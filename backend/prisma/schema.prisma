@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Users {
+  id         Int      @id @default(autoincrement())
+  username      String   @unique
+  password   String
+  name       String
+  email      String?   @unique 
+  phone      String?
+  address    String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  tokens     Tokens[]
+  userRoles  UserRoles[]
+  @@map("users")
+}
+
+
+model Tokens {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  refreshToken      String   @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("tokens")
+}
+
+
+model Roles{
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  description String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  userRoles  UserRoles[]
+  rolePermissions RolePermissions[]
+
+  @@map("roles")
+}
+
+model UserRoles {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  role_id    Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  roles      Roles    @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@map("user_roles")
+}
+
+
+model Permissions {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  description String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  rolePermissions RolePermissions[]
+
+
+  @@map("permissions")
+}
+
+model RolePermissions {
+  id            Int      @id @default(autoincrement())
+  role_id       Int
+  permission_id Int
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  roles         Roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permissions   Permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@map("role_permissions")
+}
+
+
