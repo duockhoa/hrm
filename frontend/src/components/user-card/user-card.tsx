@@ -10,7 +10,7 @@ import { useLogout } from "@/hooks/use-logout";
 import { LogOut, User, Settings, LayoutGrid } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function UserCard({ user }: { user: any }) {
+export default function UserCard({ user   }: { user: any  }) {
   const { logout } = useLogout();
   const router = useRouter();
   return (
@@ -18,9 +18,9 @@ export default function UserCard({ user }: { user: any }) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div className="flex items-center gap-2">
-            <div className="flex flex-col">
-              <span className="font-bold">{user?.name}</span>
-              <span className="text-gray-500 text-xs">
+            <div className=" flex-col hidden md:flex"  >
+              <span className="font-bold ">{user?.name}</span>
+              <span className="text-gray-500 text-xs">  
                 {user?.position} {user?.department}
               </span>
             </div>

@@ -5,8 +5,11 @@ import Notification from "../notification/notification";
 import Search from "../search/search";
 import axiosClient from "@/lib/axios-client";
 import useSWR from "swr";
+import { useSidebarStore } from "@/store/sidebar-store";
+import { MdDehaze } from "react-icons/md";
 
 export default function Header() {
+  const { toggleSidebar } = useSidebarStore();
   const fercher = async (url: string) => {
     const response = await axiosClient.get(url);
     return response.data.result;
@@ -14,11 +17,10 @@ export default function Header() {
 
   const { data: user, error, isLoading } = useSWR("/users/me", fercher);
 
-  console.log("User data in header:", user);
-
   return (
     <header className="flex items-center justify-between p-2 bg-white px-4 border-b border-gray-200 h-[60px]">
       <div className="flex items-center gap-2">
+        <button onClick={toggleSidebar} className="p-2 rounded-full hover:bg-gray-100"><MdDehaze size={24} /></button>
         <Image
           src={"/dkpharmalogo.png"}
           alt="Logo"
@@ -26,8 +28,7 @@ export default function Header() {
           height={60}
           className="p-4"
         />
-
-        <h1 className="text-xl ">Nhân Sự Dược Khoa</h1>
+        <h1 className="text-xl hidden md:block">Nhân Sự Dược Khoa</h1>
       </div>
 
       <div className="flex items-center gap-4">
@@ -47,7 +48,7 @@ export default function Header() {
           ]}
         />
 
-        <UserCard user={user} />
+        <UserCard user={user}/>
       </div>
     </header>
   );
