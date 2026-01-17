@@ -4,10 +4,11 @@ import Sidebar from "@/components/sidebar/sidebar";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useMobile from "@/hooks/use-mobile";
 import { useEffect } from "react";
-import { MdHome , MdPerson , MdCalendarToday, MdWork } from "react-icons/md";
+import { MdHome, MdPerson, MdCalendarToday, MdWork } from "react-icons/md";
 import axiosClient from "@/lib/axios-client";
 import useUsersStore from "@/store/users.store";
 import useSWR from "swr";
+import { is } from "date-fns/locale";
 const data = [
   {
     id: "1",
@@ -15,7 +16,7 @@ const data = [
     icon: <MdHome />,
     url: "/home",
   },
-    {
+  {
     id: "2",
     name: "Danh sách phòng ban",
     icon: <MdHome />,
@@ -39,16 +40,14 @@ const data = [
     icon: <MdPerson />,
     url: "/recruitment",
   },
-]
-
-
+];
 
 export default function MainLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { isOpen , toggleSidebar } = useSidebarStore();
+  const { isOpen, toggleSidebar } = useSidebarStore();
   const isMobile = useMobile();
   useEffect(() => {
     if (isMobile) {
@@ -56,17 +55,21 @@ export default function MainLayout({
     }
   }, [isMobile]);
   const fetcher = async (url: string) => {
-      const response = await axiosClient.get(url);
-      return response.data.result;
-    };
-  const { setUsers } = useUsersStore();
-    const { data: users, error, isLoading } = useSWR("/users", fetcher);
-    useEffect(() => {
-      if (users) {
-        setUsers(users);
-      }
-    }, [users])
-  
+    const response = await axiosClient.get(url);
+    return response.data.result;
+  };
+  const { setUsers, setIsLoading } = useUsersStore();
+  const { data: users, error, isLoading } = useSWR("/users", fetcher);
+  useEffect(() => {
+    if (isLoading) {
+      setIsLoading(true);
+    }
+    if (users) {
+      setUsers(users);
+      setIsLoading(false);
+    }
+  }, [users]);
+
   return (
     <div className="flex h-screen flex-col">
       <Header />

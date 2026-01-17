@@ -9,28 +9,28 @@ import {
 import { useLogout } from "@/hooks/use-logout";
 import { LogOut, User, Settings, LayoutGrid } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Skeleton } from "@/components/ui/skeleton";  
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function UserCard({ user   }: { user: any  }) {
+export default function UserCard({ user }: { user: any }) {
   const { logout } = useLogout();
   const router = useRouter();
-    return (
-      <div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="flex items-center gap-2">
-            <div className=" flex-col hidden md:flex"  >
-                {user ? (
+  return (
+    <div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <div className="flex items-center gap-2">
+            <div className=" flex-col hidden md:flex">
+              {user ? (
                 <>
-                <span className="font-bold ">{user?.name}</span>
-                <span className="text-gray-500 text-xs">  
-                  {user?.position} {user?.department}
-                </span>
+                  <span className="font-bold ">{user?.name}</span>
+                  <span className="text-gray-500 text-xs">
+                    {user?.position} {user?.department}
+                  </span>
                 </>
               ) : (
                 <>
-                <Skeleton className="w-24 h-4 mb-1" /> 
-                <Skeleton className="w-24 h-4" />
+                  <Skeleton className="w-24 h-4 mb-1" />
+                  <Skeleton className="w-24 h-4" />
                 </>
               )}
             </div>
@@ -45,7 +45,6 @@ export default function UserCard({ user   }: { user: any  }) {
                   <Skeleton className="w-12 h-12 rounded-full" />
                 </AvatarFallback>
               )}
-
             </Avatar>
           </div>
         </DropdownMenuTrigger>
