@@ -20,7 +20,7 @@ export default function Header() {
   return (
     <header className="flex items-center justify-between p-2 bg-white px-4 border-b border-gray-200 h-[60px]">
       <div className="flex items-center gap-2">
-        <button onClick={toggleSidebar} className="p-2 rounded-full hover:bg-gray-100"><MdDehaze size={24} /></button>
+        <button onClick={toggleSidebar} className="p-2 rounded-full hover:bg-gray-100"><MdDehaze size={22} /></button>
         <Image
           src={"/dkpharmalogo.png"}
           alt="Logo"
