@@ -10,7 +10,6 @@ import HomePage from "../page";
 import useMobile from "@/hooks/use-mobile";
 import useSWR from "swr";
 import axiosClient from "@/lib/axios-client";
-import { useRef } from "react";
 export default function DetailUserPage() {
   const params = useParams();
   const isMobile = useMobile();
@@ -37,7 +36,7 @@ export default function DetailUserPage() {
           defaultSize={isMobile ? 100 : 70}
           className="p-4 overflow-auto"
         >
-          <DetailUserHeader id={params.id as string} />
+          <DetailUserHeader data={params.id as string} />
           thông tin người dùng {params.id}
         </ResizablePanel>
       </ResizablePanelGroup>

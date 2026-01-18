@@ -26,8 +26,14 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const formSchema = z.object({
-    username: z.string().min(2).max(50),
-    password: z.string().min(6).max(50),
+    username: z
+      .string()
+      .min(2, "Tên đăng nhập phải lớn hơn 2 ký tự")
+      .max(50, "Tên đăng nhập phải nhỏ hơn 50 ký tự"),
+    password: z
+      .string()
+      .min(6, "Mật khẩu phải lớn hơn 6 ký tự")
+      .max(50, "Mật khẩu phải nhỏ hơn 50 ký tự"),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({

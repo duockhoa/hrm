@@ -4,7 +4,7 @@ import { AiOutlineRight } from "react-icons/ai";
 import { LuX } from "react-icons/lu";
 import { FaRegEdit } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-export default function DetailUserHeader({ id }: { id: string }) {
+export default function DetailUserHeader({ data }: { data: any }) {
   const router = useRouter();
 
   return (
@@ -12,7 +12,7 @@ export default function DetailUserHeader({ id }: { id: string }) {
       <div className="flex items-center gap-2">
         <h1>Users</h1>
         <AiOutlineRight />
-        <p>{id}</p>
+        <p>{data}</p>
       </div>
       <div className="flex items-center gap-2">
         <Button>
