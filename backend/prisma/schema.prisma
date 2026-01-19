@@ -22,6 +22,8 @@ model Users {
   email      String?   @unique 
   phone      String?
   address    String?
+  avatar     String?
+  deleted_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   tokens     Tokens[]

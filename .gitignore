@@ -55,6 +55,7 @@ backend/.env.*
 backend/logs/
 backend/build/
 backend/dist/
+backend/uploads/
 
 # Frontend (Node.js, Next.js, configs)
 frontend/node_modules/

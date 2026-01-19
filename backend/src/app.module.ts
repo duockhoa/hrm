@@ -8,9 +8,19 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
-  imports: [ConfigModule.forRoot({}), UsersModule, AuthModule, RolesModule, PermissionsModule],
+  imports: [
+    ConfigModule.forRoot({}),
+    UsersModule,
+    AuthModule,
+    RolesModule,
+    PermissionsModule,
+    MulterModule.register({
+      dest: './uploads',
+    }),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

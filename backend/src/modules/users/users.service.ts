@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { compareSync, hash } from 'bcrypt';
 import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -56,6 +57,18 @@ export class UsersService {
     const updatedUser = await this.prisma.users.update({
       where: { id },
       data: updateUserDto,
+    });
+    return updatedUser;
+  }
+
+  async uploadAvatar(id: number, avatarUrl: string) {
+    const user = await this.prisma.users.findUnique({ where: { id } });
+    if (!user) {
+      return null;
+    }
+    const updatedUser = await this.prisma.users.update({
+      where: { id },
+      data: { avatar: avatarUrl },
     });
     return updatedUser;
   }
