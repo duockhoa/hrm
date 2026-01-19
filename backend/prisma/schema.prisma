@@ -35,7 +35,7 @@ model Users {
 model Tokens {
   id         Int      @id @default(autoincrement())
   user_id    Int
-  refreshToken      String   @unique
+  refreshToken      String   @unique @db.VarChar(512)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 

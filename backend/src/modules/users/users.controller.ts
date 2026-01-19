@@ -7,6 +7,7 @@ import {
   HttpStatus,
   HttpException,
   Delete,
+  Request,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsePipes } from '@nestjs/common';
@@ -27,7 +28,7 @@ import { Permissions } from 'src/decorators/permissions.decorator';
 )
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
+  @UseGuards(jwtAuthGuard, RolesGuard)
   @Get()
   findAll() {
     return this.usersService.findAll();
@@ -41,7 +42,16 @@ export class UsersController {
     }
     return user;
   }
-  @UseGuards(jwtAuthGuard, RolesGuard)
+
+  @Get('/me')
+  async getProfile(@Request() req: any) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    return user;
+  }
+
   @Roles('admin')
   @Post()
   async createUser(@Body() createUserDto: CreateUserDto) {
