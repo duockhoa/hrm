@@ -56,7 +56,7 @@ export default function MainLayout({
   }, [isMobile]);
   const fetcher = async (url: string) => {
     const response = await axiosClient.get(url);
-    return response.data.result;
+    return response.data;
   };
   const { setUsers, setIsLoading } = useUsersStore();
   const { data: users, error, isLoading } = useSWR("/users", fetcher);

@@ -12,7 +12,7 @@ export default function Header() {
   const { toggleSidebar } = useSidebarStore();
   const fercher = async (url: string) => {
     const response = await axiosClient.get(url);
-    return response.data.result;
+    return response.data;
   };
 
   const { data: user, error, isLoading } = useSWR("/users/me", fercher);
@@ -20,7 +20,12 @@ export default function Header() {
   return (
     <header className="flex items-center justify-between p-2 bg-white px-4 border-b border-gray-200 h-[60px]">
       <div className="flex items-center gap-2">
-        <button onClick={toggleSidebar} className="p-2 rounded-full hover:bg-gray-100"><MdDehaze size={22} /></button>
+        <button
+          onClick={toggleSidebar}
+          className="p-2 rounded-full hover:bg-gray-100"
+        >
+          <MdDehaze size={22} />
+        </button>
         <Image
           src={"/dkpharmalogo.png"}
           alt="Logo"
@@ -48,7 +53,7 @@ export default function Header() {
           ]}
         />
 
-        <UserCard user={user}/>
+        <UserCard user={user} />
       </div>
     </header>
   );
