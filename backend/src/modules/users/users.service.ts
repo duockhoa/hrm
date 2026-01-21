@@ -13,7 +13,7 @@ export class UsersService {
 
   findById(id: number) {
     return this.prisma.users.findUnique({
-      where: { id },
+      where: { id: id },
       include: {
         userRoles: {
           include: {
@@ -22,6 +22,7 @@ export class UsersService {
             },
           },
         },
+        departments: true,
       },
     });
   }
