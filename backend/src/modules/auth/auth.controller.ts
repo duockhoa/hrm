@@ -35,6 +35,18 @@ export class AuthController {
     return newToken;
   }
 
+  @Post('logout')
+  async logout(@Body() refreshToken: { refreshToken: string }) {
+    if (!refreshToken || !refreshToken.refreshToken) {
+      throw new HttpException('Refresh token is required', 400);
+    }
+    const result = await this.authService.logout(refreshToken.refreshToken);
+    if (!result) {
+      throw new HttpException('Invalid refresh token', 401);
+    }
+    return { message: 'Logged out successfully' };
+  }
+
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(@Request() request) {

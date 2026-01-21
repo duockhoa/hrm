@@ -62,6 +62,18 @@ export class UsersService {
     return updatedUser;
   }
 
+  async uploadAvatar(id: number, avatarUrl: string) {
+    const user = await this.prisma.users.findUnique({ where: { id } });
+    if (!user) {
+      return null;
+    }
+    const updatedUser = await this.prisma.users.update({
+      where: { id },
+      data: { avatar: avatarUrl },
+    });
+    return updatedUser;
+  }
+
   findByUsername(username: string) {
     const user = this.prisma.users.findUnique({ where: { username } });
     if (!user) {

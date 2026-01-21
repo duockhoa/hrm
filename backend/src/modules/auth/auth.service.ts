@@ -59,4 +59,11 @@ export class AuthService {
       accessToken: newAccessToken,
     };
   }
+
+  async logout(refreshToken: string) {
+    const deleteResponse = await this.prisma.tokens.deleteMany({
+      where: { refreshToken },
+    });
+    return deleteResponse.count > 0;
+  }
 }

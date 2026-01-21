@@ -8,6 +8,9 @@ import {
   HttpException,
   Delete,
   Request,
+  UseInterceptors,
+  UploadedFile,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsePipes } from '@nestjs/common';
@@ -19,6 +22,8 @@ import { RolesGuard } from 'src/guards/roles.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Permissions } from 'src/decorators/permissions.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CloudinaryService } from 'src/cloudinary.service';
 @UseGuards(jwtAuthGuard, RolesGuard)
 @Controller('users')
 @UsePipes(
@@ -27,7 +32,10 @@ import { Permissions } from 'src/decorators/permissions.decorator';
   }),
 )
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   @Get()
   @Permissions('USER_VIEW')
@@ -38,7 +46,6 @@ export class UsersController {
   @Get('/me')
   async getProfile(@Request() req: any) {
     const user = req.user;
-    console.log('Profile user:', user);
     return user;
   }
 
@@ -49,6 +56,31 @@ export class UsersController {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
     return user;
+  }
+
+  @Post('upload-avatar/:id')
+  @UseInterceptors(FileInterceptor('avatar'))
+  async uploadAvatar(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
+    }
+    const uploadResult = await this.cloudinaryService.uploadImage(
+      file,
+      'avatars',
+    );
+    if (uploadResult && uploadResult['secure_url']) {
+      const url = uploadResult['secure_url'];
+      const updatedUser = await this.usersService.uploadAvatar(id, url);
+      return updatedUser;
+    }
+
+    return new HttpException(
+      'Avatar upload failed',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
   }
 
   @Roles('admin')

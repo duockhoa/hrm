@@ -5,6 +5,7 @@ import { PrismaService } from 'src/prisma.service';
 import { JwtStrategy } from 'src/passports/jwt.strategy';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
+import { CloudinaryService } from 'src/cloudinary.service';
 
 @Module({
   controllers: [UsersController],
@@ -14,6 +15,7 @@ import { PermissionsGuard } from 'src/guards/permissions.guard';
     JwtStrategy,
     RolesGuard,
     PermissionsGuard,
+    CloudinaryService,
   ],
   imports: [],
   exports: [UsersService],
