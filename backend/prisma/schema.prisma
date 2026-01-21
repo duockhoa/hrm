@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -19,15 +13,19 @@ model Users {
   username      String   @unique
   password   String
   name       String
+  department String?
+  position   String?
   email      String?   @unique 
   phone      String?
   address    String?
   avatar     String?
   deleted_at DateTime?
   created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  updated_at DateTime @updatedAt @default(now())
   tokens     Tokens[]
   userRoles  UserRoles[]
+  team_lead_departments Departments[] @relation("Departments_team_lead_user")
+  departments Departments? @relation(fields: [department], references: [name], onDelete: SetNull)
   @@map("users")
 }
 
@@ -37,8 +35,7 @@ model Tokens {
   user_id    Int
   refreshToken      String   @unique @db.VarChar(512)
   created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
+  updated_at DateTime @updatedAt  @default(now())
   users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("tokens")
@@ -50,7 +47,7 @@ model Roles{
   name       String   @unique
   description String?
   created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  updated_at DateTime @updatedAt  @default(now())
   userRoles  UserRoles[]
   rolePermissions RolePermissions[]
 
@@ -62,7 +59,7 @@ model UserRoles {
   user_id    Int
   role_id    Int
   created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  updated_at DateTime @updatedAt @default(now())
 
   users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
   roles      Roles    @relation(fields: [role_id], references: [id], onDelete: Cascade)
@@ -75,7 +72,7 @@ model Permissions {
   name       String   @unique
   description String?
   created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  updated_at DateTime @updatedAt @default(now())
   rolePermissions RolePermissions[]
 
 
@@ -87,12 +84,24 @@ model RolePermissions {
   role_id       Int
   permission_id Int
   created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  updated_at    DateTime @updatedAt @default(now())
 
   roles         Roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
   permissions   Permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
 
+  @@index([permission_id], map: "role_permissions_permission_id_fkey")
+  @@index([role_id], map: "role_permissions_role_id_fkey")
   @@map("role_permissions")
 }
 
 
+model Departments {
+  name        String   @id @unique
+  description String?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt  @default(now())
+  team_lead  Int? 
+  team_lead_user Users? @relation("Departments_team_lead_user", fields: [team_lead], references: [id], onDelete: SetNull)
+  users       Users[]   
+  @@map("departments")
+}

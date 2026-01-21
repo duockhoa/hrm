@@ -13,7 +13,7 @@ export class UsersService {
 
   findById(id: number) {
     return this.prisma.users.findUnique({
-      where: { id },
+      where: { id: id },
       include: {
         userRoles: {
           include: {
@@ -22,6 +22,7 @@ export class UsersService {
             },
           },
         },
+        departments: true,
       },
     });
   }
@@ -57,18 +58,6 @@ export class UsersService {
     const updatedUser = await this.prisma.users.update({
       where: { id },
       data: updateUserDto,
-    });
-    return updatedUser;
-  }
-
-  async uploadAvatar(id: number, avatarUrl: string) {
-    const user = await this.prisma.users.findUnique({ where: { id } });
-    if (!user) {
-      return null;
-    }
-    const updatedUser = await this.prisma.users.update({
-      where: { id },
-      data: { avatar: avatarUrl },
     });
     return updatedUser;
   }

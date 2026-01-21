@@ -14,4 +14,6 @@ export class CreateUserDto {
   email?: string;
   phone?: string;
   address?: string;
+  department?: string;
+  position?: string;
 }

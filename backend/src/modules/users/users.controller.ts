@@ -19,7 +19,7 @@ import { RolesGuard } from 'src/guards/roles.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Permissions } from 'src/decorators/permissions.decorator';
-
+@UseGuards(jwtAuthGuard, RolesGuard)
 @Controller('users')
 @UsePipes(
   new ValidationPipe({
@@ -28,24 +28,23 @@ import { Permissions } from 'src/decorators/permissions.decorator';
 )
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-  @UseGuards(jwtAuthGuard, RolesGuard)
+
   @Get()
+  @Permissions('USER_VIEW')
   findAll() {
     return this.usersService.findAll();
-  }
-
-  @Get(':id')
-  async findById(@Param('id') id: number) {
-    const user = await this.usersService.findById(id);
-    if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-    }
-    return user;
   }
 
   @Get('/me')
   async getProfile(@Request() req: any) {
     const user = req.user;
+    console.log('Profile user:', user);
+    return user;
+  }
+
+  @Get(':id')
+  async findById(@Param('id') id: number) {
+    const user = await this.usersService.findById(id);
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
