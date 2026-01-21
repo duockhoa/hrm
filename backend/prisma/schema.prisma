@@ -70,7 +70,6 @@ model UserRoles {
   @@map("user_roles")
 }
 
-
 model Permissions {
   id         Int      @id @default(autoincrement())
   name       String   @unique
