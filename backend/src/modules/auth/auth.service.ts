@@ -37,6 +37,7 @@ export class AuthService {
 
   async refreshToken(refreshTokenDto: any) {
     const { refreshToken } = refreshTokenDto;
+    console.log('Refresh token received:', refreshToken);
     const storedToken = await this.prisma.tokens.findUnique({
       where: { refreshToken },
     });
