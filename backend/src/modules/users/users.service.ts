@@ -2,7 +2,6 @@ import { Injectable, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { compareSync, hash } from 'bcrypt';
 import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
