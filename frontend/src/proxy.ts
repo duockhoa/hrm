@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { API_ROUTES } from "@/lib/api-routes";
 
 const authPaths = ["/login", "/register", "/forgot-password"];
 const protectedPaths = ["/home", "/profile", "/settings"];
 const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const cookieDomain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN;
-const refreshEndpoint = "/auth/refreshtoken";
+const refreshEndpoint = API_ROUTES.auth.refreshToken;
 const isSecureCookie = process.env.NODE_ENV === "production";
 
 export default async function proxy(request: NextRequest) {
@@ -35,7 +36,10 @@ export default async function proxy(request: NextRequest) {
   }
 
   if (isLoggedIn && protectedPaths.includes(pathname)) {
-    if (shouldRefreshAccessTokenAfterExpiry(accessToken, 60) && hasRefreshToken) {
+    if (
+      shouldRefreshAccessTokenAfterExpiry(accessToken, 60) &&
+      hasRefreshToken
+    ) {
       const refreshResponse = await refreshAccessToken(request, refreshToken);
       if (refreshResponse) {
         return refreshResponse;
@@ -48,7 +52,7 @@ export default async function proxy(request: NextRequest) {
 
 const refreshAccessToken = async (
   request: NextRequest,
-  refreshToken: string | undefined
+  refreshToken: string | undefined,
 ) => {
   if (!refreshToken || !backendBaseUrl) {
     return null;
@@ -105,7 +109,7 @@ const getAccessTokenMaxAge = (token: string, fallbackSeconds: number) => {
 
 const shouldRefreshAccessTokenAfterExpiry = (
   token: string | undefined,
-  graceSecondsAfterExpiry: number
+  graceSecondsAfterExpiry: number,
 ) => {
   if (!token) {
     return false;
@@ -118,7 +122,7 @@ const decodeBase64Url = (value: string) => {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized.padEnd(
     normalized.length + ((4 - (normalized.length % 4)) % 4),
-    "="
+    "=",
   );
   if (typeof atob === "function") {
     return atob(padded);

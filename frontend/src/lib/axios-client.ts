@@ -1,6 +1,10 @@
 // lib/axios-proxy.ts (Server-side)
 import axios, { AxiosError } from "axios";
-import { clearTokenCache, getTokenCache, setTokenCache } from "@/store/token.store";
+import {
+  clearTokenCache,
+  getTokenCache,
+  setTokenCache,
+} from "@/store/token.store";
 
 const axiosClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_API_URL,
@@ -58,7 +62,7 @@ axiosClient.interceptors.response.use(
     const status = error.response?.status;
     const url = originalRequest.url ?? "";
     const isAuthEndpoint =
-      url.includes("/auth/login") || url.includes("/auth/refreshtoken");
+      url.includes("/auth/login") || url.includes("/auth/refresh-token");
 
     if (status !== 401 || originalRequest._retry || isAuthEndpoint) {
       return Promise.reject(error);
@@ -86,7 +90,7 @@ axiosClient.interceptors.response.use(
         throw error;
       }
 
-      const refreshResponse = await refreshClient.post("/auth/refreshtoken", {
+      const refreshResponse = await refreshClient.post("/auth/refresh-token", {
         refreshToken,
       });
       const newAccessToken = (refreshResponse.data as { accessToken?: string })
@@ -114,7 +118,7 @@ axiosClient.interceptors.response.use(
     } finally {
       isRefreshing = false;
     }
-  }
+  },
 );
 
 export default axiosClient;

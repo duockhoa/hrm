@@ -7,11 +7,16 @@ import axiosClient from "@/lib/axios-client";
 import useSWR from "swr";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { MdDehaze } from "react-icons/md";
+import useUserStore from "@/store/user.store";
 
 export default function Header() {
   const { toggleSidebar } = useSidebarStore();
+  const { setUser } = useUserStore();
   const fercher = async (url: string) => {
     const response = await axiosClient.get(url);
+    if (response.data) {
+      setUser(response.data);
+    }
     return response.data;
   };
 

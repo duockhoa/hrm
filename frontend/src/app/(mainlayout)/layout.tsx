@@ -7,8 +7,9 @@ import { useEffect } from "react";
 import { MdHome, MdPerson, MdCalendarToday, MdWork } from "react-icons/md";
 import axiosClient from "@/lib/axios-client";
 import useUsersStore from "@/store/users.store";
+import useDepartmentStore from "@/store/department.store";
 import useSWR from "swr";
-import { is } from "date-fns/locale";
+import { API_ROUTES } from "@/lib/api-routes";
 const data = [
   {
     id: "1",
@@ -59,7 +60,22 @@ export default function MainLayout({
     return response.data;
   };
   const { setUsers, setIsLoading } = useUsersStore();
-  const { data: users, error, isLoading } = useSWR("/users", fetcher);
+  const {
+    data: users,
+    error,
+    isLoading,
+  } = useSWR(API_ROUTES.users.base, fetcher);
+
+  const { setDepartments } = useDepartmentStore();
+
+  const { data: departments } = useSWR("/departments", fetcher);
+
+  useEffect(() => {
+    if (departments) {
+      setDepartments(departments);
+    }
+  }, [departments]);
+
   useEffect(() => {
     if (isLoading) {
       setIsLoading(true);
