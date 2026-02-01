@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { logout } from "@/services/auth";
+import { logout } from "@/services/auth.service";
 import { useTokens } from "@/store/token.store";
 import axiosClient from "@/lib/axios-client";
 

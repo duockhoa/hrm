@@ -1,6 +1,8 @@
 import OpenFormButton from "../open-form-button/open-form-button";
 import FieldDisplay from "../field-display/field-display";
 import { AiFillDelete } from "react-icons/ai";
+import { FaRegPaperPlane } from "react-icons/fa";
+import { FaPaperPlane } from "react-icons/fa";
 export default function UserDetail({ user }: { user: any }) {
   if (!user) {
     return <div>Loading user details...</div>;
@@ -21,22 +23,23 @@ export default function UserDetail({ user }: { user: any }) {
           <OpenFormButton
             name="Thêm hợp đồng"
             onClick={() => {}}
-            icon={<AiFillDelete />}
+            icon={<FaRegPaperPlane />}
           />
           <OpenFormButton
             name="Thêm hợp đồng"
             onClick={() => {}}
-            icon={<AiFillDelete />}
+            icon={<FaPaperPlane />}
           />
         </div>
       </div>
       <div className="gap-4">
+        <FieldDisplay lable="Mã nhân viên" value={user?.username} />
+        <FieldDisplay lable="Họ và tên" value={user?.department} />
+        <FieldDisplay lable="Chức vụ" value={user?.position} />
         <FieldDisplay lable="Email" value={user?.email} />
         <FieldDisplay lable="Số điện thoại" value={user?.phone} />
-        <FieldDisplay lable="Địa chỉ" value={user?.address} />
         <FieldDisplay lable="Ngày sinh" value={user?.dateOfBirth} />
         <FieldDisplay lable="Ngày bắt đầu làm việc" value={user?.startDate} />
-        <FieldDisplay lable="Mã nhân viên" value={user?.employeeId} />
       </div>
     </div>
   );

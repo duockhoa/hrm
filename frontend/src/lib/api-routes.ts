@@ -6,14 +6,21 @@ const AUTH = {
 
 const USERS = {
   base: "/users",
+  me: "/users/me",
+  uploadAvatar: "/users/me/avatar",
 };
 
 const INTERNAL = {
   auth: "/api/auth",
 };
 
+const DEPARTMENT = {
+  base: "/departments",
+};
+
 export const API_ROUTES = {
   auth: AUTH,
   users: USERS,
   internal: INTERNAL,
+  departments: DEPARTMENT,
 };

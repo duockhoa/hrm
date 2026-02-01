@@ -4,6 +4,7 @@ import "./globals.css";
 import { cookies } from "next/headers";
 import { TokenProvider } from "@/store/token.store";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,15 +39,22 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <TokenProvider
-          initalToken={{
-            accessToken: accessToken || null,
-            refreshToken: refreshToken || null,
-          }}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
         >
-          {children}
-          <Toaster position="top-right" />
-        </TokenProvider>
+          <TokenProvider
+            initalToken={{
+              accessToken: accessToken || null,
+              refreshToken: refreshToken || null,
+            }}
+          >
+            {children}
+            <Toaster position="top-right" />
+          </TokenProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

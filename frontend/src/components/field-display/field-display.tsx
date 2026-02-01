@@ -7,10 +7,13 @@ export default function FieldDisplay({
 }) {
   return (
     <div className="flex w-full justify-start gap-4 ">
-      <div className="font-semibold text-gray-600 min-w-[120px] border border-gray-300 pr-2 max-w-[200px] m-1 text-left">
-        {lable} :
+      <div className="font-semibold text-gray-600 min-w-[150px]  pr-2 max-w-[200px] m-1 text-left wrap-anywhere">
+        {lable}
       </div>
-      <div className="text-gray-800 flex-1">{value}</div>
+
+      <div className="text-gray-800 flex-1 text-left">
+        <p className="wrap-anywhere">{value}</p>
+      </div>
     </div>
   );
 }
