@@ -88,14 +88,14 @@ export class UsersController {
   }
 
   @UseGuards(jwtAuthGuard, PermissionsGuard)
-  @Post('change-password')
+  @Post('me/change-password')
   async changePassword(
-    @Body() body: { oldPassword: string; newPassword: string },
+    @Body() body: { currentPassword: string; newPassword: string },
     @Request() req: any,
   ) {
-    const { oldPassword, newPassword } = body;
+    const { currentPassword, newPassword } = body;
     const hashedPassword = await this.usersService.changePassword(
-      oldPassword,
+      currentPassword,
       newPassword,
       req.user,
     );
