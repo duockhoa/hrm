@@ -73,6 +73,18 @@ export class UsersService {
     return updatedUser;
   }
 
+  async changePassword(oldPassword: string, newPassword: string, user: any) {
+    if (!compareSync(oldPassword, user.password)) {
+      return null;
+    }
+    const hashedPassword = await hash(newPassword, 10);
+    await this.prisma.users.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+    return hashedPassword;
+  }
+
   findByUsername(username: string) {
     const user = this.prisma.users.findUnique({ where: { username } });
     if (!user) {
