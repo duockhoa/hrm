@@ -3,10 +3,16 @@ import FieldDisplay from "../field-display/field-display";
 import { AiFillDelete } from "react-icons/ai";
 import { FaRegPaperPlane } from "react-icons/fa";
 import { FaPaperPlane } from "react-icons/fa";
+import AddContactForm from "../form-add-contract/form-add-contact";
+
 export default function UserDetail({ user }: { user: any }) {
   if (!user) {
     return <div>Loading user details...</div>;
   }
+
+  const handleOpenForm = () => {
+    console.log("Open Add Contact Form");
+  };
 
   return (
     <div className="w-full max-w-4xl bg-white  border p-4  rounded flex flex-col gap-4 text-center shadow-md">
@@ -17,19 +23,11 @@ export default function UserDetail({ user }: { user: any }) {
         <div className="">
           <OpenFormButton
             name="Thêm hợp đồng"
-            onClick={() => {}}
             icon={<AiFillDelete />}
+            form={<AddContactForm user_id={user?.id} />}
           />
-          <OpenFormButton
-            name="Thêm hợp đồng"
-            onClick={() => {}}
-            icon={<FaRegPaperPlane />}
-          />
-          <OpenFormButton
-            name="Thêm hợp đồng"
-            onClick={() => {}}
-            icon={<FaPaperPlane />}
-          />
+          <OpenFormButton name="Thêm hợp đồng" icon={<FaRegPaperPlane />} />
+          <OpenFormButton name="Thêm hợp đồng" icon={<FaPaperPlane />} />
         </div>
       </div>
       <div className="gap-4">
