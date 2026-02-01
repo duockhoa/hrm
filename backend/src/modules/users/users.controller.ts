@@ -58,22 +58,26 @@ export class UsersController {
     return user;
   }
 
-  @Post('upload-avatar/:id')
+  @Post('me/avatar')
   @UseInterceptors(FileInterceptor('avatar'))
   async uploadAvatar(
-    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
       throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
     }
+    console.log('Uploaded file:', file.originalname, file.mimetype);
     const uploadResult = await this.cloudinaryService.uploadImage(
       file,
       'avatars',
     );
     if (uploadResult && uploadResult['secure_url']) {
       const url = uploadResult['secure_url'];
-      const updatedUser = await this.usersService.uploadAvatar(id, url);
+      const updatedUser = await this.usersService.uploadAvatar(
+        req.user.id,
+        url,
+      );
       return updatedUser;
     }
 
@@ -81,6 +85,24 @@ export class UsersController {
       'Avatar upload failed',
       HttpStatus.INTERNAL_SERVER_ERROR,
     );
+  }
+
+  @UseGuards(jwtAuthGuard, PermissionsGuard)
+  @Post('me/change-password')
+  async changePassword(
+    @Body() body: { currentPassword: string; newPassword: string },
+    @Request() req: any,
+  ) {
+    const { currentPassword, newPassword } = body;
+    const hashedPassword = await this.usersService.changePassword(
+      currentPassword,
+      newPassword,
+      req.user,
+    );
+    if (!hashedPassword) {
+      throw new HttpException('Password change failed', HttpStatus.BAD_REQUEST);
+    }
+    return { hashedPassword };
   }
 
   @Roles('admin')
