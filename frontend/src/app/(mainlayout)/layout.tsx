@@ -4,23 +4,31 @@ import Sidebar from "@/components/sidebar/sidebar";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useMobile from "@/hooks/use-mobile";
 import { useEffect } from "react";
-import { MdHome, MdPerson, MdCalendarToday, MdWork } from "react-icons/md";
-import axiosClient from "@/lib/axios-client";
+import {
+  MdPerson,
+  MdCalendarToday,
+  MdWork,
+  MdBusiness,
+  MdAttachMoney,
+  MdAssessment,
+  MdAccessTime,
+} from "react-icons/md";
 import useUsersStore from "@/store/users.store";
 import useDepartmentStore from "@/store/department.store";
 import useSWR from "swr";
+import { departmentsService, usersService } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
 const data = [
   {
     id: "1",
     name: "Danh sách nhân sự",
-    icon: <MdHome />,
+    icon: <MdPerson />,
     url: "/home",
   },
   {
     id: "2",
     name: "Danh sách phòng ban",
-    icon: <MdHome />,
+    icon: <MdBusiness />,
     url: "/department",
   },
   {
@@ -41,6 +49,24 @@ const data = [
     icon: <MdPerson />,
     url: "/recruitment",
   },
+  {
+    id: "6",
+    name: "Lương",
+    icon: <MdAttachMoney />,
+    url: "/salary",
+  },
+  {
+    id: "7",
+    name: "Hiệu quả công việc",
+    icon: <MdAssessment />,
+    url: "/report",
+  },
+  {
+    id: "8",
+    name: "Chấm công",
+    icon: <MdAccessTime />,
+    url: "/attendance",
+  },
 ];
 
 export default function MainLayout({
@@ -55,21 +81,20 @@ export default function MainLayout({
       toggleSidebar();
     }
   }, [isMobile]);
-  const fetcher = async (url: string) => {
-    const response = await axiosClient.get(url);
-    return response.data;
-  };
+
   const { setUsers, setIsLoading } = useUsersStore();
   const {
     data: users,
     error,
     isLoading,
-  } = useSWR(API_ROUTES.users.base, fetcher);
+  } = useSWR(API_ROUTES.users.base, usersService.fetcherUsers);
 
   const { setDepartments } = useDepartmentStore();
 
-  const { data: departments } = useSWR("/departments", fetcher);
-
+  const { data: departments } = useSWR(
+    API_ROUTES.departments.base,
+    departmentsService.fetcherDepartments,
+  );
   useEffect(() => {
     if (departments) {
       setDepartments(departments);
@@ -84,7 +109,7 @@ export default function MainLayout({
       setUsers(users);
       setIsLoading(false);
     }
-  }, [users]);
+  }, [users, isLoading]);
 
   return (
     <div className="flex h-screen flex-col">

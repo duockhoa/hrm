@@ -8,19 +8,23 @@ import useSWR from "swr";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { MdDehaze } from "react-icons/md";
 import useUserStore from "@/store/user.store";
+import { API_ROUTES } from "@/lib/api-routes";
+import { userService } from "@/services/index.service";
+import { useEffect } from "react";
 
 export default function Header() {
   const { toggleSidebar } = useSidebarStore();
   const { setUser } = useUserStore();
-  const fercher = async (url: string) => {
-    const response = await axiosClient.get(url);
-    if (response.data) {
-      setUser(response.data);
+  const {
+    data: user,
+    error,
+    isLoading,
+  } = useSWR(API_ROUTES.users.me, userService.fetcherMe);
+  useEffect(() => {
+    if (user) {
+      setUser(user);
     }
-    return response.data;
-  };
-
-  const { data: user, error, isLoading } = useSWR("/users/me", fercher);
+  }, [user]);
 
   return (
     <header className="flex items-center justify-between p-2 bg-white px-4 border-b border-gray-200 h-[60px]">

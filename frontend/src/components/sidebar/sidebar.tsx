@@ -43,11 +43,14 @@ export default function Sidebar({
     <div
       className={` border-r border-gray-200 h-screen ${isMobile && !isOpen ? "w-0" : isOpen ? "w-64" : "w-20"} transition-all duration-300 ease-in-out`}
     >
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full justify-between">
         <div className="flex flex-col items-center justify-between p-2 w-full">
           {data.map((item) => (
             <SidebarMenu key={item.id} item={item} isOpen={isOpen} />
           ))}
+        </div>
+        <div className="p-2 text-center text-sm text-gray-500">
+          version beta 1.0.0
         </div>
       </div>
     </div>
