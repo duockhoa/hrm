@@ -8,6 +8,7 @@ const USERS = {
   base: "/users",
   me: "/users/me",
   uploadAvatar: "/users/me/avatar",
+  changePassword: "/users/me/change-password",
 };
 
 const INTERNAL = {

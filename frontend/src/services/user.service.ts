@@ -24,4 +24,18 @@ const uploadAvatar = async (file: File) => {
   return response.data;
 };
 
-export default { fetcherMe, uploadAvatar };
+const changePassword = async ({
+  currentPassword,
+  newPassword,
+}: {
+  currentPassword: string;
+  newPassword: string;
+}) => {
+  const response = await axiosClient.post(API_ROUTES.users.changePassword, {
+    currentPassword,
+    newPassword,
+  });
+  return response.data;
+};
+
+export default { fetcherMe, uploadAvatar, changePassword };
