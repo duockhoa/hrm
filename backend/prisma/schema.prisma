@@ -16,21 +16,33 @@ model Users {
   department String?
   position   String?
   email      String?   @unique 
-  phone      String?
-  address    String?
   avatar     String?
-  gender     String?
-  birthday   DateTime?
+  status     String   @default("active")
   deleted_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt @default(now())
+  profile    UserProfiles?
   tokens     Tokens[]
   userRoles  UserRoles[]
   team_lead_departments Departments[] @relation("Departments_team_lead_user")
   departments Departments? @relation(fields: [department], references: [name], onDelete: SetNull)
+  contracts  Contracts[]
   @@map("users")
 }
 
+
+model UserProfiles {
+  id         Int      @id @default(autoincrement())
+  user_id    Int    @unique
+  id_card   String?  @unique
+  birth_date DateTime?
+  phone      String?  @unique
+  address    String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt  @default(now())
+  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  @@map("user_profiles")
+}
 
 model Tokens {
   id         Int      @id @default(autoincrement())
@@ -76,8 +88,6 @@ model Permissions {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt @default(now())
   rolePermissions RolePermissions[]
-
-
   @@map("permissions")
 }
 
@@ -106,4 +116,30 @@ model Departments {
   team_lead_user Users? @relation("Departments_team_lead_user", fields: [team_lead], references: [id], onDelete: SetNull)
   users       Users[]   
   @@map("departments")
+}
+
+model Contracts {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  type        String
+  user_id     Int
+  start_date  DateTime
+  end_date    DateTime
+  status      String   @default("active")
+  files       ContractFiles[]
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt @default(now())
+  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  @@map("contracts")
+}
+
+model ContractFiles {
+  id          Int      @id @default(autoincrement())
+  contract_id Int
+  file_path   String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt @default(now())
+  contracts   Contracts @relation(fields: [contract_id], references: [id], onDelete: Cascade)
+  @@map("contract_files")
 }
