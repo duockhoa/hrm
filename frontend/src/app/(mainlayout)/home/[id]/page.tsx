@@ -1,5 +1,5 @@
 "use client";
-import DetailUserHeader from "@/components/detail-user-header/detail-user-header";
+import DetailUserHeader from "@/components/header-detail-user/header-detail-user";
 import { useParams } from "next/navigation";
 import {
   ResizablePanelGroup,
@@ -10,9 +10,9 @@ import HomePage from "../page";
 import useMobile from "@/hooks/use-mobile";
 import useSWR from "swr";
 import axiosClient from "@/lib/axios-client";
-import UserDetail from "@/components/user-detail/user-detail";
-import LeaveInformationDetail from "@/components/leave-information-detail/leave-information-detail";
-import ContractInline from "@/components/contract-inline/contact-inline";
+import UserDetail from "@/components/detail-user/detail-user";
+import LeaveInformationDetail from "@/components/detail-leave-information/detail-leave-information";
+import ContractInline from "@/components/inline-contract/inline-contact";
 export default function DetailUserPage() {
   const params = useParams();
   const isMobile = useMobile();

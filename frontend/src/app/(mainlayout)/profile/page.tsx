@@ -2,7 +2,7 @@
 import useUserStore from "@/store/user.store";
 import UpdateAvatar from "@/components/update-avatar/aupdate-avatar";
 import FieldDisplay from "@/components/field-display/field-display";
-import ChangePassword from "@/components/change-password/change-password";
+import ChangePassword from "@/components/form-change-password/form-change-password";
 
 export default function Profile() {
   const { user } = useUserStore();
