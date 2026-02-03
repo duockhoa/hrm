@@ -1,3 +1,4 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import { AiOutlineRight } from "react-icons/ai";
@@ -8,14 +9,16 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useState } from "react";
 export default function ListUserHeader() {
+  const [isAddOpen, setIsAddOpen] = useState(false);
   return (
     <div className="w-full flex justify-between border-b border-gray-200 pb-2 bg-white">
       <div className="flex items-center gap-2">
         <AiOutlineRight />
         <h1>Home</h1>
       </div>
-      <Dialog>
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogTrigger asChild>
           <Button>
             <PlusIcon />
@@ -26,7 +29,7 @@ export default function ListUserHeader() {
           <DialogTitle className="text-lg font-semibold mb-4 text-center">
             THÊM NHÂN SỰ MỚI
           </DialogTitle>
-          <AddUserForm />
+          <AddUserForm onClose={() => setIsAddOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>

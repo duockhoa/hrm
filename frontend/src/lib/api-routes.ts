@@ -1,3 +1,5 @@
+import { add } from "date-fns";
+
 const AUTH = {
   login: "/auth/login",
   refreshToken: "/auth/refresh-token",
@@ -7,6 +9,7 @@ const AUTH = {
 const USERS = {
   base: "/users",
   me: "/users/me",
+  addUser: "/users",
   uploadAvatar: "/users/me/avatar",
   changePassword: "/users/me/change-password",
 };

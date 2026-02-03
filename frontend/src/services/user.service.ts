@@ -7,6 +7,25 @@ const fetcherMe = async () => {
   return response.data;
 };
 
+const fetcherUserById = async (userId: string) => {
+  const response = await axiosClient.get(`${API_ROUTES.users.base}/${userId}`);
+  return response.data;
+};
+
+// The function to add a new user
+const addUser = async (userData: any) => {
+  const response = await axiosClient.post(API_ROUTES.users.base, userData);
+  return response.data;
+};
+// update user
+const updateUser = async (userId: string, userData: any) => {
+  const response = await axiosClient.put(
+    `${API_ROUTES.users.base}/${userId}`,
+    userData,
+  );
+  return response.data;
+};
+
 // upload avatar
 
 const uploadAvatar = async (file: File) => {
@@ -38,4 +57,11 @@ const changePassword = async ({
   return response.data;
 };
 
-export default { fetcherMe, uploadAvatar, changePassword };
+export default {
+  fetcherMe,
+  fetcherUserById,
+  uploadAvatar,
+  changePassword,
+  addUser,
+  updateUser,
+};

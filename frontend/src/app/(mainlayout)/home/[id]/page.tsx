@@ -13,15 +13,16 @@ import axiosClient from "@/lib/axios-client";
 import UserDetail from "@/components/detail-user/detail-user";
 import LeaveInformationDetail from "@/components/detail-leave-information/detail-leave-information";
 import ContractInline from "@/components/inline-contract/inline-contact";
+import { userService } from "@/services/index.service";
+import { API_ROUTES } from "@/lib/api-routes";
 export default function DetailUserPage() {
-  const params = useParams();
+  const params: any = useParams();
   const isMobile = useMobile();
 
-  const fetcher = async (url: string) => {
-    const response = await axiosClient.get(url);
-    return response.data;
-  };
-  const { data, error, isLoading } = useSWR(`users/${params.id}`, fetcher);
+  const { data, error, isLoading } = useSWR(
+    `${API_ROUTES.users.base}/${params.id}`,
+    () => userService.fetcherUserById(params.id),
+  );
   if (error) {
     return <div>Error loading user data.</div>;
   }
@@ -43,7 +44,7 @@ export default function DetailUserPage() {
           defaultSize={isMobile ? 100 : 70}
           className="p-4 overflow-auto"
         >
-          <DetailUserHeader data={params.id as string} />
+          <DetailUserHeader user={data} />
           <div className="flex flex-col items-center gap-4 mt-4 rounded">
             <UserDetail user={data} />
             <LeaveInformationDetail />

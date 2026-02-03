@@ -23,7 +23,8 @@ import { Input } from "../ui/input";
 import useDepartmentStore from "@/store/department.store";
 import axiosClient from "@/lib/axios-client";
 import useUsersStore from "@/store/users.store";
-export default function AddUserForm() {
+import { userService } from "@/services/index.service";
+export default function AddUserForm({ onClose }: { onClose?: () => void }) {
   const { departments } = useDepartmentStore();
   const { users } = useUsersStore();
   const getDefaultUsername = () => {
@@ -71,9 +72,10 @@ export default function AddUserForm() {
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       // Simulate API call
-      const response = await axiosClient.post("/users", data);
+      const response = await userService.addUser(data);
       toast.success("User added successfully!");
       form.reset();
+      onClose?.();
     } catch (error: any) {
       toast.error(error?.message || "Failed to add user.");
       console.error("Error adding user:", error);

@@ -22,18 +22,18 @@ import {
 import { Input } from "../ui/input";
 import useDepartmentStore from "@/store/department.store";
 import axiosClient from "@/lib/axios-client";
-import useUsersStore from "@/store/users.store";
-export default function EditUserForm() {
-  const { departments } = useDepartmentStore();
-  const { users } = useUsersStore();
-  const getDefaultUsername = () => {
-    const listUsername: number[] = users.map(
-      (user) => Number(user.username) || 0,
-    );
-    const maxUsername = Math.max(...listUsername);
+import useUserStore from "@/store/user.store";
+import { userService } from "@/services/index.service";
+import { mutate } from "swr";
 
-    return (maxUsername + 1).toString().padStart(4, "0");
-  };
+export default function EditUserForm({
+  user,
+  onClose,
+}: {
+  user: any;
+  onClose?: () => void;
+}) {
+  const { departments } = useDepartmentStore();
   const formSchema = z.object({
     username: z
       .string()
@@ -49,34 +49,29 @@ export default function EditUserForm() {
       .max(100, "Department must be at most 100 characters"),
 
     email: z.string().email("Invalid email address"),
-    password: z
-      .string()
-      .min(6, "Password must be at least 6 characters")
-      .max(50, "Password must be at most 50 characters"),
-
     position: z.string().optional(),
   });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: getDefaultUsername(),
-      department: "",
-      name: "",
-      email: "",
-      password: "",
-      position: "",
+      username: user?.username || "",
+      department: user?.department || "",
+      name: user?.name || "",
+      email: user?.email || "",
+      position: user?.position || "",
     },
   });
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       // Simulate API call
-      const response = await axiosClient.post("/users", data);
-      toast.success("User added successfully!");
-      form.reset();
+      const response = await userService.updateUser(user?.id || "", data);
+      toast.success("User updated successfully!");
+      mutate("/users/" + user?.id);
+      onClose?.();
     } catch (error: any) {
-      toast.error(error?.message || "Failed to add user.");
-      console.error("Error adding user:", error);
+      toast.error(error?.message || "Failed to update user.");
+      console.error("Error updating user:", error);
     }
   };
 
@@ -166,20 +161,6 @@ export default function EditUserForm() {
                 <FormLabel>Email</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter email" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem className="mb-4">
-                <FormLabel>Mật Khẩu</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter Mật Khẩu" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
