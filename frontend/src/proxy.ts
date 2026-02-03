@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { API_ROUTES } from "@/lib/api-routes";
 
 const authPaths = ["/login", "/register", "/forgot-password"];
-const protectedPaths = ["/home", "/profile", "/settings"];
+const protectedPaths = [
+  "/",
+  "/home",
+  "/profile",
+  "/settings",
+  "contract",
+  "/department",
+];
 const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const cookieDomain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN;
 const refreshEndpoint = API_ROUTES.auth.refreshToken;

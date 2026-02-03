@@ -1,7 +1,7 @@
 "use client";
 import useUsersStore from "@/store/users.store";
 import DeskItem from "@/components/desk/desk-item";
-import ListUserHeader from "@/components/list-user-header/list-user-header";
+import ListUserHeader from "@/components/header-list-user/header-list-user";
 import { useRouter } from "next/navigation";
 import { useRef, useEffect } from "react";
 

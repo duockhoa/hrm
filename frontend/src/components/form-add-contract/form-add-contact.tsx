@@ -110,8 +110,9 @@ export default function AddContactForm({ user_id }: { user_id?: string }) {
               </FormItem>
             )}
           />
-
-          <Button type="submit">Submit</Button>
+          <div className="flex justify-end mt-4">
+            <Button type="submit">Thêm hợp đồng</Button>
+          </div>
         </form>
       </Form>
     </div>

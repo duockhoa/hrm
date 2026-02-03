@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import { AiOutlineRight } from "react-icons/ai";
-import AddUserForm from "../add-user-form/add-user-form";
+import AddUserForm from "../form-add-user/form-add-user";
 import {
   Dialog,
   DialogTrigger,
