@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseIntPipe,
+  Put,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsePipes } from '@nestjs/common';
@@ -114,6 +115,19 @@ export class UsersController {
         'User could not be created',
         HttpStatus.BAD_REQUEST,
       );
+    }
+    return user;
+  }
+
+  @Put(':id')
+  @Permissions('USER_EDIT')
+  async updateUser(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateUserDto: Partial<CreateUserDto>,
+  ) {
+    const user = await this.usersService.updateUser(id, updateUserDto);
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
     return user;
   }
