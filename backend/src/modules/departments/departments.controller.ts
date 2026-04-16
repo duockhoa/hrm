@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { DepartmentsService } from './departments.service';
 import { UseGuards } from '@nestjs/common';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -23,5 +23,10 @@ export class DepartmentsController {
   @Post()
   async create(@Body() createDepartmentDto: CreateDepartmentDto) {
     return this.departmentsService.create(createDepartmentDto);
+  }
+
+  @Delete(':name')
+  async delete(@Param('name') name: string) {
+    return this.departmentsService.delete(name);
   }
 }

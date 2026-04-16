@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { create } from 'domain';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -10,9 +9,9 @@ export class DepartmentsService {
   }
 
   async findByName(name: string) {
-    console.log('Finding department by name:', name);
     return this.prisma.departments.findUnique({
       where: { name: name },
+      include: { users: true },
     });
   }
   async create(createDepartmentDto: any) {
@@ -20,5 +19,10 @@ export class DepartmentsService {
       data: createDepartmentDto,
     });
     return newDepartment;
+  }
+  async delete(name: string) {
+    return this.prisma.departments.delete({
+      where: { name: name },
+    });
   }
 }
