@@ -8,10 +8,27 @@ import { IoMdMore } from "react-icons/io";
 import { MdEqualizer } from "react-icons/md";
 import { FaEdit } from "react-icons/fa";
 import { AiFillDelete } from "react-icons/ai";
+import FormConfirm from "../form-confirm/form-confirm";
+import { departmentsService } from "@/services/index.service";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import React, { useState } from "react";
 
 export default function ItemDepartment({ department }: { department: any }) {
+  const [open, setOpen] = useState(false);
+
+  const handleDelete = async () => {};
+
   return (
-    <div className="bg-white rounded-md p-4 shadow-md h-[100%] min-w-100 border border-gray-300">
+    <div className="bg-white rounded-md p-4 shadow-md h-[100%] min-w-70 border border-gray-300">
       <div className="flex p-2 justify-between">
         <div className="bg-blue-500 text-white rounded-xl p-3 text-2xl">
           <MdEqualizer />
@@ -27,7 +44,8 @@ export default function ItemDepartment({ department }: { department: any }) {
               <FaEdit className="mr-2 text-blue-500" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem>
+
+            <DropdownMenuItem onClick={() => setOpen(true)}>
               <AiFillDelete className="mr-2 text-red-500" />
               Delete
             </DropdownMenuItem>
@@ -54,6 +72,9 @@ export default function ItemDepartment({ department }: { department: any }) {
           <p className="font-bold">10</p>
         </div>
       </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">Xin chào</DialogContent>
+      </Dialog>
     </div>
   );
 }
