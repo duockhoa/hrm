@@ -61,6 +61,7 @@ model Roles{
   id         Int      @id @default(autoincrement())
   name       String   @unique
   description String?
+  deleted_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt  @default(now())
   userRoles  UserRoles[]
@@ -111,6 +112,7 @@ model RolePermissions {
 model Departments {
   name        String   @id @unique
   description String?
+  deleted_at  DateTime?
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt  @default(now())
   team_lead  Int? 
@@ -154,6 +156,7 @@ model Company {
   address     String?
   phone       String?
   email       String?  @unique
+  deleted_at  DateTime?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt @default(now())
   departments Departments[]
