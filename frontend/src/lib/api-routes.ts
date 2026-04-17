@@ -22,9 +22,14 @@ const DEPARTMENT = {
   base: "/departments",
 };
 
+const COMPANY = {
+  base: "/companies",
+};
+
 export const API_ROUTES = {
   auth: AUTH,
   users: USERS,
   internal: INTERNAL,
   departments: DEPARTMENT,
+  companies: COMPANY,
 };

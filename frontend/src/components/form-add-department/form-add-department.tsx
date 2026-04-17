@@ -16,6 +16,7 @@ import { Input } from "../ui/input";
 import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 import { departmentsService } from "@/services/index.service";
+import { mutate } from "swr";
 
 export default function FormAddDepartment(props: { onClose: () => void }) {
   const formSchema = z.object({
@@ -39,6 +40,8 @@ export default function FormAddDepartment(props: { onClose: () => void }) {
         description: values.description,
       });
       toast.success("Department added successfully");
+      form.reset();
+      mutate(API_ROUTES.departments.base); // Refresh the department list after adding a new department
       props.onClose();
     } catch (error) {
       toast.error("Failed to add department");

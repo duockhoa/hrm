@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import useMobile from "@/hooks/use-mobile";
 
 function SidebarMenu({
   item,
@@ -16,6 +17,8 @@ function SidebarMenu({
 }) {
   const pathname = usePathname();
   const firstPath = "/" + pathname.split("/")[1];
+  const isMobile = useMobile();
+
   return (
     <div
       className={`w-full border-b border-gray-200 ${item.url === firstPath ? "bg-blue-100" : ""} pl-4 hover:bg-blue-50 `}
