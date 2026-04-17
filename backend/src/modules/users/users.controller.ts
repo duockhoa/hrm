@@ -25,7 +25,7 @@ import { Roles } from 'src/decorators/roles.decorator';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from 'src/cloudinary.service';
-@UseGuards(jwtAuthGuard, RolesGuard)
+@UseGuards(jwtAuthGuard)
 @Controller('users')
 @UsePipes(
   new ValidationPipe({
@@ -88,7 +88,7 @@ export class UsersController {
     );
   }
 
-  @UseGuards(jwtAuthGuard, PermissionsGuard)
+  @UseGuards(jwtAuthGuard)
   @Post('me/change-password')
   async changePassword(
     @Body() body: { currentPassword: string; newPassword: string },
