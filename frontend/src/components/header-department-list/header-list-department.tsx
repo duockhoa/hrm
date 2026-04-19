@@ -20,7 +20,7 @@ export default function HeaderListDepartment() {
       </div>
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogTrigger asChild>
-          <Button>
+          <Button className="cursor-pointer">
             <PlusIcon />
             Add new
           </Button>

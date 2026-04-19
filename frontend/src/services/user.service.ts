@@ -57,6 +57,13 @@ const changePassword = async ({
   return response.data;
 };
 
+const deleteUser = async (userId: string) => {
+  const response = await axiosClient.delete(
+    `${API_ROUTES.users.base}/${userId}`,
+  );
+  return response.data;
+};
+
 export default {
   fetcherMe,
   fetcherUserById,
@@ -64,4 +71,5 @@ export default {
   changePassword,
   addUser,
   updateUser,
+  deleteUser,
 };
