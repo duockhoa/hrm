@@ -10,6 +10,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { DepartmentsModule } from './modules/departments/departments.module';
+import { CompaniesModule } from './modules/companies/companies.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
       dest: './uploads',
     }),
     DepartmentsModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

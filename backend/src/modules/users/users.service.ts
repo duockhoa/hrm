@@ -21,7 +21,7 @@ export class UsersService {
             },
           },
         },
-        departments: true,
+        departmentObj: true,
       },
     });
   }
