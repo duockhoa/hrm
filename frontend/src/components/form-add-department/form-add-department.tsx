@@ -17,19 +17,29 @@ import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 import { departmentsService } from "@/services/index.service";
 import { mutate } from "swr";
+import useCompanyStore from "@/store/companies.store";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 export default function FormAddDepartment(props: { onClose: () => void }) {
+  const { companies } = useCompanyStore();
+  console.log("Companies in store:", companies);
   const formSchema = z.object({
     name: z.string().min(2).max(100),
     description: z.string().optional(),
-    company: z.string().optional(),
+    company_id: z.number().optional(),
   });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
-      company: "",
+      company_id: undefined,
     },
   });
 
@@ -38,6 +48,7 @@ export default function FormAddDepartment(props: { onClose: () => void }) {
       await departmentsService.createDepartment({
         name: values.name,
         description: values.description,
+        company_id: values.company_id,
       });
       toast.success("Department added successfully");
       form.reset();
@@ -89,15 +100,33 @@ export default function FormAddDepartment(props: { onClose: () => void }) {
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
-            name="description"
+            name="company_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Company</FormLabel>
                 <FormControl>
-                  <Input placeholder="Select company name" {...field} />
+                  <Select
+                    onValueChange={(val) => field.onChange(Number(val))}
+                    value={
+                      field.value !== undefined ? field.value.toString() : ""
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies?.map((company) => (
+                        <SelectItem
+                          key={company.id}
+                          value={company.id.toString()}
+                        >
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </FormControl>
                 <FormMessage />
               </FormItem>

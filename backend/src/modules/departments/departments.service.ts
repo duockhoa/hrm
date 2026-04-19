@@ -10,7 +10,6 @@ export class DepartmentsService {
   }
 
   async findByName(name: string) {
-    console.log('Finding department by name:', name);
     return this.prisma.departments.findUnique({
       where: { name: name },
     });
