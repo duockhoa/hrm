@@ -25,6 +25,7 @@ import axiosClient from "@/lib/axios-client";
 import useUserStore from "@/store/user.store";
 import { userService } from "@/services/index.service";
 import { mutate } from "swr";
+import { API_ROUTES } from "@/lib/api-routes";
 
 export default function EditUserForm({
   user,
@@ -68,6 +69,7 @@ export default function EditUserForm({
       const response = await userService.updateUser(user?.id || "", data);
       toast.success("User updated successfully!");
       mutate("/users/" + user?.id);
+      mutate(API_ROUTES.users.base);
       onClose?.();
     } catch (error: any) {
       toast.error(error?.message || "Failed to update user.");

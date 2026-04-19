@@ -32,7 +32,7 @@ export default function DetailUserHeader({ user }: { user: any }) {
       <div className="flex items-center gap-2">
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="cursor-pointer">
               <FaRegEdit />
               Edit
             </Button>
@@ -42,7 +42,7 @@ export default function DetailUserHeader({ user }: { user: any }) {
           </DialogContent>
         </Dialog>
         <div
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 hover:text-gray-900 cursor-pointer"
           onClick={() => {
             router.push("/home", { scroll: false });
           }}
