@@ -13,6 +13,7 @@ import axiosClient from "@/lib/axios-client";
 import UserDetail from "@/components/detail-user/detail-user";
 import LeaveInformationDetail from "@/components/detail-leave-information/detail-leave-information";
 import ContractInline from "@/components/inline-contract/inline-contact";
+import OvertimeInformationInline from "@/components/inline-overtime-information/inline-overtime-information";
 import { userService } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
 export default function DetailUserPage() {
@@ -47,8 +48,9 @@ export default function DetailUserPage() {
           <DetailUserHeader user={data} />
           <div className="flex flex-col items-center gap-4 mt-4 rounded">
             <UserDetail user={data} />
-            <LeaveInformationDetail />
             <ContractInline />
+            <LeaveInformationDetail />
+            <OvertimeInformationInline />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

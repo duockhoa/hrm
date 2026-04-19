@@ -15,8 +15,13 @@ import {
 } from "react-icons/md";
 import useUsersStore from "@/store/users.store";
 import useDepartmentStore from "@/store/department.store";
+import useCompanyStore from "@/store/companies.store";
 import useSWR from "swr";
-import { departmentsService, usersService } from "@/services/index.service";
+import {
+  departmentsService,
+  usersService,
+  companiesService,
+} from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
 const data = [
   {
@@ -96,6 +101,7 @@ export default function MainLayout({
   } = useSWR(API_ROUTES.users.base, usersService.fetcherUsers);
 
   const { setDepartments } = useDepartmentStore();
+  const { setCompanies } = useCompanyStore();
 
   const { data: departments } = useSWR(
     API_ROUTES.departments.base,
@@ -106,6 +112,16 @@ export default function MainLayout({
       setDepartments(departments);
     }
   }, [departments]);
+
+  const { data: companies } = useSWR(
+    API_ROUTES.companies.base,
+    companiesService.fetcherCompanies,
+  );
+  useEffect(() => {
+    if (companies) {
+      setCompanies(companies);
+    }
+  }, [companies]);
 
   useEffect(() => {
     if (isLoading) {
