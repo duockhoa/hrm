@@ -6,8 +6,7 @@ import FormConfirm from "@/components/form-confirm/form-confirm";
 import ItemDepartment from "@/components/item-department/item-department";
 export default function Department() {
   const { departments, departmentsLoading } = useDepartmentStore();
-  // phần xoá phòng ban.
-  console.log("Departments in store:", departments);
+
   return (
     <div className="bg-white rounded-md p-4 shadow-md h-[100%]">
       <HeaderListDepartment />

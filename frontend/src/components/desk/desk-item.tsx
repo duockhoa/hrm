@@ -76,11 +76,22 @@ export default function DeskItem({
                 View Details
               </DropdownMenuItem>
               <DropdownMenuItem>Edit</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete}>Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsOpen(true)}>
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+      {isOpen && (
+        <div className="">
+          <FormConfirm
+            message="Bạn chắc chắn muốn xoá người dùng này không?"
+            onConfirm={handleDelete}
+            onCancel={() => setIsOpen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
