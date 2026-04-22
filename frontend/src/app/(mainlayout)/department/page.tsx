@@ -4,7 +4,7 @@ import useDepartmentStore from "@/store/department.store";
 
 import FormConfirm from "@/components/form-confirm/form-confirm";
 import ItemDepartment from "@/components/item-department/item-department";
-export default function Department() {
+export default function DepartmentPage() {
   const { departments, departmentsLoading } = useDepartmentStore();
 
   return (
