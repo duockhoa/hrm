@@ -23,7 +23,11 @@ export default async function proxy(request: NextRequest) {
   const isLoggedIn = hasAccessToken && hasRefreshToken;
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/") {
+  if (isLoggedIn && authPaths.includes(pathname)) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+  /*
+    if (pathname === "/") {
     const target = isLoggedIn ? "/home" : "/login";
     return NextResponse.redirect(new URL(target, request.url));
   }
@@ -31,6 +35,7 @@ export default async function proxy(request: NextRequest) {
   if (isLoggedIn && authPaths.includes(pathname)) {
     return NextResponse.redirect(new URL("/home", request.url));
   }
+  */
 
   if (!isLoggedIn && protectedPaths.includes(pathname)) {
     if (!hasAccessToken && hasRefreshToken && backendBaseUrl) {
