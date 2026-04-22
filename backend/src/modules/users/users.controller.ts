@@ -25,7 +25,7 @@ import { Roles } from 'src/decorators/roles.decorator';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from 'src/cloudinary.service';
-@UseGuards(jwtAuthGuard, RolesGuard)
+@UseGuards(jwtAuthGuard)
 @Controller('users')
 @UsePipes(
   new ValidationPipe({
@@ -88,7 +88,7 @@ export class UsersController {
     );
   }
 
-  @UseGuards(jwtAuthGuard, PermissionsGuard)
+  @UseGuards(jwtAuthGuard)
   @Post('me/change-password')
   async changePassword(
     @Body() body: { currentPassword: string; newPassword: string },
@@ -106,7 +106,6 @@ export class UsersController {
     return { hashedPassword };
   }
 
-  @Roles('admin')
   @Post()
   async createUser(@Body() createUserDto: CreateUserDto) {
     const user = await this.usersService.createUser(createUserDto);
@@ -120,7 +119,6 @@ export class UsersController {
   }
 
   @Put(':id')
-  @Permissions('USER_EDIT')
   async updateUser(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: Partial<CreateUserDto>,
@@ -133,7 +131,6 @@ export class UsersController {
   }
 
   @UseGuards(jwtAuthGuard, PermissionsGuard)
-  @Permissions('USER_DELETE')
   @Delete(':id')
   async deleteUser(@Param('id') id: number) {
     const user = await this.usersService.deleteUser(id);

@@ -25,8 +25,10 @@ model Users {
   tokens     Tokens[]
   userRoles  UserRoles[]
   team_lead_departments Departments[] @relation("Departments_team_lead_user")
-  departments Departments? @relation(fields: [department], references: [name], onDelete: SetNull)
+  departmentObj Departments? @relation("DepartmentUsers", fields: [department], references: [name], onDelete: SetNull)
+  companyLeaderOf Company? @relation("CompanyLeader")
   contracts  Contracts[]
+  
   @@map("users")
 }
 
@@ -60,6 +62,7 @@ model Roles{
   id         Int      @id @default(autoincrement())
   name       String   @unique
   description String?
+  deleted_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt  @default(now())
   userRoles  UserRoles[]
@@ -110,11 +113,14 @@ model RolePermissions {
 model Departments {
   name        String   @id @unique
   description String?
+  deleted_at  DateTime?
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt  @default(now())
   team_lead  Int? 
   team_lead_user Users? @relation("Departments_team_lead_user", fields: [team_lead], references: [id], onDelete: SetNull)
-  users       Users[]   
+  company_id   Int?
+  users        Users[] @relation("DepartmentUsers")
+  company      Company? @relation(fields: [company_id], references: [id], onDelete: SetNull)
   @@map("departments")
 }
 
@@ -142,4 +148,22 @@ model ContractFiles {
   updated_at  DateTime @updatedAt @default(now())
   contracts   Contracts @relation(fields: [contract_id], references: [id], onDelete: Cascade)
   @@map("contract_files")
+}
+
+
+model Company {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  address     String?
+  phone       String?
+  email       String?  @unique
+  leader_id    Int? @unique
+  deleted_at  DateTime?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt @default(now())
+  departments Departments[]
+  leader     Users? @relation("CompanyLeader", fields: [leader_id], references: [id], onDelete: SetNull)
+  @@map("company") 
+
 }
