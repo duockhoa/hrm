@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/dialog";
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-
+import { MdApartment } from "react-icons/md";
+import { API_ROUTES } from "@/lib/api-routes";
 export default function ItemDepartment({ department }: { department: any }) {
   const [open, setOpen] = useState(false);
   const handleDelete = async () => {};
@@ -99,16 +100,35 @@ export default function ItemDepartment({ department }: { department: any }) {
         </div>
         <div className="flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <FiUsers />
+            <MdApartment />
             <p>Công ty</p>
           </div>
           <div className="font-bold">{department.company?.name || "N/A"}</div>
         </div>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">Xin chào</DialogContent>
-      </Dialog>
+      {open && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <FormConfirm
+            message="Xác nhận xóa phòng ban"
+            onConfirm={async () => {
+              try {
+                await departmentsService.deleteDepartment(department.name);
+                toast.success("Department deleted successfully");
+                mutate(API_ROUTES.departments.base);
+                setOpen(false);
+              } catch (error) {
+                toast.error("Failed to delete department");
+              }
+            }}
+            onCancel={() => setOpen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

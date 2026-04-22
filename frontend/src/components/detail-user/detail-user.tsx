@@ -16,6 +16,7 @@ export default function UserDetail({ user }: { user: any }) {
       <h1 className="text-4xl font-bold text-blue-500">
         {user?.name} - {user?.position} - {user?.department}
       </h1>
+      <div className="border-t-1 border-gray-300 p-y-2"></div>
       <div>
         <div className="">
           <OpenFormButton

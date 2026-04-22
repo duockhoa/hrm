@@ -19,6 +19,7 @@ const createDepartment = async (data: {
   name: string;
   description?: string;
   company_id?: number;
+  team_lead?: number;
 }) => {
   const response = await axiosClient.post(API_ROUTES.departments.base, data);
   return response.data;
@@ -37,6 +38,7 @@ const updateDepartment = async (
     name: string;
     description?: string;
     company_id?: number;
+    team_lead?: number;
   },
 ) => {
   const response = await axiosClient.put(

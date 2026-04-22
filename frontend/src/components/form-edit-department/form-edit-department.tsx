@@ -23,6 +23,7 @@ import {
 import { departmentsService } from "@/services/index.service";
 import { mutate } from "swr";
 import { API_ROUTES } from "@/lib/api-routes";
+import useUsersStore from "@/store/users.store";
 
 export default function FormEditDepartment({
   department,
@@ -31,11 +32,13 @@ export default function FormEditDepartment({
   department: any;
   onClose: () => void;
 }) {
+  const { users } = useUsersStore();
   const { companies } = useCompanyStore();
   const formSchema = z.object({
     name: z.string().min(2).max(100),
     description: z.string().optional(),
     company_id: z.number().optional(),
+    team_lead: z.number().optional(),
   });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,6 +46,7 @@ export default function FormEditDepartment({
       name: department?.name || "",
       description: department?.description || "",
       company_id: department?.company_id,
+      team_lead: department?.team_lead,
     },
   });
 
@@ -52,6 +56,7 @@ export default function FormEditDepartment({
         name: values.name,
         description: values.description,
         company_id: values.company_id,
+        team_lead: values.team_lead,
       });
       toast.success("Department updated successfully");
       mutate(API_ROUTES.departments.base);
@@ -129,6 +134,39 @@ export default function FormEditDepartment({
                           value={company.id.toString()}
                         >
                           {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="team_lead"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Team Lead</FormLabel>
+                <FormControl>
+                  <Select
+                    onValueChange={(val) =>
+                      field.onChange(val ? Number(val) : undefined)
+                    }
+                    value={
+                      field.value === null || field.value === undefined
+                        ? ""
+                        : field.value.toString()
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select team lead" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users?.map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>
+                          {user.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
