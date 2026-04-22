@@ -26,6 +26,7 @@ model Users {
   userRoles  UserRoles[]
   team_lead_departments Departments[] @relation("Departments_team_lead_user")
   departmentObj Departments? @relation("DepartmentUsers", fields: [department], references: [name], onDelete: SetNull)
+  companyLeaderOf Company? @relation("CompanyLeader")
   contracts  Contracts[]
   
   @@map("users")
@@ -153,12 +154,16 @@ model ContractFiles {
 model Company {
   id          Int      @id @default(autoincrement())
   name        String   @unique
+  description String?
   address     String?
   phone       String?
   email       String?  @unique
+  leader_id    Int? @unique
   deleted_at  DateTime?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt @default(now())
   departments Departments[]
+  leader     Users? @relation("CompanyLeader", fields: [leader_id], references: [id], onDelete: SetNull)
   @@map("company") 
+
 }
