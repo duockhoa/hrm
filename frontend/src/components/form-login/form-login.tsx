@@ -52,7 +52,7 @@ export default function LoginForm() {
       await setCookie({ accessToken, refreshToken });
       if (accessToken && refreshToken) {
         setTokens(accessToken, refreshToken);
-        router.replace("/home");
+        router.replace("/");
         router.refresh();
       }
       setIsLoading(false);

@@ -45,8 +45,8 @@ export default function FormEditDepartment({
     defaultValues: {
       name: department?.name || "",
       description: department?.description || "",
-      company_id: department?.company_id,
-      team_lead: department?.team_lead,
+      company_id: department?.company_id || undefined,
+      team_lead: department?.team_lead || undefined,
     },
   });
 
