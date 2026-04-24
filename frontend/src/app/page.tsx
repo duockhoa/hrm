@@ -28,14 +28,14 @@ const APPS: AppLauncherItem[] = [
 
   {
     name: "HSL ONLINE",
-    link: "/leave",
+    link: "https://www.appsheet.com/start/52a91b81-a00d-4601-8cdd-ae297d2c163d",
     icon: ClipboardCheck,
     tileClassName:
       "bg-[linear-gradient(180deg,#64D45F_0%,#42AF4F_56%,#2D8A3A_100%)]",
   },
   {
     name: "KHO DƯỢC KHOA",
-    link: "/company",
+    link: "https://www.appsheet.com/start/b3c99ab1-4c7d-4894-908e-3c58c90304ad",
     icon: Building2,
     tileClassName:
       "bg-[linear-gradient(180deg,#FFB11D_0%,#F08D00_55%,#D66A00_100%)]",
