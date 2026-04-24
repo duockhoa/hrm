@@ -14,20 +14,25 @@ function isSoftDeleteModel(model?: string): model is SoftDeleteModel {
   return !!model && model in softDeleteDelegates;
 }
 
-function withNotDeleted<T extends { where?: Record<string, unknown> }>(args: T): T {
-  const where = args.where ?? {};
+type PrismaArgsWithWhere = {
+  where?: Record<string, unknown>;
+};
+
+function withNotDeleted<T>(args: T): T & PrismaArgsWithWhere {
+  const typedArgs = (args ?? {}) as PrismaArgsWithWhere;
+  const where = typedArgs.where ?? {};
 
   if ('deleted_at' in where) {
-    return args;
+    return args as T & PrismaArgsWithWhere;
   }
 
   return {
-    ...args,
+    ...(args as object),
     where: {
       ...where,
       deleted_at: null,
     },
-  };
+  } as T & PrismaArgsWithWhere;
 }
 
 const softDeleteExtension = Prisma.defineExtension((client) =>
