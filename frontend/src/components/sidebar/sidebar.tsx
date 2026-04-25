@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useMobile from "@/hooks/use-mobile";
+import { useSidebarStore } from "@/store/sidebar-store";
 
 function SidebarMenu({
   item,
@@ -18,12 +19,13 @@ function SidebarMenu({
   const pathname = usePathname();
   const firstPath = "/" + pathname.split("/")[1];
   const isMobile = useMobile();
+  const { closeSidebar } = useSidebarStore();
 
   return (
     <div
       className={`w-full border-b border-gray-200 ${item.url === firstPath ? "bg-blue-100" : ""} pl-4 hover:bg-blue-50 `}
     >
-      <Link href={item.url}>
+      <Link href={item.url} onClick={() => isMobile && closeSidebar()}>
         <div className="flex items-center gap-2 p-2 ">
           {item.icon}
           {isOpen && item.name}

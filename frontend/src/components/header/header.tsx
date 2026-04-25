@@ -47,20 +47,7 @@ export default function Header() {
 
       <div className="flex items-center gap-4">
         <Search />
-        <Notification
-          content={[
-            {
-              id: "1",
-              title: "New Message",
-              message: "You have received a new message.",
-              from: "System",
-              to: "User",
-              link: "/messages/1",
-              read: false,
-              createdAt: new Date(),
-            },
-          ]}
-        />
+        <Notification content={[]} />
 
         <UserCard user={user} />
       </div>
