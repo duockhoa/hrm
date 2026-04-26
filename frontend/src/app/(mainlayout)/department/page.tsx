@@ -1,7 +1,11 @@
 "use client";
 import HeaderListDepartment from "@/components/header-department-list/header-list-department";
 import useDepartmentStore from "@/store/department.store";
+import useSearchStore from "@/store/search.store";
+import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 
 import ItemDepartment from "@/components/item-department/item-department";
 
@@ -44,6 +48,28 @@ function DepartmentSkeletonList() {
 
 export default function DepartmentPage() {
   const { departments, departmentsLoading } = useDepartmentStore();
+  const pathname = usePathname();
+  const searchScopePath = getSearchScopePath(pathname);
+  const searchKeyword = useSearchStore((state) =>
+    state.searchByPath[searchScopePath] ?? "",
+  );
+  const filteredDepartments = useMemo(() => {
+    if (!searchKeyword) {
+      return departments;
+    }
+
+    return departments.filter((department) =>
+      matchesSearchKeyword(
+        [
+          department.name,
+          department.description,
+          department.company?.name,
+          department.team_lead_user?.name,
+        ],
+        searchKeyword,
+      ),
+    );
+  }, [departments, searchKeyword]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white p-4 shadow-md">
@@ -52,14 +78,19 @@ export default function DepartmentPage() {
       </div>
 
       <div className="mt-4 flex-1 min-h-0 overflow-y-auto pr-1">
-        {departmentsLoading || departments.length === 0 ? (
+        {departmentsLoading ? (
           <DepartmentSkeletonList />
         ) : (
           <div className="flex flex-row flex-wrap gap-4 content-start">
-            {departments.map((dept) => (
+            {filteredDepartments.map((dept) => (
               <ItemDepartment key={dept.name} department={dept} />
             ))}
           </div>
+        )}
+        {!departmentsLoading && filteredDepartments.length === 0 && (
+          <p className="p-4 text-center text-sm text-gray-500">
+            Khong tim thay phong ban phu hop.
+          </p>
         )}
       </div>
     </div>

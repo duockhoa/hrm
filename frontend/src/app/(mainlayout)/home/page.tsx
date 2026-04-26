@@ -1,15 +1,34 @@
 "use client";
 import useUsersStore from "@/store/users.store";
+import useSearchStore from "@/store/search.store";
 import DeskItem from "@/components/desk/desk-item";
 import ListUserHeader from "@/components/header-list-user/header-list-user";
-import { useRouter } from "next/navigation";
-import { useRef, useEffect } from "react";
+import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { usePathname, useRouter } from "next/navigation";
+import { useRef, useEffect, useMemo } from "react";
 
 export default function HomePage() {
   const { users, usersLoading } = useUsersStore();
 
   const router = useRouter();
+  const pathname = usePathname();
+  const searchScopePath = getSearchScopePath(pathname);
+  const searchKeyword = useSearchStore((state) =>
+    state.searchByPath[searchScopePath] ?? "",
+  );
   const containerRef = useRef<HTMLDivElement>(null);
+  const filteredUsers = useMemo(() => {
+    if (!searchKeyword) {
+      return users;
+    }
+
+    return users.filter((user) =>
+      matchesSearchKeyword(
+        [user.name, user.position, user.department, user.email, user.phone],
+        searchKeyword,
+      ),
+    );
+  }, [users, searchKeyword]);
 
   // Lưu scroll position trước khi chuyển trang
   const handleClick = (userId: string) => {
@@ -39,13 +58,18 @@ export default function HomePage() {
           ? Array.from({ length: 10 }).map((_, idx) => (
               <DeskItem key={idx} user={null} onClick={() => {}} />
             ))
-          : users.map((user) => (
+          : filteredUsers.map((user) => (
               <DeskItem
                 key={user.id}
                 user={user}
                 onClick={() => handleClick(user.id)}
               />
             ))}
+        {!usersLoading && filteredUsers.length === 0 && (
+          <p className="p-4 text-center text-sm text-gray-500">
+            Khong tim thay nhan su phu hop.
+          </p>
+        )}
       </div>
     </div>
   );

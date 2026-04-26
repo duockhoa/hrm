@@ -1,8 +1,12 @@
 "use client";
 import HeaderListCompany from "@/components/header-list-company/header-list-company";
 import useCompanyStore from "@/store/companies.store";
+import useSearchStore from "@/store/search.store";
+import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
 import ItemCompany from "@/components/item-company/item-company";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 
 function CompanySkeletonList() {
   return (
@@ -28,6 +32,29 @@ function CompanySkeletonList() {
 
 export default function Company() {
   const { companies, companiesLoading } = useCompanyStore();
+  const pathname = usePathname();
+  const searchScopePath = getSearchScopePath(pathname);
+  const searchKeyword = useSearchStore((state) =>
+    state.searchByPath[searchScopePath] ?? "",
+  );
+  const filteredCompanies = useMemo(() => {
+    if (!searchKeyword) {
+      return companies;
+    }
+
+    return companies.filter((company: any) =>
+      matchesSearchKeyword(
+        [
+          company.name,
+          company.description,
+          company.address,
+          company.phone,
+          company.email,
+        ],
+        searchKeyword,
+      ),
+    );
+  }, [companies, searchKeyword]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white p-4 shadow-md">
@@ -36,14 +63,19 @@ export default function Company() {
       </div>
 
       <div className="mt-4 flex-1 min-h-0 overflow-y-auto pr-1">
-        {companiesLoading || companies.length === 0 ? (
+        {companiesLoading ? (
           <CompanySkeletonList />
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {companies.map((company: any) => (
+            {filteredCompanies.map((company: any) => (
               <ItemCompany key={company.id} company={company} />
             ))}
           </div>
+        )}
+        {!companiesLoading && filteredCompanies.length === 0 && (
+          <p className="p-4 text-center text-sm text-gray-500">
+            Khong tim thay cong ty phu hop.
+          </p>
         )}
       </div>
     </div>
