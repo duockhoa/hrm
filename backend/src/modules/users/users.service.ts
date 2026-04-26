@@ -2,9 +2,15 @@ import { Injectable, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { compareSync, hash } from 'bcrypt';
 import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventNames } from 'src/event.interface';
+
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
   async findAll() {
     return this.prisma.users.findMany();
@@ -43,6 +49,7 @@ export class UsersService {
     const newUser = await this.prisma.users.create({
       data,
     });
+    this.eventEmitter.emit(EventNames.USER_CREATED, newUser);
     return newUser;
   }
 
@@ -55,6 +62,7 @@ export class UsersService {
     if (!deleteResponse) {
       return null;
     }
+    this.eventEmitter.emit(EventNames.USER_DELETED, user);
     return user;
   }
 
@@ -67,6 +75,7 @@ export class UsersService {
       where: { id },
       data: updateUserDto,
     });
+    this.eventEmitter.emit(EventNames.USER_UPDATED, updatedUser);
     return updatedUser;
   }
 

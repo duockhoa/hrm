@@ -11,10 +11,14 @@ import { PermissionsModule } from './modules/permissions/permissions.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { CompaniesModule } from './modules/companies/companies.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { EmailModule } from './modules/email/email.module';
+import { ExternalSyncModule } from './modules/external-sync/external-sync.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({}),
+    EventEmitterModule.forRoot(),
     UsersModule,
     AuthModule,
     RolesModule,
@@ -24,6 +28,8 @@ import { CompaniesModule } from './modules/companies/companies.module';
     }),
     DepartmentsModule,
     CompaniesModule,
+    EmailModule,
+    ExternalSyncModule,
   ],
   controllers: [AppController],
   providers: [AppService],
