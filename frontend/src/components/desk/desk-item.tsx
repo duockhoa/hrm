@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AiOutlineMore } from "react-icons/ai";
 import {
@@ -13,6 +13,8 @@ import { userService } from "@/services/index.service";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { API_ROUTES } from "@/lib/api-routes";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import EditUserForm from "../form-edit-user/form-edit-user";
 
 export default function DeskItem({
   user,
@@ -22,6 +24,15 @@ export default function DeskItem({
   onClick: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const handleViewDetails = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    if (!user) {
+      return;
+    }
+    onClick();
+  };
+
   const handleDelete = async () => {
     try {
       await userService.deleteUser(user?.id || "");
@@ -72,10 +83,12 @@ export default function DeskItem({
               <AiOutlineMore className="text-xl mx-2 text-gray-600 hover:text-gray-900" />
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={onClick}>
+              <DropdownMenuItem onClick={handleViewDetails}>
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem>Edit</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
+                Edit
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsOpen(true)}>
                 Delete
               </DropdownMenuItem>
@@ -92,6 +105,15 @@ export default function DeskItem({
           />
         </div>
       )}
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent
+          className="max-w-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <EditUserForm user={user} onClose={() => setIsEditOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

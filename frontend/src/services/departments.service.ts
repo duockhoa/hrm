@@ -35,7 +35,6 @@ const deleteDepartment = async (id: string) => {
 const updateDepartment = async (
   id: string,
   data: {
-    name: string;
     description?: string;
     company_id?: number;
     team_lead?: number;

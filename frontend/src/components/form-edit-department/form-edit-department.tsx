@@ -35,7 +35,6 @@ export default function FormEditDepartment({
   const { users } = useUsersStore();
   const { companies } = useCompanyStore();
   const formSchema = z.object({
-    name: z.string().min(2).max(100),
     description: z.string().optional(),
     company_id: z.number().optional(),
     team_lead: z.number().optional(),
@@ -43,7 +42,6 @@ export default function FormEditDepartment({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: department?.name || "",
       description: department?.description || "",
       company_id: department?.company_id || undefined,
       team_lead: department?.team_lead || undefined,
@@ -53,7 +51,6 @@ export default function FormEditDepartment({
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       await departmentsService.updateDepartment(department.name, {
-        name: values.name,
         description: values.description,
         company_id: values.company_id,
         team_lead: values.team_lead,
@@ -62,12 +59,12 @@ export default function FormEditDepartment({
       mutate(API_ROUTES.departments.base);
       mutate(`${API_ROUTES.departments.base}/${department.name}`);
       onClose();
-    } catch (error) {
+    } catch {
       toast.error("Failed to update department");
     }
   };
 
-  const onError = (errors: any) => {
+  const onError = () => {
     toast.error("Please fix the errors in the form");
   };
 
@@ -78,19 +75,13 @@ export default function FormEditDepartment({
           onSubmit={form.handleSubmit(onSubmit, onError)}
           className="space-y-4"
         >
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter department name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <FormItem>
+            <FormLabel>Name</FormLabel>
+            <FormControl>
+              <Input value={department?.name || ""} disabled />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
           <FormField
             control={form.control}
             name="description"

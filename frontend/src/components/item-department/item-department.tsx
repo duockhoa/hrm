@@ -15,23 +15,16 @@ import FormConfirm from "../form-confirm/form-confirm";
 import { departmentsService } from "@/services/index.service";
 import { toast } from "sonner";
 import { mutate } from "swr";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { MdApartment } from "react-icons/md";
 import { API_ROUTES } from "@/lib/api-routes";
+import FormEditDepartment from "../form-edit-department/form-edit-department";
+
 export default function ItemDepartment({ department }: { department: any }) {
   const [open, setOpen] = useState(false);
-  const handleDelete = async () => {};
+  const [isEditOpen, setIsEditOpen] = useState(false);
   // Lưu scroll position trước khi chuyển trang
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,7 +33,6 @@ export default function ItemDepartment({ department }: { department: any }) {
     sessionStorage.setItem("userListScroll", scrollTop.toString());
     router.push(`/department/${departmentName}`, { scroll: false });
   };
-  console.log("Department Item:", department);
   return (
     <div
       className="bg-white rounded-md p-4 shadow-md h-[100%] w-120 border border-gray-300 hover:shadow-lg cursor-pointer"
@@ -58,7 +50,7 @@ export default function ItemDepartment({ department }: { department: any }) {
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
                 <FaEdit className="mr-2 text-blue-500" />
                 Edit
               </DropdownMenuItem>
@@ -121,7 +113,7 @@ export default function ItemDepartment({ department }: { department: any }) {
                 toast.success("Department deleted successfully");
                 mutate(API_ROUTES.departments.base);
                 setOpen(false);
-              } catch (error) {
+              } catch {
                 toast.error("Failed to delete department");
               }
             }}
@@ -129,6 +121,18 @@ export default function ItemDepartment({ department }: { department: any }) {
           />
         </div>
       )}
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent
+          className="max-w-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FormEditDepartment
+            department={department}
+            onClose={() => setIsEditOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
