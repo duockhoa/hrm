@@ -64,6 +64,7 @@ frontend/.env.*
 frontend/logs/
 frontend/build/
 frontend/dist/
+frontend/next-env.d.ts
 
 # Misc
 *.local
