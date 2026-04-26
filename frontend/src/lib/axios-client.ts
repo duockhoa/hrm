@@ -40,6 +40,20 @@ const notifyRefreshFailure = (error: unknown) => {
   refreshSubscribers = [];
 };
 
+const redirectToLogin = async () => {
+  clearTokenCache();
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    await fetch("/api/auth", { method: "DELETE" });
+  } finally {
+    if (window.location.pathname !== "/login") {
+      window.location.replace("/login");
+    }
+  }
+};
+
 axiosClient.interceptors.request.use((config) => {
   const { accessToken } = getTokenCache();
   if (accessToken) {
@@ -63,6 +77,11 @@ axiosClient.interceptors.response.use(
     const url = originalRequest.url ?? "";
     const isAuthEndpoint =
       url.includes("/auth/login") || url.includes("/auth/refresh-token");
+
+    if (!error.response && !isAuthEndpoint) {
+      await redirectToLogin();
+      return Promise.reject(error);
+    }
 
     if (status !== 401 || originalRequest._retry || isAuthEndpoint) {
       return Promise.reject(error);
@@ -112,8 +131,8 @@ axiosClient.interceptors.response.use(
       originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
       return axiosClient(originalRequest);
     } catch (refreshError) {
-      clearTokenCache();
       notifyRefreshFailure(refreshError);
+      await redirectToLogin();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

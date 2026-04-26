@@ -7,8 +7,9 @@ const protectedPaths = [
   "/home",
   "/profile",
   "/settings",
-  "contract",
+  "/contract",
   "/department",
+  "/company",
 ];
 const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const cookieDomain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN;
@@ -22,6 +23,9 @@ export default async function proxy(request: NextRequest) {
   const hasRefreshToken = Boolean(refreshToken);
   const isLoggedIn = hasAccessToken && hasRefreshToken;
   const { pathname } = request.nextUrl;
+  const isProtectedPath = protectedPaths.some((path) =>
+    path === "/" ? pathname === "/" : pathname.startsWith(path),
+  );
 
   if (isLoggedIn && authPaths.includes(pathname)) {
     return NextResponse.redirect(new URL("/", request.url));
@@ -37,25 +41,23 @@ export default async function proxy(request: NextRequest) {
   }
   */
 
-  if (!isLoggedIn && protectedPaths.includes(pathname)) {
+  if (!isLoggedIn && isProtectedPath) {
     if (!hasAccessToken && hasRefreshToken && backendBaseUrl) {
       const refreshResponse = await refreshAccessToken(request, refreshToken);
       if (refreshResponse) {
         return refreshResponse;
       }
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+    return redirectToLoginAndClearAuthCookies(request);
   }
 
-  if (isLoggedIn && protectedPaths.includes(pathname)) {
-    if (
-      shouldRefreshAccessTokenAfterExpiry(accessToken, 60) &&
-      hasRefreshToken
-    ) {
+  if (isLoggedIn && isProtectedPath) {
+    if (isAccessTokenExpired(accessToken) && hasRefreshToken) {
       const refreshResponse = await refreshAccessToken(request, refreshToken);
       if (refreshResponse) {
         return refreshResponse;
       }
+      return redirectToLoginAndClearAuthCookies(request);
     }
   }
 
@@ -119,15 +121,37 @@ const getAccessTokenMaxAge = (token: string, fallbackSeconds: number) => {
   }
 };
 
-const shouldRefreshAccessTokenAfterExpiry = (
-  token: string | undefined,
-  graceSecondsAfterExpiry: number,
-) => {
+const isAccessTokenExpired = (token: string | undefined) => {
   if (!token) {
-    return false;
+    return true;
   }
   const maxAge = getAccessTokenMaxAge(token, 0);
-  return maxAge <= 0 && maxAge >= -graceSecondsAfterExpiry;
+  return maxAge <= 0;
+};
+
+const redirectToLoginAndClearAuthCookies = (request: NextRequest) => {
+  const response = NextResponse.redirect(new URL("/login", request.url));
+  response.cookies.set({
+    name: "accessToken",
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    secure: isSecureCookie,
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
+  });
+  response.cookies.set({
+    name: "refreshToken",
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    secure: isSecureCookie,
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
+  });
+  return response;
 };
 
 const decodeBase64Url = (value: string) => {
@@ -147,12 +171,6 @@ const decodeBase64Url = (value: string) => {
 
 export const config = {
   matcher: [
-    "/",
-    "/login",
-    "/register",
-    "/forgot-password",
-    "/home",
-    "/profile",
-    "/settings",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };

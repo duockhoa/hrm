@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import Link from "next/dist/client/link";
 export default function DetailDepartmentHeader({
   department,
 }: {
@@ -29,7 +30,7 @@ export default function DetailDepartmentHeader({
   return (
     <div className="w-full flex justify-between border-b border-gray-200 pb-2">
       <div className="flex items-center gap-2">
-        <h1>Departments</h1>
+        <Link href="/department">Departments</Link>
         <AiOutlineRight />
         <p>{department?.name}</p>
       </div>

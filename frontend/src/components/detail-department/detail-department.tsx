@@ -1,7 +1,25 @@
 import FieldDisplay from "../field-display/field-display";
+import { Skeleton } from "../ui/skeleton";
+
+function DetailDepartmentSkeleton() {
+  return (
+    <div className="flex w-full max-w-4xl flex-col gap-4 rounded border bg-white p-4 text-center shadow-md">
+      <Skeleton className="mx-auto h-10 w-3/4" />
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div key={index} className="flex w-full justify-start gap-4">
+            <Skeleton className="m-1 h-5 min-w-[150px] max-w-[200px]" />
+            <Skeleton className="h-5 flex-1" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function DetailDepartment({ department }: { department: any }) {
   if (!department) {
-    return <div>Loading department details...</div>;
+    return <DetailDepartmentSkeleton />;
   }
 
   return (

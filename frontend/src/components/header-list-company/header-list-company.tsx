@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import Link from "next/link";
 import { useState } from "react";
 export default function HeaderListCompany() {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -16,7 +17,7 @@ export default function HeaderListCompany() {
     <div className="w-full flex justify-between border-b border-gray-200 pb-2 bg-white">
       <div className="flex items-center gap-2">
         <AiOutlineRight />
-        <h1>Companies</h1>
+        <Link href="/company">Companies</Link>
       </div>
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogTrigger asChild>
