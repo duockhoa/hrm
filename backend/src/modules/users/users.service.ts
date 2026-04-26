@@ -40,7 +40,7 @@ export class UsersService {
     const newUser = await this.prisma.users.create({
       data,
     });
-    this.eventEmitter.emit(EventNames.USER_CREATED, newUser);
+    this.eventEmitter.emit(EventNames.USER_SYNCED, newUser);
     return newUser;
   }
 
@@ -53,7 +53,7 @@ export class UsersService {
     if (!deleteResponse) {
       return null;
     }
-    this.eventEmitter.emit(EventNames.USER_DELETED, user);
+    this.eventEmitter.emit(EventNames.USER_SYNCED, user);
     return user;
   }
 
@@ -66,7 +66,7 @@ export class UsersService {
       where: { id },
       data: updateUserDto,
     });
-    this.eventEmitter.emit(EventNames.USER_UPDATED, updatedUser);
+    this.eventEmitter.emit(EventNames.USER_SYNCED, updatedUser);
     return updatedUser;
   }
 
