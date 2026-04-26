@@ -10,9 +10,18 @@ export class UsersService {
     return this.prisma.users.findMany();
   }
 
-  findById(id: number) {
+  findById(id: number | string | undefined | null) {
+    if (id === undefined || id === null || id === '') {
+      return null;
+    }
+
+    const userId = Number(id);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return null;
+    }
+
     return this.prisma.users.findUnique({
-      where: { id: id },
+      where: { id: userId },
       include: {
         userRoles: {
           include: {
