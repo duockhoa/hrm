@@ -8,7 +8,11 @@ import {
   Put,
 } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
+import { UseGuards } from '@nestjs/common';
+import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/guards/roles.guard';
 
+@UseGuards(jwtAuthGuard)
 @Controller('companies')
 export class CompaniesController {
   constructor(private readonly companiesService: CompaniesService) {}
