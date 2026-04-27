@@ -100,28 +100,34 @@ export default function MainLayout({
     isLoading,
   } = useSWR(API_ROUTES.users.base, usersService.fetcherUsers);
 
-  const { setDepartments } = useDepartmentStore();
-  const { setCompanies } = useCompanyStore();
+  const { setDepartments, setIsLoading: setDepartmentsLoading } =
+    useDepartmentStore();
+  const { setCompanies, setIsLoading: setCompaniesLoading } =
+    useCompanyStore();
 
-  const { data: departments } = useSWR(
+  const { data: departments, isLoading: isDepartmentsLoading } = useSWR(
     API_ROUTES.departments.base,
     departmentsService.fetcherDepartments,
   );
   useEffect(() => {
+    setDepartmentsLoading(isDepartmentsLoading);
     if (departments) {
       setDepartments(departments);
+      setDepartmentsLoading(false);
     }
-  }, [departments]);
+  }, [departments, isDepartmentsLoading]);
 
-  const { data: companies } = useSWR(
+  const { data: companies, isLoading: isCompaniesLoading } = useSWR(
     API_ROUTES.companies.base,
     companiesService.fetcherCompanies,
   );
   useEffect(() => {
+    setCompaniesLoading(isCompaniesLoading);
     if (companies) {
       setCompanies(companies);
+      setCompaniesLoading(false);
     }
-  }, [companies]);
+  }, [companies, isCompaniesLoading]);
 
   useEffect(() => {
     if (isLoading) {

@@ -53,6 +53,7 @@ export default function DepartmentPage() {
   const searchKeyword = useSearchStore((state) =>
     state.searchByPath[searchScopePath] ?? "",
   );
+  const isSearching = searchKeyword.trim().length > 0;
   const filteredDepartments = useMemo(() => {
     if (!searchKeyword) {
       return departments;
@@ -80,16 +81,17 @@ export default function DepartmentPage() {
       <div className="mt-4 flex-1 min-h-0 overflow-y-auto pr-1">
         {departmentsLoading ? (
           <DepartmentSkeletonList />
-        ) : (
+        ) : filteredDepartments.length > 0 ? (
           <div className="flex flex-row flex-wrap gap-4 content-start">
             {filteredDepartments.map((dept) => (
               <ItemDepartment key={dept.name} department={dept} />
             ))}
           </div>
-        )}
-        {!departmentsLoading && filteredDepartments.length === 0 && (
+        ) : (
           <p className="p-4 text-center text-sm text-gray-500">
-            Khong tim thay phong ban phu hop.
+            {isSearching
+              ? "Khong tim thay phong ban phu hop."
+              : "Chua co phong ban nao."}
           </p>
         )}
       </div>

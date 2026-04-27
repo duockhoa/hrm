@@ -71,6 +71,15 @@ export default function Home() {
   const [now, setNow] = useState(new Date());
   const { user } = useUserStore();
   const isMobile = useMobile();
+
+  useEffect(() => {
+    document.title = "DKPHARMA APP";
+
+    return () => {
+      document.title = "DK HRM";
+    };
+  }, []);
+
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       setNow(new Date());

@@ -23,7 +23,7 @@ export default function Search() {
     <div className="relative">
       <Input
         type="text"
-        placeholder="Tim kiem"
+        placeholder="Tìm kiếm..."
         className="rounded-full  md:w-40 w-0 focus:w-40  md:focus:w-100 focus:ring-0 focus-visible:ring-0 transition-all duration-300 ease-in-out pr-8"
         value={search}
         onChange={(e) => handleSearchChange(e.target.value)}

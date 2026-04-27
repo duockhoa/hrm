@@ -37,6 +37,7 @@ export default function Company() {
   const searchKeyword = useSearchStore((state) =>
     state.searchByPath[searchScopePath] ?? "",
   );
+  const isSearching = searchKeyword.trim().length > 0;
   const filteredCompanies = useMemo(() => {
     if (!searchKeyword) {
       return companies;
@@ -65,16 +66,17 @@ export default function Company() {
       <div className="mt-4 flex-1 min-h-0 overflow-y-auto pr-1">
         {companiesLoading ? (
           <CompanySkeletonList />
-        ) : (
+        ) : filteredCompanies.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredCompanies.map((company: any) => (
               <ItemCompany key={company.id} company={company} />
             ))}
           </div>
-        )}
-        {!companiesLoading && filteredCompanies.length === 0 && (
+        ) : (
           <p className="p-4 text-center text-sm text-gray-500">
-            Khong tim thay cong ty phu hop.
+            {isSearching
+              ? "Khong tim thay cong ty phu hop."
+              : "Chua co cong ty nao."}
           </p>
         )}
       </div>
