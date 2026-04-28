@@ -1,32 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { OnEvent } from '@nestjs/event-emitter';
 import { EventNames } from 'src/event.interface';
-
+import { UsersService } from '../users/users.service';
+import { DepartmentsService } from '../departments/departments.service';
+import { ExternalApiIntegration } from 'src/integrations/external-api.integration';
 @Injectable()
 export class ExternalSyncService {
-  constructor(private eventEmitter: EventEmitter2) {}
+  constructor(
+    private usersService: UsersService,
+    private departmentsService: DepartmentsService,
+    private externalApiIntegration: ExternalApiIntegration,
+  ) {}
 
-  syncUserCreated(user: any) {
-    this.eventEmitter.emit(EventNames.USER_CREATED, user);
+  @OnEvent(EventNames.USER_SYNCED)
+  async handleUserSyncedEvent(payload: any) {
+    const users = await this.usersService.findAllWithDeleted();
+    await this.externalApiIntegration.post('sync/users', users);
   }
 
-  syncUserUpdated(user: any) {
-    this.eventEmitter.emit(EventNames.USER_UPDATED, user);
-  }
-
-  syncUserDeleted(user: any) {
-    this.eventEmitter.emit(EventNames.USER_DELETED, user);
-  }
-
-  syncDepartmentCreated(department: any) {
-    this.eventEmitter.emit(EventNames.DEPARTMENT_CREATED, department);
-  }
-
-  syncDepartmentUpdated(department: any) {
-    this.eventEmitter.emit(EventNames.DEPARTMENT_UPDATED, department);
-  }
-
-  syncDepartmentDeleted(department: any) {
-    this.eventEmitter.emit(EventNames.DEPARTMENT_DELETED, department);
+  @OnEvent(EventNames.DEPARTMENT_SYNCED)
+  async handleDepartmentSyncedEvent(payload: any) {
+    const departments = await this.departmentsService.findAll();
+    console.log('Current departments in the system:', departments);
+    await this.externalApiIntegration.post('sync/departments', departments);
   }
 }

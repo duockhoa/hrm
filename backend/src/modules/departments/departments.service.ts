@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventNames } from 'src/event.interface';
 
 @Injectable()
 export class DepartmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
   async findAll() {
     return this.prisma.departments.findMany({
       include: {
@@ -40,17 +45,25 @@ export class DepartmentsService {
     const newDepartment = await this.prisma.departments.create({
       data: createDepartmentDto,
     });
+    this.eventEmitter.emit(EventNames.DEPARTMENT_SYNCED, newDepartment);
     return newDepartment;
   }
   async delete(name: string) {
-    return this.prisma.departments.delete({
+    const department = await this.prisma.departments.findUnique({
       where: { name: name },
     });
+    const deletedDepartment = await this.prisma.departments.delete({
+      where: { name: name },
+    });
+    this.eventEmitter.emit(EventNames.DEPARTMENT_SYNCED, deletedDepartment);
+    return deletedDepartment;
   }
   async update(name: string, updateDepartmentDto: any) {
-    return this.prisma.departments.update({
+    const updatedDepartment = await this.prisma.departments.update({
       where: { name: name },
       data: updateDepartmentDto,
     });
+    this.eventEmitter.emit(EventNames.DEPARTMENT_SYNCED, updatedDepartment);
+    return updatedDepartment;
   }
 }
