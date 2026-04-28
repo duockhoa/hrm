@@ -15,6 +15,7 @@ const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const cookieDomain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN;
 const refreshEndpoint = API_ROUTES.auth.refreshToken;
 const isSecureCookie = process.env.NODE_ENV === "production";
+const isHttpOnlyCookie = process.env.COOKIE_HTTP_ONLY === "true";
 
 export default async function proxy(request: NextRequest) {
   const accessToken = request.cookies.get("accessToken")?.value;
@@ -89,7 +90,7 @@ const refreshAccessToken = async (
     redirectResponse.cookies.set({
       name: "accessToken",
       value: data.accessToken,
-      httpOnly: true,
+      httpOnly: isHttpOnlyCookie,
       sameSite: "lax",
       path: "/",
       maxAge,
@@ -134,7 +135,7 @@ const redirectToLoginAndClearAuthCookies = (request: NextRequest) => {
   response.cookies.set({
     name: "accessToken",
     value: "",
-    httpOnly: true,
+    httpOnly: isHttpOnlyCookie,
     sameSite: "lax",
     path: "/",
     maxAge: 0,
@@ -144,7 +145,7 @@ const redirectToLoginAndClearAuthCookies = (request: NextRequest) => {
   response.cookies.set({
     name: "refreshToken",
     value: "",
-    httpOnly: true,
+    httpOnly: isHttpOnlyCookie,
     sameSite: "lax",
     path: "/",
     maxAge: 0,
