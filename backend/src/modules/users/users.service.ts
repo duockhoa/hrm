@@ -16,6 +16,12 @@ export class UsersService {
     return this.prisma.users.findMany();
   }
 
+  async findAllWithDeleted() {
+    return this.prisma.users.findMany({
+      withDeleted: true,
+    } as any);
+  }
+
   findById(id: number) {
     return this.prisma.users.findUnique({
       where: { id: id },

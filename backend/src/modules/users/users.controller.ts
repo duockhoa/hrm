@@ -39,9 +39,13 @@ export class UsersController {
   ) {}
 
   @Get()
-  @Permissions('USER_VIEW')
   findAll() {
     return this.usersService.findAll();
+  }
+
+  @Get('with-deleted')
+  findAllWithDeleted() {
+    return this.usersService.findAllWithDeleted();
   }
 
   @Get('/me')
@@ -51,7 +55,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: number) {
+  async findById(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.findById(id);
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -132,7 +136,7 @@ export class UsersController {
 
   @UseGuards(jwtAuthGuard, PermissionsGuard)
   @Delete(':id')
-  async deleteUser(@Param('id') id: number) {
+  async deleteUser(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.deleteUser(id);
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
