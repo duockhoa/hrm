@@ -16,6 +16,7 @@ export default function HomePage() {
   const searchKeyword = useSearchStore((state) =>
     state.searchByPath[searchScopePath] ?? "",
   );
+  const isSearching = searchKeyword.trim().length > 0;
   const containerRef = useRef<HTMLDivElement>(null);
   const filteredUsers = useMemo(() => {
     if (!searchKeyword) {
@@ -54,20 +55,23 @@ export default function HomePage() {
         <ListUserHeader />
       </div>
       <div className="flex-1 flex flex-col p-2 pt-0 gap-2">
-        {usersLoading
-          ? Array.from({ length: 10 }).map((_, idx) => (
-              <DeskItem key={idx} user={null} onClick={() => {}} />
-            ))
-          : filteredUsers.map((user) => (
+        {usersLoading ? (
+          Array.from({ length: 10 }).map((_, idx) => (
+            <DeskItem key={idx} user={null} onClick={() => {}} />
+          ))
+        ) : filteredUsers.length > 0 ? (
+          filteredUsers.map((user) => (
               <DeskItem
                 key={user.id}
                 user={user}
                 onClick={() => handleClick(user.id)}
               />
-            ))}
-        {!usersLoading && filteredUsers.length === 0 && (
+          ))
+        ) : (
           <p className="p-4 text-center text-sm text-gray-500">
-            Khong tim thay nhan su phu hop.
+            {isSearching
+              ? "Khong tim thay nhan su phu hop."
+              : "Chua co nhan su nao."}
           </p>
         )}
       </div>
