@@ -25,7 +25,7 @@ model Users {
   tokens     Tokens[]
   userRoles  UserRoles[]
   team_lead_departments Departments[] @relation("Departments_team_lead_user")
-  departmentObj Departments? @relation("DepartmentUsers", fields: [department], references: [name], onDelete: SetNull)
+  departmentObj Departments? @relation("DepartmentUsers", fields: [department], references: [name], onDelete: SetNull , onUpdate: Cascade)
   companyLeaderOf Company? @relation("CompanyLeader")
   contracts  Contracts[]
   
@@ -42,7 +42,7 @@ model UserProfiles {
   address    String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt  @default(now())
-  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade , onUpdate: Cascade)
   @@map("user_profiles")
 }
 
@@ -52,7 +52,7 @@ model Tokens {
   refreshToken      String   @unique @db.VarChar(512)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt  @default(now())
-  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade , onUpdate: Cascade)
 
   @@map("tokens")
 }
@@ -78,8 +78,8 @@ model UserRoles {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt @default(now())
 
-  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  roles      Roles    @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade , onUpdate: Cascade)
+  roles      Roles    @relation(fields: [role_id], references: [id], onDelete: Cascade , onUpdate: Cascade)
 
   @@map("user_roles")
 }
@@ -101,8 +101,8 @@ model RolePermissions {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt @default(now())
 
-  roles         Roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
-  permissions   Permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+  roles         Roles       @relation(fields: [role_id], references: [id], onDelete: Cascade , onUpdate: Cascade)
+  permissions   Permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade , onUpdate: Cascade)
 
   @@index([permission_id], map: "role_permissions_permission_id_fkey")
   @@index([role_id], map: "role_permissions_role_id_fkey")
@@ -117,10 +117,10 @@ model Departments {
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt  @default(now())
   team_lead  Int? 
-  team_lead_user Users? @relation("Departments_team_lead_user", fields: [team_lead], references: [id], onDelete: SetNull)
+  team_lead_user Users? @relation("Departments_team_lead_user", fields: [team_lead], references: [id], onDelete: SetNull , onUpdate: Cascade)
   company_id   Int?
   users        Users[] @relation("DepartmentUsers")
-  company      Company? @relation(fields: [company_id], references: [id], onDelete: SetNull)
+  company      Company? @relation(fields: [company_id], references: [id], onDelete: SetNull , onUpdate: Cascade)
   @@map("departments")
 }
 
@@ -136,7 +136,7 @@ model Contracts {
   files       ContractFiles[]
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt @default(now())
-  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  users      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade , onUpdate: Cascade)
   @@map("contracts")
 }
 
@@ -146,7 +146,7 @@ model ContractFiles {
   file_path   String
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt @default(now())
-  contracts   Contracts @relation(fields: [contract_id], references: [id], onDelete: Cascade)
+  contracts   Contracts @relation(fields: [contract_id], references: [id], onDelete: Cascade , onUpdate: Cascade)
   @@map("contract_files")
 }
 
@@ -163,7 +163,7 @@ model Company {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt @default(now())
   departments Departments[]
-  leader     Users? @relation("CompanyLeader", fields: [leader_id], references: [id], onDelete: SetNull)
+  leader     Users? @relation("CompanyLeader", fields: [leader_id], references: [id], onDelete: SetNull , onUpdate: Cascade)
   @@map("company") 
 
 }
