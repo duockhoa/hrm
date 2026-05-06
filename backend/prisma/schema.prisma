@@ -24,6 +24,7 @@ model Users {
   profile    UserProfiles?
   tokens     Tokens[]
   userRoles  UserRoles[]
+  passwordResetOTPs PasswordResetOTPs[]
   team_lead_departments Departments[] @relation("Departments_team_lead_user")
   departmentObj Departments? @relation("DepartmentUsers", fields: [department], references: [name], onDelete: SetNull , onUpdate: Cascade)
   companyLeaderOf Company? @relation("CompanyLeader")
@@ -166,4 +167,15 @@ model Company {
   leader     Users? @relation("CompanyLeader", fields: [leader_id], references: [id], onDelete: SetNull , onUpdate: Cascade)
   @@map("company") 
 
+}
+
+model PasswordResetOTPs {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  hash_OTP   String   @unique @db.VarChar(512)
+  expires_at DateTime
+  used_at   DateTime?
+  created_at DateTime @default(now())
+  user     Users    @relation(fields: [user_id], references: [id], onDelete: Cascade , onUpdate: Cascade)
+  @@map("password_reset_otps")
 }

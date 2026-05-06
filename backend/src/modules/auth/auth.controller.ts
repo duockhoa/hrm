@@ -47,6 +47,16 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
+  @Post('request-password-reset')
+  async requestPasswordReset(@Body() email: { email: string }) {
+    const token = await this.authService.createResetPasswordOTP(email.email);
+    if (!token) {
+      throw new HttpException('User not found', 404);
+    }
+    // In a real application, you would send an email with the reset link
+    return { message: 'Password reset OTP created' };
+  }
+
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(@Request() request) {

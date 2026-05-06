@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma.service';
-
+import {} from 'bcrypt';
 @Injectable()
 export class AuthService {
   constructor(
@@ -66,5 +66,25 @@ export class AuthService {
       where: { refreshToken },
     });
     return deleteResponse.count > 0;
+  }
+
+  async createResetPasswordOTP(email: string) {
+    const user = await this.prisma.users.findUnique({
+      where: { email },
+    });
+    if (!user) {
+      return null;
+    }
+    const payload = { sub: user.id };
+    const hashOTP = this.jwtService.sign(payload, { expiresIn: '5m' });
+
+    await this.prisma.passwordResetOTPs.create({
+      data: {
+        user_id: user.id,
+        hash_OTP: hashOTP,
+        expires_at: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
+      },
+    });
+    return hashOTP;
   }
 }
