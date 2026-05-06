@@ -19,7 +19,7 @@ type AppLauncherItem = {
 const APPS: AppLauncherItem[] = [
   {
     name: "DK REQUEST",
-    link: "https://request.dkpharma.io.vn/",
+    link: process.env.APP_REQUEST_URL || "https://request.dkpharma.io.vn",
     icon: Clock3,
     tileClassName:
       "bg-[linear-gradient(180deg,#59BEFF_0%,#3096F4_58%,#2C72E7_100%)]",
@@ -28,14 +28,14 @@ const APPS: AppLauncherItem[] = [
 
   {
     name: "HSL ONLINE",
-    link: "https://www.appsheet.com/start/52a91b81-a00d-4601-8cdd-ae297d2c163d",
+    link: process.env.APP_EBR_URL || "",
     icon: ClipboardCheck,
     tileClassName:
       "bg-[linear-gradient(180deg,#64D45F_0%,#42AF4F_56%,#2D8A3A_100%)]",
   },
   {
     name: "KHO DƯỢC KHOA",
-    link: "https://www.appsheet.com/start/b3c99ab1-4c7d-4894-908e-3c58c90304ad",
+    link: process.env.APP_WMS_URL || "",
     icon: Building2,
     tileClassName:
       "bg-[linear-gradient(180deg,#FFB11D_0%,#F08D00_55%,#D66A00_100%)]",
@@ -71,6 +71,11 @@ export default function Home() {
   const [now, setNow] = useState(new Date());
   const { user } = useUserStore();
   const isMobile = useMobile();
+  const userDepartment =
+    typeof user?.department === "string"
+      ? user.department
+      : user?.department?.name;
+  const canAccessHrm = userDepartment?.trim() === "Tổ chức";
 
   useEffect(() => {
     document.title = "DKPHARMA APP";
@@ -91,9 +96,13 @@ export default function Home() {
   }, []);
 
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredApps = APPS.filter((app) =>
-    app.name.toLowerCase().includes(normalizedSearch),
-  );
+  const filteredApps = APPS.filter((app) => {
+    if (app.name === "DK HRM" && !canAccessHrm) {
+      return false;
+    }
+
+    return app.name.toLowerCase().includes(normalizedSearch);
+  });
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#031125] text-white">
