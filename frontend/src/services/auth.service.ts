@@ -30,3 +30,12 @@ export const logout = async (accessToken?: string) => {
     throw error;
   }
 };
+
+export const confirmEmail = async (token: string) => {
+  try {
+    const response = await axios.get(`/auth/confirm-email?token=${token}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
