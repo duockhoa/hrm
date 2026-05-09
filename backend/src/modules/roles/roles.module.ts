@@ -3,9 +3,10 @@ import { RolesService } from './roles.service';
 import { RolesController } from './roles.controller';
 import { PrismaService } from 'src/prisma.service';
 import { JwtStrategy } from 'src/passports/jwt.strategy';
-import { UsersService } from '../users/users.service';
+import { UsersModule } from '../users/users.module';
 @Module({
   controllers: [RolesController],
-  providers: [RolesService, PrismaService, JwtStrategy, UsersService],
+  providers: [RolesService, PrismaService, JwtStrategy],
+  imports: [UsersModule],
 })
 export class RolesModule {}

@@ -4,12 +4,13 @@ import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventNames } from 'src/event.interface';
-
+import { EmailService } from '../email/email.service';
 @Injectable()
 export class UsersService {
   constructor(
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2,
+    private emailService: EmailService,
   ) {}
 
   async findAll() {
@@ -72,6 +73,7 @@ export class UsersService {
       where: { id },
       data: updateUserDto,
     });
+
     this.eventEmitter.emit(EventNames.USER_SYNCED, updatedUser);
     return updatedUser;
   }

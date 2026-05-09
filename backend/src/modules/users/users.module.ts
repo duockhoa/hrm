@@ -6,7 +6,7 @@ import { JwtStrategy } from 'src/passports/jwt.strategy';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CloudinaryService } from 'src/cloudinary.service';
-
+import { EmailModule } from '../email/email.module';
 @Module({
   controllers: [UsersController],
   providers: [
@@ -17,7 +17,7 @@ import { CloudinaryService } from 'src/cloudinary.service';
     PermissionsGuard,
     CloudinaryService,
   ],
-  imports: [],
+  imports: [EmailModule],
   exports: [UsersService],
 })
 export class UsersModule {}

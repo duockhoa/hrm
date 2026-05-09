@@ -19,7 +19,7 @@ type AppLauncherItem = {
 const APPS: AppLauncherItem[] = [
   {
     name: "DK REQUEST",
-    link: process.env.APP_REQUEST_URL || "https://request.dkpharma.io.vn",
+    link: process.env.NEXT_PUBLIC_APP_REQUEST_URL || "#",
     icon: Clock3,
     tileClassName:
       "bg-[linear-gradient(180deg,#59BEFF_0%,#3096F4_58%,#2C72E7_100%)]",
@@ -28,14 +28,14 @@ const APPS: AppLauncherItem[] = [
 
   {
     name: "HSL ONLINE",
-    link: process.env.APP_EBR_URL || "",
+    link: process.env.NEXT_PUBLIC_APP_EBR_URL || "",
     icon: ClipboardCheck,
     tileClassName:
       "bg-[linear-gradient(180deg,#64D45F_0%,#42AF4F_56%,#2D8A3A_100%)]",
   },
   {
     name: "KHO DƯỢC KHOA",
-    link: process.env.APP_WMS_URL || "",
+    link: process.env.NEXT_PUBLIC_APP_WMS_URL || "",
     icon: Building2,
     tileClassName:
       "bg-[linear-gradient(180deg,#FFB11D_0%,#F08D00_55%,#D66A00_100%)]",
