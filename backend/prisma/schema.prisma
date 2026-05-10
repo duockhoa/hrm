@@ -188,14 +188,27 @@ model PasswordResetOTPs {
   @@map("password_reset_otps")
 }
 
+model RegistrationNumbers {
+  id                  Int       @id @default(autoincrement())
+  registration_number String    @unique
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now()) @updatedAt
+  deleted_at          DateTime?
+  items               Items[]
+
+  @@map("registration_numbers")
+}
 
 model Items {
-  item_code String @id 
-  item_name String @db.Text
-  unit String? 
-  dk_code String?
-  created_at DateTime @default(now())
-  update_at DateTime @default(now()) @updatedAt
-  deleted_at DateTime? 
+  item_code       String               @id
+  item_name       String               @db.Text
+  unit            String?
+  dk_code         String?
+  registration_id Int?
+  registration    RegistrationNumbers? @relation(fields: [registration_id], references: [id])
+  created_at      DateTime             @default(now())
+  update_at       DateTime             @default(now()) @updatedAt
+  deleted_at      DateTime?
+
   @@map("items")
 }
