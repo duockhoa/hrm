@@ -14,6 +14,10 @@ import { CompaniesModule } from './modules/companies/companies.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { EmailModule } from './modules/email/email.module';
 import { ExternalSyncModule } from './modules/external-sync/external-sync.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SapB1ConnectorModule } from './modules/sap-b1-connector/sap-b1-connector.module';
+import { ItemsModule } from './modules/items/items.module';
+
 
 @Module({
   imports: [
@@ -30,6 +34,10 @@ import { ExternalSyncModule } from './modules/external-sync/external-sync.module
     CompaniesModule,
     EmailModule,
     ExternalSyncModule,
+    ScheduleModule.forRoot(),
+    SapB1ConnectorModule,
+    ItemsModule,
+
   ],
   controllers: [AppController],
   providers: [AppService],

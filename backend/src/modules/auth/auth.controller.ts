@@ -57,18 +57,21 @@ export class AuthController {
     return { message: 'Password reset OTP created' };
   }
 
-
   @Post('get-reset-password-otp')
   async getResetPasswordOTP(@Body() resetData: { email: string }) {
-    const hashOTP = await this.authService.createResetPasswordOTP(resetData.email);
+    const hashOTP = await this.authService.createResetPasswordOTP(
+      resetData.email,
+    );
     if (!hashOTP) {
       throw new HttpException('User not found', 404);
     }
     return { message: 'Password reset OTP created' };
   }
 
-  @Post("verify-reset-password-otp")
-  async verifyResetPasswordOTP(@Body() otpData: { email: string, otp: string }) {
+  @Post('verify-reset-password-otp')
+  async verifyResetPasswordOTP(
+    @Body() otpData: { email: string; otp: string },
+  ) {
     const { email, otp } = otpData;
     const isValid = await this.authService.verifyResetPasswordOTP(email, otp);
     if (!isValid) {
@@ -78,13 +81,22 @@ export class AuthController {
   }
 
   @Post('reset-password')
-  async resetPassword(@Body() resetData: { email: string; otp: string; newPassword: string }) {
+  async resetPassword(
+    @Body() resetData: { email: string; otp: string; newPassword: string },
+  ) {
     const { email, otp, newPassword } = resetData;
-    const isValidOTP = await this.authService.verifyResetPasswordOTP(email, otp);
+    const isValidOTP = await this.authService.verifyResetPasswordOTP(
+      email,
+      otp,
+    );
     if (!isValidOTP) {
       throw new HttpException('Invalid OTP', 400);
     }
-    const result = await this.authService.resetPassword(email, newPassword);
+    const result = await this.authService.resetPassword(
+      email,
+      otp,
+      newPassword,
+    );
     if (!result) {
       throw new HttpException('Failed to reset password', 500);
     }
