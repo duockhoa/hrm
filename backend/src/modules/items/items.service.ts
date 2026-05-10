@@ -35,4 +35,13 @@ export class ItemsService {
       },
     });
   }
+
+
+async findItemByCode(item_code: string) {
+  return this.prismaService.items.findUnique({
+    where: {
+      item_code: item_code,
+    },
+  });
+}
 }   
