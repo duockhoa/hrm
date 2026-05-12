@@ -27,7 +27,7 @@ export default function DetailDepartmentPage() {
   }
   return (
     <div className="h-[100%] min-h-0 bg-white rounded-lg shadow-md overflow-hidden">
-      <ResizablePanelGroup direction="horizontal">
+      <ResizablePanelGroup>
         {!isMobile && (
           <ResizablePanel
             defaultSize={30}
