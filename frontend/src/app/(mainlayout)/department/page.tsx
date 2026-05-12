@@ -53,6 +53,9 @@ export default function DepartmentPage() {
   const { departments, departmentsLoading } = useDepartmentStore();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const activeDepartmentName = pathname.startsWith("/department/")
+    ? pathname.split("/")[2]
+    : null;
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore((state) =>
     state.searchByPath[searchScopePath] ?? "",
@@ -98,7 +101,13 @@ export default function DepartmentPage() {
         ) : filteredDepartments.length > 0 ? (
           <div className="flex flex-row flex-wrap gap-4 content-start">
             {filteredDepartments.map((dept) => (
-              <ItemDepartment key={dept.name} department={dept} />
+              <ItemDepartment
+                key={dept.name}
+                department={dept}
+                isActive={
+                  encodeURIComponent(dept.name) === activeDepartmentName
+                }
+              />
             ))}
           </div>
         ) : (

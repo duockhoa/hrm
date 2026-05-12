@@ -17,7 +17,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import EditUserForm from "../form-edit-user/form-edit-user";
 import { cn } from "@/lib/utils";
 
-export default function DeskItem({
+export default function ItemUser({
   user,
   onClick,
   isActive = false,

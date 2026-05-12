@@ -1,7 +1,7 @@
 "use client";
 import useUsersStore from "@/store/users.store";
 import useSearchStore from "@/store/search.store";
-import DeskItem from "@/components/desk/desk-item";
+import ItemUser from "@/components/item-user/item-user";
 import ListUserHeader from "@/components/header-list-user/header-list-user";
 import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
 import {
@@ -62,11 +62,11 @@ export default function HomePage() {
       <div className="flex-1 flex flex-col p-2 pt-0 gap-2">
         {usersLoading ? (
           Array.from({ length: 10 }).map((_, idx) => (
-            <DeskItem key={idx} user={null} onClick={() => {}} />
+            <ItemUser key={idx} user={null} onClick={() => {}} />
           ))
         ) : filteredUsers.length > 0 ? (
           filteredUsers.map((user) => (
-              <DeskItem
+              <ItemUser
                 key={user.id}
                 user={user}
                 isActive={String(user.id) === activeUserId}
