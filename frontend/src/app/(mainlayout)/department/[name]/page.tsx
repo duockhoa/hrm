@@ -17,7 +17,7 @@ export default function DetailDepartmentPage() {
   const params: any = useParams();
   const isMobile = useMobile();
 
-  const { data, error, isLoading } = useSWR(
+  const { data, error } = useSWR(
     `${API_ROUTES.departments.base}/${params.name}`,
     () => departmentsService.fetcherDepartmentByName(params.name),
   );
@@ -26,12 +26,12 @@ export default function DetailDepartmentPage() {
     return <div>Error loading department data.</div>;
   }
   return (
-    <div className="h-[100%] bg-white rounded-lg shadow-md overflow-auto">
-      <ResizablePanelGroup>
+    <div className="h-[100%] min-h-0 bg-white rounded-lg shadow-md overflow-hidden">
+      <ResizablePanelGroup direction="horizontal">
         {!isMobile && (
           <ResizablePanel
             defaultSize={30}
-            className="overflow-auto min-w-100"
+            className="min-h-0 min-w-100 overflow-hidden"
             minSize={30}
           >
             <DepartmentPage />

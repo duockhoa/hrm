@@ -3,11 +3,14 @@ import HeaderListDepartment from "@/components/header-department-list/header-lis
 import useDepartmentStore from "@/store/department.store";
 import useSearchStore from "@/store/search.store";
 import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { restoreScrollableChainPosition } from "@/lib/scroll-position";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import ItemDepartment from "@/components/item-department/item-department";
+
+const DEPARTMENT_LIST_SCROLL_KEY = "departmentListScroll";
 
 function DepartmentSkeletonList() {
   return (
@@ -48,6 +51,7 @@ function DepartmentSkeletonList() {
 
 export default function DepartmentPage() {
   const { departments, departmentsLoading } = useDepartmentStore();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore((state) =>
@@ -72,13 +76,23 @@ export default function DepartmentPage() {
     );
   }, [departments, searchKeyword]);
 
+  useEffect(() => {
+    restoreScrollableChainPosition(
+      DEPARTMENT_LIST_SCROLL_KEY,
+      scrollContainerRef.current,
+    );
+  }, [filteredDepartments.length, departmentsLoading]);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white p-4 shadow-md">
       <div className="shrink-0">
         <HeaderListDepartment />
       </div>
 
-      <div className="mt-4 flex-1 min-h-0 overflow-y-auto pr-1">
+      <div
+        ref={scrollContainerRef}
+        className="mt-4 flex-1 min-h-0 overflow-y-auto pr-1"
+      >
         {departmentsLoading ? (
           <DepartmentSkeletonList />
         ) : filteredDepartments.length > 0 ? (

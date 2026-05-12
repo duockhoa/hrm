@@ -4,14 +4,23 @@ import useSearchStore from "@/store/search.store";
 import DeskItem from "@/components/desk/desk-item";
 import ListUserHeader from "@/components/header-list-user/header-list-user";
 import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import {
+  restoreScrollableChainPosition,
+  saveScrollableChainPosition,
+} from "@/lib/scroll-position";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useEffect, useMemo } from "react";
+
+const USER_LIST_SCROLL_KEY = "userListScroll";
 
 export default function HomePage() {
   const { users, usersLoading } = useUsersStore();
 
   const router = useRouter();
   const pathname = usePathname();
+  const activeUserId = pathname.startsWith("/home/")
+    ? pathname.split("/")[2]
+    : null;
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore((state) =>
     state.searchByPath[searchScopePath] ?? "",
@@ -33,18 +42,14 @@ export default function HomePage() {
 
   // Lưu scroll position trước khi chuyển trang
   const handleClick = (userId: string) => {
-    const scrollTop = containerRef.current?.scrollTop || 0;
-    sessionStorage.setItem("userListScroll", scrollTop.toString());
+    saveScrollableChainPosition(USER_LIST_SCROLL_KEY, containerRef.current);
     router.push(`/home/${userId}`, { scroll: false });
   };
 
   // Khôi phục scroll position sau khi render
   useEffect(() => {
-    const scrollTop = sessionStorage.getItem("userListScroll");
-    if (scrollTop && containerRef.current) {
-      containerRef.current.scrollTop = parseInt(scrollTop, 10);
-    }
-  }, []);
+    restoreScrollableChainPosition(USER_LIST_SCROLL_KEY, containerRef.current);
+  }, [filteredUsers.length, usersLoading]);
 
   return (
     <div
@@ -64,6 +69,7 @@ export default function HomePage() {
               <DeskItem
                 key={user.id}
                 user={user}
+                isActive={String(user.id) === activeUserId}
                 onClick={() => handleClick(user.id)}
               />
           ))

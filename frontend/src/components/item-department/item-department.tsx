@@ -21,6 +21,9 @@ import { useRouter } from "next/navigation";
 import { MdApartment } from "react-icons/md";
 import { API_ROUTES } from "@/lib/api-routes";
 import FormEditDepartment from "../form-edit-department/form-edit-department";
+import { saveScrollableChainPosition } from "@/lib/scroll-position";
+
+const DEPARTMENT_LIST_SCROLL_KEY = "departmentListScroll";
 
 export default function ItemDepartment({ department }: { department: any }) {
   const [open, setOpen] = useState(false);
@@ -29,12 +32,12 @@ export default function ItemDepartment({ department }: { department: any }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const handleClick = (departmentName: string) => {
-    const scrollTop = containerRef.current?.scrollTop || 0;
-    sessionStorage.setItem("userListScroll", scrollTop.toString());
+    saveScrollableChainPosition(DEPARTMENT_LIST_SCROLL_KEY, containerRef.current);
     router.push(`/department/${departmentName}`, { scroll: false });
   };
   return (
     <div
+      ref={containerRef}
       className="bg-white rounded-md p-4 shadow-md h-[100%] w-120 border border-gray-300 hover:shadow-lg cursor-pointer"
       onClick={() => handleClick(department?.name)}
     >

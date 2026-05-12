@@ -9,7 +9,6 @@ import {
 import HomePage from "../page";
 import useMobile from "@/hooks/use-mobile";
 import useSWR from "swr";
-import axiosClient from "@/lib/axios-client";
 import UserDetail from "@/components/detail-user/detail-user";
 import LeaveInformationDetail from "@/components/detail-leave-information/detail-leave-information";
 import ContractInline from "@/components/inline-contract/inline-contact";
@@ -20,7 +19,7 @@ export default function DetailUserPage() {
   const params: any = useParams();
   const isMobile = useMobile();
 
-  const { data, error, isLoading } = useSWR(
+  const { data, error } = useSWR(
     `${API_ROUTES.users.base}/${params.id}`,
     () => userService.fetcherUserById(params.id),
   );
@@ -28,12 +27,12 @@ export default function DetailUserPage() {
     return <div>Error loading user data.</div>;
   }
   return (
-    <div className="h-[100%] bg-white rounded-lg shadow-md overflow-auto">
-      <ResizablePanelGroup>
+    <div className="h-[100%] min-h-0 bg-white rounded-lg shadow-md overflow-hidden">
+      <ResizablePanelGroup direction="horizontal">
         {!isMobile && (
           <ResizablePanel
             defaultSize={30}
-            className="overflow-auto min-w-100"
+            className="min-h-0 min-w-100 overflow-hidden"
             minSize={30}
           >
             <HomePage />
