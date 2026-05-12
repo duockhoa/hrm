@@ -21,21 +21,38 @@ import { useRouter } from "next/navigation";
 import { MdApartment } from "react-icons/md";
 import { API_ROUTES } from "@/lib/api-routes";
 import FormEditDepartment from "../form-edit-department/form-edit-department";
+import { saveScrollableChainPosition } from "@/lib/scroll-position";
+import { cn } from "@/lib/utils";
 
-export default function ItemDepartment({ department }: { department: any }) {
+const DEPARTMENT_LIST_SCROLL_KEY = "departmentListScroll";
+
+export default function ItemDepartment({
+  department,
+  isActive = false,
+}: {
+  department: any;
+  isActive?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   // Lưu scroll position trước khi chuyển trang
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const handleClick = (departmentName: string) => {
-    const scrollTop = containerRef.current?.scrollTop || 0;
-    sessionStorage.setItem("userListScroll", scrollTop.toString());
-    router.push(`/department/${departmentName}`, { scroll: false });
+    saveScrollableChainPosition(DEPARTMENT_LIST_SCROLL_KEY, containerRef.current);
+    router.push(`/department/${encodeURIComponent(departmentName)}`, {
+      scroll: false,
+    });
   };
   return (
     <div
-      className="bg-white rounded-md p-4 shadow-md h-[100%] w-120 border border-gray-300 hover:shadow-lg cursor-pointer"
+      ref={containerRef}
+      className={cn(
+        "bg-white rounded-md p-4 shadow-md h-[100%] w-120 border border-gray-300 hover:shadow-lg cursor-pointer transition-colors",
+        isActive &&
+          "border-blue-300 bg-sky-100 text-blue-950 shadow-sm hover:bg-sky-100",
+      )}
+      aria-current={isActive ? "page" : undefined}
       onClick={() => handleClick(department?.name)}
     >
       <div className="flex p-2 justify-between">

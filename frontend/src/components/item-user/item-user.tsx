@@ -15,13 +15,16 @@ import { mutate } from "swr";
 import { API_ROUTES } from "@/lib/api-routes";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import EditUserForm from "../form-edit-user/form-edit-user";
+import { cn } from "@/lib/utils";
 
-export default function DeskItem({
+export default function ItemUser({
   user,
   onClick,
+  isActive = false,
 }: {
   user: any;
   onClick: () => void;
+  isActive?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -45,7 +48,12 @@ export default function DeskItem({
 
   return (
     <div
-      className={`flex gap-2 border-b border-gray-200 p-2 cursor-pointer hover:bg-gray-50`}
+      className={cn(
+        "flex gap-2 rounded-md border border-transparent border-b-gray-200 p-2 cursor-pointer transition-colors hover:bg-gray-50",
+        isActive &&
+          "border-blue-200 bg-sky-100 text-blue-950 shadow-sm hover:bg-sky-100",
+      )}
+      aria-current={isActive ? "page" : undefined}
       onClick={onClick}
     >
       <div className="flex items-center gap-4">
