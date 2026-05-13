@@ -200,15 +200,41 @@ model RegistrationNumbers {
 }
 
 model Items {
-  item_code       String               @id
-  item_name       String               @db.Text
-  unit            String?
-  dk_code         String?
-  registration_id Int?
-  registration    RegistrationNumbers? @relation(fields: [registration_id], references: [id])
-  created_at      DateTime             @default(now())
-  update_at       DateTime             @default(now()) @updatedAt
-  deleted_at      DateTime?
+  item_code        String               @id
+  item_name        String               @db.Text
+  unit             String?
+  dk_code          String?
+  registration_id  Int?
+  registration     RegistrationNumbers? @relation(fields: [registration_id], references: [id])
+  productionOrders ProductionOrders[]
+  created_at       DateTime             @default(now())
+  update_at        DateTime             @default(now()) @updatedAt
+  deleted_at       DateTime?
 
   @@map("items")
 }
+
+model ProductionOrders {
+  id                    Int      @id
+  item_code             String
+  item                  Items    @relation(fields: [item_code], references: [item_code])
+  status                String
+  type                  String
+  planned_quatity       Int
+  creation_date         DateTime
+  origin                String?
+  warehouse             String?
+  unit                  String
+  start_date            DateTime
+  description           String
+  date_manufacture      String?
+  expire_date           String?
+  lot_no                String
+  packing_specification String?
+  production_order_code String?
+  @@index([item_code], map: "production_orders_item_code_fkey")
+  @@map("production_orders")
+}
+
+
+
