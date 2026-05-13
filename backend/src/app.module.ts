@@ -17,6 +17,7 @@ import { ExternalSyncModule } from './modules/external-sync/external-sync.module
 import { ScheduleModule } from '@nestjs/schedule';
 import { SapB1ConnectorModule } from './modules/sap-b1-connector/sap-b1-connector.module';
 import { ItemsModule } from './modules/items/items.module';
+import { ProductionOrdersModule } from './modules/production-orders/production-orders.module';
 
 
 @Module({
@@ -37,6 +38,7 @@ import { ItemsModule } from './modules/items/items.module';
     ScheduleModule.forRoot(),
     SapB1ConnectorModule,
     ItemsModule,
+    ProductionOrdersModule,
 
   ],
   controllers: [AppController],
