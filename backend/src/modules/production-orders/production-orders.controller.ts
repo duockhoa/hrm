@@ -24,4 +24,8 @@ export class ProductionOrdersController {
   async findProductionOrderById(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderById(id);
   }
+  @Get(':id/production-order-lines')
+  async findProductionOrderLines(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrdersService.findProductionOrderLines(id);
+  }
 }
