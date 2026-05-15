@@ -141,6 +141,10 @@ describe('ProductionOrdersService', () => {
   it('exports production order lines to an xlsx buffer', async () => {
     mockedAxiosGet.mockResolvedValueOnce({
       data: {
+        ItemNo: 'TP00063',
+        PlannedQuantity: 1000,
+        ProductDescription: 'Thanh pham test',
+        U_SL: '010126',
         U_MLSX: 'TP00063-1090526-2031',
         ProductionOrderLines: [
           {
@@ -199,11 +203,12 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('K6').value).toBe('Ngày 08 tháng 05 năm 2026');
     expect(worksheet.getCell('K7').value).toBe('Số: TP00063-1090526-2031');
     expect(worksheet.getCell('A11').value).toBe(
-      '- Lý do xuất: Xuất kho theo lệnh sản xuất 2031',
+      '- Lý do xuất: Xuất cho sản xuất Thanh pham test (1000) TP00063 - 010126',
     );
     expect(worksheet.getCell('A12').value).toBe(
       '- Xuất tại kho (ngăn lô): K-KHKV',
     );
+    expect(worksheet.getCell('Z115').value).toBeNull();
     expect(worksheet.getCell('A16').value).toBe(1);
     expect(worksheet.getCell('B16').value).toBe('BB00075');
     expect(worksheet.getCell('D16').value).toBe(
@@ -215,7 +220,7 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('N16').value).toBe('Cai');
     expect(worksheet.getCell('O16').value).toBe(1.5);
     expect(worksheet.getCell('AB16').value).toBeNull();
-    expect(worksheet.getCell('O114').value).toBe(1.5);
+    expect(worksheet.getCell('O114').value).toBeNull();
     expect(worksheet.getRow(16).height).toBeGreaterThan(20.25);
     expect(worksheet.getRow(17).hidden).toBe(true);
   });

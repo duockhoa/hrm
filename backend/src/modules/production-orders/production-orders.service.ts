@@ -17,8 +17,12 @@ export type SapProductionOrderStage = {
 export type SapProductionOrderResponse = {
   AbsoluteEntry?: number | null;
   DocumentNumber?: number | null;
+  ItemNo?: string | null;
+  PlannedQuantity?: number | string | null;
+  ProductDescription?: string | null;
   ProductionOrderLines?: SapProductionOrderLine[];
   ProductionOrdersStages?: SapProductionOrderStage[];
+  U_SL?: string | null;
   U_MLSX?: string | null;
   [key: string]: unknown;
 };

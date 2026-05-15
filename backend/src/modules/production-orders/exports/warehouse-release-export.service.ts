@@ -18,7 +18,6 @@ const WAREHOUSE_RELEASE_TEMPLATE_PATH = path.join(
 const WAREHOUSE_RELEASE_SHEET_NAME = 'Page1';
 const WAREHOUSE_RELEASE_DATA_START_ROW = 16;
 const WAREHOUSE_RELEASE_DATA_END_ROW = 113;
-const WAREHOUSE_RELEASE_TOTAL_ROW = 114;
 const WAREHOUSE_RELEASE_DEFAULT_DATA_ROW_HEIGHT = 18;
 const WAREHOUSE_RELEASE_TEXT_LINE_HEIGHT = 12;
 const WAREHOUSE_RELEASE_ROW_VERTICAL_PADDING = 2;
@@ -198,6 +197,19 @@ const getWarehouseReleaseNumber = (
   normalizeCellValue(productionOrder?.AbsoluteEntry) ??
   productionOrderId;
 
+const getWarehouseReleaseReason = (
+  productionOrder?: SapProductionOrderResponse,
+) => {
+  const productDescription =
+    normalizeCellValue(productionOrder?.ProductDescription) ?? '';
+  const plannedQuantity =
+    normalizeCellValue(productionOrder?.PlannedQuantity) ?? '';
+  const itemNo = normalizeCellValue(productionOrder?.ItemNo) ?? '';
+  const batchNumber = normalizeCellValue(productionOrder?.U_SL) ?? '';
+
+  return `- Lý do xuất: Xuất cho sản xuất ${productDescription} (${plannedQuantity}) ${itemNo} - ${batchNumber}`;
+};
+
 @Injectable()
 export class WarehouseReleaseExportService {
   async export(
@@ -243,19 +255,12 @@ export class WarehouseReleaseExportService {
       'K7',
       `Số: ${getWarehouseReleaseNumber(productionOrderId, productionOrder)}`,
     );
-    setCellValue(
-      worksheet,
-      'A11',
-      `- Lý do xuất: Xuất kho theo lệnh sản xuất ${productionOrderId}`,
-    );
+    setCellValue(worksheet, 'A11', getWarehouseReleaseReason(productionOrder));
     setCellValue(
       worksheet,
       'A12',
       `- Xuất tại kho (ngăn lô): ${warehouse ?? ''}`,
     );
-    setCellValue(worksheet, 'Z115', formatVietnameseDate(issueDate));
-
-    let totalPlannedQuantity = 0;
 
     for (const [index, line] of warehouseReleaseLines.entries()) {
       const rowNumber = WAREHOUSE_RELEASE_DATA_START_ROW + index;
@@ -269,8 +274,6 @@ export class WarehouseReleaseExportService {
         line.UnitOfMeasurement?.Code ?? line.UoMCode,
       );
       const lineText = getLineValue(line, 'LineText');
-
-      totalPlannedQuantity += plannedQuantity;
 
       setCellValue(worksheet, `A${rowNumber}`, index + 1);
       setCellValue(worksheet, `B${rowNumber}`, itemNo);
@@ -297,12 +300,6 @@ export class WarehouseReleaseExportService {
         { value: lineText, startColumn: 24, endColumn: 27 },
       ]);
     }
-
-    setCellValue(
-      worksheet,
-      `O${WAREHOUSE_RELEASE_TOTAL_ROW}`,
-      totalPlannedQuantity,
-    );
 
     for (
       let rowNumber =
