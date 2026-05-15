@@ -1,33 +1,46 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import axios from 'axios';
+import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 
-type SapProductionOrderLine = {
+export type SapProductionOrderLine = {
   StageID?: number | null;
   UoMEntry?: number | null;
   [key: string]: unknown;
 };
 
-type SapProductionOrderStage = {
+export type SapProductionOrderStage = {
   StageID?: number | null;
   [key: string]: unknown;
 };
 
-type SapProductionOrderResponse = {
+export type SapProductionOrderResponse = {
+  AbsoluteEntry?: number | null;
+  DocumentNumber?: number | null;
   ProductionOrderLines?: SapProductionOrderLine[];
   ProductionOrdersStages?: SapProductionOrderStage[];
+  U_MLSX?: string | null;
+  [key: string]: unknown;
 };
 
-type SapUnitOfMeasurement = {
+export type SapUnitOfMeasurement = {
   AbsEntry?: number | null;
   Code?: string | null;
   Name?: string | null;
   [key: string]: unknown;
 };
 
+export type ProductionOrderLineWithRelations = SapProductionOrderLine & {
+  ProductionOrdersStage: SapProductionOrderStage | null;
+  UnitOfMeasurement: SapUnitOfMeasurement | null;
+};
+
 @Injectable()
 export class ProductionOrdersService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly warehouseReleaseExportService: WarehouseReleaseExportService,
+  ) {}
 
   async findAll() {
     return this.prismaService.productionOrders.findMany({
@@ -51,7 +64,7 @@ export class ProductionOrdersService {
     });
   }
 
-  async findProductionOrderLines(id: number) {
+  private async findProductionOrderLineData(id: number) {
     const [productionOrderResponse, unitOfMeasurementsResponse] =
       await Promise.all([
         axios.get<SapProductionOrderResponse>(
@@ -89,16 +102,42 @@ export class ProductionOrdersService {
       }
     }
 
-    return productionOrderLines.map((line) => ({
-      ...line,
-      ProductionOrdersStage:
-        typeof line.StageID === 'number'
-          ? (stagesById.get(line.StageID) ?? null)
-          : null,
-      UnitOfMeasurement:
-        typeof line.UoMEntry === 'number'
-          ? (unitOfMeasurementsByAbsEntry.get(line.UoMEntry) ?? null)
-          : null,
-    }));
+    const lines = productionOrderLines.map(
+      (line): ProductionOrderLineWithRelations => ({
+        ...line,
+        ProductionOrdersStage:
+          typeof line.StageID === 'number'
+            ? (stagesById.get(line.StageID) ?? null)
+            : null,
+        UnitOfMeasurement:
+          typeof line.UoMEntry === 'number'
+            ? (unitOfMeasurementsByAbsEntry.get(line.UoMEntry) ?? null)
+            : null,
+      }),
+    );
+
+    return {
+      productionOrder: productionOrderResponse.data,
+      lines,
+    };
+  }
+
+  async findProductionOrderLines(
+    id: number,
+  ): Promise<ProductionOrderLineWithRelations[]> {
+    const { lines } = await this.findProductionOrderLineData(id);
+
+    return lines;
+  }
+
+  async exportProductionOrderLines(id: number) {
+    const { productionOrder, lines } =
+      await this.findProductionOrderLineData(id);
+
+    return this.warehouseReleaseExportService.export(
+      id,
+      lines,
+      productionOrder,
+    );
   }
 }
