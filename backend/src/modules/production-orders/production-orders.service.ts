@@ -1,33 +1,98 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import axios from 'axios';
+import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
+import type {
+  ExportProductionOrderLinesDto,
+  ProductionOrderStageIdFilter,
+} from './dto/export-production-order-lines.dto';
 
-type SapProductionOrderLine = {
+export type SapProductionOrderLine = {
   StageID?: number | null;
   UoMEntry?: number | null;
   [key: string]: unknown;
 };
 
-type SapProductionOrderStage = {
+export type SapProductionOrderStage = {
   StageID?: number | null;
   [key: string]: unknown;
 };
 
-type SapProductionOrderResponse = {
+export type SapProductionOrderResponse = {
+  AbsoluteEntry?: number | null;
+  DocumentNumber?: number | null;
+  ItemNo?: string | null;
+  PlannedQuantity?: number | string | null;
+  ProductDescription?: string | null;
   ProductionOrderLines?: SapProductionOrderLine[];
   ProductionOrdersStages?: SapProductionOrderStage[];
+  U_SL?: string | null;
+  U_MLSX?: string | null;
+  [key: string]: unknown;
 };
 
-type SapUnitOfMeasurement = {
+export type SapUnitOfMeasurement = {
   AbsEntry?: number | null;
   Code?: string | null;
   Name?: string | null;
   [key: string]: unknown;
 };
 
+export type ProductionOrderLineWithRelations = SapProductionOrderLine & {
+  ProductionOrdersStage: SapProductionOrderStage | null;
+  UnitOfMeasurement: SapUnitOfMeasurement | null;
+};
+
+const getStageIdFilterInput = (
+  options?: ExportProductionOrderLinesDto,
+): ProductionOrderStageIdFilter | number | string | undefined => {
+  if (!options) {
+    return undefined;
+  }
+
+  if (options.stageIds !== undefined) {
+    return options.stageIds;
+  }
+
+  if (options.StageID !== undefined) {
+    return options.StageID;
+  }
+
+  return options.stageId;
+};
+
+const normalizeStageId = (stageId: number | string) => {
+  if (typeof stageId === 'string' && stageId.trim() === '') {
+    throw new BadRequestException('StageID must be an integer.');
+  }
+
+  const normalizedStageId = Number(stageId);
+
+  if (!Number.isInteger(normalizedStageId)) {
+    throw new BadRequestException('StageID must be an integer.');
+  }
+
+  return normalizedStageId;
+};
+
+const normalizeStageIds = (
+  value: ProductionOrderStageIdFilter | number | string | undefined,
+) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const stageIds = Array.isArray(value) ? value : [value];
+
+  return [...new Set(stageIds.map((stageId) => normalizeStageId(stageId)))];
+};
+
 @Injectable()
 export class ProductionOrdersService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly warehouseReleaseExportService: WarehouseReleaseExportService,
+  ) {}
 
   async findAll() {
     return this.prismaService.productionOrders.findMany({
@@ -51,7 +116,7 @@ export class ProductionOrdersService {
     });
   }
 
-  async findProductionOrderLines(id: number) {
+  private async findProductionOrderLineData(id: number) {
     const [productionOrderResponse, unitOfMeasurementsResponse] =
       await Promise.all([
         axios.get<SapProductionOrderResponse>(
@@ -89,16 +154,53 @@ export class ProductionOrdersService {
       }
     }
 
-    return productionOrderLines.map((line) => ({
-      ...line,
-      ProductionOrdersStage:
-        typeof line.StageID === 'number'
-          ? (stagesById.get(line.StageID) ?? null)
-          : null,
-      UnitOfMeasurement:
-        typeof line.UoMEntry === 'number'
-          ? (unitOfMeasurementsByAbsEntry.get(line.UoMEntry) ?? null)
-          : null,
-    }));
+    const lines = productionOrderLines.map(
+      (line): ProductionOrderLineWithRelations => ({
+        ...line,
+        ProductionOrdersStage:
+          typeof line.StageID === 'number'
+            ? (stagesById.get(line.StageID) ?? null)
+            : null,
+        UnitOfMeasurement:
+          typeof line.UoMEntry === 'number'
+            ? (unitOfMeasurementsByAbsEntry.get(line.UoMEntry) ?? null)
+            : null,
+      }),
+    );
+
+    return {
+      productionOrder: productionOrderResponse.data,
+      lines,
+    };
+  }
+
+  async findProductionOrderLines(
+    id: number,
+  ): Promise<ProductionOrderLineWithRelations[]> {
+    const { lines } = await this.findProductionOrderLineData(id);
+
+    return lines;
+  }
+
+  async exportProductionOrderLines(
+    id: number,
+    options?: ExportProductionOrderLinesDto,
+  ) {
+    const { productionOrder, lines } =
+      await this.findProductionOrderLineData(id);
+    const stageIds = normalizeStageIds(getStageIdFilterInput(options));
+    const stageIdSet = stageIds ? new Set(stageIds) : undefined;
+    const filteredLines = stageIdSet
+      ? lines.filter(
+          (line) =>
+            typeof line.StageID === 'number' && stageIdSet.has(line.StageID),
+        )
+      : lines;
+
+    return this.warehouseReleaseExportService.export(
+      id,
+      filteredLines,
+      productionOrder,
+    );
   }
 }
