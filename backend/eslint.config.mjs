@@ -23,7 +23,6 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
-  },
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-floating-promises': 'warn',
@@ -34,7 +33,6 @@ export default tseslint.config(
       ],
       '@typescript-eslint/no-unsafe-assignment': 'off',
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
-    },
     },
   },
 );
