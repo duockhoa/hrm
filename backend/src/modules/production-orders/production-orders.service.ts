@@ -1,7 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import axios from 'axios';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
+import type {
+  ExportProductionOrderLinesDto,
+  ProductionOrderStageIdFilter,
+} from './dto/export-production-order-lines.dto';
 
 export type SapProductionOrderLine = {
   StageID?: number | null;
@@ -37,6 +41,50 @@ export type SapUnitOfMeasurement = {
 export type ProductionOrderLineWithRelations = SapProductionOrderLine & {
   ProductionOrdersStage: SapProductionOrderStage | null;
   UnitOfMeasurement: SapUnitOfMeasurement | null;
+};
+
+const getStageIdFilterInput = (
+  options?: ExportProductionOrderLinesDto,
+): ProductionOrderStageIdFilter | number | string | undefined => {
+  if (!options) {
+    return undefined;
+  }
+
+  if (options.stageIds !== undefined) {
+    return options.stageIds;
+  }
+
+  if (options.StageID !== undefined) {
+    return options.StageID;
+  }
+
+  return options.stageId;
+};
+
+const normalizeStageId = (stageId: number | string) => {
+  if (typeof stageId === 'string' && stageId.trim() === '') {
+    throw new BadRequestException('StageID must be an integer.');
+  }
+
+  const normalizedStageId = Number(stageId);
+
+  if (!Number.isInteger(normalizedStageId)) {
+    throw new BadRequestException('StageID must be an integer.');
+  }
+
+  return normalizedStageId;
+};
+
+const normalizeStageIds = (
+  value: ProductionOrderStageIdFilter | number | string | undefined,
+) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const stageIds = Array.isArray(value) ? value : [value];
+
+  return [...new Set(stageIds.map((stageId) => normalizeStageId(stageId)))];
 };
 
 @Injectable()
@@ -134,13 +182,24 @@ export class ProductionOrdersService {
     return lines;
   }
 
-  async exportProductionOrderLines(id: number) {
+  async exportProductionOrderLines(
+    id: number,
+    options?: ExportProductionOrderLinesDto,
+  ) {
     const { productionOrder, lines } =
       await this.findProductionOrderLineData(id);
+    const stageIds = normalizeStageIds(getStageIdFilterInput(options));
+    const stageIdSet = stageIds ? new Set(stageIds) : undefined;
+    const filteredLines = stageIdSet
+      ? lines.filter(
+          (line) =>
+            typeof line.StageID === 'number' && stageIdSet.has(line.StageID),
+        )
+      : lines;
 
     return this.warehouseReleaseExportService.export(
       id,
-      lines,
+      filteredLines,
       productionOrder,
     );
   }

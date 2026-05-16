@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -11,6 +12,7 @@ import {
 import type { Response } from 'express';
 import { ProductionOrdersService } from './production-orders.service';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import type { ExportProductionOrderLinesDto } from './dto/export-production-order-lines.dto';
 
 @UseGuards(jwtAuthGuard)
 @Controller('production-orders')
@@ -36,10 +38,14 @@ export class ProductionOrdersController {
   @Post(':id/production-order-lines/export')
   async exportProductionOrderLines(
     @Param('id', ParseIntPipe) id: number,
+    @Body() exportOptions: ExportProductionOrderLinesDto,
     @Res({ passthrough: true }) response: Response,
   ) {
     const exportedFile =
-      await this.productionOrdersService.exportProductionOrderLines(id);
+      await this.productionOrdersService.exportProductionOrderLines(
+        id,
+        exportOptions,
+      );
     const encodedFilename = encodeURIComponent(exportedFile.filename);
 
     response.set({

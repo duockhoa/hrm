@@ -52,11 +52,17 @@ describe('ProductionOrdersController', () => {
       set: jest.fn(),
     } as unknown as Response;
 
-    const result = await controller.exportProductionOrderLines(2031, response);
+    const exportOptions = { stageIds: [2, 3] };
+
+    const result = await controller.exportProductionOrderLines(
+      2031,
+      exportOptions,
+      response,
+    );
 
     expect(
       productionOrdersService.exportProductionOrderLines,
-    ).toHaveBeenCalledWith(2031);
+    ).toHaveBeenCalledWith(2031, exportOptions);
     expect(response.set).toHaveBeenCalledWith({
       'Content-Disposition':
         'attachment; filename="warehouse-release-order-2031.xlsx"; filename*=UTF-8\'\'warehouse-release-order-2031.xlsx',

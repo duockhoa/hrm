@@ -11,6 +11,7 @@ const mockedAxiosGet = axios.get as jest.MockedFunction<typeof axios.get>;
 
 describe('ProductionOrdersService', () => {
   let service: ProductionOrdersService;
+  let warehouseReleaseExportService: WarehouseReleaseExportService;
 
   beforeEach(async () => {
     mockedAxiosGet.mockReset();
@@ -32,6 +33,9 @@ describe('ProductionOrdersService', () => {
     }).compile();
 
     service = module.get<ProductionOrdersService>(ProductionOrdersService);
+    warehouseReleaseExportService = module.get<WarehouseReleaseExportService>(
+      WarehouseReleaseExportService,
+    );
   });
 
   it('should be defined', () => {
@@ -223,5 +227,80 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('O114').value).toBeNull();
     expect(worksheet.getRow(16).height).toBeGreaterThan(20.25);
     expect(worksheet.getRow(17).hidden).toBe(true);
+  });
+
+  it('filters exported production order lines by stage ids', async () => {
+    const productionOrder = {
+      ItemNo: 'TP00063',
+      PlannedQuantity: 1000,
+      ProductDescription: 'Thanh pham test',
+      U_SL: '010126',
+      U_MLSX: 'TP00063-1090526-2031',
+      ProductionOrderLines: [
+        {
+          LineNumber: 7,
+          VisualOrder: 7,
+          ItemNo: 'BB00075',
+          ItemType: 'pit_Item',
+          StageID: 2,
+          UoMEntry: 172,
+        },
+        {
+          LineNumber: 8,
+          VisualOrder: 8,
+          ItemNo: 'BB00076',
+          ItemType: 'pit_Item',
+          StageID: 3,
+          UoMEntry: 173,
+        },
+      ],
+      ProductionOrdersStages: [
+        {
+          StageID: 2,
+          Name: 'Dong goi',
+        },
+        {
+          StageID: 3,
+          Name: 'Kiem nghiem',
+        },
+      ],
+    };
+    mockedAxiosGet.mockResolvedValueOnce({
+      data: productionOrder,
+    });
+    mockedAxiosGet.mockResolvedValueOnce({
+      data: [
+        {
+          AbsEntry: 172,
+          Code: 'Cai',
+          Name: 'Cai',
+        },
+        {
+          AbsEntry: 173,
+          Code: 'Hop',
+          Name: 'Hop',
+        },
+      ],
+    });
+    const exportSpy = jest
+      .spyOn(warehouseReleaseExportService, 'export')
+      .mockResolvedValue({
+        buffer: Buffer.from('xlsx-content'),
+        contentType:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        filename: 'warehouse-release-order-2031.xlsx',
+      });
+
+    await service.exportProductionOrderLines(2031, { StageID: [2] });
+
+    expect(exportSpy).toHaveBeenCalledTimes(1);
+    const [, exportedLines] = exportSpy.mock.calls[0];
+    expect(exportedLines).toHaveLength(1);
+    expect(exportedLines[0]).toEqual(
+      expect.objectContaining({
+        ItemNo: 'BB00075',
+        StageID: 2,
+      }),
+    );
   });
 });
