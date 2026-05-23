@@ -200,16 +200,17 @@ model RegistrationNumbers {
 }
 
 model Items {
-  item_code        String               @id
-  item_name        String               @db.Text
-  unit             String?
-  dk_code          String?
-  registration_id  Int?
-  registration     RegistrationNumbers? @relation(fields: [registration_id], references: [id])
-  productionOrders ProductionOrders[]
-  created_at       DateTime             @default(now())
-  update_at        DateTime             @default(now()) @updatedAt
-  deleted_at       DateTime?
+  item_code               String                    @id
+  item_name               String                    @db.Text
+  unit                    String?
+  dk_code                 String?
+  registration_id         Int?
+  registration            RegistrationNumbers?      @relation(fields: [registration_id], references: [id])
+  productionOrders        ProductionOrders[]
+  productionSpecification ProductionSpecifications?
+  created_at              DateTime                  @default(now())
+  update_at               DateTime                  @default(now()) @updatedAt
+  deleted_at              DateTime?
 
   @@map("items")
 }
@@ -232,9 +233,24 @@ model ProductionOrders {
   lot_no                String
   packing_specification String?
   production_order_code String?
+
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
 }
 
+model ProductionSpecifications {
+  item_code           String    @id
+  item                Items     @relation(fields: [item_code], references: [item_code])
+  product_line        String?
+  dosage_form         String?
+  lower_control_limit Decimal?   @db.Decimal(18, 6)
+  upper_control_limit Decimal?   @db.Decimal(18, 6)
+  lower_allowed_limit Decimal?   @db.Decimal(18, 6)
+  upper_allowed_limit Decimal?   @db.Decimal(18, 6)
+  unit                String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now()) @updatedAt
+  deleted_at          DateTime?
 
-
+  @@map("production_specifications")
+}

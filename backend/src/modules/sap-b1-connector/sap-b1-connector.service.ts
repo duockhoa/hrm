@@ -166,8 +166,6 @@ export class SapB1ConnectorService {
                 ...productionOrderData,
               },
             });
-
-            this.logger.log(`Synced production order: ${id}`);
           } catch (productionOrderError) {
             this.logger.warn(
               `Failed to sync production order: ${

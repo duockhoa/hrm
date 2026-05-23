@@ -31,17 +31,28 @@ export class ItemsService {
         NOT: [
           { item_code: { startsWith: 'TP' } },
           { item_code: { startsWith: 'BTP' } },
-        ]
+        ],
       },
     });
   }
 
+  async findItemByCode(item_code: string) {
+    const item = await this.prismaService.items.findUnique({
+      where: {
+        item_code: item_code,
+      },
+      include: {
+        productionSpecification: true,
+      },
+    });
 
-async findItemByCode(item_code: string) {
-  return this.prismaService.items.findUnique({
-    where: {
-      item_code: item_code,
-    },
-  });
+    if (item?.productionSpecification?.deleted_at) {
+      return {
+        ...item,
+        productionSpecification: null,
+      };
+    }
+
+    return item;
+  }
 }
-}   
