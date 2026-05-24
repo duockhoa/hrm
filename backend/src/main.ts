@@ -1,9 +1,12 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
-import { AuthenticationMiddleware } from './middleware/authentication/authentication.middleware';
+import { ensureProductionOrderDeviationUploadDir } from './modules/production-order-deviations/production-order-deviation-upload.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  ensureProductionOrderDeviationUploadDir();
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableCors({});
   await app.listen(process.env.PORT ?? 3000);
 }

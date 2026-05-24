@@ -48,4 +48,37 @@ describe('ProductionOrderDeviationsController', () => {
       '2031',
     );
   });
+
+  it('uses the uploaded deviation image path when creating', async () => {
+    const createdDeviation = {
+      id: 1,
+      deviation_image:
+        '/production-order-deviations/images/deviation-image.jpg',
+    };
+
+    productionOrderDeviationsService.create.mockResolvedValue(createdDeviation);
+
+    await expect(
+      controller.create(
+        {
+          production_order_id: '2031',
+          deviation_content: 'Sai lech khoi luong',
+          handling_plan: 'Kiem tra lai',
+          reporter_id: '7',
+        },
+        {
+          filename: 'deviation-image.jpg',
+        } as Express.Multer.File,
+      ),
+    ).resolves.toEqual(createdDeviation);
+
+    expect(productionOrderDeviationsService.create).toHaveBeenCalledWith({
+      production_order_id: '2031',
+      deviation_content: 'Sai lech khoi luong',
+      handling_plan: 'Kiem tra lai',
+      reporter_id: '7',
+      deviation_image:
+        '/production-order-deviations/images/deviation-image.jpg',
+    });
+  });
 });

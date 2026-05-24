@@ -7,6 +7,10 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderDeviationDto } from './dto/create-production-order-deviation.dto';
 import { UpdateProductionOrderDeviationDto } from './dto/update-production-order-deviation.dto';
+import {
+  getAuthenticatedDeviationImagePath,
+  removeStoredDeviationImage,
+} from './production-order-deviation-upload.config';
 
 const productionOrderDeviationUserSelect = {
   id: true,
@@ -47,16 +51,21 @@ export class ProductionOrderDeviationsService {
       await this.ensureProductionOrderExists(normalizedProductionOrderId);
     }
 
-    return this.prismaService.productionOrderDeviations.findMany({
-      where: {
-        production_order_id: normalizedProductionOrderId ?? undefined,
-        deleted_at: null,
-      },
-      include: productionOrderDeviationInclude,
-      orderBy: {
-        created_at: 'desc',
-      },
-    });
+    const deviations =
+      await this.prismaService.productionOrderDeviations.findMany({
+        where: {
+          production_order_id: normalizedProductionOrderId ?? undefined,
+          deleted_at: null,
+        },
+        include: productionOrderDeviationInclude,
+        orderBy: {
+          created_at: 'desc',
+        },
+      });
+
+    return deviations.map((deviation) =>
+      this.withAuthenticatedImagePath(deviation),
+    );
   }
 
   async findById(id: number) {
@@ -73,7 +82,7 @@ export class ProductionOrderDeviationsService {
       throw new NotFoundException('Production order deviation not found');
     }
 
-    return deviation;
+    return this.withAuthenticatedImagePath(deviation);
   }
 
   async create(createDto: CreateProductionOrderDeviationDto) {
@@ -86,16 +95,24 @@ export class ProductionOrderDeviationsService {
       await this.ensureUserExists(data.approver_id, 'Approver');
     }
 
-    return this.prismaService.productionOrderDeviations.create({
-      data,
-      include: productionOrderDeviationInclude,
-    });
+    const deviation = await this.prismaService.productionOrderDeviations.create(
+      {
+        data,
+        include: productionOrderDeviationInclude,
+      },
+    );
+
+    return this.withAuthenticatedImagePath(deviation);
   }
 
   async update(id: number, updateDto: UpdateProductionOrderDeviationDto) {
-    await this.findById(id);
+    const existingDeviation = await this.findById(id);
 
     const data = this.buildUpdateData(updateDto);
+    const nextDeviationImage = data.deviation_image as
+      | string
+      | null
+      | undefined;
 
     if (data.production_order_id !== undefined) {
       await this.ensureProductionOrderExists(
@@ -111,27 +128,51 @@ export class ProductionOrderDeviationsService {
       await this.ensureUserExists(data.approver_id as number, 'Approver');
     }
 
-    return this.prismaService.productionOrderDeviations.update({
-      where: {
-        id,
-      },
-      data,
-      include: productionOrderDeviationInclude,
-    });
+    const updatedDeviation =
+      await this.prismaService.productionOrderDeviations.update({
+        where: {
+          id,
+        },
+        data,
+        include: productionOrderDeviationInclude,
+      });
+
+    if (
+      nextDeviationImage !== undefined &&
+      existingDeviation.deviation_image !== nextDeviationImage
+    ) {
+      await removeStoredDeviationImage(existingDeviation.deviation_image);
+    }
+
+    return this.withAuthenticatedImagePath(updatedDeviation);
   }
 
   async delete(id: number) {
     await this.findById(id);
 
-    return this.prismaService.productionOrderDeviations.update({
-      where: {
-        id,
-      },
-      data: {
-        deleted_at: new Date(),
-      },
-      include: productionOrderDeviationInclude,
-    });
+    const deletedDeviation =
+      await this.prismaService.productionOrderDeviations.update({
+        where: {
+          id,
+        },
+        data: {
+          deleted_at: new Date(),
+        },
+        include: productionOrderDeviationInclude,
+      });
+
+    return this.withAuthenticatedImagePath(deletedDeviation);
+  }
+
+  private withAuthenticatedImagePath<
+    T extends { deviation_image: string | null },
+  >(deviation: T) {
+    return {
+      ...deviation,
+      deviation_image: getAuthenticatedDeviationImagePath(
+        deviation.deviation_image,
+      ),
+    };
   }
 
   private async ensureProductionOrderExists(id: number) {
@@ -172,10 +213,7 @@ export class ProductionOrderDeviationsService {
         dto.deviation_content,
         'deviation_content',
       ),
-      deviation_image: this.normalizeOptionalString(
-        dto.deviation_image,
-        'deviation_image',
-      ),
+      deviation_image: this.normalizeDeviationImage(dto.deviation_image),
       handling_plan: this.normalizeRequiredString(
         dto.handling_plan,
         'handling_plan',
@@ -203,10 +241,7 @@ export class ProductionOrderDeviationsService {
     }
 
     if (dto.deviation_image !== undefined) {
-      data.deviation_image = this.normalizeOptionalString(
-        dto.deviation_image,
-        'deviation_image',
-      );
+      data.deviation_image = this.normalizeDeviationImage(dto.deviation_image);
     }
 
     if (dto.handling_plan !== undefined) {
@@ -257,6 +292,12 @@ export class ProductionOrderDeviationsService {
     const normalizedValue = value.trim();
 
     return normalizedValue === '' ? null : normalizedValue;
+  }
+
+  private normalizeDeviationImage(value: unknown) {
+    return getAuthenticatedDeviationImagePath(
+      this.normalizeOptionalString(value, 'deviation_image'),
+    );
   }
 
   private normalizeRequiredInt(value: unknown, fieldName: string) {

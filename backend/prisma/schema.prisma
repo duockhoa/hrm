@@ -241,6 +241,25 @@ model ProductionOrders {
   @@map("production_orders")
 }
 
+
+
+model ProductionSpecifications {
+  item_code           String    @id
+  item                Items     @relation(fields: [item_code], references: [item_code])
+  product_line        String?
+  dosage_form         String?
+  lower_control_limit Decimal?  @db.Decimal(18, 6)
+  upper_control_limit Decimal?  @db.Decimal(18, 6)
+  lower_allowed_limit Decimal?  @db.Decimal(18, 6)
+  upper_allowed_limit Decimal?  @db.Decimal(18, 6)
+  unit                String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now()) @updatedAt
+  deleted_at          DateTime?
+
+  @@map("production_specifications")
+}
+
 model ProductionOrderDeviations {
   id                  Int              @id @default(autoincrement())
   production_order_id Int
@@ -260,21 +279,4 @@ model ProductionOrderDeviations {
   @@index([approver_id], map: "production_order_deviations_approver_id_fkey")
   @@index([reporter_id], map: "production_order_deviations_reporter_id_fkey")
   @@map("production_order_deviations")
-}
-
-model ProductionSpecifications {
-  item_code           String    @id
-  item                Items     @relation(fields: [item_code], references: [item_code])
-  product_line        String?
-  dosage_form         String?
-  lower_control_limit Decimal?  @db.Decimal(18, 6)
-  upper_control_limit Decimal?  @db.Decimal(18, 6)
-  lower_allowed_limit Decimal?  @db.Decimal(18, 6)
-  upper_allowed_limit Decimal?  @db.Decimal(18, 6)
-  unit                String?
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @default(now()) @updatedAt
-  deleted_at          DateTime?
-
-  @@map("production_specifications")
 }
