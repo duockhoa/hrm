@@ -19,6 +19,7 @@ import { SapB1ConnectorModule } from './modules/sap-b1-connector/sap-b1-connecto
 import { ItemsModule } from './modules/items/items.module';
 import { ProductionOrdersModule } from './modules/production-orders/production-orders.module';
 import { ProductionSpecificationsModule } from './modules/production-specifications/production-specifications.module';
+import { ProductionOrderDeviationsModule } from './modules/production-order-deviations/production-order-deviations.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ProductionSpecificationsModule } from './modules/production-specificati
     SapB1ConnectorModule,
     ItemsModule,
     ProductionOrdersModule,
+    ProductionOrderDeviationsModule,
     ProductionSpecificationsModule,
   ],
   controllers: [AppController],

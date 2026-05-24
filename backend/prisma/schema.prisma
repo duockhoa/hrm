@@ -8,26 +8,28 @@ datasource db {
 }
 
 model Users {
-  id                    Int                 @id @default(autoincrement())
-  username              String              @unique
-  password              String
-  name                  String
-  email                 String?             @unique
-  created_at            DateTime            @default(now())
-  updated_at            DateTime            @default(now()) @updatedAt
-  avatar                String?
-  deleted_at            DateTime?
-  department            String?
-  position              String?
-  status                String              @default("active")
-  companyLeaderOf       Company?            @relation("CompanyLeader")
-  contracts             Contracts[]
-  team_lead_departments Departments[]       @relation("Departments_team_lead_user")
-  passwordResetOTPs     PasswordResetOTPs[]
-  tokens                Tokens[]
-  profile               UserProfiles?
-  userRoles             UserRoles[]
-  departmentObj         Departments?        @relation("DepartmentUsers", fields: [department], references: [name])
+  id                                Int                         @id @default(autoincrement())
+  username                          String                      @unique
+  password                          String
+  name                              String
+  email                             String?                     @unique
+  created_at                        DateTime                    @default(now())
+  updated_at                        DateTime                    @default(now()) @updatedAt
+  avatar                            String?
+  deleted_at                        DateTime?
+  department                        String?
+  position                          String?
+  status                            String                      @default("active")
+  companyLeaderOf                   Company?                    @relation("CompanyLeader")
+  contracts                         Contracts[]
+  team_lead_departments             Departments[]               @relation("Departments_team_lead_user")
+  passwordResetOTPs                 PasswordResetOTPs[]
+  tokens                            Tokens[]
+  profile                           UserProfiles?
+  userRoles                         UserRoles[]
+  departmentObj                     Departments?                @relation("DepartmentUsers", fields: [department], references: [name])
+  approvedProductionOrderDeviations ProductionOrderDeviations[] @relation("ProductionOrderDeviationApprover")
+  reportedProductionOrderDeviations ProductionOrderDeviations[] @relation("ProductionOrderDeviationReporter")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -216,9 +218,9 @@ model Items {
 }
 
 model ProductionOrders {
-  id                    Int      @id
+  id                    Int                         @id
   item_code             String
-  item                  Items    @relation(fields: [item_code], references: [item_code])
+  item                  Items                       @relation(fields: [item_code], references: [item_code])
   status                String
   type                  String
   planned_quatity       Int
@@ -233,9 +235,31 @@ model ProductionOrders {
   lot_no                String
   packing_specification String?
   production_order_code String?
+  deviations            ProductionOrderDeviations[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
+}
+
+model ProductionOrderDeviations {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade)
+  deviation_content   String           @db.Text
+  deviation_image     String?          @db.Text
+  handling_plan       String           @db.Text
+  approver_id         Int?
+  approver            Users?           @relation("ProductionOrderDeviationApprover", fields: [approver_id], references: [id])
+  reporter_id         Int
+  reporter            Users            @relation("ProductionOrderDeviationReporter", fields: [reporter_id], references: [id])
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+  deleted_at          DateTime?
+
+  @@index([production_order_id], map: "production_order_deviations_production_order_id_fkey")
+  @@index([approver_id], map: "production_order_deviations_approver_id_fkey")
+  @@index([reporter_id], map: "production_order_deviations_reporter_id_fkey")
+  @@map("production_order_deviations")
 }
 
 model ProductionSpecifications {
@@ -243,10 +267,10 @@ model ProductionSpecifications {
   item                Items     @relation(fields: [item_code], references: [item_code])
   product_line        String?
   dosage_form         String?
-  lower_control_limit Decimal?   @db.Decimal(18, 6)
-  upper_control_limit Decimal?   @db.Decimal(18, 6)
-  lower_allowed_limit Decimal?   @db.Decimal(18, 6)
-  upper_allowed_limit Decimal?   @db.Decimal(18, 6)
+  lower_control_limit Decimal?  @db.Decimal(18, 6)
+  upper_control_limit Decimal?  @db.Decimal(18, 6)
+  lower_allowed_limit Decimal?  @db.Decimal(18, 6)
+  upper_allowed_limit Decimal?  @db.Decimal(18, 6)
   unit                String?
   created_at          DateTime  @default(now())
   updated_at          DateTime  @default(now()) @updatedAt
