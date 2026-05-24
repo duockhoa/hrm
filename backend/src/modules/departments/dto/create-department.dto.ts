@@ -1,7 +1,7 @@
 import {} from 'class-validator';
 
 export class CreateDepartmentDto {
-  name: string;
+  name!: string;
   description?: string;
   team_lead?: number;
   company_id?: number;

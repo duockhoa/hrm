@@ -6,11 +6,17 @@ import { ProductionOrderDeviationsService } from './production-order-deviations.
 describe('ProductionOrderDeviationsService', () => {
   let service: ProductionOrderDeviationsService;
   let prismaService: {
+    $transaction: jest.Mock;
     productionOrderDeviations: {
       findFirst: jest.Mock;
       findMany: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+    };
+    productionOrderDeviationImages: {
+      findFirst: jest.Mock;
+      createMany: jest.Mock;
+      updateMany: jest.Mock;
     };
     productionOrders: {
       findUnique: jest.Mock;
@@ -22,11 +28,17 @@ describe('ProductionOrderDeviationsService', () => {
 
   beforeEach(async () => {
     prismaService = {
+      $transaction: jest.fn((callback) => callback(prismaService)),
       productionOrderDeviations: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      productionOrderDeviationImages: {
+        findFirst: jest.fn(),
+        createMany: jest.fn(),
+        updateMany: jest.fn(),
       },
       productionOrders: {
         findUnique: jest.fn(),
@@ -56,7 +68,14 @@ describe('ProductionOrderDeviationsService', () => {
       id: 1,
       production_order_id: 2031,
       deviation_content: 'Sai lech khoi luong',
-      deviation_image: null,
+      images: [
+        {
+          image_path: '/production-order-deviations/images/image-1.jpg',
+        },
+        {
+          image_path: '/production-order-deviations/images/image-2.jpg',
+        },
+      ],
       handling_plan: 'Kiem tra lai cong doan',
       approver_id: null,
       reporter_id: 7,
@@ -64,7 +83,11 @@ describe('ProductionOrderDeviationsService', () => {
 
     prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
     prismaService.users.findFirst.mockResolvedValue({ id: 7 });
-    prismaService.productionOrderDeviations.create.mockResolvedValue(
+    prismaService.productionOrderDeviations.create.mockResolvedValue({
+      id: 1,
+      production_order_id: 2031,
+    });
+    prismaService.productionOrderDeviations.findFirst.mockResolvedValue(
       createdDeviation,
     );
 
@@ -72,36 +95,58 @@ describe('ProductionOrderDeviationsService', () => {
       service.create({
         production_order_id: '2031',
         deviation_content: '  Sai lech khoi luong  ',
-        deviation_image: '',
+        deviation_images: [
+          '/production-order-deviations/images/image-1.jpg',
+          '/production-order-deviations/images/image-2.jpg',
+        ],
         handling_plan: '  Kiem tra lai cong doan  ',
         reporter_id: '7',
       }),
-    ).resolves.toEqual(createdDeviation);
+    ).resolves.toEqual({
+      ...createdDeviation,
+      deviation_images: [
+        '/production-order-deviations/images/image-1.jpg',
+        '/production-order-deviations/images/image-2.jpg',
+      ],
+      deviation_image: '/production-order-deviations/images/image-1.jpg',
+    });
 
     expect(prismaService.productionOrderDeviations.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: {
           production_order_id: 2031,
           deviation_content: 'Sai lech khoi luong',
-          deviation_image: null,
           handling_plan: 'Kiem tra lai cong doan',
           approver_id: null,
           reporter_id: 7,
         },
       }),
     );
+    expect(
+      prismaService.productionOrderDeviationImages.createMany,
+    ).toHaveBeenCalledWith({
+      data: [
+        {
+          deviation_id: 1,
+          image_path: '/production-order-deviations/images/image-1.jpg',
+        },
+        {
+          deviation_id: 1,
+          image_path: '/production-order-deviations/images/image-2.jpg',
+        },
+      ],
+    });
   });
 
   it('rejects empty updates', async () => {
     prismaService.productionOrderDeviations.findFirst.mockResolvedValue({
       id: 1,
+      images: [],
     });
 
     await expect(service.update(1, {})).rejects.toBeInstanceOf(
       BadRequestException,
     );
-    expect(
-      prismaService.productionOrderDeviations.update,
-    ).not.toHaveBeenCalled();
+    expect(prismaService.$transaction).not.toHaveBeenCalled();
   });
 });

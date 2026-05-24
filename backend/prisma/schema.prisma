@@ -241,8 +241,6 @@ model ProductionOrders {
   @@map("production_orders")
 }
 
-
-
 model ProductionSpecifications {
   item_code           String    @id
   item                Items     @relation(fields: [item_code], references: [item_code])
@@ -261,22 +259,35 @@ model ProductionSpecifications {
 }
 
 model ProductionOrderDeviations {
-  id                  Int              @id @default(autoincrement())
+  id                  Int                              @id @default(autoincrement())
   production_order_id Int
-  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade)
-  deviation_content   String           @db.Text
-  deviation_image     String?          @db.Text
-  handling_plan       String           @db.Text
+  productionOrder     ProductionOrders                 @relation(fields: [production_order_id], references: [id], onDelete: Cascade)
+  deviation_content   String                           @db.Text
+  handling_plan       String                           @db.Text
   approver_id         Int?
-  approver            Users?           @relation("ProductionOrderDeviationApprover", fields: [approver_id], references: [id])
+  approver            Users?                           @relation("ProductionOrderDeviationApprover", fields: [approver_id], references: [id])
   reporter_id         Int
-  reporter            Users            @relation("ProductionOrderDeviationReporter", fields: [reporter_id], references: [id])
-  created_at          DateTime         @default(now())
-  updated_at          DateTime         @default(now()) @updatedAt
+  reporter            Users                            @relation("ProductionOrderDeviationReporter", fields: [reporter_id], references: [id])
+  images              ProductionOrderDeviationImages[]
+  created_at          DateTime                         @default(now())
+  updated_at          DateTime                         @default(now()) @updatedAt
   deleted_at          DateTime?
 
   @@index([production_order_id], map: "production_order_deviations_production_order_id_fkey")
   @@index([approver_id], map: "production_order_deviations_approver_id_fkey")
   @@index([reporter_id], map: "production_order_deviations_reporter_id_fkey")
   @@map("production_order_deviations")
+}
+
+model ProductionOrderDeviationImages {
+  id           Int                       @id @default(autoincrement())
+  deviation_id Int
+  deviation    ProductionOrderDeviations @relation(fields: [deviation_id], references: [id], onDelete: Cascade)
+  image_path   String                    @db.Text
+  created_at   DateTime                  @default(now())
+  updated_at   DateTime                  @default(now()) @updatedAt
+  deleted_at   DateTime?
+
+  @@index([deviation_id], map: "production_order_deviation_images_deviation_id_fkey")
+  @@map("production_order_deviation_images")
 }

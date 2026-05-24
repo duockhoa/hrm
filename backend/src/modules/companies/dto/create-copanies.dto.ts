@@ -2,7 +2,7 @@ import { IsString, IsEmail, IsNotEmpty } from 'class-validator';
 export class CreateCompanyDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
   @IsString()
   description?: string;
   @IsString()

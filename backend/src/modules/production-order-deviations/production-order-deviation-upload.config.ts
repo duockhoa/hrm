@@ -37,6 +37,7 @@ const STORED_DEVIATION_IMAGE_ROUTES = [
   PRODUCTION_ORDER_DEVIATION_IMAGE_ROUTE,
   LEGACY_PRODUCTION_ORDER_DEVIATION_UPLOAD_ROUTE,
 ];
+export const MAX_DEVIATION_IMAGE_COUNT = 10;
 
 export const productionOrderDeviationImageUploadOptions = {
   storage: diskStorage({
@@ -56,7 +57,7 @@ export const productionOrderDeviationImageUploadOptions = {
     if (!IMAGE_EXTENSIONS_BY_MIME_TYPE.has(file.mimetype)) {
       callback(
         new BadRequestException(
-          'deviation_image must be a JPG, PNG, WEBP, or GIF image',
+          'deviation_images must be JPG, PNG, WEBP, or GIF images',
         ),
         false,
       );
@@ -77,6 +78,11 @@ export const getDeviationImagePath = (file?: Express.Multer.File) => {
 
   return `${PRODUCTION_ORDER_DEVIATION_IMAGE_ROUTE}/${file.filename}`;
 };
+
+export const getDeviationImagePaths = (files?: Express.Multer.File[]) =>
+  files
+    ?.map((file) => getDeviationImagePath(file))
+    .filter((imagePath): imagePath is string => Boolean(imagePath)) ?? [];
 
 const getSafeDeviationImageFilename = (filename: string) => {
   const normalizedFilename = filename.trim();
@@ -131,6 +137,18 @@ const getStoredDeviationImageFilename = (imagePath?: string | null) => {
   return getSafeDeviationImageFilename(basename(imagePath));
 };
 
+export const getDeviationImageLookupPaths = (filename: string) => {
+  const safeFilename = getSafeDeviationImageFilename(filename);
+
+  if (!safeFilename) {
+    return [];
+  }
+
+  return STORED_DEVIATION_IMAGE_ROUTES.map(
+    (route) => `${route}/${safeFilename}`,
+  );
+};
+
 export const getAuthenticatedDeviationImagePath = (
   imagePath?: string | null,
 ) => {
@@ -142,6 +160,13 @@ export const getAuthenticatedDeviationImagePath = (
 
   return `${PRODUCTION_ORDER_DEVIATION_IMAGE_ROUTE}/${filename}`;
 };
+
+export const getAuthenticatedDeviationImagePaths = (
+  imagePaths?: Array<string | null | undefined>,
+) =>
+  imagePaths
+    ?.map((imagePath) => getAuthenticatedDeviationImagePath(imagePath))
+    .filter((imagePath): imagePath is string => Boolean(imagePath)) ?? [];
 
 export const resolveDeviationImageFile = async (filename: string) => {
   const filePath = getDeviationImageFilePath(filename);
@@ -174,6 +199,14 @@ export const removeUploadedDeviationImage = async (
   await unlink(file.path).catch(() => undefined);
 };
 
+export const removeUploadedDeviationImages = async (
+  files?: Express.Multer.File[],
+) => {
+  await Promise.all(
+    files?.map((file) => removeUploadedDeviationImage(file)) ?? [],
+  );
+};
+
 export const removeStoredDeviationImage = async (imagePath?: string | null) => {
   const filename = getStoredDeviationImageFilename(imagePath);
 
@@ -188,4 +221,12 @@ export const removeStoredDeviationImage = async (imagePath?: string | null) => {
   }
 
   await unlink(filePath).catch(() => undefined);
+};
+
+export const removeStoredDeviationImages = async (
+  imagePaths?: Array<string | null | undefined>,
+) => {
+  await Promise.all(
+    imagePaths?.map((imagePath) => removeStoredDeviationImage(imagePath)) ?? [],
+  );
 };
