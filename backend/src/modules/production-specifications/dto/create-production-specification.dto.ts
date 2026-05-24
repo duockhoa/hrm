@@ -1,5 +1,5 @@
 export class CreateProductionSpecificationDto {
-  item_code: string;
+  item_code!: string;
   product_line?: string | null;
   dosage_form?: string | null;
   lower_control_limit?: string | number | null;
