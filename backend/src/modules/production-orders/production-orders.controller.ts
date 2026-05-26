@@ -17,6 +17,25 @@ import type { ExportProductionOrderLinesDto } from './dto/export-production-orde
 import { CreateProductionOrderSamplingRequestDto } from './dto/create-production-order-sampling-request.dto';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 
+const getAsciiFilenameFallback = (filename: string) => {
+  const fallback = filename
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7e]/g, '')
+    .replace(/[\\/:*?"<>|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return fallback || 'download.xlsx';
+};
+
+const encodeContentDispositionFilename = (filename: string) =>
+  encodeURIComponent(filename).replace(
+    /['()*]/g,
+    (character) =>
+      `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+
 @UseGuards(jwtAuthGuard)
 @Controller('production-orders')
 export class ProductionOrdersController {
@@ -70,10 +89,13 @@ export class ProductionOrdersController {
         id,
         exportOptions,
       );
-    const encodedFilename = encodeURIComponent(exportedFile.filename);
+    const filenameFallback = getAsciiFilenameFallback(exportedFile.filename);
+    const encodedFilename = encodeContentDispositionFilename(
+      exportedFile.filename,
+    );
 
     response.set({
-      'Content-Disposition': `attachment; filename="${exportedFile.filename}"; filename*=UTF-8''${encodedFilename}`,
+      'Content-Disposition': `attachment; filename="${filenameFallback}"; filename*=UTF-8''${encodedFilename}`,
       'Content-Length': exportedFile.buffer.length,
       'Content-Type': exportedFile.contentType,
     });
