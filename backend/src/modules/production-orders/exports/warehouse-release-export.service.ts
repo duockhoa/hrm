@@ -199,6 +199,7 @@ const getWarehouseReleaseNumber = (
 
 const getWarehouseReleaseReason = (
   productionOrder?: SapProductionOrderResponse,
+  lines: ProductionOrderLineWithRelations[] = [],
 ) => {
   const productDescription =
     normalizeCellValue(productionOrder?.ProductDescription) ?? '';
@@ -206,8 +207,53 @@ const getWarehouseReleaseReason = (
     normalizeCellValue(productionOrder?.PlannedQuantity) ?? '';
   const itemNo = normalizeCellValue(productionOrder?.ItemNo) ?? '';
   const batchNumber = normalizeCellValue(productionOrder?.U_SL) ?? '';
+  const stageNames = [
+    ...new Set(
+      lines
+        .map((line) => normalizeCellValue(line.ProductionOrdersStage?.Name))
+        .map((stageName) =>
+          typeof stageName === 'string' ? stageName.trim() : stageName,
+        )
+        .filter(Boolean),
+    ),
+  ].join(' + ');
+  const reasonPrefix = stageNames
+    ? `Xuất nguyên vật liệu cho ${stageNames}`
+    : 'Xuất nguyên vật liệu cho sản xuất';
 
-  return `- Lý do xuất: Xuất cho sản xuất ${productDescription} (${plannedQuantity}) ${itemNo} - ${batchNumber}`;
+  return `- Lý do xuất: ${reasonPrefix} ${productDescription} (${plannedQuantity}) ${itemNo} - ${batchNumber}`;
+};
+
+const sanitizeFilenamePart = (value: unknown) => {
+  const normalizedValue = normalizeCellValue(value);
+
+  if (normalizedValue === null || normalizedValue === '') {
+    return '';
+  }
+
+  return String(normalizedValue)
+    .replace(/[\\/:*?"<>|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const getWarehouseReleaseFilename = (
+  productionOrderId: number,
+  productionOrder?: SapProductionOrderResponse,
+) => {
+  const productDescription = sanitizeFilenamePart(
+    productionOrder?.ProductDescription,
+  );
+  const batchNumber = sanitizeFilenamePart(productionOrder?.U_SL);
+  const filenameParts = ['PXK', productDescription, batchNumber].filter(
+    Boolean,
+  );
+
+  if (filenameParts.length === 1) {
+    filenameParts.push(String(productionOrderId));
+  }
+
+  return `${filenameParts.join(' ')}.xlsx`;
 };
 
 @Injectable()
@@ -255,7 +301,11 @@ export class WarehouseReleaseExportService {
       'K7',
       `Số: ${getWarehouseReleaseNumber(productionOrderId, productionOrder)}`,
     );
-    setCellValue(worksheet, 'A11', getWarehouseReleaseReason(productionOrder));
+    setCellValue(
+      worksheet,
+      'A11',
+      getWarehouseReleaseReason(productionOrder, warehouseReleaseLines),
+    );
     setCellValue(
       worksheet,
       'A12',
@@ -315,7 +365,7 @@ export class WarehouseReleaseExportService {
     return {
       buffer: Buffer.from(buffer),
       contentType: EXCEL_MIME_TYPE,
-      filename: `warehouse-release-order-${productionOrderId}.xlsx`,
+      filename: getWarehouseReleaseFilename(productionOrderId, productionOrder),
     };
   }
 }

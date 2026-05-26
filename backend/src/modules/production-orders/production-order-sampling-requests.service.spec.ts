@@ -23,6 +23,8 @@ describe('ProductionOrderSamplingRequestsService', () => {
   beforeEach(async () => {
     process.env.APPS_SCRIPT_PYCLM_API_URL =
       'https://script.google.com/macros/s/test/exec';
+    process.env.APPS_SCRIPT_PYCLM_EMAIL_RECIPIENTS =
+      'ktcl@example.com, manager@example.com';
     delete process.env.APPS_SCRIPT_PYCLM_TIMEOUT_MS;
     mockedAxiosPost.mockReset();
 
@@ -54,6 +56,7 @@ describe('ProductionOrderSamplingRequestsService', () => {
 
   afterEach(() => {
     delete process.env.APPS_SCRIPT_PYCLM_API_URL;
+    delete process.env.APPS_SCRIPT_PYCLM_EMAIL_RECIPIENTS;
     delete process.env.APPS_SCRIPT_PYCLM_TIMEOUT_MS;
   });
 
@@ -97,7 +100,7 @@ describe('ProductionOrderSamplingRequestsService', () => {
     const result = await service.create(
       2031,
       { location: ' Kiem nghiem ' },
-      { id: 7, name: 'Binh' },
+      { id: 7, name: 'Binh', email: 'binh@example.com' },
     );
 
     expect(mockedAxiosPost).toHaveBeenCalledWith(
@@ -110,6 +113,8 @@ describe('ProductionOrderSamplingRequestsService', () => {
         expiryDate: '2028-05-03',
         sender: 'Binh',
         location: 'Kiem nghiem',
+        emailRecipients:
+          'ktcl@example.com,manager@example.com,binh@example.com',
       },
       {
         headers: {

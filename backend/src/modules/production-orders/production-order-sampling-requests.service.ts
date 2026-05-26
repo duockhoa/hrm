@@ -161,6 +161,7 @@ export class ProductionOrderSamplingRequestsService {
         this.normalizeOptionalString(dto.location) ??
         productionOrder.warehouse ??
         '',
+      emailRecipients: this.getEmailRecipients(user),
     };
   }
 
@@ -172,6 +173,7 @@ export class ProductionOrderSamplingRequestsService {
     expiryDate: string;
     sender: string;
     location: string;
+    emailRecipients: string;
   }): Promise<Required<Pick<AppsScriptPyclmResponse, 'url'>>> {
     try {
       const response = await axios.post<AppsScriptPyclmResponse>(
@@ -241,6 +243,29 @@ export class ProductionOrderSamplingRequestsService {
       this.normalizeOptionalString(user?.email) ??
       ''
     );
+  }
+
+  private getEmailRecipients(user?: AuthenticatedUser) {
+    const recipients = [
+      ...this.normalizeEmailRecipients(
+        process.env.APPS_SCRIPT_PYCLM_EMAIL_RECIPIENTS,
+      ),
+      ...this.normalizeEmailRecipients(user?.email),
+    ];
+    const uniqueRecipients = [...new Set(recipients)];
+
+    return uniqueRecipients.join(',');
+  }
+
+  private normalizeEmailRecipients(value?: string | null) {
+    if (!value) {
+      return [];
+    }
+
+    return value
+      .split(',')
+      .map((recipient) => recipient.trim())
+      .filter(Boolean);
   }
 
   private shouldResend(value?: boolean | string | null) {
