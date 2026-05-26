@@ -167,11 +167,30 @@ describe('ProductionOrdersService', () => {
             U_SL: '010126',
             U_HSD: '2028-05-03',
           },
+          {
+            DocumentAbsoluteEntry: 2031,
+            LineNumber: 8,
+            VisualOrder: 8,
+            ItemNo: 'BB00076',
+            ItemName: 'Mang nhom dung cho dong goi thanh pham',
+            ItemType: 'pit_Item',
+            StageID: 3,
+            UoMEntry: 172,
+            PlannedQuantity: 2,
+            Warehouse: 'K-KHKV',
+            StartDate: '2026-05-08',
+            U_SL: '010126',
+            U_HSD: '2028-05-03',
+          },
         ],
         ProductionOrdersStages: [
           {
             StageID: 2,
             Name: 'Dong goi',
+          },
+          {
+            StageID: 3,
+            Name: 'Xu ly bao bi',
           },
         ],
       },
@@ -188,7 +207,7 @@ describe('ProductionOrdersService', () => {
 
     const exportedFile = await service.exportProductionOrderLines(2031);
 
-    expect(exportedFile.filename).toBe('warehouse-release-order-2031.xlsx');
+    expect(exportedFile.filename).toBe('PXK Thanh pham test 010126.xlsx');
     expect(exportedFile.contentType).toBe(
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
@@ -207,7 +226,7 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('K6').value).toBe('Ngày 08 tháng 05 năm 2026');
     expect(worksheet.getCell('K7').value).toBe('Số: TP00063-1090526-2031');
     expect(worksheet.getCell('A11').value).toBe(
-      '- Lý do xuất: Xuất cho sản xuất Thanh pham test (1000) TP00063 - 010126',
+      '- Lý do xuất: Xuất nguyên vật liệu cho Dong goi + Xu ly bao bi Thanh pham test (1000) TP00063 - 010126',
     );
     expect(worksheet.getCell('A12').value).toBe(
       '- Xuất tại kho (ngăn lô): K-KHKV',
@@ -226,7 +245,7 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('AB16').value).toBeNull();
     expect(worksheet.getCell('O114').value).toBeNull();
     expect(worksheet.getRow(16).height).toBeGreaterThan(20.25);
-    expect(worksheet.getRow(17).hidden).toBe(true);
+    expect(worksheet.getRow(18).hidden).toBe(true);
   });
 
   it('filters exported production order lines by stage ids', async () => {

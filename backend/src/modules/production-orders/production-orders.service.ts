@@ -43,6 +43,13 @@ export type ProductionOrderLineWithRelations = SapProductionOrderLine & {
   UnitOfMeasurement: SapUnitOfMeasurement | null;
 };
 
+const productionOrderSamplingRequestInclude = {
+  orderBy: {
+    sent_at: 'desc' as const,
+  },
+  take: 1,
+};
+
 const getStageIdFilterInput = (
   options?: ExportProductionOrderLinesDto,
 ): ProductionOrderStageIdFilter | number | string | undefined => {
@@ -98,6 +105,7 @@ export class ProductionOrdersService {
     return this.prismaService.productionOrders.findMany({
       include: {
         item: true,
+        samplingRequests: productionOrderSamplingRequestInclude,
       },
       orderBy: {
         id: 'desc',
@@ -112,6 +120,7 @@ export class ProductionOrdersService {
       },
       include: {
         item: true,
+        samplingRequests: productionOrderSamplingRequestInclude,
       },
     });
   }
