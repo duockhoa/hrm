@@ -3,6 +3,7 @@ import { StreamableFile } from '@nestjs/common';
 import { ProductionOrdersController } from './production-orders.controller';
 import { ProductionOrdersService } from './production-orders.service';
 import type { Response } from 'express';
+import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -12,6 +13,10 @@ describe('ProductionOrdersController', () => {
     findProductionOrderLines: jest.Mock;
     exportProductionOrderLines: jest.Mock;
   };
+  let productionOrderSamplingRequestsService: {
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
 
   beforeEach(async () => {
     productionOrdersService = {
@@ -20,6 +25,10 @@ describe('ProductionOrdersController', () => {
       findProductionOrderLines: jest.fn(),
       exportProductionOrderLines: jest.fn(),
     };
+    productionOrderSamplingRequestsService = {
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -27,6 +36,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrdersService,
           useValue: productionOrdersService,
+        },
+        {
+          provide: ProductionOrderSamplingRequestsService,
+          useValue: productionOrderSamplingRequestsService,
         },
       ],
     }).compile();
@@ -38,6 +51,36 @@ describe('ProductionOrdersController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('gets sampling requests for a production order', async () => {
+    const samplingRequests = [{ id: 1, production_order_id: 2031 }];
+    productionOrderSamplingRequestsService.findAllByProductionOrder.mockResolvedValue(
+      samplingRequests,
+    );
+
+    await expect(controller.findSamplingRequests(2031)).resolves.toBe(
+      samplingRequests,
+    );
+    expect(
+      productionOrderSamplingRequestsService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('creates a sampling request using the authenticated user', async () => {
+    const createDto = { location: 'Kiem nghiem' };
+    const user = { id: 7, name: 'Binh' };
+    const result = { status: 'success', samplingRequest: { id: 1 } };
+    productionOrderSamplingRequestsService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createSamplingRequest(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderSamplingRequestsService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+    );
   });
 
   it('sets download headers and returns a streamable file when exporting production order lines', async () => {
