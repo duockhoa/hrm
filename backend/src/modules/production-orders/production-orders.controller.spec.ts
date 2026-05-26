@@ -115,4 +115,27 @@ describe('ProductionOrdersController', () => {
     });
     expect(result).toBeInstanceOf(StreamableFile);
   });
+
+  it('uses an ASCII fallback filename when the exported filename has Vietnamese characters', async () => {
+    const buffer = Buffer.from('xlsx-content');
+    productionOrdersService.exportProductionOrderLines.mockResolvedValue({
+      buffer,
+      contentType:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      filename: 'PXK Thành phẩm test 010126.xlsx',
+    });
+    const response = {
+      set: jest.fn(),
+    } as unknown as Response;
+
+    await controller.exportProductionOrderLines(2031, {}, response);
+
+    expect(response.set).toHaveBeenCalledWith({
+      'Content-Disposition':
+        'attachment; filename="PXK Thanh pham test 010126.xlsx"; filename*=UTF-8\'\'PXK%20Th%C3%A0nh%20ph%E1%BA%A9m%20test%20010126.xlsx',
+      'Content-Length': buffer.length,
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+  });
 });
