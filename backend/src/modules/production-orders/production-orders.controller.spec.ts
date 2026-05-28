@@ -9,6 +9,8 @@ describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
   let productionOrdersService: {
     findAll: jest.Mock;
+    findFinishedProducts: jest.Mock;
+    findSemiFinishedProducts: jest.Mock;
     findProductionOrderById: jest.Mock;
     findProductionOrderLines: jest.Mock;
     exportProductionOrderLines: jest.Mock;
@@ -21,6 +23,8 @@ describe('ProductionOrdersController', () => {
   beforeEach(async () => {
     productionOrdersService = {
       findAll: jest.fn(),
+      findFinishedProducts: jest.fn(),
+      findSemiFinishedProducts: jest.fn(),
       findProductionOrderById: jest.fn(),
       findProductionOrderLines: jest.fn(),
       exportProductionOrderLines: jest.fn(),
@@ -51,6 +55,34 @@ describe('ProductionOrdersController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('gets production orders with TP item codes', async () => {
+    const productionOrders = [{ id: 2031, item_code: 'TP00001' }];
+    productionOrdersService.findFinishedProducts.mockResolvedValue(
+      productionOrders,
+    );
+
+    await expect(controller.findFinishedProducts()).resolves.toBe(
+      productionOrders,
+    );
+    expect(productionOrdersService.findFinishedProducts).toHaveBeenCalledTimes(
+      1,
+    );
+  });
+
+  it('gets production orders with BTP item codes', async () => {
+    const productionOrders = [{ id: 2031, item_code: 'BTP00001' }];
+    productionOrdersService.findSemiFinishedProducts.mockResolvedValue(
+      productionOrders,
+    );
+
+    await expect(controller.findSemiFinishedProducts()).resolves.toBe(
+      productionOrders,
+    );
+    expect(
+      productionOrdersService.findSemiFinishedProducts,
+    ).toHaveBeenCalledTimes(1);
   });
 
   it('gets sampling requests for a production order', async () => {

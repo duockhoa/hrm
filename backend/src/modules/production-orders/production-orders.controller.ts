@@ -49,6 +49,16 @@ export class ProductionOrdersController {
     return this.productionOrdersService.findAll();
   }
 
+  @Get('finished-products')
+  async findFinishedProducts() {
+    return this.productionOrdersService.findFinishedProducts();
+  }
+
+  @Get('semi-finished-products')
+  async findSemiFinishedProducts() {
+    return this.productionOrdersService.findSemiFinishedProducts();
+  }
+
   @Get(':id')
   async findProductionOrderById(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderById(id);
