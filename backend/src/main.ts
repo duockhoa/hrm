@@ -7,7 +7,9 @@ async function bootstrap() {
   ensureProductionOrderDeviationUploadDir();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.enableCors({});
+  app.enableCors({
+    exposedHeaders: ['Content-Disposition'],
+  });
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
