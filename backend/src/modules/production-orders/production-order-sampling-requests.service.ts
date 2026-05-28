@@ -83,24 +83,24 @@ export class ProductionOrderSamplingRequestsService {
       throw new NotFoundException('Production order not found');
     }
 
-    const existingSentRequest =
-      await this.prismaService.productionOrderSamplingRequests.findFirst({
-        where: {
-          production_order_id: productionOrderId,
-          status: 'sent',
-        },
-        include: samplingRequestInclude,
-        orderBy: {
-          sent_at: 'desc',
-        },
-      });
+    // const existingSentRequest =
+    //   await this.prismaService.productionOrderSamplingRequests.findFirst({
+    //     where: {
+    //       production_order_id: productionOrderId,
+    //       status: 'sent',
+    //     },
+    //     include: samplingRequestInclude,
+    //     orderBy: {
+    //       sent_at: 'desc',
+    //     },
+    //   });
 
-    if (existingSentRequest && !this.shouldResend(dto.resend)) {
-      return {
-        status: 'already_sent',
-        samplingRequest: existingSentRequest,
-      };
-    }
+    // if (existingSentRequest && !this.shouldResend(dto.resend)) {
+    //   return {
+    //     status: 'already_sent',
+    //     samplingRequest: existingSentRequest,
+    //   };
+    // }
 
     const payload = this.buildPyclmPayload(productionOrder, dto, user);
     const providerResponse = await this.sendPyclmRequest(payload);
