@@ -12,6 +12,12 @@ const mockedAxiosGet = axios.get as jest.MockedFunction<typeof axios.get>;
 describe('ProductionOrdersService', () => {
   let service: ProductionOrdersService;
   let warehouseReleaseExportService: WarehouseReleaseExportService;
+  let prismaService: {
+    productionOrders: {
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+    };
+  };
 
   beforeEach(async () => {
     mockedAxiosGet.mockReset();
@@ -36,10 +42,71 @@ describe('ProductionOrdersService', () => {
     warehouseReleaseExportService = module.get<WarehouseReleaseExportService>(
       WarehouseReleaseExportService,
     );
+    prismaService = module.get(PrismaService);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('returns production orders with TP item codes', async () => {
+    const productionOrders = [{ id: 2031, item_code: 'TP00001' }];
+    prismaService.productionOrders.findMany.mockResolvedValue(
+      productionOrders,
+    );
+
+    await expect(service.findFinishedProducts()).resolves.toBe(
+      productionOrders,
+    );
+    expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith({
+      where: {
+        item_code: {
+          startsWith: 'TP',
+        },
+      },
+      include: {
+        item: true,
+        samplingRequests: {
+          orderBy: {
+            sent_at: 'desc',
+          },
+          take: 1,
+        },
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+  });
+
+  it('returns production orders with BTP item codes', async () => {
+    const productionOrders = [{ id: 2031, item_code: 'BTP00001' }];
+    prismaService.productionOrders.findMany.mockResolvedValue(
+      productionOrders,
+    );
+
+    await expect(service.findSemiFinishedProducts()).resolves.toBe(
+      productionOrders,
+    );
+    expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith({
+      where: {
+        item_code: {
+          startsWith: 'BTP',
+        },
+      },
+      include: {
+        item: true,
+        samplingRequests: {
+          orderBy: {
+            sent_at: 'desc',
+          },
+          take: 1,
+        },
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
   });
 
   it('returns production order lines joined with production order stages', async () => {

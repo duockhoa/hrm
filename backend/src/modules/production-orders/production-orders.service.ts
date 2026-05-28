@@ -113,6 +113,40 @@ export class ProductionOrdersService {
     });
   }
 
+  async findFinishedProducts() {
+    return this.prismaService.productionOrders.findMany({
+      where: {
+        item_code: {
+          startsWith: 'TP',
+        },
+      },
+      include: {
+        item: true,
+        samplingRequests: productionOrderSamplingRequestInclude,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+  }
+
+  async findSemiFinishedProducts() {
+    return this.prismaService.productionOrders.findMany({
+      where: {
+        item_code: {
+          startsWith: 'BTP',
+        },
+      },
+      include: {
+        item: true,
+        samplingRequests: productionOrderSamplingRequestInclude,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+  }
+
   async findProductionOrderById(id: number) {
     return this.prismaService.productionOrders.findUnique({
       where: {
