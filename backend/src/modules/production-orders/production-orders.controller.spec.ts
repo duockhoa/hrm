@@ -85,6 +85,26 @@ describe('ProductionOrdersController', () => {
     ).toHaveBeenCalledTimes(1);
   });
 
+  it('gets a production order by id', async () => {
+    const productionOrder = {
+      id: 2031,
+      item_code: 'TP00001',
+      pyclm: {
+        isSent: true,
+      },
+    };
+    productionOrdersService.findProductionOrderById.mockResolvedValue(
+      productionOrder,
+    );
+
+    await expect(controller.findProductionOrderById(2031)).resolves.toBe(
+      productionOrder,
+    );
+    expect(
+      productionOrdersService.findProductionOrderById,
+    ).toHaveBeenCalledWith(2031);
+  });
+
   it('gets sampling requests for a production order', async () => {
     const samplingRequests = [{ id: 1, production_order_id: 2031 }];
     productionOrderSamplingRequestsService.findAllByProductionOrder.mockResolvedValue(

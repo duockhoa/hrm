@@ -43,11 +43,41 @@ export type ProductionOrderLineWithRelations = SapProductionOrderLine & {
   UnitOfMeasurement: SapUnitOfMeasurement | null;
 };
 
+type ProductionOrderSamplingRequestForPyclm = {
+  status?: string | null;
+  google_doc_url?: string | null;
+  sent_at?: Date | null;
+  location?: string | null;
+  sender?: unknown | null;
+};
+
+type ProductionOrderWithSamplingRequests = {
+  samplingRequests: ProductionOrderSamplingRequestForPyclm[];
+};
+
 const productionOrderSamplingRequestInclude = {
   orderBy: {
     sent_at: 'desc' as const,
   },
   take: 1,
+};
+
+const productionOrderSamplingRequestSenderSelect = {
+  id: true,
+  username: true,
+  name: true,
+  email: true,
+  department: true,
+  position: true,
+};
+
+const productionOrderSamplingRequestWithSenderInclude = {
+  ...productionOrderSamplingRequestInclude,
+  include: {
+    sender: {
+      select: productionOrderSamplingRequestSenderSelect,
+    },
+  },
 };
 
 const getStageIdFilterInput = (
@@ -102,61 +132,107 @@ export class ProductionOrdersService {
   ) {}
 
   async findAll() {
-    return this.prismaService.productionOrders.findMany({
-      include: {
-        item: true,
-        samplingRequests: productionOrderSamplingRequestInclude,
+    const productionOrders = await this.prismaService.productionOrders.findMany(
+      {
+        include: {
+          item: true,
+          samplingRequests: productionOrderSamplingRequestWithSenderInclude,
+        },
+        orderBy: {
+          id: 'desc',
+        },
       },
-      orderBy: {
-        id: 'desc',
-      },
-    });
+    );
+
+    return this.addPyclmInfoToList(productionOrders);
   }
 
   async findFinishedProducts() {
-    return this.prismaService.productionOrders.findMany({
-      where: {
-        item_code: {
-          startsWith: 'TP',
+    const productionOrders = await this.prismaService.productionOrders.findMany(
+      {
+        where: {
+          item_code: {
+            startsWith: 'TP',
+          },
+        },
+        include: {
+          item: true,
+          samplingRequests: productionOrderSamplingRequestWithSenderInclude,
+        },
+        orderBy: {
+          id: 'desc',
         },
       },
-      include: {
-        item: true,
-        samplingRequests: productionOrderSamplingRequestInclude,
-      },
-      orderBy: {
-        id: 'desc',
-      },
-    });
+    );
+
+    return this.addPyclmInfoToList(productionOrders);
   }
 
   async findSemiFinishedProducts() {
-    return this.prismaService.productionOrders.findMany({
-      where: {
-        item_code: {
-          startsWith: 'BTP',
+    const productionOrders = await this.prismaService.productionOrders.findMany(
+      {
+        where: {
+          item_code: {
+            startsWith: 'BTP',
+          },
+        },
+        include: {
+          item: true,
+          samplingRequests: productionOrderSamplingRequestWithSenderInclude,
+        },
+        orderBy: {
+          id: 'desc',
         },
       },
-      include: {
-        item: true,
-        samplingRequests: productionOrderSamplingRequestInclude,
-      },
-      orderBy: {
-        id: 'desc',
-      },
-    });
+    );
+
+    return this.addPyclmInfoToList(productionOrders);
   }
 
   async findProductionOrderById(id: number) {
-    return this.prismaService.productionOrders.findUnique({
-      where: {
-        id,
+    const productionOrder =
+      await this.prismaService.productionOrders.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          item: true,
+          samplingRequests: productionOrderSamplingRequestWithSenderInclude,
+        },
+      });
+
+    if (!productionOrder) {
+      return productionOrder;
+    }
+
+    return this.addPyclmInfo(productionOrder);
+  }
+
+  private addPyclmInfoToList<T extends ProductionOrderWithSamplingRequests>(
+    productionOrders: T[],
+  ) {
+    return productionOrders.map((productionOrder) =>
+      this.addPyclmInfo(productionOrder),
+    );
+  }
+
+  private addPyclmInfo<T extends ProductionOrderWithSamplingRequests>(
+    productionOrder: T,
+  ) {
+    const latestSamplingRequest = productionOrder.samplingRequests[0] ?? null;
+
+    return {
+      ...productionOrder,
+      pyclm: {
+        isSent: latestSamplingRequest?.status === 'sent',
+        status: latestSamplingRequest?.status ?? null,
+        googleDocUrl: latestSamplingRequest?.google_doc_url ?? null,
+        sentAt: latestSamplingRequest?.sent_at ?? null,
+        location: latestSamplingRequest?.location ?? null,
+        sender: latestSamplingRequest?.sender ?? null,
+        latestSamplingRequest,
       },
-      include: {
-        item: true,
-        samplingRequests: productionOrderSamplingRequestInclude,
-      },
-    });
+    };
   }
 
   private async findProductionOrderLineData(id: number) {

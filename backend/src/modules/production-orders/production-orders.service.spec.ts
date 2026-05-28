@@ -49,15 +49,114 @@ describe('ProductionOrdersService', () => {
     expect(service).toBeDefined();
   });
 
-  it('returns production orders with TP item codes', async () => {
-    const productionOrders = [{ id: 2031, item_code: 'TP00001' }];
-    prismaService.productionOrders.findMany.mockResolvedValue(
-      productionOrders,
-    );
+  it('returns production orders with PYCLM sending info', async () => {
+    const sentAt = new Date('2026-05-28T08:00:00.000Z');
+    const sender = {
+      id: 7,
+      username: 'binh',
+      name: 'Binh',
+      email: 'binh@example.com',
+      department: 'QA',
+      position: 'Manager',
+    };
+    const latestSamplingRequest = {
+      id: 1,
+      production_order_id: 2031,
+      sender_id: 7,
+      sender,
+      location: 'Kiem nghiem',
+      google_doc_url: 'https://docs.google.com/document/d/test',
+      status: 'sent',
+      sent_at: sentAt,
+    };
+    const productionOrders = [
+      {
+        id: 2031,
+        item_code: 'TP00001',
+        samplingRequests: [latestSamplingRequest],
+      },
+      {
+        id: 2030,
+        item_code: 'TP00002',
+        samplingRequests: [],
+      },
+    ];
+    prismaService.productionOrders.findMany.mockResolvedValue(productionOrders);
 
-    await expect(service.findFinishedProducts()).resolves.toBe(
-      productionOrders,
-    );
+    await expect(service.findAll()).resolves.toEqual([
+      {
+        ...productionOrders[0],
+        pyclm: {
+          isSent: true,
+          status: 'sent',
+          googleDocUrl: 'https://docs.google.com/document/d/test',
+          sentAt,
+          location: 'Kiem nghiem',
+          sender,
+          latestSamplingRequest,
+        },
+      },
+      {
+        ...productionOrders[1],
+        pyclm: {
+          isSent: false,
+          status: null,
+          googleDocUrl: null,
+          sentAt: null,
+          location: null,
+          sender: null,
+          latestSamplingRequest: null,
+        },
+      },
+    ]);
+    expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith({
+      include: {
+        item: true,
+        samplingRequests: {
+          orderBy: {
+            sent_at: 'desc',
+          },
+          take: 1,
+          include: {
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                email: true,
+                department: true,
+                position: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+  });
+
+  it('returns production orders with TP item codes', async () => {
+    const productionOrders = [
+      { id: 2031, item_code: 'TP00001', samplingRequests: [] },
+    ];
+    prismaService.productionOrders.findMany.mockResolvedValue(productionOrders);
+
+    await expect(service.findFinishedProducts()).resolves.toEqual([
+      {
+        ...productionOrders[0],
+        pyclm: {
+          isSent: false,
+          status: null,
+          googleDocUrl: null,
+          sentAt: null,
+          location: null,
+          sender: null,
+          latestSamplingRequest: null,
+        },
+      },
+    ]);
     expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith({
       where: {
         item_code: {
@@ -71,6 +170,18 @@ describe('ProductionOrdersService', () => {
             sent_at: 'desc',
           },
           take: 1,
+          include: {
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                email: true,
+                department: true,
+                position: true,
+              },
+            },
+          },
         },
       },
       orderBy: {
@@ -80,14 +191,25 @@ describe('ProductionOrdersService', () => {
   });
 
   it('returns production orders with BTP item codes', async () => {
-    const productionOrders = [{ id: 2031, item_code: 'BTP00001' }];
-    prismaService.productionOrders.findMany.mockResolvedValue(
-      productionOrders,
-    );
+    const productionOrders = [
+      { id: 2031, item_code: 'BTP00001', samplingRequests: [] },
+    ];
+    prismaService.productionOrders.findMany.mockResolvedValue(productionOrders);
 
-    await expect(service.findSemiFinishedProducts()).resolves.toBe(
-      productionOrders,
-    );
+    await expect(service.findSemiFinishedProducts()).resolves.toEqual([
+      {
+        ...productionOrders[0],
+        pyclm: {
+          isSent: false,
+          status: null,
+          googleDocUrl: null,
+          sentAt: null,
+          location: null,
+          sender: null,
+          latestSamplingRequest: null,
+        },
+      },
+    ]);
     expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith({
       where: {
         item_code: {
@@ -101,10 +223,91 @@ describe('ProductionOrdersService', () => {
             sent_at: 'desc',
           },
           take: 1,
+          include: {
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                email: true,
+                department: true,
+                position: true,
+              },
+            },
+          },
         },
       },
       orderBy: {
         id: 'desc',
+      },
+    });
+  });
+
+  it('returns a production order by id with PYCLM sending info', async () => {
+    const sentAt = new Date('2026-05-28T08:00:00.000Z');
+    const sender = {
+      id: 7,
+      username: 'binh',
+      name: 'Binh',
+      email: 'binh@example.com',
+      department: 'QA',
+      position: 'Manager',
+    };
+    const latestSamplingRequest = {
+      id: 1,
+      production_order_id: 2031,
+      sender_id: 7,
+      sender,
+      location: 'Kiem nghiem',
+      google_doc_url: 'https://docs.google.com/document/d/test',
+      status: 'sent',
+      sent_at: sentAt,
+    };
+    const productionOrder = {
+      id: 2031,
+      item_code: 'TP00001',
+      samplingRequests: [latestSamplingRequest],
+    };
+    prismaService.productionOrders.findUnique.mockResolvedValue(
+      productionOrder,
+    );
+
+    await expect(service.findProductionOrderById(2031)).resolves.toEqual({
+      ...productionOrder,
+      pyclm: {
+        isSent: true,
+        status: 'sent',
+        googleDocUrl: 'https://docs.google.com/document/d/test',
+        sentAt,
+        location: 'Kiem nghiem',
+        sender,
+        latestSamplingRequest,
+      },
+    });
+    expect(prismaService.productionOrders.findUnique).toHaveBeenCalledWith({
+      where: {
+        id: 2031,
+      },
+      include: {
+        item: true,
+        samplingRequests: {
+          orderBy: {
+            sent_at: 'desc',
+          },
+          take: 1,
+          include: {
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                email: true,
+                department: true,
+                position: true,
+              },
+            },
+          },
+        },
       },
     });
   });
