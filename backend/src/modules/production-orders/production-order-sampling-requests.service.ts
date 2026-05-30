@@ -246,12 +246,7 @@ export class ProductionOrderSamplingRequestsService {
   }
 
   private getEmailRecipients(user?: AuthenticatedUser) {
-    const recipients = [
-      ...this.normalizeEmailRecipients(
-        process.env.APPS_SCRIPT_PYCLM_EMAIL_RECIPIENTS,
-      ),
-      ...this.normalizeEmailRecipients(user?.email),
-    ];
+    const recipients = this.normalizeEmailRecipients(user?.email);
     const uniqueRecipients = [...new Set(recipients)];
 
     return uniqueRecipients.join(',');
