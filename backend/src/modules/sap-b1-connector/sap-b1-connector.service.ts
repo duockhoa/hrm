@@ -92,7 +92,7 @@ export class SapB1ConnectorService {
     }
   }
 
-  @Cron('*/30 * * * * *')
+  @Cron(process.env.SAP_B1_LOT_LIST_SYNC_CRON || '*/30 * * * * *')
   async handleCronSyncProductionOrders() {
     try {
       const response = await axios.get(
