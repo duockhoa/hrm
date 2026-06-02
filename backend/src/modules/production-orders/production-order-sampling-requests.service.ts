@@ -26,6 +26,93 @@ type AuthenticatedUser = {
 
 const DEFAULT_PYCLM_API_TIMEOUT_MS = 30000;
 
+const padTwoDigits = (value: number) => String(value).padStart(2, '0');
+
+const formatShortDateParts = (day: string, month: string, year: string) => {
+  const dayNumber = Number(day);
+  const monthNumber = Number(month);
+  const yearNumber = Number(year);
+
+  if (
+    !Number.isInteger(dayNumber) ||
+    !Number.isInteger(monthNumber) ||
+    !Number.isInteger(yearNumber) ||
+    dayNumber < 1 ||
+    dayNumber > 31 ||
+    monthNumber < 1 ||
+    monthNumber > 12
+  ) {
+    return null;
+  }
+
+  return `${padTwoDigits(dayNumber)}${padTwoDigits(monthNumber)}${String(
+    yearNumber,
+  )
+    .padStart(2, '0')
+    .slice(-2)}`;
+};
+
+const formatPyclmExpiryDate = (value?: string | null) => {
+  const normalizedValue = typeof value === 'string' ? value.trim() : '';
+
+  if (!normalizedValue) {
+    return '';
+  }
+
+  if (/^\d{6}$/.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  const isoDateMatch = normalizedValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+
+  if (isoDateMatch) {
+    return (
+      formatShortDateParts(isoDateMatch[3], isoDateMatch[2], isoDateMatch[1]) ??
+      normalizedValue
+    );
+  }
+
+  const compactIsoDateMatch = normalizedValue.match(/^(\d{4})(\d{2})(\d{2})$/);
+
+  if (compactIsoDateMatch) {
+    return (
+      formatShortDateParts(
+        compactIsoDateMatch[3],
+        compactIsoDateMatch[2],
+        compactIsoDateMatch[1],
+      ) ?? normalizedValue
+    );
+  }
+
+  const vietnameseDateMatch = normalizedValue.match(
+    /^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$/,
+  );
+
+  if (vietnameseDateMatch) {
+    return (
+      formatShortDateParts(
+        vietnameseDateMatch[1],
+        vietnameseDateMatch[2],
+        vietnameseDateMatch[3],
+      ) ?? normalizedValue
+    );
+  }
+
+  const parsedDate = new Date(normalizedValue);
+
+  if (!Number.isNaN(parsedDate.getTime())) {
+    return (
+      formatShortDateParts(
+        String(parsedDate.getUTCDate()),
+        String(parsedDate.getUTCMonth() + 1),
+        String(parsedDate.getUTCFullYear()),
+      ) ?? normalizedValue
+    );
+  }
+
+  return normalizedValue;
+};
+
 const samplingRequestSenderSelect = {
   id: true,
   username: true,
@@ -155,7 +242,7 @@ export class ProductionOrderSamplingRequestsService {
         productionOrder.unit,
       ),
       batchNumber: productionOrder.lot_no,
-      expiryDate: productionOrder.expire_date ?? '',
+      expiryDate: formatPyclmExpiryDate(productionOrder.expire_date),
       sender: this.getSenderName(user),
       location:
         this.normalizeOptionalString(dto.location) ??

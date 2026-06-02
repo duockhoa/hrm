@@ -107,7 +107,7 @@ describe('ProductionOrderSamplingRequestsService', () => {
         itemName: 'Thanh pham test',
         quantity: '1000 kg',
         batchNumber: '010126',
-        expiryDate: '2028-05-03',
+        expiryDate: '030528',
         sender: 'Binh',
         location: 'Kiem nghiem',
         emailRecipients: 'binh@example.com',
