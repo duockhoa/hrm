@@ -236,6 +236,7 @@ model ProductionOrders {
   lot_no                String
   packing_specification String?
   production_order_code String?
+  remarks               String?                           @db.Text
   deviations            ProductionOrderDeviations[]
   samplingRequests      ProductionOrderSamplingRequests[]
 

@@ -156,6 +156,7 @@ export class SapB1ConnectorService {
               lot_no: this.requireSapString(production_order.U_SL, 'U_SL'),
               packing_specification: production_order.U_QCHH ?? null,
               production_order_code: production_order.U_MLSX ?? null,
+              remarks: production_order.Remarks ?? null,
             };
 
             await this.prismaService.productionOrders.upsert({

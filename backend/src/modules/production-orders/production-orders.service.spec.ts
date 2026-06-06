@@ -190,9 +190,10 @@ describe('ProductionOrdersService', () => {
     });
   });
 
-  it('returns production orders with BTP item codes', async () => {
+  it('returns production orders without TP item codes', async () => {
     const productionOrders = [
       { id: 2031, item_code: 'BTP00001', samplingRequests: [] },
+      { id: 2032, item_code: 'NVL00001', samplingRequests: [] },
     ];
     prismaService.productionOrders.findMany.mockResolvedValue(productionOrders);
 
@@ -209,11 +210,25 @@ describe('ProductionOrdersService', () => {
           latestSamplingRequest: null,
         },
       },
+      {
+        ...productionOrders[1],
+        pyclm: {
+          isSent: false,
+          status: null,
+          googleDocUrl: null,
+          sentAt: null,
+          location: null,
+          sender: null,
+          latestSamplingRequest: null,
+        },
+      },
     ]);
     expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith({
       where: {
         item_code: {
-          startsWith: 'BTP',
+          not: {
+            startsWith: 'TP',
+          },
         },
       },
       include: {

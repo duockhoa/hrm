@@ -173,7 +173,9 @@ export class ProductionOrdersService {
       {
         where: {
           item_code: {
-            startsWith: 'BTP',
+            not: {
+              startsWith: 'TP',
+            },
           },
         },
         include: {
