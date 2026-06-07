@@ -13,6 +13,7 @@ describe('ProductionOrdersController', () => {
     findSemiFinishedProducts: jest.Mock;
     findProductionOrderById: jest.Mock;
     findProductionOrderLines: jest.Mock;
+    exportProductionOrder: jest.Mock;
     exportProductionOrderLines: jest.Mock;
   };
   let productionOrderSamplingRequestsService: {
@@ -27,6 +28,7 @@ describe('ProductionOrdersController', () => {
       findSemiFinishedProducts: jest.fn(),
       findProductionOrderById: jest.fn(),
       findProductionOrderLines: jest.fn(),
+      exportProductionOrder: jest.fn(),
       exportProductionOrderLines: jest.fn(),
     };
     productionOrderSamplingRequestsService = {
@@ -103,6 +105,33 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrdersService.findProductionOrderById,
     ).toHaveBeenCalledWith(2031);
+  });
+
+  it('sets download headers and returns a streamable file when exporting a production order', async () => {
+    const buffer = Buffer.from('docx-content');
+    productionOrdersService.exportProductionOrder.mockResolvedValue({
+      buffer,
+      contentType:
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      filename: 'Lenh san xuat EUCIGA 5 ml 0030126.docx',
+    });
+    const response = {
+      set: jest.fn(),
+    } as unknown as Response;
+
+    const result = await controller.exportProductionOrder(2031, response);
+
+    expect(productionOrdersService.exportProductionOrder).toHaveBeenCalledWith(
+      2031,
+    );
+    expect(response.set).toHaveBeenCalledWith({
+      'Content-Disposition':
+        'attachment; filename="Lenh san xuat EUCIGA 5 ml 0030126.docx"; filename*=UTF-8\'\'Lenh%20san%20xuat%20EUCIGA%205%20ml%200030126.docx',
+      'Content-Length': buffer.length,
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+    expect(result).toBeInstanceOf(StreamableFile);
   });
 
   it('gets sampling requests for a production order', async () => {

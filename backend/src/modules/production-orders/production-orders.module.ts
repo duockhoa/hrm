@@ -6,6 +6,7 @@ import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { PrismaService } from 'src/prisma.service';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
+import { ProductionOrderExportService } from './exports/production-order-export.service';
 
 @Module({
   controllers: [ProductionOrdersController],
@@ -13,6 +14,7 @@ import { ProductionOrderSamplingRequestsService } from './production-order-sampl
     ProductionOrdersService,
     ProductionOrderSamplingRequestsService,
     WarehouseReleaseExportService,
+    ProductionOrderExportService,
     RolesGuard,
     PermissionsGuard,
     PrismaService,

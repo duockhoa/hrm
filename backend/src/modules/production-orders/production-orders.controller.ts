@@ -32,8 +32,7 @@ const getAsciiFilenameFallback = (filename: string) => {
 const encodeContentDispositionFilename = (filename: string) =>
   encodeURIComponent(filename).replace(
     /['()*]/g,
-    (character) =>
-      `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 
 @UseGuards(jwtAuthGuard)
@@ -57,6 +56,27 @@ export class ProductionOrdersController {
   @Get('semi-finished-products')
   async findSemiFinishedProducts() {
     return this.productionOrdersService.findSemiFinishedProducts();
+  }
+
+  @Get(':id/export')
+  async exportProductionOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const exportedFile =
+      await this.productionOrdersService.exportProductionOrder(id);
+    const filenameFallback = getAsciiFilenameFallback(exportedFile.filename);
+    const encodedFilename = encodeContentDispositionFilename(
+      exportedFile.filename,
+    );
+
+    response.set({
+      'Content-Disposition': `attachment; filename="${filenameFallback}"; filename*=UTF-8''${encodedFilename}`,
+      'Content-Length': exportedFile.buffer.length,
+      'Content-Type': exportedFile.contentType,
+    });
+
+    return new StreamableFile(exportedFile.buffer);
   }
 
   @Get(':id')

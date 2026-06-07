@@ -1,7 +1,12 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import axios from 'axios';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
+import { ProductionOrderExportService } from './exports/production-order-export.service';
 import type {
   ExportProductionOrderLinesDto,
   ProductionOrderStageIdFilter,
@@ -129,6 +134,7 @@ export class ProductionOrdersService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly warehouseReleaseExportService: WarehouseReleaseExportService,
+    private readonly productionOrderExportService: ProductionOrderExportService,
   ) {}
 
   async findAll() {
@@ -301,6 +307,24 @@ export class ProductionOrdersService {
     const { lines } = await this.findProductionOrderLineData(id);
 
     return lines;
+  }
+
+  async exportProductionOrder(id: number) {
+    const productionOrder =
+      await this.prismaService.productionOrders.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          item: true,
+        },
+      });
+
+    if (!productionOrder) {
+      throw new NotFoundException('Production order not found');
+    }
+
+    return this.productionOrderExportService.export(productionOrder);
   }
 
   async exportProductionOrderLines(

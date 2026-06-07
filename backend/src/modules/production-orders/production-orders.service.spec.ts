@@ -4,6 +4,8 @@ import { PrismaService } from 'src/prisma.service';
 import axios from 'axios';
 import ExcelJS from 'exceljs';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
+import { ProductionOrderExportService } from './exports/production-order-export.service';
+import PizZip from 'pizzip';
 
 jest.mock('axios');
 
@@ -26,6 +28,7 @@ describe('ProductionOrdersService', () => {
       providers: [
         ProductionOrdersService,
         WarehouseReleaseExportService,
+        ProductionOrderExportService,
         {
           provide: PrismaService,
           useValue: {
@@ -425,6 +428,71 @@ describe('ProductionOrdersService', () => {
       2,
       'https://sap-b1-connector.dkpharma.io.vn/unit-of-measurements',
     );
+  });
+
+  it('exports a production order to a docx buffer', async () => {
+    const productionOrder = {
+      id: 2031,
+      item_code: 'TPEGU01',
+      status: 'R',
+      type: 'S',
+      planned_quatity: 10000,
+      creation_date: new Date('2026-01-20T00:00:00.000Z'),
+      origin: null,
+      warehouse: 'K-TP',
+      unit: 'Lọ',
+      start_date: new Date('2026-01-26T00:00:00.000Z'),
+      description: 'EUCIGA 5 ml',
+      date_manufacture: '2026-01-26',
+      expire_date: '2029-01-26',
+      lot_no: '0030126',
+      packing_specification: '5ml/goi x 30 goi/hop x 30 hop/kien',
+      production_order_code: 'LPC3/TPEUG01-003/2026',
+      remarks: 'The tich pha che: 1060 L',
+      item: {
+        item_code: 'TPEGU01',
+        item_name: 'EUCIGA 5 ml',
+        unit: 'Hop',
+        dk_code: null,
+        registration_id: null,
+        created_at: new Date('2026-01-01T00:00:00.000Z'),
+        update_at: new Date('2026-01-01T00:00:00.000Z'),
+        deleted_at: null,
+      },
+    };
+    prismaService.productionOrders.findUnique.mockResolvedValue(
+      productionOrder,
+    );
+
+    const exportedFile = await service.exportProductionOrder(2031);
+
+    expect(prismaService.productionOrders.findUnique).toHaveBeenCalledWith({
+      where: {
+        id: 2031,
+      },
+      include: {
+        item: true,
+      },
+    });
+    expect(exportedFile.filename).toBe(
+      'Lenh san xuat EUCIGA 5 ml 0030126.docx',
+    );
+    expect(exportedFile.contentType).toBe(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    expect(Buffer.isBuffer(exportedFile.buffer)).toBe(true);
+
+    const documentXml = new PizZip(exportedFile.buffer)
+      .file('word/document.xml')
+      ?.asText();
+
+    expect(documentXml).toContain('TPEGU01');
+    expect(documentXml).toContain('EUCIGA 5 ml');
+    expect(documentXml).toContain('LPC3/TPEUG01-003/2026');
+    expect(documentXml).toContain('10.000 lọ');
+    expect(documentXml).toContain('260126');
+    expect(documentXml).toContain('260129');
+    expect(documentXml).not.toContain('{{item_code}}');
   });
 
   it('exports production order lines to an xlsx buffer', async () => {
