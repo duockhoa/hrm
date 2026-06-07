@@ -22,7 +22,9 @@ const WAREHOUSE_RELEASE_DEFAULT_DATA_ROW_HEIGHT = 18;
 const WAREHOUSE_RELEASE_TEXT_LINE_HEIGHT = 12;
 const WAREHOUSE_RELEASE_ROW_VERTICAL_PADDING = 2;
 const WAREHOUSE_RELEASE_ROW_HEIGHT_BUFFER = 1.5;
-const WAREHOUSE_RELEASE_USABLE_WIDTH_RATIO = 1.35;
+// Excel column widths are already defined in character units,
+// so use the raw width for tighter wrapping calculation.
+const WAREHOUSE_RELEASE_USABLE_WIDTH_RATIO = 1.0;
 
 type RowContentMeasure = {
   value: unknown;
@@ -153,11 +155,13 @@ const getDataRowHeight = (
     ),
   );
 
-  return Math.max(
-    WAREHOUSE_RELEASE_DEFAULT_DATA_ROW_HEIGHT,
-    maxLineCount * WAREHOUSE_RELEASE_TEXT_LINE_HEIGHT +
-      WAREHOUSE_RELEASE_ROW_VERTICAL_PADDING,
-  ) + WAREHOUSE_RELEASE_ROW_HEIGHT_BUFFER;
+  return (
+    Math.max(
+      WAREHOUSE_RELEASE_DEFAULT_DATA_ROW_HEIGHT,
+      maxLineCount * WAREHOUSE_RELEASE_TEXT_LINE_HEIGHT +
+        WAREHOUSE_RELEASE_ROW_VERTICAL_PADDING,
+    ) + WAREHOUSE_RELEASE_ROW_HEIGHT_BUFFER
+  );
 };
 
 const applyDataRowLayout = (
