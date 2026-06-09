@@ -8,11 +8,20 @@ import PizZip from 'pizzip';
 const DOCX_MIME_TYPE =
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-const PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
+const PRODUCTION_ORDER_TEMPLATE_DIR = path.join(
   process.cwd(),
   'templates',
   'production-order-template',
-  'production-order-form-template.docx',
+);
+
+const FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
+  PRODUCTION_ORDER_TEMPLATE_DIR,
+  'production-order-finished-product-form-template.docx',
+);
+
+const SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
+  PRODUCTION_ORDER_TEMPLATE_DIR,
+  'production-order-semi-finished-product-form-template.docx',
 );
 
 type ProductionOrderForExport = ProductionOrders & {
@@ -156,6 +165,17 @@ const getProductionOrderFilename = (
   return `${filenameParts.join(' ')}.docx`;
 };
 
+const isFinishedProductProductionOrder = (
+  productionOrder: ProductionOrderForExport,
+) => productionOrder.item_code.startsWith('TP');
+
+const getProductionOrderTemplatePath = (
+  productionOrder: ProductionOrderForExport,
+) =>
+  isFinishedProductProductionOrder(productionOrder)
+    ? FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH
+    : SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH;
+
 const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
   item_code: normalizeTemplateValue(productionOrder.item_code),
   item_name: normalizeTemplateValue(productionOrder.item?.item_name),
@@ -175,7 +195,9 @@ const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
 @Injectable()
 export class ProductionOrderExportService {
   async export(productionOrder: ProductionOrderForExport) {
-    const template = await fs.readFile(PRODUCTION_ORDER_TEMPLATE_PATH);
+    const template = await fs.readFile(
+      getProductionOrderTemplatePath(productionOrder),
+    );
     const zip = new PizZip(template);
     const doc = new Docxtemplater(zip, {
       delimiters: {

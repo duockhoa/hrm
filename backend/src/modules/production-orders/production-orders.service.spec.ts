@@ -430,7 +430,7 @@ describe('ProductionOrdersService', () => {
     );
   });
 
-  it('exports a production order to a docx buffer', async () => {
+  it('exports a finished product production order to a docx buffer', async () => {
     const productionOrder = {
       id: 2031,
       item_code: 'TPEGU01',
@@ -492,6 +492,70 @@ describe('ProductionOrdersService', () => {
     expect(documentXml).toContain('10.000 lọ');
     expect(documentXml).toContain('260126');
     expect(documentXml).toContain('260129');
+    expect(documentXml).not.toContain('TGĐ Sản xuất');
+    expect(documentXml).not.toContain('{{item_code}}');
+  });
+
+  it('exports a semi-finished product production order with the BTP template', async () => {
+    const productionOrder = {
+      id: 2032,
+      item_code: 'BTP00001',
+      status: 'R',
+      type: 'S',
+      planned_quatity: 500,
+      creation_date: new Date('2026-06-01T00:00:00.000Z'),
+      origin: null,
+      warehouse: 'K-BTP',
+      unit: 'Kg',
+      start_date: new Date('2026-06-02T00:00:00.000Z'),
+      description: 'Bán thành phẩm test',
+      date_manufacture: '2026-06-02',
+      expire_date: '2027-06-02',
+      lot_no: '0010626',
+      packing_specification: null,
+      production_order_code: 'LSX/BTP00001-001/2026',
+      remarks: null,
+      item: {
+        item_code: 'BTP00001',
+        item_name: 'Bán thành phẩm test',
+        unit: 'Kg',
+        dk_code: null,
+        registration_id: null,
+        created_at: new Date('2026-06-01T00:00:00.000Z'),
+        update_at: new Date('2026-06-01T00:00:00.000Z'),
+        deleted_at: null,
+      },
+    };
+    prismaService.productionOrders.findUnique.mockResolvedValue(
+      productionOrder,
+    );
+
+    const exportedFile = await service.exportProductionOrder(2032);
+
+    expect(prismaService.productionOrders.findUnique).toHaveBeenCalledWith({
+      where: {
+        id: 2032,
+      },
+      include: {
+        item: true,
+      },
+    });
+    expect(exportedFile.filename).toBe(
+      'Lenh san xuat Bán thành phẩm test 0010626.docx',
+    );
+    expect(Buffer.isBuffer(exportedFile.buffer)).toBe(true);
+
+    const documentXml = new PizZip(exportedFile.buffer)
+      .file('word/document.xml')
+      ?.asText();
+
+    expect(documentXml).toContain('BTP00001');
+    expect(documentXml).toContain('Bán thành phẩm test');
+    expect(documentXml).toContain('LSX/BTP00001-001/2026');
+    expect(documentXml).toContain('500 kg');
+    expect(documentXml).toContain('020626');
+    expect(documentXml).toContain('020627');
+    expect(documentXml).toContain('TGĐ Sản xuất');
     expect(documentXml).not.toContain('{{item_code}}');
   });
 
