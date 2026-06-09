@@ -157,6 +157,7 @@ export class SapB1ConnectorService {
               packing_specification: production_order.U_QCHH ?? null,
               production_order_code: production_order.U_MLSX ?? null,
               remarks: production_order.Remarks ?? null,
+              internal_notes: production_order.U_GC ?? null,
             };
 
             await this.prismaService.productionOrders.upsert({

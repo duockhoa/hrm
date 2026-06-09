@@ -76,11 +76,13 @@ describe('ProductionOrdersService', () => {
       {
         id: 2031,
         item_code: 'TP00001',
+        internal_notes: 'Ghi chu noi bo TP',
         samplingRequests: [latestSamplingRequest],
       },
       {
         id: 2030,
         item_code: 'TP00002',
+        internal_notes: null,
         samplingRequests: [],
       },
     ];
@@ -284,6 +286,7 @@ describe('ProductionOrdersService', () => {
     const productionOrder = {
       id: 2031,
       item_code: 'TP00001',
+      internal_notes: 'Ghi chu noi bo TP',
       samplingRequests: [latestSamplingRequest],
     };
     prismaService.productionOrders.findUnique.mockResolvedValue(

@@ -46,7 +46,7 @@ describe('SapB1ConnectorService', () => {
     expect(service).toBeDefined();
   });
 
-  it('syncs production order remarks from SAP', async () => {
+  it('syncs production order remarks and internal notes from SAP', async () => {
     mockedAxiosGet.mockResolvedValue({
       data: [
         {
@@ -66,6 +66,7 @@ describe('SapB1ConnectorService', () => {
           U_SL: '010126',
           U_QCHH: 'Hop 10 vi',
           U_MLSX: 'TP00063-1090526-2031',
+          U_GC: 'Ghi chu noi bo',
           Remarks: 'Ghi chu san xuat',
         },
       ],
@@ -83,10 +84,12 @@ describe('SapB1ConnectorService', () => {
       },
       update: expect.objectContaining({
         remarks: 'Ghi chu san xuat',
+        internal_notes: 'Ghi chu noi bo',
       }),
       create: expect.objectContaining({
         id: 2031,
         remarks: 'Ghi chu san xuat',
+        internal_notes: 'Ghi chu noi bo',
       }),
     });
   });
