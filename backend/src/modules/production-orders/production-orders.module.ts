@@ -7,12 +7,14 @@ import { PrismaService } from 'src/prisma.service';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
+import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 
 @Module({
   controllers: [ProductionOrdersController],
   providers: [
     ProductionOrdersService,
     ProductionOrderSamplingRequestsService,
+    ProductionOrderEnvironmentChecksService,
     WarehouseReleaseExportService,
     ProductionOrderExportService,
     RolesGuard,

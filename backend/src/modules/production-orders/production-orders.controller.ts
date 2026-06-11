@@ -16,6 +16,8 @@ import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import type { ExportProductionOrderLinesDto } from './dto/export-production-order-lines.dto';
 import { CreateProductionOrderSamplingRequestDto } from './dto/create-production-order-sampling-request.dto';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
+import { CreateProductionOrderEnvironmentCheckDto } from './dto/create-production-order-environment-check.dto';
+import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 
 const getAsciiFilenameFallback = (filename: string) => {
   const fallback = filename
@@ -41,6 +43,7 @@ export class ProductionOrdersController {
   constructor(
     private readonly productionOrdersService: ProductionOrdersService,
     private readonly productionOrderSamplingRequestsService: ProductionOrderSamplingRequestsService,
+    private readonly productionOrderEnvironmentChecksService: ProductionOrderEnvironmentChecksService,
   ) {}
 
   @Get()
@@ -102,6 +105,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderSamplingRequestsService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/environment-checks')
+  async findEnvironmentChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderEnvironmentChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/environment-checks')
+  async createEnvironmentCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderEnvironmentCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderEnvironmentChecksService.create(
       id,
       createDto,
       req.user,

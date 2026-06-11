@@ -4,6 +4,7 @@ import { ProductionOrdersController } from './production-orders.controller';
 import { ProductionOrdersService } from './production-orders.service';
 import type { Response } from 'express';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
+import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -17,6 +18,10 @@ describe('ProductionOrdersController', () => {
     exportProductionOrderLines: jest.Mock;
   };
   let productionOrderSamplingRequestsService: {
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
+  let productionOrderEnvironmentChecksService: {
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
   };
@@ -35,6 +40,10 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderEnvironmentChecksService = {
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -46,6 +55,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSamplingRequestsService,
           useValue: productionOrderSamplingRequestsService,
+        },
+        {
+          provide: ProductionOrderEnvironmentChecksService,
+          useValue: productionOrderEnvironmentChecksService,
         },
       ],
     }).compile();
@@ -158,6 +171,41 @@ describe('ProductionOrdersController', () => {
       controller.createSamplingRequest(2031, createDto, { user }),
     ).resolves.toBe(result);
     expect(productionOrderSamplingRequestsService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+    );
+  });
+
+  it('gets environment checks for a production order', async () => {
+    const environmentChecks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderEnvironmentChecksService.findAllByProductionOrder.mockResolvedValue(
+      environmentChecks,
+    );
+
+    await expect(controller.findEnvironmentChecks(2031)).resolves.toBe(
+      environmentChecks,
+    );
+    expect(
+      productionOrderEnvironmentChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('creates an environment check using the authenticated user', async () => {
+    const createDto = {
+      room: 'Phong pha che 1',
+      temperature_c: 25.5,
+      humidity_percent: 60.2,
+      checked_at: '2026-06-11T08:00:00.000Z',
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderEnvironmentChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createEnvironmentCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderEnvironmentChecksService.create).toHaveBeenCalledWith(
       2031,
       createDto,
       user,
