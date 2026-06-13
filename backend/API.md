@@ -620,6 +620,75 @@ Lỗi thường gặp:
 - `400 humidity_percent must be less than or equal to 100`
 - `401 Authenticated user not found`
 
+## Production Order Finished Product Summary
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+### Lấy danh sách tổng kết thành phẩm của lệnh sản xuất
+
+```http
+GET /production-orders/:id/finished-product-summaries
+```
+
+Response trả về danh sách tổng kết, sắp xếp bản mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "package_count": 12,
+    "boxes_per_package": 24,
+    "loose_box_count": 3,
+    "created_by_id": 7,
+    "created_at": "2026-06-12T08:10:00.000Z",
+    "updated_at": "2026-06-12T08:10:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Tạo tổng kết thành phẩm
+
+```http
+POST /production-orders/:id/finished-product-summaries
+```
+
+Body:
+
+```json
+{
+  "package_count": 12,
+  "boxes_per_package": 24,
+  "loose_box_count": 3
+}
+```
+
+Quy tắc:
+
+- `package_count`: Số kiện, bắt buộc, là số nguyên không âm.
+- `boxes_per_package`: Số hộp trên kiện, bắt buộc, là số nguyên không âm.
+- `loose_box_count`: Số hộp lẻ, bắt buộc, là số nguyên không âm.
+- Có thể gửi số dạng chuỗi, ví dụ `"12"`.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
+- Một lệnh sản xuất có thể có nhiều bản tổng kết thành phẩm.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 package_count is required`
+- `400 package_count must be a non-negative integer`
+- `401 Authenticated user not found`
+
 ## Production Order Deviations
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
@@ -657,9 +726,7 @@ Cách 1: JSON body với đường dẫn ảnh có sẵn:
   "handling_plan": "Huong xu ly",
   "approver_id": 2,
   "reporter_id": 7,
-  "deviation_images": [
-    "/production-order-deviations/images/example.jpg"
-  ]
+  "deviation_images": ["/production-order-deviations/images/example.jpg"]
 }
 ```
 

@@ -8,6 +8,7 @@ import { WarehouseReleaseExportService } from './exports/warehouse-release-expor
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
+import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 
 @Module({
   controllers: [ProductionOrdersController],
@@ -15,6 +16,7 @@ import { ProductionOrderEnvironmentChecksService } from './production-order-envi
     ProductionOrdersService,
     ProductionOrderSamplingRequestsService,
     ProductionOrderEnvironmentChecksService,
+    ProductionOrderFinishedProductSummariesService,
     WarehouseReleaseExportService,
     ProductionOrderExportService,
     RolesGuard,

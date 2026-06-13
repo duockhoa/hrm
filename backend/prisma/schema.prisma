@@ -8,30 +8,31 @@ datasource db {
 }
 
 model Users {
-  id                                      Int                                @id @default(autoincrement())
-  username                                String                             @unique
-  password                                String
-  name                                    String
-  email                                   String?                            @unique
-  created_at                              DateTime                           @default(now())
-  updated_at                              DateTime                           @default(now()) @updatedAt
-  avatar                                  String?
-  deleted_at                              DateTime?
-  department                              String?
-  position                                String?
-  status                                  String                             @default("active")
-  companyLeaderOf                         Company?                           @relation("CompanyLeader")
-  contracts                               Contracts[]
-  team_lead_departments                   Departments[]                      @relation("Departments_team_lead_user")
-  passwordResetOTPs                       PasswordResetOTPs[]
-  tokens                                  Tokens[]
-  profile                                 UserProfiles?
-  userRoles                               UserRoles[]
-  departmentObj                           Departments?                       @relation("DepartmentUsers", fields: [department], references: [name])
-  approvedProductionOrderDeviations       ProductionOrderDeviations[]        @relation("ProductionOrderDeviationApprover")
-  reportedProductionOrderDeviations       ProductionOrderDeviations[]        @relation("ProductionOrderDeviationReporter")
-  productionOrderSamplingRequests         ProductionOrderSamplingRequests[]
-  createdProductionOrderEnvironmentChecks ProductionOrderEnvironmentChecks[] @relation("ProductionOrderEnvironmentCheckCreator")
+  id                                             Int                                       @id @default(autoincrement())
+  username                                       String                                    @unique
+  password                                       String
+  name                                           String
+  email                                          String?                                   @unique
+  created_at                                     DateTime                                  @default(now())
+  updated_at                                     DateTime                                  @default(now()) @updatedAt
+  avatar                                         String?
+  deleted_at                                     DateTime?
+  department                                     String?
+  position                                       String?
+  status                                         String                                    @default("active")
+  companyLeaderOf                                Company?                                  @relation("CompanyLeader")
+  contracts                                      Contracts[]
+  team_lead_departments                          Departments[]                             @relation("Departments_team_lead_user")
+  passwordResetOTPs                              PasswordResetOTPs[]
+  tokens                                         Tokens[]
+  profile                                        UserProfiles?
+  userRoles                                      UserRoles[]
+  departmentObj                                  Departments?                              @relation("DepartmentUsers", fields: [department], references: [name])
+  approvedProductionOrderDeviations              ProductionOrderDeviations[]               @relation("ProductionOrderDeviationApprover")
+  reportedProductionOrderDeviations              ProductionOrderDeviations[]               @relation("ProductionOrderDeviationReporter")
+  productionOrderSamplingRequests                ProductionOrderSamplingRequests[]
+  createdProductionOrderEnvironmentChecks        ProductionOrderEnvironmentChecks[]        @relation("ProductionOrderEnvironmentCheckCreator")
+  createdProductionOrderFinishedProductSummaries ProductionOrderFinishedProductSummaries[] @relation("ProductionOrderFinishedProductSummaryCreator")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -220,28 +221,29 @@ model Items {
 }
 
 model ProductionOrders {
-  id                    Int                                @id
-  item_code             String
-  item                  Items                              @relation(fields: [item_code], references: [item_code])
-  status                String
-  type                  String
-  planned_quatity       Int
-  creation_date         DateTime
-  origin                String?
-  warehouse             String?
-  unit                  String
-  start_date            DateTime
-  description           String
-  date_manufacture      String?
-  expire_date           String?
-  lot_no                String
-  packing_specification String?
-  production_order_code String?
-  remarks               String?                            @db.Text
-  internal_notes        String?                            @db.Text
-  deviations            ProductionOrderDeviations[]
-  samplingRequests      ProductionOrderSamplingRequests[]
-  environmentChecks     ProductionOrderEnvironmentChecks[]
+  id                       Int                                       @id
+  item_code                String
+  item                     Items                                     @relation(fields: [item_code], references: [item_code])
+  status                   String
+  type                     String
+  planned_quatity          Int
+  creation_date            DateTime
+  origin                   String?
+  warehouse                String?
+  unit                     String
+  start_date               DateTime
+  description              String
+  date_manufacture         String?
+  expire_date              String?
+  lot_no                   String
+  packing_specification    String?
+  production_order_code    String?
+  remarks                  String?                                   @db.Text
+  internal_notes           String?                                   @db.Text
+  deviations               ProductionOrderDeviations[]
+  samplingRequests         ProductionOrderSamplingRequests[]
+  environmentChecks        ProductionOrderEnvironmentChecks[]
+  finishedProductSummaries ProductionOrderFinishedProductSummaries[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
@@ -332,4 +334,21 @@ model ProductionOrderEnvironmentChecks {
   @@index([production_order_id], map: "production_order_environment_checks_production_order_id_fkey")
   @@index([created_by_id], map: "production_order_environment_checks_created_by_id_fkey")
   @@map("production_order_environment_checks")
+}
+
+model ProductionOrderFinishedProductSummaries {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_finished_summary_po_id_fkey")
+  package_count       Int
+  boxes_per_package   Int
+  loose_box_count     Int
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderFinishedProductSummaryCreator", fields: [created_by_id], references: [id], map: "po_finished_summary_created_by_id_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_finished_summary_po_id_fkey")
+  @@index([created_by_id], map: "po_finished_summary_created_by_id_fkey")
+  @@map("production_order_finished_product_summaries")
 }

@@ -18,6 +18,8 @@ import { CreateProductionOrderSamplingRequestDto } from './dto/create-production
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { CreateProductionOrderEnvironmentCheckDto } from './dto/create-production-order-environment-check.dto';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
+import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
+import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 
 const getAsciiFilenameFallback = (filename: string) => {
   const fallback = filename
@@ -44,6 +46,7 @@ export class ProductionOrdersController {
     private readonly productionOrdersService: ProductionOrdersService,
     private readonly productionOrderSamplingRequestsService: ProductionOrderSamplingRequestsService,
     private readonly productionOrderEnvironmentChecksService: ProductionOrderEnvironmentChecksService,
+    private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
   ) {}
 
   @Get()
@@ -125,6 +128,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderEnvironmentChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/finished-product-summaries')
+  async findFinishedProductSummaries(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderFinishedProductSummariesService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/finished-product-summaries')
+  async createFinishedProductSummary(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderFinishedProductSummaryDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderFinishedProductSummariesService.create(
       id,
       createDto,
       req.user,

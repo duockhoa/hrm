@@ -5,6 +5,7 @@ import { ProductionOrdersService } from './production-orders.service';
 import type { Response } from 'express';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
+import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -22,6 +23,10 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderEnvironmentChecksService: {
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
+  let productionOrderFinishedProductSummariesService: {
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
   };
@@ -44,6 +49,10 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderFinishedProductSummariesService = {
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -59,6 +68,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderEnvironmentChecksService,
           useValue: productionOrderEnvironmentChecksService,
+        },
+        {
+          provide: ProductionOrderFinishedProductSummariesService,
+          useValue: productionOrderFinishedProductSummariesService,
         },
       ],
     }).compile();
@@ -210,6 +223,40 @@ describe('ProductionOrdersController', () => {
       createDto,
       user,
     );
+  });
+
+  it('gets finished product summaries for a production order', async () => {
+    const summaries = [{ id: 1, production_order_id: 2031 }];
+    productionOrderFinishedProductSummariesService.findAllByProductionOrder.mockResolvedValue(
+      summaries,
+    );
+
+    await expect(controller.findFinishedProductSummaries(2031)).resolves.toBe(
+      summaries,
+    );
+    expect(
+      productionOrderFinishedProductSummariesService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('creates a finished product summary using the authenticated user', async () => {
+    const createDto = {
+      package_count: 12,
+      boxes_per_package: 24,
+      loose_box_count: 3,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderFinishedProductSummariesService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createFinishedProductSummary(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderFinishedProductSummariesService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
   });
 
   it('sets download headers and returns a streamable file when exporting production order lines', async () => {
