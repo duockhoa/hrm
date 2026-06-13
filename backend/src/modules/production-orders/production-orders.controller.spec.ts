@@ -23,10 +23,12 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderEnvironmentChecksService: {
+    findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
   };
   let productionOrderFinishedProductSummariesService: {
+    findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
   };
@@ -46,10 +48,12 @@ describe('ProductionOrdersController', () => {
       create: jest.fn(),
     };
     productionOrderEnvironmentChecksService = {
+      findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
     productionOrderFinishedProductSummariesService = {
+      findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
@@ -204,6 +208,20 @@ describe('ProductionOrdersController', () => {
     ).toHaveBeenCalledWith(2031);
   });
 
+  it('gets an environment check by id', async () => {
+    const environmentCheck = { id: 1, production_order_id: 2031 };
+    productionOrderEnvironmentChecksService.findById.mockResolvedValue(
+      environmentCheck,
+    );
+
+    await expect(controller.findEnvironmentCheckById(1)).resolves.toBe(
+      environmentCheck,
+    );
+    expect(productionOrderEnvironmentChecksService.findById).toHaveBeenCalledWith(
+      1,
+    );
+  });
+
   it('creates an environment check using the authenticated user', async () => {
     const createDto = {
       room: 'Phong pha che 1',
@@ -237,6 +255,20 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderFinishedProductSummariesService.findAllByProductionOrder,
     ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a finished product summary by id', async () => {
+    const summary = { id: 1, production_order_id: 2031 };
+    productionOrderFinishedProductSummariesService.findById.mockResolvedValue(
+      summary,
+    );
+
+    await expect(controller.findFinishedProductSummaryById(1)).resolves.toBe(
+      summary,
+    );
+    expect(
+      productionOrderFinishedProductSummariesService.findById,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('creates a finished product summary using the authenticated user', async () => {

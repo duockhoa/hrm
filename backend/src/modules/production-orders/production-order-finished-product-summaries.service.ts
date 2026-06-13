@@ -31,6 +31,24 @@ const finishedProductSummaryInclude = {
 export class ProductionOrderFinishedProductSummariesService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  async findById(summaryId: number) {
+    const summary =
+      await this.prismaService.productionOrderFinishedProductSummaries.findUnique(
+        {
+          where: {
+            id: summaryId,
+          },
+          include: finishedProductSummaryInclude,
+        },
+      );
+
+    if (!summary) {
+      throw new NotFoundException('Finished product summary not found');
+    }
+
+    return summary;
+  }
+
   async findAllByProductionOrder(productionOrderId: number) {
     await this.ensureProductionOrderExists(productionOrderId);
 

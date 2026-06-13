@@ -64,6 +64,22 @@ export class ProductionOrdersController {
     return this.productionOrdersService.findSemiFinishedProducts();
   }
 
+  @Get('finished-product-summaries/:summaryId')
+  async findFinishedProductSummaryById(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderFinishedProductSummariesService.findById(
+      summaryId,
+    );
+  }
+
+  @Get('environment-checks/:checkId')
+  async findEnvironmentCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderEnvironmentChecksService.findById(checkId);
+  }
+
   @Get(':id/export')
   async exportProductionOrder(
     @Param('id', ParseIntPipe) id: number,

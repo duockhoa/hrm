@@ -33,6 +33,22 @@ const environmentCheckInclude = {
 export class ProductionOrderEnvironmentChecksService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  async findById(checkId: number) {
+    const environmentCheck =
+      await this.prismaService.productionOrderEnvironmentChecks.findUnique({
+        where: {
+          id: checkId,
+        },
+        include: environmentCheckInclude,
+      });
+
+    if (!environmentCheck) {
+      throw new NotFoundException('Environment check not found');
+    }
+
+    return environmentCheck;
+  }
+
   async findAllByProductionOrder(productionOrderId: number) {
     await this.ensureProductionOrderExists(productionOrderId);
 

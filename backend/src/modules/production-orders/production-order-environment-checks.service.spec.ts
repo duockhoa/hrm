@@ -14,6 +14,7 @@ describe('ProductionOrderEnvironmentChecksService', () => {
       findUnique: jest.Mock;
     };
     productionOrderEnvironmentChecks: {
+      findUnique: jest.Mock;
       findMany: jest.Mock;
       create: jest.Mock;
     };
@@ -25,6 +26,7 @@ describe('ProductionOrderEnvironmentChecksService', () => {
         findUnique: jest.fn(),
       },
       productionOrderEnvironmentChecks: {
+        findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
       },
@@ -64,6 +66,32 @@ describe('ProductionOrderEnvironmentChecksService', () => {
         },
       }),
     );
+  });
+
+  it('gets an environment check by id', async () => {
+    const environmentCheck = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrderEnvironmentChecks.findUnique.mockResolvedValue(
+      environmentCheck,
+    );
+
+    await expect(service.findById(1)).resolves.toBe(environmentCheck);
+    expect(
+      prismaService.productionOrderEnvironmentChecks.findUnique,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 1,
+        },
+      }),
+    );
+  });
+
+  it('throws NotFoundException when the environment check does not exist', async () => {
+    prismaService.productionOrderEnvironmentChecks.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(service.findById(1)).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('creates an environment check with normalized input', async () => {

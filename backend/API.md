@@ -587,6 +587,40 @@ Response mẫu:
 ]
 ```
 
+### Lấy một bản ghi nhiệt độ/độ ẩm theo ID
+
+```http
+GET /production-orders/environment-checks/:checkId
+```
+
+Response mẫu:
+
+```json
+{
+  "id": 1,
+  "production_order_id": 2031,
+  "room": "Phong pha che 1",
+  "temperature_c": "25.50",
+  "humidity_percent": "60.20",
+  "created_by_id": 7,
+  "checked_at": "2026-06-11T08:00:00.000Z",
+  "created_at": "2026-06-11T08:10:00.000Z",
+  "updated_at": "2026-06-11T08:10:00.000Z",
+  "createdBy": {
+    "id": 7,
+    "username": "binh",
+    "name": "Binh",
+    "email": "binh@example.com",
+    "department": "QA",
+    "position": "Staff"
+  }
+}
+```
+
+Lỗi thường gặp:
+
+- `404 Environment check not found`
+
 ### Thêm dữ liệu nhiệt độ/độ ẩm
 
 ```http
@@ -656,6 +690,39 @@ Response mẫu:
   }
 ]
 ```
+
+### Lấy một tổng kết thành phẩm theo ID
+
+```http
+GET /production-orders/finished-product-summaries/:summaryId
+```
+
+Response mẫu:
+
+```json
+{
+  "id": 1,
+  "production_order_id": 2031,
+  "package_count": 12,
+  "boxes_per_package": 24,
+  "loose_box_count": 3,
+  "created_by_id": 7,
+  "created_at": "2026-06-12T08:10:00.000Z",
+  "updated_at": "2026-06-12T08:10:00.000Z",
+  "createdBy": {
+    "id": 7,
+    "username": "binh",
+    "name": "Binh",
+    "email": "binh@example.com",
+    "department": "QA",
+    "position": "Staff"
+  }
+}
+```
+
+Lỗi thường gặp:
+
+- `404 Finished product summary not found`
 
 ### Tạo tổng kết thành phẩm
 

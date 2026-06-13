@@ -14,6 +14,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       findUnique: jest.Mock;
     };
     productionOrderFinishedProductSummaries: {
+      findUnique: jest.Mock;
       findMany: jest.Mock;
       create: jest.Mock;
     };
@@ -25,6 +26,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
         findUnique: jest.fn(),
       },
       productionOrderFinishedProductSummaries: {
+        findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
       },
@@ -64,6 +66,32 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
         },
       }),
     );
+  });
+
+  it('gets a finished product summary by id', async () => {
+    const summary = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      summary,
+    );
+
+    await expect(service.findById(1)).resolves.toBe(summary);
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.findUnique,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 1,
+        },
+      }),
+    );
+  });
+
+  it('throws NotFoundException when the finished product summary does not exist', async () => {
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(service.findById(1)).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('creates a finished product summary with normalized input', async () => {
