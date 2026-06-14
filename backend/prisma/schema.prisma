@@ -33,6 +33,7 @@ model Users {
   productionOrderSamplingRequests                ProductionOrderSamplingRequests[]
   createdProductionOrderEnvironmentChecks        ProductionOrderEnvironmentChecks[]        @relation("ProductionOrderEnvironmentCheckCreator")
   createdProductionOrderFinishedProductSummaries ProductionOrderFinishedProductSummaries[] @relation("ProductionOrderFinishedProductSummaryCreator")
+  createdProductionOrderDensityChecks            ProductionOrderDensityChecks[]            @relation("ProductionOrderDensityCheckCreator")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -286,6 +287,7 @@ model ProductionOrders {
   samplingRequests         ProductionOrderSamplingRequests[]
   environmentChecks        ProductionOrderEnvironmentChecks[]
   finishedProductSummaries ProductionOrderFinishedProductSummaries[]
+  densityChecks            ProductionOrderDensityChecks[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
@@ -395,4 +397,22 @@ model ProductionOrderFinishedProductSummaries {
   @@index([production_order_id], map: "po_finished_summary_po_id_fkey")
   @@index([created_by_id], map: "po_finished_summary_created_by_id_fkey")
   @@map("production_order_finished_product_summaries")
+}
+
+model ProductionOrderDensityChecks {
+  id                         Int              @id @default(autoincrement())
+  production_order_id        Int
+  productionOrder            ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_density_checks_po_id_fkey")
+  empty_pycnometer_mass_g    Decimal          @db.Decimal(12, 4)
+  solution_pycnometer_mass_g Decimal          @db.Decimal(12, 4)
+  water_pycnometer_mass_g    Decimal          @db.Decimal(12, 4)
+  density                    Decimal          @db.Decimal(12, 6)
+  created_by_id              Int
+  createdBy                  Users            @relation("ProductionOrderDensityCheckCreator", fields: [created_by_id], references: [id], map: "po_density_checks_created_by_id_fkey")
+  created_at                 DateTime         @default(now())
+  updated_at                 DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_density_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_density_checks_created_by_id_fkey")
+  @@map("production_order_density_checks")
 }

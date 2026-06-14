@@ -20,6 +20,8 @@ import { CreateProductionOrderEnvironmentCheckDto } from './dto/create-productio
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
+import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
+import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 
 const getAsciiFilenameFallback = (filename: string) => {
   const fallback = filename
@@ -47,6 +49,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSamplingRequestsService: ProductionOrderSamplingRequestsService,
     private readonly productionOrderEnvironmentChecksService: ProductionOrderEnvironmentChecksService,
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
+    private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
   ) {}
 
   @Get()
@@ -78,6 +81,11 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderEnvironmentChecksService.findById(checkId);
+  }
+
+  @Get('density-checks/:checkId')
+  async findDensityCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderDensityChecksService.findById(checkId);
   }
 
   @Get(':id/export')
@@ -144,6 +152,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderEnvironmentChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/density-checks')
+  async findDensityChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderDensityChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/density-checks')
+  async createDensityCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderDensityCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderDensityChecksService.create(
       id,
       createDto,
       req.user,

@@ -834,6 +834,88 @@ Lỗi thường gặp:
 - `400 humidity_percent must be less than or equal to 100`
 - `401 Authenticated user not found`
 
+## Production Order Density Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+### Lấy danh sách kiểm tra tỉ trọng của lệnh sản xuất
+
+```http
+GET /production-orders/:id/density-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "empty_pycnometer_mass_g": "25.0000",
+    "solution_pycnometer_mass_g": "75.0000",
+    "water_pycnometer_mass_g": "75.5000",
+    "density": "0.990099",
+    "created_by_id": 7,
+    "created_at": "2026-06-11T08:10:00.000Z",
+    "updated_at": "2026-06-11T08:10:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một bản ghi tỉ trọng theo ID
+
+```http
+GET /production-orders/density-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Density check not found`
+
+### Thêm dữ liệu tỉ trọng
+
+```http
+POST /production-orders/:id/density-checks
+```
+
+Body:
+
+```json
+{
+  "empty_pycnometer_mass_g": 25,
+  "solution_pycnometer_mass_g": 75,
+  "water_pycnometer_mass_g": 75.5
+}
+```
+
+Quy tắc:
+
+- Các khối lượng là bắt buộc, lưu dạng `DECIMAL(12, 4)`.
+- Có thể gửi số dạng chuỗi, ví dụ `"25.0000"` hoặc `"25,0000"`.
+- `solution_pycnometer_mass_g` phải lớn hơn `empty_pycnometer_mass_g`.
+- `water_pycnometer_mass_g` phải lớn hơn `empty_pycnometer_mass_g`.
+- Backend tự tính và lưu `density`; frontend không gửi field này.
+- Công thức: `(solution_pycnometer_mass_g - empty_pycnometer_mass_g) / (water_pycnometer_mass_g - empty_pycnometer_mass_g)`.
+- Thời điểm kiểm tra là `created_at`, lấy theo thời điểm tạo bản ghi.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 empty_pycnometer_mass_g is required`
+- `400 water_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
+- `401 Authenticated user not found`
+
 ## Production Order Finished Product Summary
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

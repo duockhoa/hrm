@@ -10,6 +10,7 @@ import { ProductionOrderExportService } from './exports/production-order-export.
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { FeaturesModule } from '../features/features.module';
+import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 
 @Module({
   imports: [FeaturesModule],
@@ -19,6 +20,7 @@ import { FeaturesModule } from '../features/features.module';
     ProductionOrderSamplingRequestsService,
     ProductionOrderEnvironmentChecksService,
     ProductionOrderFinishedProductSummariesService,
+    ProductionOrderDensityChecksService,
     WarehouseReleaseExportService,
     ProductionOrderExportService,
     RolesGuard,

@@ -6,6 +6,7 @@ import type { Response } from 'express';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
+import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -28,6 +29,11 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderFinishedProductSummariesService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
+  let productionOrderDensityChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -57,6 +63,11 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderDensityChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -76,6 +87,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderFinishedProductSummariesService,
           useValue: productionOrderFinishedProductSummariesService,
+        },
+        {
+          provide: ProductionOrderDensityChecksService,
+          useValue: productionOrderDensityChecksService,
         },
       ],
     }).compile();
@@ -217,9 +232,9 @@ describe('ProductionOrdersController', () => {
     await expect(controller.findEnvironmentCheckById(1)).resolves.toBe(
       environmentCheck,
     );
-    expect(productionOrderEnvironmentChecksService.findById).toHaveBeenCalledWith(
-      1,
-    );
+    expect(
+      productionOrderEnvironmentChecksService.findById,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('creates an environment check using the authenticated user', async () => {
@@ -237,6 +252,54 @@ describe('ProductionOrdersController', () => {
       controller.createEnvironmentCheck(2031, createDto, { user }),
     ).resolves.toBe(result);
     expect(productionOrderEnvironmentChecksService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+    );
+  });
+
+  it('gets density checks for a production order', async () => {
+    const densityChecks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderDensityChecksService.findAllByProductionOrder.mockResolvedValue(
+      densityChecks,
+    );
+
+    await expect(controller.findDensityChecks(2031)).resolves.toBe(
+      densityChecks,
+    );
+    expect(
+      productionOrderDensityChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a density check by id', async () => {
+    const densityCheck = { id: 1, production_order_id: 2031 };
+    productionOrderDensityChecksService.findById.mockResolvedValue(
+      densityCheck,
+    );
+
+    await expect(controller.findDensityCheckById(1)).resolves.toBe(
+      densityCheck,
+    );
+    expect(productionOrderDensityChecksService.findById).toHaveBeenCalledWith(
+      1,
+    );
+  });
+
+  it('creates a density check using the authenticated user', async () => {
+    const createDto = {
+      empty_pycnometer_mass_g: 25,
+      solution_pycnometer_mass_g: 75,
+      water_pycnometer_mass_g: 75.5,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderDensityChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createDensityCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderDensityChecksService.create).toHaveBeenCalledWith(
       2031,
       createDto,
       user,
