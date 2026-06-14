@@ -7,6 +7,6 @@ import { PrismaService } from 'src/prisma.service';
 
 @Module({
   controllers: [ItemsController],
-  providers: [ItemsService,  RolesGuard, PermissionsGuard, PrismaService],
+  providers: [ItemsService, RolesGuard, PermissionsGuard, PrismaService],
 })
 export class ItemsModule {}

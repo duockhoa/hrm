@@ -426,6 +426,8 @@ Tất cả API trong nhóm này cần `Auth: Bearer`.
 GET /items
 ```
 
+Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`.
+
 ### Lấy thành phẩm
 
 ```http
@@ -455,6 +457,8 @@ Ví dụ:
 ```http
 GET /items/TP00001
 ```
+
+Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`.
 
 ## Features
 

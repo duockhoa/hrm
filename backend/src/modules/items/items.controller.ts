@@ -8,11 +8,9 @@ import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 export class ItemsController {
   constructor(private readonly itemsService: ItemsService) {}
   @Get()
-
   async findAll() {
     return this.itemsService.findAll();
   }
-
 
   @Get('finished-products')
   async findFinishedProducts() {

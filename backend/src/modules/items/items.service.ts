@@ -1,39 +1,61 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
+
+const ITEM_INCLUDE = {
+  productionSpecification: {
+    include: {
+      productLine: true,
+    },
+  },
+};
+
 @Injectable()
 export class ItemsService {
   constructor(private readonly prismaService: PrismaService) {}
   async findAll() {
-    return this.prismaService.items.findMany();
+    const items = await this.prismaService.items.findMany({
+      include: ITEM_INCLUDE,
+    });
+
+    return items.map((item) => this.hideDeletedProductionSpecification(item));
   }
 
   async findFinishedProducts() {
-    return this.prismaService.items.findMany({
+    const items = await this.prismaService.items.findMany({
       where: {
         item_code: {
           startsWith: 'TP',
         },
       },
+      include: ITEM_INCLUDE,
     });
+
+    return items.map((item) => this.hideDeletedProductionSpecification(item));
   }
   async findSemiFinishedProducts() {
-    return this.prismaService.items.findMany({
+    const items = await this.prismaService.items.findMany({
       where: {
         item_code: {
           startsWith: 'BTP',
         },
       },
+      include: ITEM_INCLUDE,
     });
+
+    return items.map((item) => this.hideDeletedProductionSpecification(item));
   }
   async findRawMaterials() {
-    return this.prismaService.items.findMany({
+    const items = await this.prismaService.items.findMany({
       where: {
         NOT: [
           { item_code: { startsWith: 'TP' } },
           { item_code: { startsWith: 'BTP' } },
         ],
       },
+      include: ITEM_INCLUDE,
     });
+
+    return items.map((item) => this.hideDeletedProductionSpecification(item));
   }
 
   async findItemByCode(item_code: string) {
@@ -41,11 +63,17 @@ export class ItemsService {
       where: {
         item_code: item_code,
       },
-      include: {
-        productionSpecification: true,
-      },
+      include: ITEM_INCLUDE,
     });
 
+    return this.hideDeletedProductionSpecification(item);
+  }
+
+  private hideDeletedProductionSpecification<
+    T extends {
+      productionSpecification?: { deleted_at?: Date | null } | null;
+    } | null,
+  >(item: T) {
     if (item?.productionSpecification?.deleted_at) {
       return {
         ...item,
