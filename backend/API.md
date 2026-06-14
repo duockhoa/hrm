@@ -647,6 +647,21 @@ GET /production-orders/semi-finished-products
 GET /production-orders/:id
 ```
 
+Response có thêm field `pyclm` dựa trên sampling request mới nhất và `featureConfig` dựa trên cấu hình action/view của `item_code`.
+
+Ví dụ `featureConfig`:
+
+```json
+{
+  "featureConfig": {
+    "item_code": "TP00001",
+    "actions": [],
+    "sections": [],
+    "features": []
+  }
+}
+```
+
 ### Lấy line của lệnh sản xuất từ SAP connector
 
 ```http

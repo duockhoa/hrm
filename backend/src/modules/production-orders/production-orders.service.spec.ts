@@ -6,6 +6,7 @@ import ExcelJS from 'exceljs';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import PizZip from 'pizzip';
+import { FeaturesService } from '../features/features.service';
 
 jest.mock('axios');
 
@@ -14,6 +15,9 @@ const mockedAxiosGet = axios.get as jest.MockedFunction<typeof axios.get>;
 describe('ProductionOrdersService', () => {
   let service: ProductionOrdersService;
   let warehouseReleaseExportService: WarehouseReleaseExportService;
+  let featuresService: {
+    findConfigByItemCode: jest.Mock;
+  };
   let prismaService: {
     productionOrders: {
       findMany: jest.Mock;
@@ -23,12 +27,19 @@ describe('ProductionOrdersService', () => {
 
   beforeEach(async () => {
     mockedAxiosGet.mockReset();
+    featuresService = {
+      findConfigByItemCode: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProductionOrdersService,
         WarehouseReleaseExportService,
         ProductionOrderExportService,
+        {
+          provide: FeaturesService,
+          useValue: featuresService,
+        },
         {
           provide: PrismaService,
           useValue: {
@@ -289,9 +300,34 @@ describe('ProductionOrdersService', () => {
       internal_notes: 'Ghi chu noi bo TP',
       samplingRequests: [latestSamplingRequest],
     };
+    const featureConfig = {
+      item_code: 'TP00001',
+      actions: [
+        {
+          feature_id: 1,
+          key: 'create_environment_check',
+          kind: 'action',
+          label: 'Nhập nhiệt độ/độ ẩm',
+          order: 10,
+          enabled: true,
+        },
+      ],
+      sections: [],
+      features: [
+        {
+          feature_id: 1,
+          key: 'create_environment_check',
+          kind: 'action',
+          label: 'Nhập nhiệt độ/độ ẩm',
+          order: 10,
+          enabled: true,
+        },
+      ],
+    };
     prismaService.productionOrders.findUnique.mockResolvedValue(
       productionOrder,
     );
+    featuresService.findConfigByItemCode.mockResolvedValue(featureConfig);
 
     await expect(service.findProductionOrderById(2031)).resolves.toEqual({
       ...productionOrder,
@@ -304,6 +340,7 @@ describe('ProductionOrdersService', () => {
         sender,
         latestSamplingRequest,
       },
+      featureConfig,
     });
     expect(prismaService.productionOrders.findUnique).toHaveBeenCalledWith({
       where: {
@@ -331,6 +368,9 @@ describe('ProductionOrdersService', () => {
         },
       },
     });
+    expect(featuresService.findConfigByItemCode).toHaveBeenCalledWith(
+      'TP00001',
+    );
   });
 
   it('returns production order lines joined with production order stages', async () => {

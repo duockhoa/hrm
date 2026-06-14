@@ -9,8 +9,10 @@ import { ProductionOrderSamplingRequestsService } from './production-order-sampl
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
+import { FeaturesModule } from '../features/features.module';
 
 @Module({
+  imports: [FeaturesModule],
   controllers: [ProductionOrdersController],
   providers: [
     ProductionOrdersService,

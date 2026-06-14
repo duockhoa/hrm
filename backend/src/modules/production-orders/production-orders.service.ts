@@ -11,6 +11,7 @@ import type {
   ExportProductionOrderLinesDto,
   ProductionOrderStageIdFilter,
 } from './dto/export-production-order-lines.dto';
+import { FeaturesService } from '../features/features.service';
 
 export type SapProductionOrderLine = {
   StageID?: number | null;
@@ -133,6 +134,7 @@ const normalizeStageIds = (
 export class ProductionOrdersService {
   constructor(
     private readonly prismaService: PrismaService,
+    private readonly featuresService: FeaturesService,
     private readonly warehouseReleaseExportService: WarehouseReleaseExportService,
     private readonly productionOrderExportService: ProductionOrderExportService,
   ) {}
@@ -213,7 +215,14 @@ export class ProductionOrdersService {
       return productionOrder;
     }
 
-    return this.addPyclmInfo(productionOrder);
+    const featureConfig = await this.featuresService.findConfigByItemCode(
+      productionOrder.item_code,
+    );
+
+    return {
+      ...this.addPyclmInfo(productionOrder),
+      featureConfig,
+    };
   }
 
   private addPyclmInfoToList<T extends ProductionOrderWithSamplingRequests>(
