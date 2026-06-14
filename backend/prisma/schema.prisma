@@ -211,6 +211,7 @@ model Items {
   dk_code                 String?
   registration_id         Int?
   registration            RegistrationNumbers?      @relation(fields: [registration_id], references: [id])
+  itemFeatures            ItemFeatures[]
   productionOrders        ProductionOrders[]
   productionSpecification ProductionSpecifications?
   created_at              DateTime                  @default(now())
@@ -218,6 +219,36 @@ model Items {
   deleted_at              DateTime?
 
   @@map("items")
+}
+
+model Features {
+  id            Int            @id @default(autoincrement())
+  key           String         @unique
+  kind          String
+  label         String
+  default_order Int            @default(0)
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @default(now()) @updatedAt
+  itemFeatures  ItemFeatures[]
+
+  @@map("features")
+}
+
+model ItemFeatures {
+  id         Int      @id @default(autoincrement())
+  item_code  String
+  feature_id Int
+  enabled    Boolean  @default(true)
+  order      Int?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+  item       Items    @relation(fields: [item_code], references: [item_code], onDelete: Cascade)
+  feature    Features @relation(fields: [feature_id], references: [id], onDelete: Cascade)
+
+  @@unique([item_code, feature_id])
+  @@index([feature_id], map: "item_features_feature_id_fkey")
+  @@index([item_code], map: "item_features_item_code_fkey")
+  @@map("item_features")
 }
 
 model ProductionOrders {

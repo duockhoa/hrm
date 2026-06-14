@@ -456,6 +456,167 @@ Ví dụ:
 GET /items/TP00001
 ```
 
+## Features
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+`features` là danh mục action/view chuẩn. `item_features` là liên kết item nào bật action/view nào.
+
+### Lấy danh sách feature
+
+```http
+GET /features
+```
+
+### Lấy feature theo id
+
+```http
+GET /features/:id
+```
+
+### Lấy feature theo key
+
+```http
+GET /features/key/:key
+```
+
+### Tạo feature
+
+```http
+POST /features
+```
+
+Body:
+
+```json
+{
+  "key": "environment_checks",
+  "kind": "section",
+  "label": "Nhiệt độ/độ ẩm",
+  "default_order": 10
+}
+```
+
+### Cập nhật feature
+
+```http
+PUT /features/:id
+```
+
+Body:
+
+```json
+{
+  "label": "Nhiệt độ/độ ẩm",
+  "default_order": 10
+}
+```
+
+### Xóa feature
+
+```http
+DELETE /features/:id
+```
+
+### Lấy action/view theo item
+
+```http
+GET /features/items/:item_code
+GET /features/items/:item_code?includeDisabled=true
+```
+
+Response là danh sách raw từ bảng `item_features`.
+
+### Lấy action/view theo item dạng config frontend
+
+```http
+GET /features/items/:item_code/config
+GET /features/items/:item_code/config?includeDisabled=true
+```
+
+Response:
+
+```json
+{
+  "item_code": "TP00001",
+  "actions": [
+    {
+      "feature_id": 1,
+      "key": "create_environment_check",
+      "kind": "action",
+      "label": "Nhập nhiệt độ/độ ẩm",
+      "order": 10,
+      "enabled": true
+    }
+  ],
+  "sections": [
+    {
+      "feature_id": 2,
+      "key": "environment_checks",
+      "kind": "section",
+      "label": "Nhiệt độ/độ ẩm",
+      "order": 10,
+      "enabled": true
+    }
+  ],
+  "features": [
+    {
+      "feature_id": 1,
+      "key": "create_environment_check",
+      "kind": "action",
+      "label": "Nhập nhiệt độ/độ ẩm",
+      "order": 10,
+      "enabled": true
+    },
+    {
+      "feature_id": 2,
+      "key": "environment_checks",
+      "kind": "section",
+      "label": "Nhiệt độ/độ ẩm",
+      "order": 10,
+      "enabled": true
+    }
+  ]
+}
+```
+
+### Bật hoặc cập nhật feature cho item
+
+```http
+POST /features/items/:item_code
+```
+
+Body dùng `feature_id` hoặc `feature_key`:
+
+```json
+{
+  "feature_key": "environment_checks",
+  "enabled": true,
+  "order": 10
+}
+```
+
+### Cập nhật liên kết item-feature
+
+```http
+PUT /features/items/:item_code/:feature_id
+```
+
+Body:
+
+```json
+{
+  "enabled": false,
+  "order": 20
+}
+```
+
+### Xóa liên kết item-feature
+
+```http
+DELETE /features/items/:item_code/:feature_id
+```
+
 ## Production Orders
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
