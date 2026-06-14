@@ -1049,7 +1049,7 @@ Body:
 ```json
 {
   "item_code": "TP00001",
-  "product_line": "Line A",
+  "product_line_id": 1,
   "dosage_form": "Liquid",
   "lower_control_limit": 95,
   "upper_control_limit": 105,
@@ -1062,8 +1062,12 @@ Body:
 Quy tắc:
 
 - `item_code` phải tồn tại trong bảng `items`.
+- `product_line_id` là tùy chọn và phải tồn tại trong bảng `product_lines`.
+- Backend vẫn nhận `product_line` dạng text để tương thích request cũ; nếu gửi text, hệ thống sẽ tìm hoặc tạo `product_lines` tương ứng.
 - Các field giới hạn là số thập phân, tối đa 6 chữ số sau dấu phẩy.
 - Nếu specification đã bị soft delete, API create/update có thể restore bản ghi.
+
+Response include thêm `productLine`.
 
 ### Cập nhật specification
 
@@ -1088,6 +1092,67 @@ DELETE /production-specifications/:item_code
 ```
 
 API này set `deleted_at`, không xóa cứng bản ghi.
+
+## Product Lines
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+### Lấy danh sách dây chuyền/dòng sản phẩm
+
+```http
+GET /product-lines
+```
+
+### Lấy product line theo id
+
+```http
+GET /product-lines/:id
+```
+
+### Lấy product line theo code
+
+```http
+GET /product-lines/code/:code
+```
+
+### Tạo product line
+
+```http
+POST /product-lines
+```
+
+Body:
+
+```json
+{
+  "code": "LINE_A",
+  "name": "Line A"
+}
+```
+
+Nếu không gửi `code`, backend tự sinh từ `name`.
+
+### Cập nhật product line
+
+```http
+PUT /product-lines/:id
+```
+
+Body gửi các field cần đổi:
+
+```json
+{
+  "name": "Line A"
+}
+```
+
+Gửi `"code": null` để backend sinh lại `code` từ `name`.
+
+### Xóa product line
+
+```http
+DELETE /product-lines/:id
+```
 
 ## Email
 

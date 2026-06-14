@@ -251,6 +251,17 @@ model ItemFeatures {
   @@map("item_features")
 }
 
+model ProductLines {
+  id                       Int                        @id @default(autoincrement())
+  code                     String                     @unique
+  name                     String
+  created_at               DateTime                   @default(now())
+  updated_at               DateTime                   @default(now()) @updatedAt
+  productionSpecifications ProductionSpecifications[]
+
+  @@map("product_lines")
+}
+
 model ProductionOrders {
   id                       Int                                       @id
   item_code                String
@@ -281,19 +292,21 @@ model ProductionOrders {
 }
 
 model ProductionSpecifications {
-  item_code           String    @id
-  item                Items     @relation(fields: [item_code], references: [item_code])
-  product_line        String?
+  item_code           String        @id
+  item                Items         @relation(fields: [item_code], references: [item_code])
+  product_line_id     Int?
+  productLine         ProductLines? @relation(fields: [product_line_id], references: [id], onDelete: SetNull)
   dosage_form         String?
-  lower_control_limit Decimal?  @db.Decimal(18, 6)
-  upper_control_limit Decimal?  @db.Decimal(18, 6)
-  lower_allowed_limit Decimal?  @db.Decimal(18, 6)
-  upper_allowed_limit Decimal?  @db.Decimal(18, 6)
+  lower_control_limit Decimal?      @db.Decimal(18, 6)
+  upper_control_limit Decimal?      @db.Decimal(18, 6)
+  lower_allowed_limit Decimal?      @db.Decimal(18, 6)
+  upper_allowed_limit Decimal?      @db.Decimal(18, 6)
   unit                String?
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @default(now()) @updatedAt
+  created_at          DateTime      @default(now())
+  updated_at          DateTime      @default(now()) @updatedAt
   deleted_at          DateTime?
 
+  @@index([product_line_id], map: "production_specifications_product_line_id_fkey")
   @@map("production_specifications")
 }
 

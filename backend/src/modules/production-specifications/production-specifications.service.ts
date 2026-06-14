@@ -23,6 +23,7 @@ export class ProductionSpecificationsService {
       },
       include: {
         item: true,
+        productLine: true,
       },
       orderBy: {
         item_code: 'asc',
@@ -43,6 +44,7 @@ export class ProductionSpecificationsService {
         },
         include: {
           item: true,
+          productLine: true,
         },
       });
 
@@ -54,7 +56,7 @@ export class ProductionSpecificationsService {
   }
 
   async create(createDto: CreateProductionSpecificationDto) {
-    const data = this.buildCreateData(createDto);
+    const data = await this.buildCreateData(createDto);
 
     await this.ensureItemExists(data.item_code);
 
@@ -84,6 +86,7 @@ export class ProductionSpecificationsService {
         },
         include: {
           item: true,
+          productLine: true,
         },
       });
     }
@@ -92,6 +95,7 @@ export class ProductionSpecificationsService {
       data,
       include: {
         item: true,
+        productLine: true,
       },
     });
   }
@@ -112,7 +116,7 @@ export class ProductionSpecificationsService {
       });
 
     if (!existing || existing.deleted_at) {
-      const createData = this.buildCreateData({
+      const createData = await this.buildCreateData({
         ...updateDto,
         item_code: normalizedItemCode,
       } as CreateProductionSpecificationDto);
@@ -130,6 +134,7 @@ export class ProductionSpecificationsService {
           },
           include: {
             item: true,
+            productLine: true,
           },
         });
       }
@@ -138,11 +143,12 @@ export class ProductionSpecificationsService {
         data: createData,
         include: {
           item: true,
+          productLine: true,
         },
       });
     }
 
-    const data = this.buildUpdateData(updateDto);
+    const data = await this.buildUpdateData(updateDto);
 
     return this.prismaService.productionSpecifications.update({
       where: {
@@ -151,6 +157,7 @@ export class ProductionSpecificationsService {
       data,
       include: {
         item: true,
+        productLine: true,
       },
     });
   }
@@ -172,6 +179,7 @@ export class ProductionSpecificationsService {
       },
       include: {
         item: true,
+        productLine: true,
       },
     });
   }
@@ -189,15 +197,12 @@ export class ProductionSpecificationsService {
     }
   }
 
-  private buildCreateData(
+  private async buildCreateData(
     dto: CreateProductionSpecificationDto,
-  ): Prisma.ProductionSpecificationsUncheckedCreateInput {
+  ): Promise<Prisma.ProductionSpecificationsUncheckedCreateInput> {
     return {
       item_code: this.normalizeRequiredString(dto.item_code, 'item_code'),
-      product_line: this.normalizeOptionalString(
-        dto.product_line,
-        'product_line',
-      ),
+      product_line_id: await this.resolveProductLineId(dto),
       dosage_form: this.normalizeOptionalString(dto.dosage_form, 'dosage_form'),
       lower_control_limit: this.normalizeOptionalDecimal(
         dto.lower_control_limit,
@@ -219,14 +224,11 @@ export class ProductionSpecificationsService {
     };
   }
 
-  private buildUpdateData(dto: UpdateProductionSpecificationDto) {
+  private async buildUpdateData(dto: UpdateProductionSpecificationDto) {
     const data: Prisma.ProductionSpecificationsUncheckedUpdateInput = {};
 
-    if (dto.product_line !== undefined) {
-      data.product_line = this.normalizeOptionalString(
-        dto.product_line,
-        'product_line',
-      );
+    if (this.hasProductLineInput(dto)) {
+      data.product_line_id = await this.resolveProductLineId(dto);
     }
 
     if (dto.dosage_form !== undefined) {
@@ -275,6 +277,98 @@ export class ProductionSpecificationsService {
     return data;
   }
 
+  private hasProductLineInput(
+    dto: CreateProductionSpecificationDto | UpdateProductionSpecificationDto,
+  ) {
+    return (
+      dto.product_line_id !== undefined ||
+      dto.productLineId !== undefined ||
+      dto.product_line !== undefined
+    );
+  }
+
+  private async resolveProductLineId(
+    dto: CreateProductionSpecificationDto | UpdateProductionSpecificationDto,
+  ) {
+    if (dto.product_line_id !== undefined || dto.productLineId !== undefined) {
+      const productLineId = this.normalizeOptionalInt(
+        dto.product_line_id ?? dto.productLineId,
+        'product_line_id',
+      );
+
+      if (productLineId === null) {
+        return null;
+      }
+
+      await this.ensureProductLineExists(productLineId);
+
+      return productLineId;
+    }
+
+    const productLineName = this.normalizeOptionalString(
+      dto.product_line,
+      'product_line',
+    );
+
+    if (productLineName === null) {
+      return null;
+    }
+
+    return this.findOrCreateProductLineId(productLineName);
+  }
+
+  private async ensureProductLineExists(id: number) {
+    const productLine = await this.prismaService.productLines.findUnique({
+      where: { id },
+    });
+
+    if (!productLine) {
+      throw new NotFoundException('Product line not found');
+    }
+  }
+
+  private async findOrCreateProductLineId(name: string) {
+    const existing = await this.prismaService.productLines.findFirst({
+      where: { name },
+    });
+
+    if (existing) {
+      return existing.id;
+    }
+
+    const productLine = await this.prismaService.productLines.create({
+      data: {
+        code: await this.buildProductLineCode(name),
+        name,
+      },
+    });
+
+    return productLine.id;
+  }
+
+  private async buildProductLineCode(name: string) {
+    const baseCode =
+      name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .toUpperCase() || 'PRODUCT_LINE';
+    let code = baseCode;
+    let suffix = 2;
+
+    while (
+      await this.prismaService.productLines.findUnique({
+        where: { code },
+      })
+    ) {
+      code = `${baseCode}_${suffix}`;
+      suffix += 1;
+    }
+
+    return code;
+  }
+
   private normalizeRequiredString(value: unknown, fieldName: string) {
     if (typeof value !== 'string' || value.trim() === '') {
       throw new BadRequestException(`${fieldName} is required`);
@@ -295,6 +389,24 @@ export class ProductionSpecificationsService {
     const normalizedValue = value.trim();
 
     return normalizedValue === '' ? null : normalizedValue;
+  }
+
+  private normalizeOptionalInt(value: unknown, fieldName: string) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === 'string' && value.trim() === '') {
+      return null;
+    }
+
+    const normalizedValue = Number(value);
+
+    if (!Number.isInteger(normalizedValue) || normalizedValue <= 0) {
+      throw new BadRequestException(`${fieldName} must be a positive integer`);
+    }
+
+    return normalizedValue;
   }
 
   private normalizeOptionalDecimal(value: unknown, fieldName: string) {
