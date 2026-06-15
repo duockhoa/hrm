@@ -34,6 +34,9 @@ model Users {
   createdProductionOrderEnvironmentChecks        ProductionOrderEnvironmentChecks[]        @relation("ProductionOrderEnvironmentCheckCreator")
   createdProductionOrderFinishedProductSummaries ProductionOrderFinishedProductSummaries[] @relation("ProductionOrderFinishedProductSummaryCreator")
   createdProductionOrderDensityChecks            ProductionOrderDensityChecks[]            @relation("ProductionOrderDensityCheckCreator")
+  createdProductionOrderDateChecks               ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckCreator")
+  approvedProductionOrderDateChecks              ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckApprover")
+  createdProductionOrderDateCheckImages          ProductionOrderDateCheckImages[]          @relation("ProductionOrderDateCheckImageCreator")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -288,6 +291,7 @@ model ProductionOrders {
   environmentChecks        ProductionOrderEnvironmentChecks[]
   finishedProductSummaries ProductionOrderFinishedProductSummaries[]
   densityChecks            ProductionOrderDensityChecks[]
+  dateChecks               ProductionOrderDateChecks[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
@@ -415,4 +419,42 @@ model ProductionOrderDensityChecks {
   @@index([production_order_id], map: "po_density_checks_po_id_fkey")
   @@index([created_by_id], map: "po_density_checks_created_by_id_fkey")
   @@map("production_order_density_checks")
+}
+
+model ProductionOrderDateChecks {
+  id                  Int                              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders                 @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_date_checks_po_id_fkey")
+  package_type        String
+  request_file_path   String?                          @db.Text
+  approval_status     String                           @default("pending")
+  created_by_id       Int
+  createdBy           Users                            @relation("ProductionOrderDateCheckCreator", fields: [created_by_id], references: [id], map: "po_date_checks_created_by_id_fkey")
+  approved_by_id      Int?
+  approvedBy          Users?                           @relation("ProductionOrderDateCheckApprover", fields: [approved_by_id], references: [id], map: "po_date_checks_approved_by_id_fkey")
+  checked_at          DateTime                         @default(now())
+  approved_at         DateTime?
+  created_at          DateTime                         @default(now())
+  updated_at          DateTime                         @default(now()) @updatedAt
+  images              ProductionOrderDateCheckImages[]
+
+  @@index([production_order_id], map: "po_date_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_date_checks_created_by_id_fkey")
+  @@index([approved_by_id], map: "po_date_checks_approved_by_id_fkey")
+  @@map("production_order_date_checks")
+}
+
+model ProductionOrderDateCheckImages {
+  id            Int                       @id @default(autoincrement())
+  date_check_id Int
+  dateCheck     ProductionOrderDateChecks @relation(fields: [date_check_id], references: [id], onDelete: Cascade, map: "po_date_check_images_check_id_fkey")
+  image_path    String                    @db.Text
+  created_by_id Int
+  createdBy     Users                     @relation("ProductionOrderDateCheckImageCreator", fields: [created_by_id], references: [id], map: "po_date_check_images_created_by_id_fkey")
+  created_at    DateTime                  @default(now())
+  updated_at    DateTime                  @default(now()) @updatedAt
+
+  @@index([date_check_id], map: "po_date_check_images_check_id_fkey")
+  @@index([created_by_id], map: "po_date_check_images_created_by_id_fkey")
+  @@map("production_order_date_check_images")
 }

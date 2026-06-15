@@ -1,15 +1,23 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
+  NotFoundException,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Request,
   Res,
   StreamableFile,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { createReadStream } from 'fs';
 import type { Response } from 'express';
 import { ProductionOrdersService } from './production-orders.service';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -22,6 +30,42 @@ import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-pro
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
+import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
+import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
+import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
+import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
+import {
+  getDateCheckImagePaths,
+  getDateCheckRequestFilePath,
+  MAX_DATE_CHECK_IMAGE_COUNT,
+  productionOrderDateCheckUploadOptions,
+  removeUploadedDateCheckFiles,
+} from './production-order-date-check-upload.config';
+
+type DateCheckUploadFields = {
+  request_file?: Express.Multer.File[];
+  images?: Express.Multer.File[];
+  image?: Express.Multer.File[];
+};
+
+const dateCheckRequestFileUploadFields = [
+  { name: 'request_file', maxCount: 1 },
+];
+
+const dateCheckImageUploadFields = [
+  { name: 'images', maxCount: MAX_DATE_CHECK_IMAGE_COUNT },
+  { name: 'image', maxCount: MAX_DATE_CHECK_IMAGE_COUNT },
+];
+
+const getUploadedDateCheckImages = (uploadedFiles?: DateCheckUploadFields) => [
+  ...(uploadedFiles?.images ?? []),
+  ...(uploadedFiles?.image ?? []),
+];
+
+const getUploadedDateCheckFiles = (uploadedFiles?: DateCheckUploadFields) => [
+  ...(uploadedFiles?.request_file ?? []),
+  ...getUploadedDateCheckImages(uploadedFiles),
+];
 
 const getAsciiFilenameFallback = (filename: string) => {
   const fallback = filename
@@ -50,6 +94,7 @@ export class ProductionOrdersController {
     private readonly productionOrderEnvironmentChecksService: ProductionOrderEnvironmentChecksService,
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
+    private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
   ) {}
 
   @Get()
@@ -86,6 +131,139 @@ export class ProductionOrdersController {
   @Get('density-checks/:checkId')
   async findDensityCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDensityChecksService.findById(checkId);
+  }
+
+  @Get('date-checks/images/:filename')
+  async getDateCheckImage(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.productionOrderDateChecksService.findImageFile(filename);
+
+    if (!imageFile) {
+      throw new NotFoundException('Date check image not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
+  @Get('date-checks/request-files/:filename')
+  async getDateCheckRequestFile(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const requestFile =
+      await this.productionOrderDateChecksService.findRequestFile(filename);
+
+    if (!requestFile) {
+      throw new NotFoundException('Date check request file not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': requestFile.size,
+      'Content-Type': requestFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(requestFile.filePath));
+  }
+
+  @Get('date-checks/:checkId')
+  async findDateCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderDateChecksService.findById(checkId);
+  }
+
+  @Patch('date-checks/:checkId')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      dateCheckRequestFileUploadFields,
+      productionOrderDateCheckUploadOptions,
+    ),
+  )
+  async updateDateCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderDateCheckDto,
+    @UploadedFiles() uploadedFiles?: DateCheckUploadFields,
+  ) {
+    const uploadedRequestFile = uploadedFiles?.request_file?.[0];
+
+    try {
+      return await this.productionOrderDateChecksService.update(
+        checkId,
+        updateDto,
+        {
+          requestFilePath: getDateCheckRequestFilePath(uploadedRequestFile),
+        },
+      );
+    } catch (error) {
+      await removeUploadedDateCheckFiles(
+        getUploadedDateCheckFiles(uploadedFiles),
+      );
+      throw error;
+    }
+  }
+
+  @Patch('date-checks/:checkId/approval')
+  async approveDateCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() approveDto: ApproveProductionOrderDateCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderDateChecksService.approve(
+      checkId,
+      approveDto,
+      req.user,
+    );
+  }
+
+  @Delete('date-checks/:checkId')
+  async deleteDateCheck(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderDateChecksService.delete(checkId);
+  }
+
+  @Post('date-checks/:checkId/images')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      dateCheckImageUploadFields,
+      productionOrderDateCheckUploadOptions,
+    ),
+  )
+  async addDateCheckImages(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @UploadedFiles() uploadedFiles: DateCheckUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    const uploadedImages = getUploadedDateCheckImages(uploadedFiles);
+
+    if (uploadedImages.length > MAX_DATE_CHECK_IMAGE_COUNT) {
+      await removeUploadedDateCheckFiles(uploadedImages);
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_DATE_CHECK_IMAGE_COUNT} files`,
+      );
+    }
+
+    try {
+      return await this.productionOrderDateChecksService.addImages(
+        checkId,
+        getDateCheckImagePaths(uploadedImages),
+        req.user,
+      );
+    } catch (error) {
+      await removeUploadedDateCheckFiles(uploadedImages);
+      throw error;
+    }
+  }
+
+  @Delete('date-checks/images/:imageId')
+  async deleteDateCheckImage(@Param('imageId', ParseIntPipe) imageId: number) {
+    return this.productionOrderDateChecksService.deleteImage(imageId);
   }
 
   @Get(':id/export')
@@ -176,6 +354,43 @@ export class ProductionOrdersController {
       createDto,
       req.user,
     );
+  }
+
+  @Get(':id/date-checks')
+  async findDateChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderDateChecksService.findAllByProductionOrder(id);
+  }
+
+  @Post(':id/date-checks')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      dateCheckRequestFileUploadFields,
+      productionOrderDateCheckUploadOptions,
+    ),
+  )
+  async createDateCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderDateCheckDto,
+    @UploadedFiles() uploadedFiles: DateCheckUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    try {
+      return await this.productionOrderDateChecksService.create(
+        id,
+        createDto,
+        req.user,
+        {
+          requestFilePath: getDateCheckRequestFilePath(
+            uploadedFiles?.request_file?.[0],
+          ),
+        },
+      );
+    } catch (error) {
+      await removeUploadedDateCheckFiles(
+        getUploadedDateCheckFiles(uploadedFiles),
+      );
+      throw error;
+    }
   }
 
   @Get(':id/finished-product-summaries')

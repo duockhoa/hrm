@@ -7,6 +7,7 @@ import { ProductionOrderSamplingRequestsService } from './production-order-sampl
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
+import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -38,6 +39,18 @@ describe('ProductionOrdersController', () => {
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
   };
+  let productionOrderDateChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    approve: jest.Mock;
+    delete: jest.Mock;
+    addImages: jest.Mock;
+    deleteImage: jest.Mock;
+    findImageFile: jest.Mock;
+    findRequestFile: jest.Mock;
+  };
 
   beforeEach(async () => {
     productionOrdersService = {
@@ -68,6 +81,18 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderDateChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      approve: jest.fn(),
+      delete: jest.fn(),
+      addImages: jest.fn(),
+      deleteImage: jest.fn(),
+      findImageFile: jest.fn(),
+      findRequestFile: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -91,6 +116,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderDensityChecksService,
           useValue: productionOrderDensityChecksService,
+        },
+        {
+          provide: ProductionOrderDateChecksService,
+          useValue: productionOrderDateChecksService,
         },
       ],
     }).compile();
@@ -303,6 +332,111 @@ describe('ProductionOrdersController', () => {
       2031,
       createDto,
       user,
+    );
+  });
+
+  it('gets date checks for a production order', async () => {
+    const dateChecks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderDateChecksService.findAllByProductionOrder.mockResolvedValue(
+      dateChecks,
+    );
+
+    await expect(controller.findDateChecks(2031)).resolves.toBe(dateChecks);
+    expect(
+      productionOrderDateChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a date check by id', async () => {
+    const dateCheck = { id: 1, production_order_id: 2031 };
+    productionOrderDateChecksService.findById.mockResolvedValue(dateCheck);
+
+    await expect(controller.findDateCheckById(1)).resolves.toBe(dateCheck);
+    expect(productionOrderDateChecksService.findById).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a date check using the authenticated user', async () => {
+    const createDto = { package_type: 'goi' };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderDateChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createDateCheck(2031, createDto, undefined, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderDateChecksService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+      {
+        requestFilePath: undefined,
+      },
+    );
+  });
+
+  it('updates a date check request data', async () => {
+    const updateDto = { package_type: 'lo' };
+    const result = { id: 1, package_type: 'lo' };
+    productionOrderDateChecksService.update.mockResolvedValue(result);
+
+    await expect(
+      controller.updateDateCheck(1, updateDto, undefined),
+    ).resolves.toBe(result);
+    expect(productionOrderDateChecksService.update).toHaveBeenCalledWith(
+      1,
+      updateDto,
+      {
+        requestFilePath: undefined,
+      },
+    );
+  });
+
+  it('approves a date check using the authenticated user', async () => {
+    const approveDto = { approval_status: 'approved' };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, approval_status: 'approved' };
+    productionOrderDateChecksService.approve.mockResolvedValue(result);
+
+    await expect(
+      controller.approveDateCheck(1, approveDto, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderDateChecksService.approve).toHaveBeenCalledWith(
+      1,
+      approveDto,
+      user,
+    );
+  });
+
+  it('deletes a date check', async () => {
+    const result = { id: 1 };
+    productionOrderDateChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteDateCheck(1)).resolves.toBe(result);
+    expect(productionOrderDateChecksService.delete).toHaveBeenCalledWith(1);
+  });
+
+  it('adds date check images using the authenticated user', async () => {
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, images: [] };
+    productionOrderDateChecksService.addImages.mockResolvedValue(result);
+
+    await expect(
+      controller.addDateCheckImages(1, undefined, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderDateChecksService.addImages).toHaveBeenCalledWith(
+      1,
+      [],
+      user,
+    );
+  });
+
+  it('deletes a date check image', async () => {
+    const result = { id: 1 };
+    productionOrderDateChecksService.deleteImage.mockResolvedValue(result);
+
+    await expect(controller.deleteDateCheckImage(1)).resolves.toBe(result);
+    expect(productionOrderDateChecksService.deleteImage).toHaveBeenCalledWith(
+      1,
     );
   });
 

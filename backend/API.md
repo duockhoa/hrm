@@ -916,6 +916,290 @@ Lỗi thường gặp:
 - `400 water_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
 - `401 Authenticated user not found`
 
+## Production Order Date Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này dùng để tạo phiếu kiểm tra nội dung in date trên sản phẩm/bao bì thuộc một lệnh sản xuất. Nội dung yêu cầu in date nằm trong file `request_file`, DB chỉ lưu đường dẫn file.
+
+File upload được lưu tại:
+
+- File yêu cầu: `uploads/production-order-date-checks/request-files`
+- Ảnh kiểm tra: `uploads/production-order-date-checks/images`
+
+Tên file lưu trên server có dạng:
+
+```text
+<ten-goc-da-lam-sach>-<uuid>.<ext>
+```
+
+Ví dụ:
+
+```text
+yeu-cau-in-date-9f2f0a42-8c67-4e8c-8d4f-6f61f1c26d3e.pdf
+```
+
+Trong đó `ten-goc-da-lam-sach` giữ tên file gốc ở dạng an toàn, còn `uuid` tránh trùng tên file.
+
+### Lấy danh sách phiếu kiểm tra date của lệnh sản xuất
+
+```http
+GET /production-orders/:id/date-checks
+```
+
+Response sắp xếp theo `checked_at` mới nhất trước, sau đó `created_at` và `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "package_type": "goi",
+    "request_file_path": "/production-orders/date-checks/request-files/5fa1.pdf",
+    "approval_status": "pending",
+    "created_by_id": 7,
+    "approved_by_id": null,
+    "checked_at": "2026-06-15T08:00:00.000Z",
+    "approved_at": null,
+    "created_at": "2026-06-15T08:00:00.000Z",
+    "updated_at": "2026-06-15T08:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "avatar": null,
+      "department": "QA",
+      "position": "Staff",
+      "status": "active"
+    },
+    "approvedBy": null,
+    "images": []
+  }
+]
+```
+
+Ghi chú:
+
+- Khi mới tạo phiếu bằng `POST /production-orders/:id/date-checks`, `images` thường là mảng rỗng.
+- Ảnh chỉ xuất hiện trong `images` sau khi gọi API riêng `POST /production-orders/date-checks/:checkId/images`.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy chi tiết một phiếu kiểm tra date
+
+```http
+GET /production-orders/date-checks/:checkId
+```
+
+Response gồm thông tin lệnh sản xuất, người tạo, người duyệt và danh sách ảnh kèm người gửi ảnh nếu phiếu đã được upload ảnh bằng API riêng.
+
+Lỗi thường gặp:
+
+- `404 Date check not found`
+
+### Tạo phiếu kiểm tra date
+
+```http
+POST /production-orders/:id/date-checks
+```
+
+Content-Type: `multipart/form-data`
+
+Body:
+
+```text
+package_type=goi
+request_file=<file>
+```
+
+Field upload:
+
+- `package_type` bắt buộc. Ví dụ: `goi`, `lo`, `chai`, `hop`, `thung`.
+- `request_file` là file nội dung yêu cầu in date, tùy chọn.
+- API này chỉ dùng để tạo phiếu và upload `request_file`.
+- Ảnh kiểm tra được upload bằng API riêng: `POST /production-orders/date-checks/:checkId/images`.
+- Sau khi tạo phiếu, dùng `id` của phiếu trả về làm `checkId` để upload ảnh.
+
+File hợp lệ:
+
+- File yêu cầu: PDF, Word, Excel, TXT, CSV, JPG, PNG, WEBP, GIF.
+- Dung lượng tối đa mỗi file: 20 MB.
+
+Backend tự set:
+
+- `production_order_id` lấy từ `:id`.
+- `created_by_id` lấy từ user đăng nhập.
+- `approval_status = "pending"`.
+- `checked_at` lấy theo thời điểm tạo.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 package_type is required`
+- `400 request_file must be PDF, Word, Excel, TXT, CSV, JPG, PNG, WEBP, or GIF`
+- `401 Authenticated user not found`
+
+### Cập nhật phiếu kiểm tra date
+
+```http
+PATCH /production-orders/date-checks/:checkId
+```
+
+Content-Type: `multipart/form-data`
+
+Body: gửi field cần đổi.
+
+```text
+package_type=lo
+request_file=<file>
+```
+
+Quy tắc:
+
+- Chỉ cập nhật khi `approval_status = "pending"`.
+- Có thể đổi `package_type`.
+- Có thể thay `request_file`; backend sẽ xóa file yêu cầu cũ khỏi thư mục upload.
+- API này không thêm ảnh. Muốn thêm ảnh dùng API thêm ảnh riêng.
+
+Lỗi thường gặp:
+
+- `404 Date check not found`
+- `400 No update data provided`
+- `400 Date check is already approved or rejected`
+
+### Duyệt hoặc từ chối phiếu kiểm tra date
+
+```http
+PATCH /production-orders/date-checks/:checkId/approval
+```
+
+Body:
+
+```json
+{
+  "approval_status": "approved"
+}
+```
+
+Giá trị hợp lệ:
+
+- `approved`
+- `rejected`
+
+Backend tự set:
+
+- `approved_by_id` lấy từ user đăng nhập.
+- `approved_at` lấy theo thời điểm duyệt.
+
+Quy tắc:
+
+- Chỉ duyệt/từ chối khi phiếu còn `pending`.
+- Sau khi `approved` hoặc `rejected`, API thường không cho sửa, thêm ảnh, xóa ảnh hoặc xóa phiếu.
+
+Lỗi thường gặp:
+
+- `404 Date check not found`
+- `400 approval_status is required`
+- `400 approval_status must be approved or rejected`
+- `400 Date check is already approved or rejected`
+- `401 Authenticated user not found`
+
+### Xóa phiếu kiểm tra date
+
+```http
+DELETE /production-orders/date-checks/:checkId
+```
+
+Quy tắc:
+
+- Xóa cứng bản ghi, không dùng `deleted_at`.
+- Chỉ xóa khi `approval_status = "pending"`.
+- DB tự cascade xóa các record ảnh của phiếu.
+- Backend xóa cả file yêu cầu và file ảnh vật lý khỏi thư mục upload.
+
+Lỗi thường gặp:
+
+- `404 Date check not found`
+- `400 Date check is already approved or rejected`
+
+### Thêm ảnh vào phiếu kiểm tra date
+
+```http
+POST /production-orders/date-checks/:checkId/images
+```
+
+Content-Type: `multipart/form-data`
+
+Body:
+
+```text
+images=<file>
+images=<file>
+```
+
+Ghi chú:
+
+- Field upload hỗ trợ `images` hoặc `image`.
+- Tối đa 10 ảnh cho mỗi request.
+- File hợp lệ: JPG, PNG, WEBP, GIF.
+- Dung lượng tối đa mỗi file: 20 MB.
+- Backend tự set `created_by_id` của ảnh theo user đăng nhập.
+- Chỉ thêm ảnh khi phiếu còn `pending`.
+
+Lỗi thường gặp:
+
+- `404 Date check not found`
+- `400 images are required`
+- `400 images cannot exceed 10 files`
+- `400 Date check is already approved or rejected`
+- `401 Authenticated user not found`
+
+### Xóa một ảnh kiểm tra date
+
+```http
+DELETE /production-orders/date-checks/images/:imageId
+```
+
+Quy tắc:
+
+- Xóa cứng record ảnh.
+- Xóa file ảnh vật lý khỏi thư mục upload.
+- Chỉ xóa ảnh khi phiếu chứa ảnh còn `pending`.
+
+Lỗi thường gặp:
+
+- `404 Date check image not found`
+- `400 Date check is already approved or rejected`
+
+### Lấy file ảnh kiểm tra date
+
+```http
+GET /production-orders/date-checks/images/:filename
+```
+
+Response: file ảnh.
+
+Lỗi thường gặp:
+
+- `404 Date check image not found`
+
+### Lấy file yêu cầu in date
+
+```http
+GET /production-orders/date-checks/request-files/:filename
+```
+
+Response: file yêu cầu.
+
+Lỗi thường gặp:
+
+- `404 Date check request file not found`
+
 ## Production Order Finished Product Summary
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
