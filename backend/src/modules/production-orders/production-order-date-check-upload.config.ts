@@ -5,6 +5,11 @@ import { stat, unlink } from 'fs/promises';
 import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
 
+type DateCheckUploadFileMetadata = Pick<
+  Express.Multer.File,
+  'fieldname' | 'mimetype' | 'originalname'
+>;
+
 export const PRODUCTION_ORDER_DATE_CHECK_IMAGE_ROUTE =
   '/production-orders/date-checks/images';
 export const PRODUCTION_ORDER_DATE_CHECK_REQUEST_FILE_ROUTE =
@@ -85,43 +90,62 @@ const getUploadDestination = (fieldName: string) => {
   return PRODUCTION_ORDER_DATE_CHECK_IMAGE_UPLOAD_DIR;
 };
 
-const getStoredExtension = (file: Express.Multer.File) => {
+const normalizeOriginalFilename = (originalName: string) => {
+  const utf8Filename = Buffer.from(originalName, 'latin1').toString('utf8');
+
+  if (utf8Filename.includes('\uFFFD')) {
+    return originalName;
+  }
+
+  return utf8Filename;
+};
+
+const getStoredExtension = (file: DateCheckUploadFileMetadata) => {
+  const originalName = normalizeOriginalFilename(file.originalname);
+
   if (file.fieldname === 'request_file') {
     return (
       REQUEST_FILE_EXTENSIONS_BY_MIME_TYPE.get(file.mimetype) ??
-      extname(file.originalname).toLowerCase()
+      extname(originalName).toLowerCase()
     );
   }
 
   return (
     IMAGE_EXTENSIONS_BY_MIME_TYPE.get(file.mimetype) ??
-    extname(file.originalname).toLowerCase()
+    extname(originalName).toLowerCase()
   );
 };
 
 const getOriginalNameSegment = (originalName: string) => {
-  const normalizedFilename = basename(originalName.replace(/\\/g, '/'));
+  const normalizedFilename = basename(
+    normalizeOriginalFilename(originalName).replace(/\\/g, '/'),
+  );
   const originalExtension = extname(normalizedFilename);
   const originalBaseName = originalExtension
     ? normalizedFilename.slice(0, -originalExtension.length)
     : normalizedFilename;
 
   const sanitizedBaseName = originalBaseName
-    .normalize('NFC')
-    .replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ')
-    .replace(/\s+/g, '-')
-    .replace(/^\.+/, '')
-    .replace(/\.+$/, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[.-]+/, '')
+    .replace(/[.-]+$/, '')
     .slice(0, 120);
 
   return sanitizedBaseName || 'file';
 };
 
-const getUploadStoredFilename = (file: Express.Multer.File) =>
+export const getDateCheckUploadStoredFilename = (
+  file: DateCheckUploadFileMetadata,
+) =>
   `${getOriginalNameSegment(file.originalname)}-${randomUUID()}${getStoredExtension(file)}`;
 
 const getRequestFileExtension = (file: Express.Multer.File) =>
-  extname(file.originalname).toLowerCase();
+  extname(normalizeOriginalFilename(file.originalname)).toLowerCase();
 
 const isAllowedRequestFile = (file: Express.Multer.File) =>
   REQUEST_FILE_EXTENSIONS_BY_MIME_TYPE.has(file.mimetype) ||
@@ -134,7 +158,7 @@ export const productionOrderDateCheckUploadOptions = {
       callback(null, getUploadDestination(file.fieldname));
     },
     filename: (_req, file, callback) => {
-      callback(null, getUploadStoredFilename(file));
+      callback(null, getDateCheckUploadStoredFilename(file));
     },
   }),
   fileFilter: (_req, file, callback) => {

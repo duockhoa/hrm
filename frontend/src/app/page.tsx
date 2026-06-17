@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Building2, ClipboardCheck, Clock3, UserCog } from "lucide-react";
+import { Building2, ClipboardCheck, Clock3, UserCog, Package } from "lucide-react";
 import HeaderApps from "@/components/header-apps/header-apps";
 import ItemApp from "@/components/item-app/item-app";
 import useUserStore from "@/store/user.store";
@@ -47,6 +47,15 @@ const APPS: AppLauncherItem[] = [
     tileClassName:
       "bg-[linear-gradient(180deg,#267BFF_0%,#1B59CC_60%,#1243A5_100%)]",
   },
+
+{
+    name: "SCB",
+    link: process.env.NEXT_PUBLIC_APP_SCB_URL || "#", // Dùng biến môi trường
+    icon: Package,
+    tileClassName: "bg-[linear-gradient(180deg,#FF6B6B_0%,#E63946_50%,#D90429_100%)]",
+    external: true,
+  },
+  
 ];
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("vi-VN", {
