@@ -7,6 +7,7 @@ import { ProductionOrderSamplingRequestsService } from './production-order-sampl
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
+import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
 describe('ProductionOrdersController', () => {
@@ -35,6 +36,11 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderDensityChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
+  let productionOrderDisintegrationChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -81,6 +87,11 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderDisintegrationChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
     productionOrderDateChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -116,6 +127,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderDensityChecksService,
           useValue: productionOrderDensityChecksService,
+        },
+        {
+          provide: ProductionOrderDisintegrationChecksService,
+          useValue: productionOrderDisintegrationChecksService,
         },
         {
           provide: ProductionOrderDateChecksService,
@@ -333,6 +348,56 @@ describe('ProductionOrdersController', () => {
       createDto,
       user,
     );
+  });
+
+  it('gets disintegration checks for a production order', async () => {
+    const disintegrationChecks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderDisintegrationChecksService.findAllByProductionOrder.mockResolvedValue(
+      disintegrationChecks,
+    );
+
+    await expect(controller.findDisintegrationChecks(2031)).resolves.toBe(
+      disintegrationChecks,
+    );
+    expect(
+      productionOrderDisintegrationChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a disintegration check by id', async () => {
+    const disintegrationCheck = { id: 1, production_order_id: 2031 };
+    productionOrderDisintegrationChecksService.findById.mockResolvedValue(
+      disintegrationCheck,
+    );
+
+    await expect(controller.findDisintegrationCheckById(1)).resolves.toBe(
+      disintegrationCheck,
+    );
+    expect(
+      productionOrderDisintegrationChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a disintegration check using the authenticated user', async () => {
+    const createDto = {
+      dosage_form_stage: 'tablet',
+      unit_1_passed: true,
+      unit_2_passed: true,
+      unit_3_passed: true,
+      unit_4_passed: true,
+      unit_5_passed: true,
+      unit_6_passed: false,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderDisintegrationChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createDisintegrationCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderDisintegrationChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
   });
 
   it('gets date checks for a production order', async () => {

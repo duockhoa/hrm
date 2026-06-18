@@ -34,6 +34,7 @@ model Users {
   createdProductionOrderEnvironmentChecks        ProductionOrderEnvironmentChecks[]        @relation("ProductionOrderEnvironmentCheckCreator")
   createdProductionOrderFinishedProductSummaries ProductionOrderFinishedProductSummaries[] @relation("ProductionOrderFinishedProductSummaryCreator")
   createdProductionOrderDensityChecks            ProductionOrderDensityChecks[]            @relation("ProductionOrderDensityCheckCreator")
+  createdProductionOrderDisintegrationChecks     ProductionOrderDisintegrationChecks[]     @relation("ProductionOrderDisintegrationCheckCreator")
   createdProductionOrderDateChecks               ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckCreator")
   approvedProductionOrderDateChecks              ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckApprover")
   createdProductionOrderDateCheckImages          ProductionOrderDateCheckImages[]          @relation("ProductionOrderDateCheckImageCreator")
@@ -291,6 +292,7 @@ model ProductionOrders {
   environmentChecks        ProductionOrderEnvironmentChecks[]
   finishedProductSummaries ProductionOrderFinishedProductSummaries[]
   densityChecks            ProductionOrderDensityChecks[]
+  disintegrationChecks     ProductionOrderDisintegrationChecks[]
   dateChecks               ProductionOrderDateChecks[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
@@ -419,6 +421,28 @@ model ProductionOrderDensityChecks {
   @@index([production_order_id], map: "po_density_checks_po_id_fkey")
   @@index([created_by_id], map: "po_density_checks_created_by_id_fkey")
   @@map("production_order_density_checks")
+}
+
+model ProductionOrderDisintegrationChecks {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_disintegration_checks_po_id_fkey")
+  dosage_form_stage   String
+  unit_1_passed       Boolean
+  unit_2_passed       Boolean
+  unit_3_passed       Boolean
+  unit_4_passed       Boolean
+  unit_5_passed       Boolean
+  unit_6_passed       Boolean
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderDisintegrationCheckCreator", fields: [created_by_id], references: [id], map: "po_disintegration_checks_created_by_id_fkey")
+  checked_at          DateTime         @default(now())
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_disintegration_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_disintegration_checks_created_by_id_fkey")
+  @@map("production_order_disintegration_checks")
 }
 
 model ProductionOrderDateChecks {

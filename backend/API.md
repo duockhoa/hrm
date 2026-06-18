@@ -916,6 +916,106 @@ Lỗi thường gặp:
 - `400 water_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
 - `401 Authenticated user not found`
 
+## Production Order Disintegration Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này dùng để tạo phiếu kiểm tra độ rã cho từng đơn vị kiểm tra thuộc một lệnh sản xuất. Kết quả từng đơn vị được lưu dạng boolean:
+
+- `true` = Đạt
+- `false` = Không đạt
+
+### Lấy danh sách kiểm tra độ rã của lệnh sản xuất
+
+```http
+GET /production-orders/:id/disintegration-checks
+```
+
+Response sắp xếp theo `checked_at` mới nhất trước, sau đó `created_at` và `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "dosage_form_stage": "film_coated_tablet",
+    "unit_1_passed": true,
+    "unit_2_passed": true,
+    "unit_3_passed": true,
+    "unit_4_passed": true,
+    "unit_5_passed": true,
+    "unit_6_passed": false,
+    "created_by_id": 7,
+    "checked_at": "2026-06-17T08:00:00.000Z",
+    "created_at": "2026-06-17T08:00:00.000Z",
+    "updated_at": "2026-06-17T08:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một phiếu kiểm tra độ rã theo ID
+
+```http
+GET /production-orders/disintegration-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Disintegration check not found`
+
+### Thêm dữ liệu kiểm tra độ rã
+
+```http
+POST /production-orders/:id/disintegration-checks
+```
+
+Body:
+
+```json
+{
+  "dosage_form_stage": "film_coated_tablet",
+  "unit_1_passed": "Đạt",
+  "unit_2_passed": "Đạt",
+  "unit_3_passed": true,
+  "unit_4_passed": "Không đạt",
+  "unit_5_passed": false,
+  "unit_6_passed": "khong dat"
+}
+```
+
+Quy tắc:
+
+- `dosage_form_stage` bắt buộc và không được rỗng.
+- `dosage_form_stage` có thể dùng các giá trị như `tablet`, `film_coated_tablet`, `capsule`.
+- `unit_1_passed` đến `unit_6_passed` đều bắt buộc.
+- Các field `unit_*_passed` có thể gửi boolean, `1`/`0`, hoặc chuỗi như `Đạt`, `Không đạt`, `dat`, `khong dat`, `pass`, `fail`.
+- Backend normalize kết quả về boolean trước khi lưu DB.
+- `production_order_id` lấy từ `:id`.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
+- `checked_at` lấy theo thời điểm tạo bản ghi.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 dosage_form_stage is required`
+- `400 unit_1_passed is required`
+- `400 unit_6_passed must be pass or fail`
+- `401 Authenticated user not found`
+
 ## Production Order Date Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

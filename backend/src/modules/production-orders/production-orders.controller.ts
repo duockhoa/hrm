@@ -30,6 +30,8 @@ import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-pro
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
+import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-production-order-disintegration-check.dto';
+import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
@@ -94,6 +96,7 @@ export class ProductionOrdersController {
     private readonly productionOrderEnvironmentChecksService: ProductionOrderEnvironmentChecksService,
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
+    private readonly productionOrderDisintegrationChecksService: ProductionOrderDisintegrationChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
   ) {}
 
@@ -131,6 +134,13 @@ export class ProductionOrdersController {
   @Get('density-checks/:checkId')
   async findDensityCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDensityChecksService.findById(checkId);
+  }
+
+  @Get('disintegration-checks/:checkId')
+  async findDisintegrationCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderDisintegrationChecksService.findById(checkId);
   }
 
   @Get('date-checks/images/:filename')
@@ -350,6 +360,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderDensityChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/disintegration-checks')
+  async findDisintegrationChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderDisintegrationChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/disintegration-checks')
+  async createDisintegrationCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderDisintegrationCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderDisintegrationChecksService.create(
       id,
       createDto,
       req.user,
