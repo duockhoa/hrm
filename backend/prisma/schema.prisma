@@ -36,6 +36,7 @@ model Users {
   createdProductionOrderDensityChecks            ProductionOrderDensityChecks[]            @relation("ProductionOrderDensityCheckCreator")
   createdProductionOrderDisintegrationChecks     ProductionOrderDisintegrationChecks[]     @relation("ProductionOrderDisintegrationCheckCreator")
   createdProductionOrderHardCapsuleLeakageChecks ProductionOrderHardCapsuleLeakageChecks[] @relation("ProductionOrderHardCapsuleLeakageCheckCreator")
+  createdProductionOrderBottleVolumeChecks       ProductionOrderBottleVolumeChecks[]       @relation("ProductionOrderBottleVolumeCheckCreator")
   createdProductionOrderDateChecks               ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckCreator")
   approvedProductionOrderDateChecks              ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckApprover")
   createdProductionOrderDateCheckImages          ProductionOrderDateCheckImages[]          @relation("ProductionOrderDateCheckImageCreator")
@@ -295,6 +296,7 @@ model ProductionOrders {
   densityChecks            ProductionOrderDensityChecks[]
   disintegrationChecks     ProductionOrderDisintegrationChecks[]
   hardCapsuleLeakageChecks ProductionOrderHardCapsuleLeakageChecks[]
+  bottleVolumeChecks       ProductionOrderBottleVolumeChecks[]
   dateChecks               ProductionOrderDateChecks[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
@@ -463,6 +465,27 @@ model ProductionOrderHardCapsuleLeakageChecks {
   @@index([production_order_id], map: "po_hard_capsule_leakage_checks_po_id_fkey")
   @@index([created_by_id], map: "po_hard_capsule_leakage_checks_created_by_id_fkey")
   @@map("production_order_hard_capsule_leakage_checks")
+}
+
+model ProductionOrderBottleVolumeChecks {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_bottle_volume_checks_po_id_fkey")
+  bottle_1_volume     Decimal?         @db.Decimal(10, 2)
+  bottle_2_volume     Decimal?         @db.Decimal(10, 2)
+  bottle_3_volume     Decimal?         @db.Decimal(10, 2)
+  bottle_4_volume     Decimal?         @db.Decimal(10, 2)
+  bottle_5_volume     Decimal?         @db.Decimal(10, 2)
+  bottle_6_volume     Decimal?         @db.Decimal(10, 2)
+  unit                String           @default("ml") @db.VarChar(10)
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderBottleVolumeCheckCreator", fields: [created_by_id], references: [id], map: "po_bottle_volume_checks_created_by_id_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_bottle_volume_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_bottle_volume_checks_created_by_id_fkey")
+  @@map("production_order_bottle_volume_checks")
 }
 
 model ProductionOrderDateChecks {

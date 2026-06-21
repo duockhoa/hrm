@@ -9,6 +9,7 @@ import { ProductionOrderFinishedProductSummariesService } from './production-ord
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
+import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
 describe('ProductionOrdersController', () => {
@@ -47,6 +48,11 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderHardCapsuleLeakageChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
+  let productionOrderBottleVolumeChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -103,6 +109,11 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderBottleVolumeChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
     productionOrderDateChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -146,6 +157,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderHardCapsuleLeakageChecksService,
           useValue: productionOrderHardCapsuleLeakageChecksService,
+        },
+        {
+          provide: ProductionOrderBottleVolumeChecksService,
+          useValue: productionOrderBottleVolumeChecksService,
         },
         {
           provide: ProductionOrderDateChecksService,
@@ -460,6 +475,49 @@ describe('ProductionOrdersController', () => {
     ).resolves.toBe(result);
     expect(
       productionOrderHardCapsuleLeakageChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('gets bottle volume checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderBottleVolumeChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findBottleVolumeChecks(2031)).resolves.toBe(checks);
+    expect(
+      productionOrderBottleVolumeChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a bottle volume check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderBottleVolumeChecksService.findById.mockResolvedValue(check);
+
+    await expect(controller.findBottleVolumeCheckById(1)).resolves.toBe(check);
+    expect(
+      productionOrderBottleVolumeChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a bottle volume check using the authenticated user', async () => {
+    const createDto = {
+      bottle_1_volume: 10.01,
+      bottle_2_volume: 10.02,
+      bottle_3_volume: 9.98,
+      bottle_4_volume: 10,
+      bottle_5_volume: 10.03,
+      bottle_6_volume: 9.99,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderBottleVolumeChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createBottleVolumeCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderBottleVolumeChecksService.create,
     ).toHaveBeenCalledWith(2031, createDto, user);
   });
 

@@ -34,6 +34,8 @@ import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-produc
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { CreateProductionOrderHardCapsuleLeakageCheckDto } from './dto/create-production-order-hard-capsule-leakage-check.dto';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
+import { CreateProductionOrderBottleVolumeCheckDto } from './dto/create-production-order-bottle-volume-check.dto';
+import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
@@ -100,6 +102,7 @@ export class ProductionOrdersController {
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
     private readonly productionOrderDisintegrationChecksService: ProductionOrderDisintegrationChecksService,
     private readonly productionOrderHardCapsuleLeakageChecksService: ProductionOrderHardCapsuleLeakageChecksService,
+    private readonly productionOrderBottleVolumeChecksService: ProductionOrderBottleVolumeChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
   ) {}
 
@@ -153,6 +156,13 @@ export class ProductionOrdersController {
     return this.productionOrderHardCapsuleLeakageChecksService.findById(
       checkId,
     );
+  }
+
+  @Get('bottle-volume-checks/:checkId')
+  async findBottleVolumeCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderBottleVolumeChecksService.findById(checkId);
   }
 
   @Get('date-checks/images/:filename')
@@ -412,6 +422,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderHardCapsuleLeakageChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/bottle-volume-checks')
+  async findBottleVolumeChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderBottleVolumeChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/bottle-volume-checks')
+  async createBottleVolumeCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderBottleVolumeCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderBottleVolumeChecksService.create(
       id,
       createDto,
       req.user,

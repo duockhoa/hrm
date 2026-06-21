@@ -1100,6 +1100,91 @@ Lỗi thường gặp:
 - `400 leaked_capsule_count cannot exceed tested_capsule_count`
 - `401 Authenticated user not found`
 
+## Production Order Bottle Volume Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu các lần kiểm tra thể tích của tối đa 6 lọ thuộc một lệnh sản xuất. Mỗi bản ghi cần ít nhất 1 giá trị thể tích và có đơn vị cố định là `ml`.
+
+### Lấy danh sách kiểm tra thể tích 6 lọ
+
+```http
+GET /production-orders/:id/bottle-volume-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "bottle_1_volume": "10.01",
+    "bottle_2_volume": null,
+    "bottle_3_volume": null,
+    "bottle_4_volume": null,
+    "bottle_5_volume": null,
+    "bottle_6_volume": null,
+    "unit": "ml",
+    "created_by_id": 7,
+    "created_at": "2026-06-21T08:00:00.000Z",
+    "updated_at": "2026-06-21T08:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một bản ghi kiểm tra thể tích theo ID
+
+```http
+GET /production-orders/bottle-volume-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Bottle volume check not found`
+
+### Thêm dữ liệu kiểm tra thể tích 6 lọ
+
+```http
+POST /production-orders/:id/bottle-volume-checks
+```
+
+Body:
+
+```json
+{
+  "bottle_1_volume": 10.01
+}
+```
+
+Quy tắc:
+
+- Phải nhập ít nhất 1 trong 6 field `bottle_1_volume` đến `bottle_6_volume`; các field còn thiếu được lưu là `null`.
+- Mỗi giá trị được nhập phải lớn hơn `0`, lưu dạng `DECIMAL(10, 2)` và có tối đa 2 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `10.02`, `"10.02"` hoặc `"10,02"`.
+- `unit` luôn là `ml`, do backend tự lưu; frontend không gửi field này.
+- `production_order_id` lấy từ `:id`.
+- Người kiểm tra là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
+- `created_at` là thời điểm kiểm tra.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 At least one bottle volume is required`
+- `400 bottle_1_volume must fit DECIMAL(10, 2) with up to 2 decimal places`
+- `400 bottle_1_volume must be greater than 0`
+- `401 Authenticated user not found`
+
 ## Production Order Date Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
