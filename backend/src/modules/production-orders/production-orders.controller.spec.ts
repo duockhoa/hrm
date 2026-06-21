@@ -10,6 +10,7 @@ import { ProductionOrderDensityChecksService } from './production-order-density-
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
+import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
 describe('ProductionOrdersController', () => {
@@ -53,6 +54,11 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderBottleVolumeChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
+  let productionOrderShellWeightChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -114,6 +120,11 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderShellWeightChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
     productionOrderDateChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -161,6 +172,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderBottleVolumeChecksService,
           useValue: productionOrderBottleVolumeChecksService,
+        },
+        {
+          provide: ProductionOrderShellWeightChecksService,
+          useValue: productionOrderShellWeightChecksService,
         },
         {
           provide: ProductionOrderDateChecksService,
@@ -518,6 +533,61 @@ describe('ProductionOrdersController', () => {
     ).resolves.toBe(result);
     expect(
       productionOrderBottleVolumeChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('gets shell weight checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderShellWeightChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findShellWeightChecks(2031)).resolves.toBe(
+      checks,
+    );
+    expect(
+      productionOrderShellWeightChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a shell weight check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderShellWeightChecksService.findById.mockResolvedValue(
+      check,
+    );
+
+    await expect(controller.findShellWeightCheckById(1)).resolves.toBe(
+      check,
+    );
+    expect(
+      productionOrderShellWeightChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a shell weight check using the authenticated user', async () => {
+    const createDto = {
+      shell_1_weight: 50.01,
+      shell_2_weight: 50.02,
+      shell_3_weight: 49.98,
+      shell_4_weight: 50,
+      shell_5_weight: 50.03,
+      shell_6_weight: 49.99,
+      shell_7_weight: 50.04,
+      shell_8_weight: 49.97,
+      shell_9_weight: 50.05,
+      shell_10_weight: 49.96,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderShellWeightChecksService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createShellWeightCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderShellWeightChecksService.create,
     ).toHaveBeenCalledWith(2031, createDto, user);
   });
 

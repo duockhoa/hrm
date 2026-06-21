@@ -37,6 +37,7 @@ model Users {
   createdProductionOrderDisintegrationChecks     ProductionOrderDisintegrationChecks[]     @relation("ProductionOrderDisintegrationCheckCreator")
   createdProductionOrderHardCapsuleLeakageChecks ProductionOrderHardCapsuleLeakageChecks[] @relation("ProductionOrderHardCapsuleLeakageCheckCreator")
   createdProductionOrderBottleVolumeChecks       ProductionOrderBottleVolumeChecks[]       @relation("ProductionOrderBottleVolumeCheckCreator")
+  createdProductionOrderShellWeightChecks ProductionOrderShellWeightChecks[] @relation("ProductionOrderShellWeightCheckCreator")
   createdProductionOrderDateChecks               ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckCreator")
   approvedProductionOrderDateChecks              ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckApprover")
   createdProductionOrderDateCheckImages          ProductionOrderDateCheckImages[]          @relation("ProductionOrderDateCheckImageCreator")
@@ -297,6 +298,7 @@ model ProductionOrders {
   disintegrationChecks     ProductionOrderDisintegrationChecks[]
   hardCapsuleLeakageChecks ProductionOrderHardCapsuleLeakageChecks[]
   bottleVolumeChecks       ProductionOrderBottleVolumeChecks[]
+  shellWeightChecks ProductionOrderShellWeightChecks[]
   dateChecks               ProductionOrderDateChecks[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
@@ -486,6 +488,31 @@ model ProductionOrderBottleVolumeChecks {
   @@index([production_order_id], map: "po_bottle_volume_checks_po_id_fkey")
   @@index([created_by_id], map: "po_bottle_volume_checks_created_by_id_fkey")
   @@map("production_order_bottle_volume_checks")
+}
+
+model ProductionOrderShellWeightChecks {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_shell_weight_checks_po_id_fkey")
+  shell_1_weight      Decimal          @db.Decimal(10, 2)
+  shell_2_weight      Decimal          @db.Decimal(10, 2)
+  shell_3_weight      Decimal          @db.Decimal(10, 2)
+  shell_4_weight      Decimal          @db.Decimal(10, 2)
+  shell_5_weight      Decimal          @db.Decimal(10, 2)
+  shell_6_weight      Decimal          @db.Decimal(10, 2)
+  shell_7_weight      Decimal          @db.Decimal(10, 2)
+  shell_8_weight      Decimal          @db.Decimal(10, 2)
+  shell_9_weight      Decimal          @db.Decimal(10, 2)
+  shell_10_weight     Decimal          @db.Decimal(10, 2)
+  unit                String           @default("mg") @db.VarChar(10)
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderShellWeightCheckCreator", fields: [created_by_id], references: [id], map: "po_shell_weight_checks_created_by_id_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_shell_weight_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_shell_weight_checks_created_by_id_fkey")
+  @@map("production_order_shell_weight_checks")
 }
 
 model ProductionOrderDateChecks {

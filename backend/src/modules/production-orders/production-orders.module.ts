@@ -14,6 +14,7 @@ import { ProductionOrderDensityChecksService } from './production-order-density-
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
+import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
 @Module({
@@ -28,6 +29,7 @@ import { ProductionOrderDateChecksService } from './production-order-date-checks
     ProductionOrderDisintegrationChecksService,
     ProductionOrderHardCapsuleLeakageChecksService,
     ProductionOrderBottleVolumeChecksService,
+    ProductionOrderShellWeightChecksService,
     ProductionOrderDateChecksService,
     WarehouseReleaseExportService,
     ProductionOrderExportService,

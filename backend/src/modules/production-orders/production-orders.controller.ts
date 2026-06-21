@@ -36,6 +36,8 @@ import { CreateProductionOrderHardCapsuleLeakageCheckDto } from './dto/create-pr
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { CreateProductionOrderBottleVolumeCheckDto } from './dto/create-production-order-bottle-volume-check.dto';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
+import { CreateProductionOrderShellWeightCheckDto } from './dto/create-production-order-shell-weight-check.dto';
+import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
@@ -103,6 +105,7 @@ export class ProductionOrdersController {
     private readonly productionOrderDisintegrationChecksService: ProductionOrderDisintegrationChecksService,
     private readonly productionOrderHardCapsuleLeakageChecksService: ProductionOrderHardCapsuleLeakageChecksService,
     private readonly productionOrderBottleVolumeChecksService: ProductionOrderBottleVolumeChecksService,
+    private readonly productionOrderShellWeightChecksService: ProductionOrderShellWeightChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
   ) {}
 
@@ -163,6 +166,15 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderBottleVolumeChecksService.findById(checkId);
+  }
+
+  @Get('shell-weight-checks/:checkId')
+  async findShellWeightCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderShellWeightChecksService.findById(
+      checkId,
+    );
   }
 
   @Get('date-checks/images/:filename')
@@ -442,6 +454,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderBottleVolumeChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/shell-weight-checks')
+  async findShellWeightChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderShellWeightChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/shell-weight-checks')
+  async createShellWeightCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderShellWeightCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderShellWeightChecksService.create(
       id,
       createDto,
       req.user,

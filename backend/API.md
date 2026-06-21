@@ -1185,6 +1185,104 @@ Lỗi thường gặp:
 - `400 bottle_1_volume must be greater than 0`
 - `401 Authenticated user not found`
 
+## Production Order Shell Weight Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu các lần kiểm tra khối lượng của 10 vỏ thuộc một lệnh sản xuất. Mỗi bản ghi bắt buộc có đủ 10 khối lượng và có đơn vị cố định là `mg`.
+
+### Lấy danh sách kiểm tra khối lượng 10 vỏ
+
+```http
+GET /production-orders/:id/shell-weight-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "shell_1_weight": "50.01",
+    "shell_2_weight": "50.02",
+    "shell_3_weight": "49.98",
+    "shell_4_weight": "50.00",
+    "shell_5_weight": "50.03",
+    "shell_6_weight": "49.99",
+    "shell_7_weight": "50.04",
+    "shell_8_weight": "49.97",
+    "shell_9_weight": "50.05",
+    "shell_10_weight": "49.96",
+    "unit": "mg",
+    "created_by_id": 7,
+    "created_at": "2026-06-21T12:00:00.000Z",
+    "updated_at": "2026-06-21T12:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một bản ghi kiểm tra khối lượng vỏ theo ID
+
+```http
+GET /production-orders/shell-weight-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Shell weight check not found`
+
+### Thêm dữ liệu kiểm tra khối lượng 10 vỏ
+
+```http
+POST /production-orders/:id/shell-weight-checks
+```
+
+Body:
+
+```json
+{
+  "shell_1_weight": 50.01,
+  "shell_2_weight": 50.02,
+  "shell_3_weight": 49.98,
+  "shell_4_weight": 50,
+  "shell_5_weight": 50.03,
+  "shell_6_weight": 49.99,
+  "shell_7_weight": 50.04,
+  "shell_8_weight": 49.97,
+  "shell_9_weight": 50.05,
+  "shell_10_weight": 49.96
+}
+```
+
+Quy tắc:
+
+- Cả 10 field `shell_1_weight` đến `shell_10_weight` đều bắt buộc và phải lớn hơn `0`.
+- Mỗi giá trị lưu dạng `DECIMAL(10, 2)`, tối đa 2 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `50.02`, `"50.02"` hoặc `"50,02"`.
+- `unit` luôn là `mg`, do backend tự lưu; frontend không gửi field này.
+- `production_order_id` lấy từ `:id`.
+- Người kiểm tra là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
+- `created_at` là thời điểm kiểm tra.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 shell_1_weight is required`
+- `400 shell_1_weight must fit DECIMAL(10, 2) with up to 2 decimal places`
+- `400 shell_1_weight must be greater than 0`
+- `401 Authenticated user not found`
+
 ## Production Order Date Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
