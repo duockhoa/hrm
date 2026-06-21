@@ -32,6 +32,8 @@ import { CreateProductionOrderDensityCheckDto } from './dto/create-production-or
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-production-order-disintegration-check.dto';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
+import { CreateProductionOrderHardCapsuleLeakageCheckDto } from './dto/create-production-order-hard-capsule-leakage-check.dto';
+import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
@@ -97,6 +99,7 @@ export class ProductionOrdersController {
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
     private readonly productionOrderDisintegrationChecksService: ProductionOrderDisintegrationChecksService,
+    private readonly productionOrderHardCapsuleLeakageChecksService: ProductionOrderHardCapsuleLeakageChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
   ) {}
 
@@ -141,6 +144,15 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderDisintegrationChecksService.findById(checkId);
+  }
+
+  @Get('hard-capsule-leakage-checks/:checkId')
+  async findHardCapsuleLeakageCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderHardCapsuleLeakageChecksService.findById(
+      checkId,
+    );
   }
 
   @Get('date-checks/images/:filename')
@@ -380,6 +392,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderDisintegrationChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/hard-capsule-leakage-checks')
+  async findHardCapsuleLeakageChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderHardCapsuleLeakageChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/hard-capsule-leakage-checks')
+  async createHardCapsuleLeakageCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderHardCapsuleLeakageCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderHardCapsuleLeakageChecksService.create(
       id,
       createDto,
       req.user,

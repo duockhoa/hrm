@@ -1016,6 +1016,90 @@ Lỗi thường gặp:
 - `400 unit_6_passed must be pass or fail`
 - `401 Authenticated user not found`
 
+## Production Order Hard Capsule Leakage Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này chỉ dùng để lưu các lần kiểm tra độ rò rỉ của **viên nang cứng** theo từng lệnh sản xuất. Không dùng nhóm API này cho viên nén, nang mềm hoặc kiểm tra độ kín bao bì.
+
+### Lấy danh sách kiểm tra độ rò rỉ của lệnh sản xuất
+
+```http
+GET /production-orders/:id/hard-capsule-leakage-checks
+```
+
+Response sắp xếp theo thời điểm kiểm tra mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "stage": "before_coating",
+    "tested_capsule_count": 100,
+    "leaked_capsule_count": 2,
+    "created_by_id": 7,
+    "checked_at": "2026-06-21T08:00:00.000Z",
+    "created_at": "2026-06-21T08:00:00.000Z",
+    "updated_at": "2026-06-21T08:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một phiếu kiểm tra độ rò rỉ theo ID
+
+```http
+GET /production-orders/hard-capsule-leakage-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Hard capsule leakage check not found`
+
+### Thêm dữ liệu kiểm tra độ rò rỉ
+
+```http
+POST /production-orders/:id/hard-capsule-leakage-checks
+```
+
+Body:
+
+```json
+{
+  "stage": "before_coating",
+  "tested_capsule_count": 100,
+  "leaked_capsule_count": 2
+}
+```
+
+Quy tắc:
+
+- `stage` bắt buộc, nhận `before_coating` (Trước bao) hoặc `after_coating` (Sau bao). Backend cũng chấp nhận chuỗi `Trước bao`/`Sau bao` và chuẩn hóa về hai giá trị trên.
+- `tested_capsule_count` là số viên nang cứng được kiểm tra, phải là số nguyên lớn hơn hoặc bằng `1`.
+- `leaked_capsule_count` là số viên nang cứng bị rò rỉ, phải là số nguyên lớn hơn hoặc bằng `0` và không được vượt `tested_capsule_count`.
+- `production_order_id` lấy từ `:id`.
+- Người kiểm tra là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
+- `checked_at` lấy theo thời điểm tạo bản ghi.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 stage is required`
+- `400 stage must be before_coating or after_coating`
+- `400 tested_capsule_count must be greater than or equal to 1`
+- `400 leaked_capsule_count cannot exceed tested_capsule_count`
+- `401 Authenticated user not found`
+
 ## Production Order Date Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

@@ -12,6 +12,7 @@ import { ProductionOrderFinishedProductSummariesService } from './production-ord
 import { FeaturesModule } from '../features/features.module';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
+import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
 @Module({
@@ -24,6 +25,7 @@ import { ProductionOrderDateChecksService } from './production-order-date-checks
     ProductionOrderFinishedProductSummariesService,
     ProductionOrderDensityChecksService,
     ProductionOrderDisintegrationChecksService,
+    ProductionOrderHardCapsuleLeakageChecksService,
     ProductionOrderDateChecksService,
     WarehouseReleaseExportService,
     ProductionOrderExportService,

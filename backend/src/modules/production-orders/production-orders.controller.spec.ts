@@ -8,6 +8,7 @@ import { ProductionOrderEnvironmentChecksService } from './production-order-envi
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
+import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
 describe('ProductionOrdersController', () => {
@@ -41,6 +42,11 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderDisintegrationChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
+  let productionOrderHardCapsuleLeakageChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -92,6 +98,11 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderHardCapsuleLeakageChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
     productionOrderDateChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -131,6 +142,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderDisintegrationChecksService,
           useValue: productionOrderDisintegrationChecksService,
+        },
+        {
+          provide: ProductionOrderHardCapsuleLeakageChecksService,
+          useValue: productionOrderHardCapsuleLeakageChecksService,
         },
         {
           provide: ProductionOrderDateChecksService,
@@ -397,6 +412,54 @@ describe('ProductionOrdersController', () => {
     ).resolves.toBe(result);
     expect(
       productionOrderDisintegrationChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('gets hard capsule leakage checks for a production order', async () => {
+    const leakageChecks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderHardCapsuleLeakageChecksService.findAllByProductionOrder.mockResolvedValue(
+      leakageChecks,
+    );
+
+    await expect(controller.findHardCapsuleLeakageChecks(2031)).resolves.toBe(
+      leakageChecks,
+    );
+    expect(
+      productionOrderHardCapsuleLeakageChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a hard capsule leakage check by id', async () => {
+    const leakageCheck = { id: 1, production_order_id: 2031 };
+    productionOrderHardCapsuleLeakageChecksService.findById.mockResolvedValue(
+      leakageCheck,
+    );
+
+    await expect(controller.findHardCapsuleLeakageCheckById(1)).resolves.toBe(
+      leakageCheck,
+    );
+    expect(
+      productionOrderHardCapsuleLeakageChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a hard capsule leakage check using the authenticated user', async () => {
+    const createDto = {
+      stage: 'before_coating',
+      tested_capsule_count: 100,
+      leaked_capsule_count: 2,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderHardCapsuleLeakageChecksService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createHardCapsuleLeakageCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderHardCapsuleLeakageChecksService.create,
     ).toHaveBeenCalledWith(2031, createDto, user);
   });
 
