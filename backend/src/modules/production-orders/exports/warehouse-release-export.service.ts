@@ -22,14 +22,13 @@ const WAREHOUSE_RELEASE_DEFAULT_DATA_ROW_HEIGHT = 18;
 const WAREHOUSE_RELEASE_TEXT_LINE_HEIGHT = 12;
 const WAREHOUSE_RELEASE_ROW_VERTICAL_PADDING = 2;
 const WAREHOUSE_RELEASE_ROW_HEIGHT_BUFFER = 1.5;
-// Excel column widths are already defined in character units,
-// so use the raw width for tighter wrapping calculation.
-const WAREHOUSE_RELEASE_USABLE_WIDTH_RATIO = 1.0;
+const WAREHOUSE_RELEASE_BATCH_NUMBER_USABLE_WIDTH_RATIO = 0.8;
 
 type RowContentMeasure = {
   value: unknown;
   startColumn: number;
   endColumn: number;
+  usableWidthRatio?: number;
 };
 
 const normalizeCellValue = (value: unknown): string | number | null => {
@@ -120,7 +119,11 @@ const getColumnRangeWidth = (
   return width;
 };
 
-const getWrappedLineCount = (value: unknown, width: number) => {
+const getWrappedLineCount = (
+  value: unknown,
+  width: number,
+  usableWidthRatio = 1,
+) => {
   const normalizedValue = normalizeCellValue(value);
 
   if (normalizedValue === null || normalizedValue === '') {
@@ -129,7 +132,7 @@ const getWrappedLineCount = (value: unknown, width: number) => {
 
   const usableCharacterCount = Math.max(
     1,
-    Math.floor(width * WAREHOUSE_RELEASE_USABLE_WIDTH_RATIO),
+    Math.floor(width * usableWidthRatio),
   );
 
   return String(normalizedValue)
@@ -151,6 +154,7 @@ const getDataRowHeight = (
       getWrappedLineCount(
         content.value,
         getColumnRangeWidth(worksheet, content.startColumn, content.endColumn),
+        content.usableWidthRatio,
       ),
     ),
   );
@@ -347,7 +351,12 @@ export class WarehouseReleaseExportService {
         { value: index + 1, startColumn: 1, endColumn: 1 },
         { value: itemNo, startColumn: 2, endColumn: 3 },
         { value: itemName, startColumn: 4, endColumn: 7 },
-        { value: batchNumber, startColumn: 8, endColumn: 9 },
+        {
+          value: batchNumber,
+          startColumn: 8,
+          endColumn: 9,
+          usableWidthRatio: WAREHOUSE_RELEASE_BATCH_NUMBER_USABLE_WIDTH_RATIO,
+        },
         { value: expiryDate, startColumn: 10, endColumn: 11 },
         { value: warehouseCode, startColumn: 12, endColumn: 13 },
         { value: unitOfMeasurement, startColumn: 14, endColumn: 14 },

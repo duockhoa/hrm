@@ -632,14 +632,14 @@ describe('ProductionOrdersService', () => {
             LineNumber: 8,
             VisualOrder: 8,
             ItemNo: 'BB00076',
-            ItemName: 'Mang nhom dung cho dong goi thanh pham',
+            ItemName: 'Mang nhom',
             ItemType: 'pit_Item',
             StageID: 3,
             UoMEntry: 172,
             PlannedQuantity: 2,
             Warehouse: 'K-KHKV',
             StartDate: '2026-05-08',
-            U_SL: '010126',
+            U_SL: '010126-A001',
             U_HSD: '2028-05-03',
           },
         ],
@@ -705,6 +705,8 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('AB16').value).toBeNull();
     expect(worksheet.getCell('O114').value).toBeNull();
     expect(worksheet.getRow(16).height).toBeGreaterThan(20.25);
+    expect(worksheet.getCell('H17').value).toBe('010126-A001');
+    expect(worksheet.getRow(17).height).toBe(27.5);
     expect(worksheet.getRow(18).hidden).toBe(true);
   });
 
