@@ -5,6 +5,7 @@ import {
   getTokenCache,
   setTokenCache,
 } from "@/store/token.store";
+import { API_ROUTES } from "./api-routes";
 
 const axiosClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_API_URL,
@@ -23,6 +24,14 @@ const refreshClient = axios.create({
   withCredentials: false,
   timeout: 12000,
 });
+
+const authEndpointPaths = [
+  API_ROUTES.auth.login,
+  API_ROUTES.auth.refreshToken,
+  API_ROUTES.auth.requestPasswordReset,
+  API_ROUTES.auth.verifyResetPasswordOtp,
+  API_ROUTES.auth.resetPassword,
+];
 
 let isRefreshing = false;
 let refreshSubscribers: Array<{
@@ -75,8 +84,7 @@ axiosClient.interceptors.response.use(
 
     const status = error.response?.status;
     const url = originalRequest.url ?? "";
-    const isAuthEndpoint =
-      url.includes("/auth/login") || url.includes("/auth/refresh-token");
+    const isAuthEndpoint = authEndpointPaths.some((path) => url.includes(path));
 
     if (!error.response && !isAuthEndpoint) {
       await redirectToLogin();

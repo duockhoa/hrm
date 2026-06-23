@@ -6,12 +6,14 @@ import { PrismaService } from 'src/prisma.service';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { LocalStrategy } from 'src/passports/local.strategy';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   controllers: [AuthController],
   providers: [AuthService, PrismaService, LocalStrategy],
   imports: [
     UsersModule,
+    EmailModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET as string,

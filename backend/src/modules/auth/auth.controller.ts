@@ -1,10 +1,27 @@
-import { Body, Controller, HttpException, Post, Request } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpException,
+  Post,
+  Request,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { UseGuards } from '@nestjs/common';
 import { LocalAuthGuard } from 'src/guards/local-auth.guard';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyResetPasswordOtpDto } from './dto/verify-reset-password-otp.dto';
 
 @Controller('auth')
+@UsePipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+  }),
+)
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -48,30 +65,29 @@ export class AuthController {
   }
 
   @Post('request-password-reset')
-  async requestPasswordReset(@Body() email: { email: string }) {
-    const token = await this.authService.createResetPasswordOTP(email.email);
-    if (!token) {
+  async requestPasswordReset(@Body() resetData: RequestPasswordResetDto) {
+    const result = await this.authService.createResetPasswordOTP(
+      resetData.email,
+    );
+    if (!result) {
       throw new HttpException('User not found', 404);
     }
-    // In a real application, you would send an email with the reset link
-    return { message: 'Password reset OTP created' };
+    return { message: 'Password reset OTP sent' };
   }
 
   @Post('get-reset-password-otp')
-  async getResetPasswordOTP(@Body() resetData: { email: string }) {
-    const hashOTP = await this.authService.createResetPasswordOTP(
+  async getResetPasswordOTP(@Body() resetData: RequestPasswordResetDto) {
+    const result = await this.authService.createResetPasswordOTP(
       resetData.email,
     );
-    if (!hashOTP) {
+    if (!result) {
       throw new HttpException('User not found', 404);
     }
-    return { message: 'Password reset OTP created' };
+    return { message: 'Password reset OTP sent' };
   }
 
   @Post('verify-reset-password-otp')
-  async verifyResetPasswordOTP(
-    @Body() otpData: { email: string; otp: string },
-  ) {
+  async verifyResetPasswordOTP(@Body() otpData: VerifyResetPasswordOtpDto) {
     const { email, otp } = otpData;
     const isValid = await this.authService.verifyResetPasswordOTP(email, otp);
     if (!isValid) {
@@ -81,24 +97,15 @@ export class AuthController {
   }
 
   @Post('reset-password')
-  async resetPassword(
-    @Body() resetData: { email: string; otp: string; newPassword: string },
-  ) {
+  async resetPassword(@Body() resetData: ResetPasswordDto) {
     const { email, otp, newPassword } = resetData;
-    const isValidOTP = await this.authService.verifyResetPasswordOTP(
-      email,
-      otp,
-    );
-    if (!isValidOTP) {
-      throw new HttpException('Invalid OTP', 400);
-    }
     const result = await this.authService.resetPassword(
       email,
       otp,
       newPassword,
     );
     if (!result) {
-      throw new HttpException('Failed to reset password', 500);
+      throw new HttpException('Invalid OTP', 400);
     }
     return { message: 'Password reset successfully' };
   }

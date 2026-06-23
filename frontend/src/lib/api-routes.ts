@@ -1,9 +1,10 @@
-import { add } from "date-fns";
-
 const AUTH = {
   login: "/auth/login",
   refreshToken: "/auth/refresh-token",
   logout: "/auth/logout",
+  requestPasswordReset: "/auth/request-password-reset",
+  verifyResetPasswordOtp: "/auth/verify-reset-password-otp",
+  resetPassword: "/auth/reset-password",
 };
 
 const USERS = {

@@ -130,6 +130,14 @@ Body:
 }
 ```
 
+Response thanh cong:
+
+```json
+{
+  "message": "Password reset OTP sent"
+}
+```
+
 ### Xác thực OTP reset mật khẩu
 
 ```http
@@ -164,6 +172,8 @@ Body:
   "newPassword": "new-password"
 }
 ```
+
+`newPassword` toi thieu 6 ky tu. OTP chi dung duoc mot lan va het han theo `PASSWORD_RESET_OTP_EXPIRES_IN_MINUTES` hoac mac dinh 5 phut.
 
 ## Users
 
