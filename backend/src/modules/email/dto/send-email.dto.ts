@@ -3,5 +3,4 @@ export class SendEmailDto {
   subject!: string;
   message?: string;
   html?: string;
-  senderName?: string;
 }

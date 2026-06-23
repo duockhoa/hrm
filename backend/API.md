@@ -1918,8 +1918,7 @@ Body:
   "recipients": ["a@example.com", "b@example.com"],
   "subject": "Thong bao",
   "message": "Noi dung email",
-  "html": "<p>Noi dung HTML</p>",
-  "senderName": "HRM"
+  "html": "<p>Noi dung HTML</p>"
 }
 ```
 
@@ -1928,6 +1927,7 @@ Quy tắc:
 - `recipients` có thể là chuỗi, chuỗi phân tách bằng dấu phẩy, hoặc mảng chuỗi.
 - `subject` bắt buộc.
 - Cần có ít nhất một trong hai field: `message` hoặc `html`.
+- Tên người gửi được cấu hình bằng biến môi trường `EMAIL_SENDER_NAME`.
 
 ## App Root
 

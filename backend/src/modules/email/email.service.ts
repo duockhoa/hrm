@@ -2,17 +2,20 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import axios, { AxiosError } from 'axios';
 import { EventNames } from 'src/event.interface';
-import {
-  DEFAULT_APPS_SCRIPT_EMAIL_API_URL,
-  DEFAULT_EMAIL_SENDER_NAME,
-  DEFAULT_EMAIL_TEXT_BODY,
-  DEFAULT_EMAIL_TIMEOUT_MS,
-} from './constants/email.constants';
+import { DEFAULT_EMAIL_TEXT_BODY } from './constants/email.constants';
 import { SendEmailDto } from './dto/send-email.dto';
 import {
   AppsScriptEmailResponse,
   SendEmailResponse,
 } from './interfaces/apps-script-email-response.interface';
+
+interface EmailPayload {
+  recipients: string[];
+  subject: string;
+  message: string;
+  html: string;
+  senderName: string;
+}
 
 @Injectable()
 export class EmailService {
@@ -53,7 +56,7 @@ export class EmailService {
     // Here you can implement the logic to send an email notification
   }
 
-  private buildPayload(sendEmailDto?: SendEmailDto): Required<SendEmailDto> {
+  private buildPayload(sendEmailDto?: SendEmailDto): EmailPayload {
     if (!sendEmailDto) {
       throw new HttpException(
         'Email payload is required',
@@ -72,10 +75,6 @@ export class EmailService {
         : '';
     const html =
       typeof sendEmailDto.html === 'string' ? sendEmailDto.html.trim() : '';
-    const senderName =
-      typeof sendEmailDto.senderName === 'string'
-        ? sendEmailDto.senderName.trim()
-        : '';
 
     if (!recipients.length) {
       throw new HttpException(
@@ -100,7 +99,7 @@ export class EmailService {
       subject,
       message: message || DEFAULT_EMAIL_TEXT_BODY,
       html: html || '',
-      senderName: senderName || DEFAULT_EMAIL_SENDER_NAME,
+      senderName: this.emailSenderName,
     };
   }
 
@@ -120,19 +119,43 @@ export class EmailService {
   }
 
   private get emailApiUrl(): string {
-    return (
-      process.env.APPS_SCRIPT_EMAIL_API_URL || DEFAULT_APPS_SCRIPT_EMAIL_API_URL
-    );
+    const apiUrl = process.env.APPS_SCRIPT_EMAIL_API_URL?.trim();
+
+    if (!apiUrl) {
+      throw new HttpException(
+        'APPS_SCRIPT_EMAIL_API_URL is required',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    return apiUrl;
   }
 
   private get emailTimeoutMs(): number {
-    const timeout = Number(process.env.APPS_SCRIPT_EMAIL_TIMEOUT_MS);
+    const timeoutValue = process.env.APPS_SCRIPT_EMAIL_TIMEOUT_MS?.trim();
+    const timeout = Number(timeoutValue);
 
-    if (Number.isNaN(timeout) || timeout <= 0) {
-      return DEFAULT_EMAIL_TIMEOUT_MS;
+    if (!timeoutValue || Number.isNaN(timeout) || timeout <= 0) {
+      throw new HttpException(
+        'APPS_SCRIPT_EMAIL_TIMEOUT_MS must be a positive number',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
 
     return timeout;
+  }
+
+  private get emailSenderName(): string {
+    const senderName = process.env.EMAIL_SENDER_NAME?.trim();
+
+    if (!senderName) {
+      throw new HttpException(
+        'EMAIL_SENDER_NAME is required',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    return senderName;
   }
 
   private handleEmailApiError(error: unknown): never {
