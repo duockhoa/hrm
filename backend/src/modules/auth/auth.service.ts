@@ -94,16 +94,17 @@ export class AuthService {
     });
 
     try {
+      const resetPasswordOtpEmail = this.buildResetPasswordOtpEmail(
+        OTP,
+        expiresInMinutes,
+        user.name,
+      );
+
       await this.emailService.sendEmail({
         recipients: email,
-        subject: 'Ma OTP dat lai mat khau',
-        message: `Ma OTP dat lai mat khau cua ban la: ${OTP}. Ma co hieu luc trong ${expiresInMinutes} phut.`,
-        html: `
-          <p>Ma OTP dat lai mat khau cua ban la:</p>
-          <p><strong style="font-size: 24px; letter-spacing: 4px;">${OTP}</strong></p>
-          <p>Ma co hieu luc trong ${expiresInMinutes} phut.</p>
-          <p>Neu ban khong yeu cau dat lai mat khau, vui long bo qua email nay.</p>
-        `,
+        subject: resetPasswordOtpEmail.subject,
+        message: resetPasswordOtpEmail.message,
+        html: resetPasswordOtpEmail.html,
       });
     } catch (error) {
       await this.prisma.passwordResetOTPs
@@ -124,6 +125,99 @@ export class AuthService {
     });
 
     return true;
+  }
+
+  private buildResetPasswordOtpEmail(
+    otp: string,
+    expiresInMinutes: number,
+    recipientName?: string | null,
+  ) {
+    const subject = 'Mã OTP đặt lại mật khẩu';
+    const message = `Mã OTP đặt lại mật khẩu của bạn là: ${otp}. Mã có hiệu lực trong ${expiresInMinutes} phút.`;
+    const greetingName = this.escapeHtml(recipientName?.trim() || 'bạn');
+    const logoUrl = this.escapeHtml(this.passwordResetEmailLogoUrl);
+
+    return {
+      subject,
+      message,
+      html: `
+        <!doctype html>
+        <html lang="vi">
+          <head>
+            <meta charset="UTF-8" />
+            <title>${subject}</title>
+          </head>
+          <body style="margin: 0; padding: 0; background: #ffffff; font-family: Arial, Helvetica, sans-serif; color: #111111;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; padding: 40px 16px 20px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; background: #ffffff;">
+                    <tr>
+                      <td align="center" style="padding: 0 24px 20px;">
+                        <img src="${logoUrl}" width="170" alt="DKPharma" style="display: block; width: 170px; max-width: 70%; height: auto; border: 0; outline: none; text-decoration: none;" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding: 0 24px;">
+                        <p style="margin: 0 0 14px; font-size: 15px; line-height: 1.6; color: #111111;">
+                          Xin chào ${greetingName},
+                        </p>
+                        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #111111;">
+                          Chúng tôi nhận được yêu cầu thiết lập mật khẩu đăng nhập mới cho tài khoản DKPharma của bạn.<br />
+                          Vui lòng nhập mã OTP dưới đây để đặt lại mật khẩu:
+                        </p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding: 40px 24px 36px;">
+                        <div style="font-size: 38px; line-height: 1.2; letter-spacing: 12px; font-weight: 700; color: #111111;">${otp}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding: 0 24px 32px;">
+                        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #111111;">
+                          Mã OTP có hiệu lực trong ${expiresInMinutes} phút. Lưu ý: KHÔNG chia sẻ mã này với bất kỳ ai.
+                        </p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding: 0 24px 36px;">
+                        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #111111;">
+                          Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email hoặc liên hệ bộ phận hỗ trợ của DKPharma.
+                        </p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="border-top: 1px solid #dddddd; padding: 16px 24px 0;">
+                        <p style="margin: 0; text-align: center; font-size: 12px; line-height: 1.5; color: #777777;">
+                          Đây là email tự động. Vui lòng không trả lời email này.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `,
+    };
+  }
+
+  private get passwordResetEmailLogoUrl() {
+    return (
+      process.env.PASSWORD_RESET_EMAIL_LOGO_URL?.trim() ||
+      'https://prod-cdn.pharmacity.io/e-com/images/brand-logo/dk-pharma.png'
+    );
+  }
+
+  private escapeHtml(value: string) {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   async verifyResetPasswordOTP(email: string, otp: string) {

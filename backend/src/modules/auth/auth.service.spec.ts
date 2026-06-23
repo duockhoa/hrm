@@ -25,6 +25,8 @@ describe('AuthService', () => {
     };
 
     process.env.PASSWORD_RESET_OTP_EXPIRES_IN_MINUTES = '10';
+    process.env.PASSWORD_RESET_EMAIL_LOGO_URL =
+      'https://example.com/dkpharmalogo.png';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -43,16 +45,18 @@ describe('AuthService', () => {
 
   afterEach(() => {
     delete process.env.PASSWORD_RESET_OTP_EXPIRES_IN_MINUTES;
+    delete process.env.PASSWORD_RESET_EMAIL_LOGO_URL;
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  it('creates a reset OTP, stores the hash, and emails the plain OTP', async () => {
+  it('creates a reset OTP, stores the hash, and emails the HTML OTP', async () => {
     prisma.users.findUnique.mockResolvedValue({
       id: 1,
       email: 'user@example.com',
+      name: 'Nguyễn Văn A',
     });
     prisma.passwordResetOTPs.create.mockImplementation(async (args) => ({
       id: 10,
@@ -75,14 +79,23 @@ describe('AuthService', () => {
     await expect(
       bcrypt.compare('123456', createArg.data.hash_OTP),
     ).resolves.toBe(true);
-    expect(emailService.sendEmail).toHaveBeenCalledWith(
+    expect(emailService.sendEmail).toHaveBeenCalledTimes(1);
+    const emailPayload = emailService.sendEmail.mock.calls[0][0];
+    expect(emailPayload).toEqual(
       expect.objectContaining({
         recipients: 'user@example.com',
-        subject: 'Ma OTP dat lai mat khau',
+        subject: 'Mã OTP đặt lại mật khẩu',
         message: expect.stringContaining('123456'),
-        html: expect.stringContaining('123456'),
       }),
     );
+    expect(emailPayload.message).toContain('10 phút');
+    expect(emailPayload.html).toContain('<!doctype html>');
+    expect(emailPayload.html).toContain('https://example.com/dkpharmalogo.png');
+    expect(emailPayload.html).toContain('Xin chào Nguyễn Văn A');
+    expect(emailPayload.html).toContain('123456');
+    expect(emailPayload.html).toContain('10 phút');
+    expect(emailPayload.html).toContain('font-family: Arial');
+    expect(emailPayload.html).not.toContain('background: #0f766e');
     expect(prisma.passwordResetOTPs.updateMany).toHaveBeenCalledWith({
       where: {
         user_id: 1,
