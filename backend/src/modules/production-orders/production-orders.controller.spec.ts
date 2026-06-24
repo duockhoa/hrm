@@ -11,6 +11,7 @@ import { ProductionOrderDisintegrationChecksService } from './production-order-d
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
+import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
 describe('ProductionOrdersController', () => {
@@ -62,6 +63,10 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+  };
+  let productionOrderCylinderCalibrationsService: {
+    findByProductionOrder: jest.Mock;
+    upsert: jest.Mock;
   };
   let productionOrderDateChecksService: {
     findById: jest.Mock;
@@ -125,6 +130,10 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderCylinderCalibrationsService = {
+      findByProductionOrder: jest.fn(),
+      upsert: jest.fn(),
+    };
     productionOrderDateChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -176,6 +185,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderShellWeightChecksService,
           useValue: productionOrderShellWeightChecksService,
+        },
+        {
+          provide: ProductionOrderCylinderCalibrationsService,
+          useValue: productionOrderCylinderCalibrationsService,
         },
         {
           provide: ProductionOrderDateChecksService,
@@ -542,9 +555,7 @@ describe('ProductionOrdersController', () => {
       checks,
     );
 
-    await expect(controller.findShellWeightChecks(2031)).resolves.toBe(
-      checks,
-    );
+    await expect(controller.findShellWeightChecks(2031)).resolves.toBe(checks);
     expect(
       productionOrderShellWeightChecksService.findAllByProductionOrder,
     ).toHaveBeenCalledWith(2031);
@@ -552,13 +563,9 @@ describe('ProductionOrdersController', () => {
 
   it('gets a shell weight check by id', async () => {
     const check = { id: 1, production_order_id: 2031 };
-    productionOrderShellWeightChecksService.findById.mockResolvedValue(
-      check,
-    );
+    productionOrderShellWeightChecksService.findById.mockResolvedValue(check);
 
-    await expect(controller.findShellWeightCheckById(1)).resolves.toBe(
-      check,
-    );
+    await expect(controller.findShellWeightCheckById(1)).resolves.toBe(check);
     expect(
       productionOrderShellWeightChecksService.findById,
     ).toHaveBeenCalledWith(1);
@@ -579,15 +586,51 @@ describe('ProductionOrdersController', () => {
     };
     const user = { id: 7, name: 'Binh' };
     const result = { id: 1, production_order_id: 2031 };
-    productionOrderShellWeightChecksService.create.mockResolvedValue(
-      result,
-    );
+    productionOrderShellWeightChecksService.create.mockResolvedValue(result);
 
     await expect(
       controller.createShellWeightCheck(2031, createDto, { user }),
     ).resolves.toBe(result);
+    expect(productionOrderShellWeightChecksService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+    );
+  });
+
+  it('gets a cylinder calibration for a production order', async () => {
+    const calibration = {
+      id: 1,
+      production_order_id: 2031,
+      cylinder_code: 'OD-001',
+      calibration_number: 0.1234,
+    };
+    productionOrderCylinderCalibrationsService.findByProductionOrder.mockResolvedValue(
+      calibration,
+    );
+
+    await expect(controller.findCylinderCalibration(2031)).resolves.toBe(
+      calibration,
+    );
     expect(
-      productionOrderShellWeightChecksService.create,
+      productionOrderCylinderCalibrationsService.findByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('upserts a cylinder calibration using the authenticated user', async () => {
+    const createDto = {
+      cylinder_code: 'OD-001',
+      calibration_number: '0.1234',
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderCylinderCalibrationsService.upsert.mockResolvedValue(result);
+
+    await expect(
+      controller.upsertCylinderCalibration(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderCylinderCalibrationsService.upsert,
     ).toHaveBeenCalledWith(2031, createDto, user);
   });
 

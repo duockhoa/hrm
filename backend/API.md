@@ -1293,6 +1293,76 @@ Lỗi thường gặp:
 - `400 shell_1_weight must be greater than 0`
 - `401 Authenticated user not found`
 
+## Production Order Cylinder Calibrations
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu 1 thông số hiệu chỉnh ống đong cho mỗi lệnh sản xuất.
+
+### Lấy thông số hiệu chỉnh ống đong
+
+```http
+GET /production-orders/:id/cylinder-calibration
+```
+
+Response trả về object nếu đã nhập, hoặc `null` nếu lệnh sản xuất chưa có thông số hiệu chỉnh.
+
+Response mẫu:
+
+```json
+{
+  "id": 1,
+  "production_order_id": 2031,
+  "cylinder_code": null,
+  "calibration_number": "0.1234",
+  "created_by_id": 7,
+  "created_at": "2026-06-24T00:00:00.000Z",
+  "updated_at": "2026-06-24T00:00:00.000Z",
+  "createdBy": {
+    "id": 7,
+    "username": "binh",
+    "name": "Binh",
+    "email": "binh@example.com",
+    "department": "QA",
+    "position": "Staff"
+  }
+}
+```
+
+### Tạo hoặc cập nhật thông số hiệu chỉnh ống đong
+
+```http
+POST /production-orders/:id/cylinder-calibration
+```
+
+Body:
+
+```json
+{
+  "calibration_number": "0.1234"
+}
+```
+
+Quy tắc:
+
+- Mỗi lệnh sản xuất chỉ có 1 bản ghi hiệu chỉnh ống đong.
+- Nếu chưa có dữ liệu thì API tạo mới; nếu đã có thì API cập nhật `cylinder_code` và `calibration_number`.
+- `cylinder_code` không bắt buộc, tối đa 100 ký tự nếu có nhập. Nếu bỏ trống hoặc gửi chuỗi rỗng thì lưu `null`.
+- `calibration_number` bắt buộc, lưu dạng `DECIMAL(10, 4)`, tối đa 4 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `0.1234`, `"0.1234"` hoặc `"0,1234"`.
+- `calibration_number` có thể là số âm, số dương hoặc `0`.
+- `production_order_id` lấy từ `:id`.
+- Người tạo dữ liệu là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 cylinder_code must be a string`
+- `400 cylinder_code must be at most 100 characters`
+- `400 calibration_number is required`
+- `400 calibration_number must fit DECIMAL(10, 4) with up to 4 decimal places`
+- `401 Authenticated user not found`
+
 ## Production Order Date Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

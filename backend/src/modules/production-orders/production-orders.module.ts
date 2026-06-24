@@ -16,6 +16,7 @@ import { ProductionOrderHardCapsuleLeakageChecksService } from './production-ord
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
+import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 
 @Module({
   imports: [FeaturesModule],
@@ -30,6 +31,7 @@ import { ProductionOrderDateChecksService } from './production-order-date-checks
     ProductionOrderHardCapsuleLeakageChecksService,
     ProductionOrderBottleVolumeChecksService,
     ProductionOrderShellWeightChecksService,
+    ProductionOrderCylinderCalibrationsService,
     ProductionOrderDateChecksService,
     WarehouseReleaseExportService,
     ProductionOrderExportService,

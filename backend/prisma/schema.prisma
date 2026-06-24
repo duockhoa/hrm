@@ -37,7 +37,8 @@ model Users {
   createdProductionOrderDisintegrationChecks     ProductionOrderDisintegrationChecks[]     @relation("ProductionOrderDisintegrationCheckCreator")
   createdProductionOrderHardCapsuleLeakageChecks ProductionOrderHardCapsuleLeakageChecks[] @relation("ProductionOrderHardCapsuleLeakageCheckCreator")
   createdProductionOrderBottleVolumeChecks       ProductionOrderBottleVolumeChecks[]       @relation("ProductionOrderBottleVolumeCheckCreator")
-  createdProductionOrderShellWeightChecks ProductionOrderShellWeightChecks[] @relation("ProductionOrderShellWeightCheckCreator")
+  createdProductionOrderShellWeightChecks        ProductionOrderShellWeightChecks[]        @relation("ProductionOrderShellWeightCheckCreator")
+  createdProductionOrderCylinderCalibrations     ProductionOrderCylinderCalibrations[]     @relation("ProductionOrderCylinderCalibrationCreator")
   createdProductionOrderDateChecks               ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckCreator")
   approvedProductionOrderDateChecks              ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckApprover")
   createdProductionOrderDateCheckImages          ProductionOrderDateCheckImages[]          @relation("ProductionOrderDateCheckImageCreator")
@@ -298,7 +299,8 @@ model ProductionOrders {
   disintegrationChecks     ProductionOrderDisintegrationChecks[]
   hardCapsuleLeakageChecks ProductionOrderHardCapsuleLeakageChecks[]
   bottleVolumeChecks       ProductionOrderBottleVolumeChecks[]
-  shellWeightChecks ProductionOrderShellWeightChecks[]
+  shellWeightChecks        ProductionOrderShellWeightChecks[]
+  cylinderCalibration      ProductionOrderCylinderCalibrations?
   dateChecks               ProductionOrderDateChecks[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
@@ -513,6 +515,21 @@ model ProductionOrderShellWeightChecks {
   @@index([production_order_id], map: "po_shell_weight_checks_po_id_fkey")
   @@index([created_by_id], map: "po_shell_weight_checks_created_by_id_fkey")
   @@map("production_order_shell_weight_checks")
+}
+
+model ProductionOrderCylinderCalibrations {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int              @unique(map: "po_cylinder_calibrations_po_id_key")
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_cylinder_calibrations_po_id_fkey")
+  cylinder_code       String?          @db.VarChar(100)
+  calibration_number  Decimal          @db.Decimal(10, 4)
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderCylinderCalibrationCreator", fields: [created_by_id], references: [id], map: "po_cylinder_calibrations_created_by_id_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([created_by_id], map: "po_cylinder_calibrations_created_by_id_idx")
+  @@map("production_order_cylinder_calibrations")
 }
 
 model ProductionOrderDateChecks {

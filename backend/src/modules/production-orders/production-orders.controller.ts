@@ -38,6 +38,8 @@ import { CreateProductionOrderBottleVolumeCheckDto } from './dto/create-producti
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { CreateProductionOrderShellWeightCheckDto } from './dto/create-production-order-shell-weight-check.dto';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
+import { CreateProductionOrderCylinderCalibrationDto } from './dto/create-production-order-cylinder-calibration.dto';
+import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
@@ -106,6 +108,7 @@ export class ProductionOrdersController {
     private readonly productionOrderHardCapsuleLeakageChecksService: ProductionOrderHardCapsuleLeakageChecksService,
     private readonly productionOrderBottleVolumeChecksService: ProductionOrderBottleVolumeChecksService,
     private readonly productionOrderShellWeightChecksService: ProductionOrderShellWeightChecksService,
+    private readonly productionOrderCylinderCalibrationsService: ProductionOrderCylinderCalibrationsService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
   ) {}
 
@@ -172,9 +175,7 @@ export class ProductionOrdersController {
   async findShellWeightCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
-    return this.productionOrderShellWeightChecksService.findById(
-      checkId,
-    );
+    return this.productionOrderShellWeightChecksService.findById(checkId);
   }
 
   @Get('date-checks/images/:filename')
@@ -474,6 +475,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderShellWeightChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/cylinder-calibration')
+  async findCylinderCalibration(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderCylinderCalibrationsService.findByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/cylinder-calibration')
+  async upsertCylinderCalibration(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderCylinderCalibrationDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderCylinderCalibrationsService.upsert(
       id,
       createDto,
       req.user,
