@@ -11,6 +11,7 @@ import { ProductionOrderDisintegrationChecksService } from './production-order-d
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
+import { ProductionOrderTenShellWeightChecksService } from './production-order-ten-shell-weight-checks.service';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
@@ -64,6 +65,11 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+  };
+  let productionOrderTenShellWeightChecksService: {
+    findById: jest.Mock;
+    findByProductionOrder: jest.Mock;
+    upsert: jest.Mock;
   };
   let productionOrderCylinderCalibrationsService: {
     findByProductionOrder: jest.Mock;
@@ -137,6 +143,11 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderTenShellWeightChecksService = {
+      findById: jest.fn(),
+      findByProductionOrder: jest.fn(),
+      upsert: jest.fn(),
+    };
     productionOrderCylinderCalibrationsService = {
       findByProductionOrder: jest.fn(),
       upsert: jest.fn(),
@@ -198,6 +209,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderShellWeightChecksService,
           useValue: productionOrderShellWeightChecksService,
+        },
+        {
+          provide: ProductionOrderTenShellWeightChecksService,
+          useValue: productionOrderTenShellWeightChecksService,
         },
         {
           provide: ProductionOrderCylinderCalibrationsService,
@@ -613,6 +628,50 @@ describe('ProductionOrdersController', () => {
       createDto,
       user,
     );
+  });
+
+  it('gets a ten-shell weight check for a production order', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderTenShellWeightChecksService.findByProductionOrder.mockResolvedValue(
+      check,
+    );
+
+    await expect(controller.findTenShellWeightCheck(2031)).resolves.toBe(
+      check,
+    );
+    expect(
+      productionOrderTenShellWeightChecksService.findByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a ten-shell weight check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderTenShellWeightChecksService.findById.mockResolvedValue(
+      check,
+    );
+
+    await expect(controller.findTenShellWeightCheckById(1)).resolves.toBe(
+      check,
+    );
+    expect(
+      productionOrderTenShellWeightChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('upserts a ten-shell weight check using the authenticated user', async () => {
+    const createDto = {
+      ten_shells_weight: 500.04,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderTenShellWeightChecksService.upsert.mockResolvedValue(result);
+
+    await expect(
+      controller.upsertTenShellWeightCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderTenShellWeightChecksService.upsert,
+    ).toHaveBeenCalledWith(2031, createDto, user);
   });
 
   it('gets a cylinder calibration for a production order', async () => {

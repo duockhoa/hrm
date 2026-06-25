@@ -38,6 +38,8 @@ import { CreateProductionOrderBottleVolumeCheckDto } from './dto/create-producti
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { CreateProductionOrderShellWeightCheckDto } from './dto/create-production-order-shell-weight-check.dto';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
+import { CreateProductionOrderTenShellWeightCheckDto } from './dto/create-production-order-ten-shell-weight-check.dto';
+import { ProductionOrderTenShellWeightChecksService } from './production-order-ten-shell-weight-checks.service';
 import { CreateProductionOrderCylinderCalibrationDto } from './dto/create-production-order-cylinder-calibration.dto';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { CreateProductionOrderSensoryCheckDto } from './dto/create-production-order-sensory-check.dto';
@@ -124,6 +126,7 @@ export class ProductionOrdersController {
     private readonly productionOrderHardCapsuleLeakageChecksService: ProductionOrderHardCapsuleLeakageChecksService,
     private readonly productionOrderBottleVolumeChecksService: ProductionOrderBottleVolumeChecksService,
     private readonly productionOrderShellWeightChecksService: ProductionOrderShellWeightChecksService,
+    private readonly productionOrderTenShellWeightChecksService: ProductionOrderTenShellWeightChecksService,
     private readonly productionOrderCylinderCalibrationsService: ProductionOrderCylinderCalibrationsService,
     private readonly productionOrderSensoryChecksService: ProductionOrderSensoryChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
@@ -193,6 +196,13 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderShellWeightChecksService.findById(checkId);
+  }
+
+  @Get('ten-shell-weight-checks/:checkId')
+  async findTenShellWeightCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderTenShellWeightChecksService.findById(checkId);
   }
 
   @Get('date-checks/images/:filename')
@@ -518,6 +528,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderShellWeightChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/ten-shell-weight-check')
+  async findTenShellWeightCheck(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderTenShellWeightChecksService.findByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/ten-shell-weight-check')
+  async upsertTenShellWeightCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderTenShellWeightCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderTenShellWeightChecksService.upsert(
       id,
       createDto,
       req.user,

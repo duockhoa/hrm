@@ -15,6 +15,7 @@ import { ProductionOrderDisintegrationChecksService } from './production-order-d
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
+import { ProductionOrderTenShellWeightChecksService } from './production-order-ten-shell-weight-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
@@ -32,6 +33,7 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
     ProductionOrderHardCapsuleLeakageChecksService,
     ProductionOrderBottleVolumeChecksService,
     ProductionOrderShellWeightChecksService,
+    ProductionOrderTenShellWeightChecksService,
     ProductionOrderCylinderCalibrationsService,
     ProductionOrderSensoryChecksService,
     ProductionOrderDateChecksService,

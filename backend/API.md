@@ -1293,6 +1293,85 @@ Lỗi thường gặp:
 - `400 shell_1_weight must be greater than 0`
 - `401 Authenticated user not found`
 
+## Production Order Ten-Shell Weight Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu khối lượng chung của 10 vỏ nang thuộc một lệnh sản xuất. Đây là tính năng riêng với nhóm `Production Order Shell Weight Checks` phía trên. Mỗi lệnh sản xuất chỉ có 1 bản ghi khối lượng chung 10 vỏ nang và có đơn vị cố định là `mg`.
+
+### Lấy khối lượng chung 10 vỏ nang
+
+```http
+GET /production-orders/:id/ten-shell-weight-check
+```
+
+Response trả về object nếu đã nhập, hoặc `null` nếu lệnh sản xuất chưa có dữ liệu.
+
+Response mẫu:
+
+```json
+{
+  "id": 1,
+  "production_order_id": 2031,
+  "ten_shells_weight": "500.04",
+  "unit": "mg",
+  "created_by_id": 7,
+  "created_at": "2026-06-25T00:00:00.000Z",
+  "updated_at": "2026-06-25T00:00:00.000Z",
+  "createdBy": {
+    "id": 7,
+    "username": "binh",
+    "name": "Binh",
+    "email": "binh@example.com",
+    "department": "QA",
+    "position": "Staff"
+  }
+}
+```
+
+### Lấy một bản ghi khối lượng chung 10 vỏ nang theo ID
+
+```http
+GET /production-orders/ten-shell-weight-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Ten-shell weight check not found`
+
+### Tạo hoặc cập nhật khối lượng chung 10 vỏ nang
+
+```http
+POST /production-orders/:id/ten-shell-weight-check
+```
+
+Body:
+
+```json
+{
+  "ten_shells_weight": 500.04
+}
+```
+
+Quy tắc:
+
+- Mỗi lệnh sản xuất chỉ có 1 bản ghi khối lượng chung 10 vỏ nang.
+- Nếu chưa có dữ liệu thì API tạo mới; nếu đã có thì API cập nhật `ten_shells_weight`.
+- `ten_shells_weight` bắt buộc và phải lớn hơn `0`.
+- `ten_shells_weight` lưu dạng `DECIMAL(10, 2)`, tối đa 2 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `500.04`, `"500.04"` hoặc `"500,04"`.
+- `unit` luôn là `mg`, do backend tự lưu; frontend không gửi field này.
+- `production_order_id` lấy từ `:id`.
+- Người tạo dữ liệu là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 ten_shells_weight is required`
+- `400 ten_shells_weight must fit DECIMAL(10, 2) with up to 2 decimal places`
+- `400 ten_shells_weight must be greater than 0`
+- `401 Authenticated user not found`
+
 ## Production Order Cylinder Calibrations
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
