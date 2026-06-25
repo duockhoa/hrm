@@ -1,0 +1,200 @@
+import { BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { mkdirSync } from 'fs';
+import { stat, unlink } from 'fs/promises';
+import { diskStorage } from 'multer';
+import { basename, extname, join, resolve, sep } from 'path';
+
+type SensoryCheckUploadFileMetadata = Pick<
+  Express.Multer.File,
+  'mimetype' | 'originalname'
+>;
+
+export const PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_ROUTE =
+  '/production-orders/sensory-checks/images';
+
+const PRODUCTION_ORDER_SENSORY_CHECK_UPLOAD_DIR = join(
+  process.cwd(),
+  'uploads',
+  'production-order-sensory-checks',
+);
+export const PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_UPLOAD_DIR = join(
+  PRODUCTION_ORDER_SENSORY_CHECK_UPLOAD_DIR,
+  'images',
+);
+
+const MAX_SENSORY_CHECK_IMAGE_SIZE_IN_BYTES = 20 * 1024 * 1024;
+
+const IMAGE_EXTENSIONS_BY_MIME_TYPE = new Map([
+  ['image/jpeg', '.jpg'],
+  ['image/png', '.png'],
+  ['image/webp', '.webp'],
+  ['image/gif', '.gif'],
+]);
+
+const IMAGE_MIME_TYPES_BY_EXTENSION = new Map(
+  Array.from(IMAGE_EXTENSIONS_BY_MIME_TYPE, ([mimeType, extension]) => [
+    extension,
+    mimeType,
+  ]),
+);
+IMAGE_MIME_TYPES_BY_EXTENSION.set('.jpeg', 'image/jpeg');
+
+const ensureProductionOrderSensoryCheckUploadDirs = () => {
+  mkdirSync(PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_UPLOAD_DIR, {
+    recursive: true,
+  });
+};
+
+const normalizeOriginalFilename = (originalName: string) => {
+  const utf8Filename = Buffer.from(originalName, 'latin1').toString('utf8');
+
+  if (utf8Filename.includes('\uFFFD')) {
+    return originalName;
+  }
+
+  return utf8Filename;
+};
+
+const getOriginalNameSegment = (originalName: string) => {
+  const normalizedFilename = basename(
+    normalizeOriginalFilename(originalName).replace(/\\/g, '/'),
+  );
+  const originalExtension = extname(normalizedFilename);
+  const originalBaseName = originalExtension
+    ? normalizedFilename.slice(0, -originalExtension.length)
+    : normalizedFilename;
+
+  const sanitizedBaseName = originalBaseName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[.-]+/, '')
+    .replace(/[.-]+$/, '')
+    .slice(0, 120);
+
+  return sanitizedBaseName || 'image';
+};
+
+const getStoredExtension = (file: SensoryCheckUploadFileMetadata) =>
+  IMAGE_EXTENSIONS_BY_MIME_TYPE.get(file.mimetype) ??
+  extname(normalizeOriginalFilename(file.originalname)).toLowerCase();
+
+export const getSensoryCheckUploadStoredFilename = (
+  file: SensoryCheckUploadFileMetadata,
+) =>
+  `${getOriginalNameSegment(file.originalname)}-${randomUUID()}${getStoredExtension(file)}`;
+
+export const productionOrderSensoryCheckImageUploadOptions = {
+  storage: diskStorage({
+    destination: (_req, _file, callback) => {
+      ensureProductionOrderSensoryCheckUploadDirs();
+      callback(null, PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_UPLOAD_DIR);
+    },
+    filename: (_req, file, callback) => {
+      callback(null, getSensoryCheckUploadStoredFilename(file));
+    },
+  }),
+  fileFilter: (_req, file, callback) => {
+    if (!IMAGE_EXTENSIONS_BY_MIME_TYPE.has(file.mimetype)) {
+      callback(
+        new BadRequestException('image must be a JPG, PNG, WEBP, or GIF image'),
+        false,
+      );
+      return;
+    }
+
+    callback(null, true);
+  },
+  limits: {
+    fileSize: MAX_SENSORY_CHECK_IMAGE_SIZE_IN_BYTES,
+  },
+};
+
+export const getSensoryCheckImagePath = (file?: Express.Multer.File) => {
+  if (!file) {
+    return undefined;
+  }
+
+  return `${PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_ROUTE}/${file.filename}`;
+};
+
+const getSafeFilename = (filename: string) => {
+  const normalizedFilename = filename.trim();
+
+  if (
+    normalizedFilename === '' ||
+    normalizedFilename === '.' ||
+    normalizedFilename === '..' ||
+    normalizedFilename.includes('/') ||
+    normalizedFilename.includes('\\') ||
+    basename(normalizedFilename) !== normalizedFilename
+  ) {
+    return null;
+  }
+
+  return normalizedFilename;
+};
+
+const getResolvedFilePath = (filename: string) => {
+  const safeFilename = getSafeFilename(filename);
+
+  if (!safeFilename) {
+    return null;
+  }
+
+  const resolvedUploadDir = resolve(
+    PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_UPLOAD_DIR,
+  );
+  const filePath = resolve(resolvedUploadDir, safeFilename);
+
+  if (!filePath.startsWith(`${resolvedUploadDir}${sep}`)) {
+    return null;
+  }
+
+  return filePath;
+};
+
+export const getSensoryCheckImageLookupPaths = (filename: string) => {
+  const safeFilename = getSafeFilename(filename);
+
+  return safeFilename
+    ? [`${PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_ROUTE}/${safeFilename}`]
+    : [];
+};
+
+export const resolveSensoryCheckImageFile = async (filename: string) => {
+  const filePath = getResolvedFilePath(filename);
+  const contentType =
+    IMAGE_MIME_TYPES_BY_EXTENSION.get(extname(filename).toLowerCase()) ??
+    'application/octet-stream';
+
+  if (!filePath) {
+    return null;
+  }
+
+  const fileStat = await stat(filePath).catch(() => null);
+
+  if (!fileStat?.isFile()) {
+    return null;
+  }
+
+  return {
+    contentType,
+    filePath,
+    size: fileStat.size,
+  };
+};
+
+export const removeUploadedSensoryCheckImage = async (
+  file?: Express.Multer.File,
+) => {
+  if (!file?.path) {
+    return;
+  }
+
+  await unlink(file.path).catch(() => undefined);
+};

@@ -12,6 +12,7 @@ import { ProductionOrderHardCapsuleLeakageChecksService } from './production-ord
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
+import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
 describe('ProductionOrdersController', () => {
@@ -67,6 +68,12 @@ describe('ProductionOrdersController', () => {
   let productionOrderCylinderCalibrationsService: {
     findByProductionOrder: jest.Mock;
     upsert: jest.Mock;
+  };
+  let productionOrderSensoryChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    findImageFile: jest.Mock;
   };
   let productionOrderDateChecksService: {
     findById: jest.Mock;
@@ -134,6 +141,12 @@ describe('ProductionOrdersController', () => {
       findByProductionOrder: jest.fn(),
       upsert: jest.fn(),
     };
+    productionOrderSensoryChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      findImageFile: jest.fn(),
+    };
     productionOrderDateChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -189,6 +202,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderCylinderCalibrationsService,
           useValue: productionOrderCylinderCalibrationsService,
+        },
+        {
+          provide: ProductionOrderSensoryChecksService,
+          useValue: productionOrderSensoryChecksService,
         },
         {
           provide: ProductionOrderDateChecksService,
@@ -632,6 +649,52 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderCylinderCalibrationsService.upsert,
     ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('gets sensory checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031, color: 'vang nhat' }];
+    productionOrderSensoryChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findSensoryChecks(2031)).resolves.toBe(checks);
+    expect(
+      productionOrderSensoryChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a sensory check by id', async () => {
+    const check = { id: 1, production_order_id: 2031, smell: 'thom' };
+    productionOrderSensoryChecksService.findById.mockResolvedValue(check);
+
+    await expect(controller.findSensoryCheckById(1)).resolves.toBe(check);
+    expect(productionOrderSensoryChecksService.findById).toHaveBeenCalledWith(
+      1,
+    );
+  });
+
+  it('creates a sensory check using the authenticated user', async () => {
+    const createDto = {
+      color: 'vang nhat',
+      smell: 'thom',
+      taste: 'ngot',
+      note: 'dat yeu cau',
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSensoryChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createSensoryCheck(2031, createDto, undefined, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderSensoryChecksService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+      {
+        imagePath: undefined,
+      },
+    );
   });
 
   it('gets date checks for a production order', async () => {

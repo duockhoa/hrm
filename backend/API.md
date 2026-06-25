@@ -1363,6 +1363,121 @@ Lỗi thường gặp:
 - `400 calibration_number must fit DECIMAL(10, 4) with up to 4 decimal places`
 - `401 Authenticated user not found`
 
+## Production Order Sensory Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu các lần thử màu sắc, mùi, vị và hình ảnh của một lệnh sản xuất. Một lệnh sản xuất có thể có nhiều lần thử. Bảng này không có field `checked_at`; thời điểm tạo lấy từ `created_at`.
+
+### Lấy danh sách thử mùi vị của lệnh sản xuất
+
+```http
+GET /production-orders/:id/sensory-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "color": "Vàng nhạt",
+    "smell": "Thơm đặc trưng",
+    "taste": "Ngọt nhẹ",
+    "note": "Đạt yêu cầu cảm quan",
+    "image_path": "/production-orders/sensory-checks/images/mau-thu-abc.jpg",
+    "created_by_id": 7,
+    "created_at": "2026-06-24T00:00:00.000Z",
+    "updated_at": "2026-06-24T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một bản ghi thử mùi vị theo ID
+
+```http
+GET /production-orders/sensory-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Sensory check not found`
+
+### Thêm dữ liệu thử mùi vị
+
+```http
+POST /production-orders/:id/sensory-checks
+```
+
+Nếu có ảnh, gửi `multipart/form-data`:
+
+```text
+color=Vàng nhạt
+smell=Thơm đặc trưng
+taste=Ngọt nhẹ
+note=Đạt yêu cầu cảm quan
+image=<file>
+```
+
+Tên field ảnh hợp lệ:
+
+- `image`
+- `sensory_image`
+
+Nếu không có ảnh, có thể gửi JSON:
+
+```json
+{
+  "color": "Vàng nhạt",
+  "smell": "Thơm đặc trưng",
+  "taste": "Ngọt nhẹ",
+  "note": "Đạt yêu cầu cảm quan"
+}
+```
+
+Quy tắc:
+
+- Mỗi lần gọi API tạo một bản ghi thử mới.
+- `color`, `smell`, `taste` không bắt buộc, tối đa 255 ký tự mỗi field.
+- `note` không bắt buộc, lưu dạng ghi chú dài.
+- `image` không bắt buộc, chỉ nhận JPG, PNG, WEBP hoặc GIF, tối đa 20MB.
+- Phải có ít nhất một trong các dữ liệu: `color`, `smell`, `taste`, `note`, hoặc ảnh.
+- `production_order_id` lấy từ `:id`.
+- Người tạo dữ liệu là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
+- Không có field `checked_at`.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 At least one sensory check value is required`
+- `400 color must be at most 255 characters`
+- `400 smell must be at most 255 characters`
+- `400 taste must be at most 255 characters`
+- `400 note must be a string`
+- `400 Only one sensory check image is allowed`
+- `401 Authenticated user not found`
+
+### Xem ảnh thử mùi vị
+
+```http
+GET /production-orders/sensory-checks/images/:filename
+```
+
+Lỗi thường gặp:
+
+- `404 Sensory check image not found`
+
 ## Production Order Date Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

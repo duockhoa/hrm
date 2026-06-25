@@ -40,6 +40,8 @@ import { CreateProductionOrderShellWeightCheckDto } from './dto/create-productio
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { CreateProductionOrderCylinderCalibrationDto } from './dto/create-production-order-cylinder-calibration.dto';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
+import { CreateProductionOrderSensoryCheckDto } from './dto/create-production-order-sensory-check.dto';
+import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
@@ -51,10 +53,20 @@ import {
   productionOrderDateCheckUploadOptions,
   removeUploadedDateCheckFiles,
 } from './production-order-date-check-upload.config';
+import {
+  getSensoryCheckImagePath,
+  productionOrderSensoryCheckImageUploadOptions,
+  removeUploadedSensoryCheckImage,
+} from './production-order-sensory-check-upload.config';
 
 type DateCheckUploadFields = {
   request_file?: Express.Multer.File[];
   images?: Express.Multer.File[];
+  image?: Express.Multer.File[];
+};
+
+type SensoryCheckUploadFields = {
+  sensory_image?: Express.Multer.File[];
   image?: Express.Multer.File[];
 };
 
@@ -76,6 +88,10 @@ const getUploadedDateCheckFiles = (uploadedFiles?: DateCheckUploadFields) => [
   ...(uploadedFiles?.request_file ?? []),
   ...getUploadedDateCheckImages(uploadedFiles),
 ];
+
+const getUploadedSensoryCheckImages = (
+  uploadedFiles?: SensoryCheckUploadFields,
+) => [...(uploadedFiles?.sensory_image ?? []), ...(uploadedFiles?.image ?? [])];
 
 const getAsciiFilenameFallback = (filename: string) => {
   const fallback = filename
@@ -109,6 +125,7 @@ export class ProductionOrdersController {
     private readonly productionOrderBottleVolumeChecksService: ProductionOrderBottleVolumeChecksService,
     private readonly productionOrderShellWeightChecksService: ProductionOrderShellWeightChecksService,
     private readonly productionOrderCylinderCalibrationsService: ProductionOrderCylinderCalibrationsService,
+    private readonly productionOrderSensoryChecksService: ProductionOrderSensoryChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
   ) {}
 
@@ -218,6 +235,32 @@ export class ProductionOrdersController {
     });
 
     return new StreamableFile(createReadStream(requestFile.filePath));
+  }
+
+  @Get('sensory-checks/images/:filename')
+  async getSensoryCheckImage(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.productionOrderSensoryChecksService.findImageFile(filename);
+
+    if (!imageFile) {
+      throw new NotFoundException('Sensory check image not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
+  @Get('sensory-checks/:checkId')
+  async findSensoryCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderSensoryChecksService.findById(checkId);
   }
 
   @Get('date-checks/:checkId')
@@ -499,6 +542,51 @@ export class ProductionOrdersController {
       createDto,
       req.user,
     );
+  }
+
+  @Get(':id/sensory-checks')
+  async findSensoryChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderSensoryChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/sensory-checks')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'sensory_image', maxCount: 1 },
+        { name: 'image', maxCount: 1 },
+      ],
+      productionOrderSensoryCheckImageUploadOptions,
+    ),
+  )
+  async createSensoryCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderSensoryCheckDto,
+    @UploadedFiles() uploadedFiles: SensoryCheckUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    const uploadedImages = getUploadedSensoryCheckImages(uploadedFiles);
+
+    if (uploadedImages.length > 1) {
+      await Promise.all(uploadedImages.map(removeUploadedSensoryCheckImage));
+      throw new BadRequestException('Only one sensory check image is allowed');
+    }
+
+    try {
+      return await this.productionOrderSensoryChecksService.create(
+        id,
+        createDto,
+        req.user,
+        {
+          imagePath: getSensoryCheckImagePath(uploadedImages[0]),
+        },
+      );
+    } catch (error) {
+      await Promise.all(uploadedImages.map(removeUploadedSensoryCheckImage));
+      throw error;
+    }
   }
 
   @Get(':id/date-checks')

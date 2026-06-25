@@ -17,6 +17,7 @@ import { ProductionOrderBottleVolumeChecksService } from './production-order-bot
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
+import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 
 @Module({
   imports: [FeaturesModule],
@@ -32,6 +33,7 @@ import { ProductionOrderCylinderCalibrationsService } from './production-order-c
     ProductionOrderBottleVolumeChecksService,
     ProductionOrderShellWeightChecksService,
     ProductionOrderCylinderCalibrationsService,
+    ProductionOrderSensoryChecksService,
     ProductionOrderDateChecksService,
     WarehouseReleaseExportService,
     ProductionOrderExportService,
