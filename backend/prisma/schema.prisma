@@ -39,6 +39,7 @@ model Users {
   createdProductionOrderBottleVolumeChecks       ProductionOrderBottleVolumeChecks[]       @relation("ProductionOrderBottleVolumeCheckCreator")
   createdProductionOrderShellWeightChecks        ProductionOrderShellWeightChecks[]        @relation("ProductionOrderShellWeightCheckCreator")
   createdProductionOrderTenShellWeightChecks     ProductionOrderTenShellWeightChecks[]     @relation("ProductionOrderTenShellWeightCheckCreator")
+  createdProductionOrderVialInspectionChecks     ProductionOrderVialInspectionChecks[]     @relation("ProductionOrderVialInspectionCheckCreator")
   createdProductionOrderCylinderCalibrations     ProductionOrderCylinderCalibrations[]     @relation("ProductionOrderCylinderCalibrationCreator")
   createdProductionOrderSensoryChecks            ProductionOrderSensoryChecks[]            @relation("ProductionOrderSensoryCheckCreator")
   createdProductionOrderDateChecks               ProductionOrderDateChecks[]               @relation("ProductionOrderDateCheckCreator")
@@ -303,6 +304,7 @@ model ProductionOrders {
   bottleVolumeChecks       ProductionOrderBottleVolumeChecks[]
   shellWeightChecks        ProductionOrderShellWeightChecks[]
   tenShellWeightCheck      ProductionOrderTenShellWeightChecks?
+  vialInspectionChecks     ProductionOrderVialInspectionChecks[]
   cylinderCalibration      ProductionOrderCylinderCalibrations?
   sensoryChecks            ProductionOrderSensoryChecks[]
   dateChecks               ProductionOrderDateChecks[]
@@ -534,6 +536,26 @@ model ProductionOrderTenShellWeightChecks {
 
   @@index([created_by_id], map: "po_ten_shell_weight_checks_created_by_id_fkey")
   @@map("production_order_ten_shell_weight_checks")
+}
+
+model ProductionOrderVialInspectionChecks {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_vial_inspection_checks_po_id_fkey")
+  bag_number          Int
+  fiber_vial_count    Int
+  particulate_count   Int
+  damaged_count       Int
+  other_defect_count  Int
+  note                String?          @db.Text
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderVialInspectionCheckCreator", fields: [created_by_id], references: [id], map: "po_vial_inspection_checks_created_by_id_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_vial_inspection_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_vial_inspection_checks_created_by_id_fkey")
+  @@map("production_order_vial_inspection_checks")
 }
 
 model ProductionOrderCylinderCalibrations {

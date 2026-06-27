@@ -1195,6 +1195,109 @@ Lỗi thường gặp:
 - `400 bottle_1_volume must be greater than 0`
 - `401 Authenticated user not found`
 
+## Production Order Vial Inspection Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu các lần soi lọ theo từng bao của một lệnh sản xuất. Một lệnh sản xuất có thể có nhiều bản ghi soi lọ.
+
+### Lấy danh sách soi lọ của lệnh sản xuất
+
+```http
+GET /production-orders/:id/vial-inspection-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "bag_number": 1,
+    "fiber_vial_count": 1,
+    "particulate_count": 2,
+    "damaged_count": 0,
+    "other_defect_count": 3,
+    "note": "Cần theo dõi",
+    "created_by_id": 7,
+    "created_at": "2026-06-25T00:00:00.000Z",
+    "updated_at": "2026-06-25T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một bản ghi soi lọ theo ID
+
+```http
+GET /production-orders/vial-inspection-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Vial inspection check not found`
+
+### Thêm dữ liệu soi lọ
+
+```http
+POST /production-orders/:id/vial-inspection-checks
+```
+
+Body:
+
+```json
+{
+  "bag_number": 1,
+  "fiber_vial_count": 1,
+  "particulate_count": 2,
+  "damaged_count": 0,
+  "other_defect_count": 3,
+  "note": "Cần theo dõi"
+}
+```
+
+Mapping field:
+
+- `bag_number`: Bao số.
+- `fiber_vial_count`: Số lọ có sợi.
+- `particulate_count`: Số lượng vẩn.
+- `damaged_count`: Số lượng hỏng.
+- `other_defect_count`: Số lượng lỗi khác.
+- `note`: Ghi chú.
+
+Quy tắc:
+
+- `bag_number` bắt buộc và phải là số nguyên lớn hơn `0`.
+- Các field số lượng `fiber_vial_count`, `particulate_count`, `damaged_count`, `other_defect_count` đều bắt buộc và phải là số nguyên không âm.
+- `note` không bắt buộc, lưu dạng ghi chú dài.
+- `production_order_id` lấy từ `:id`.
+- Người tạo dữ liệu là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
+- `created_at` là thời điểm tạo dữ liệu.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 bag_number is required`
+- `400 bag_number must be a non-negative integer`
+- `400 bag_number must be greater than 0`
+- `400 fiber_vial_count is required`
+- `400 fiber_vial_count must be a non-negative integer`
+- `400 particulate_count must be a non-negative integer`
+- `400 damaged_count must be a non-negative integer`
+- `400 other_defect_count must be a non-negative integer`
+- `400 note must be a string`
+- `401 Authenticated user not found`
+
 ## Production Order Shell Weight Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

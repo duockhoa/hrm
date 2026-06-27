@@ -40,6 +40,8 @@ import { CreateProductionOrderShellWeightCheckDto } from './dto/create-productio
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { CreateProductionOrderTenShellWeightCheckDto } from './dto/create-production-order-ten-shell-weight-check.dto';
 import { ProductionOrderTenShellWeightChecksService } from './production-order-ten-shell-weight-checks.service';
+import { CreateProductionOrderVialInspectionCheckDto } from './dto/create-production-order-vial-inspection-check.dto';
+import { ProductionOrderVialInspectionChecksService } from './production-order-vial-inspection-checks.service';
 import { CreateProductionOrderCylinderCalibrationDto } from './dto/create-production-order-cylinder-calibration.dto';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { CreateProductionOrderSensoryCheckDto } from './dto/create-production-order-sensory-check.dto';
@@ -127,6 +129,7 @@ export class ProductionOrdersController {
     private readonly productionOrderBottleVolumeChecksService: ProductionOrderBottleVolumeChecksService,
     private readonly productionOrderShellWeightChecksService: ProductionOrderShellWeightChecksService,
     private readonly productionOrderTenShellWeightChecksService: ProductionOrderTenShellWeightChecksService,
+    private readonly productionOrderVialInspectionChecksService: ProductionOrderVialInspectionChecksService,
     private readonly productionOrderCylinderCalibrationsService: ProductionOrderCylinderCalibrationsService,
     private readonly productionOrderSensoryChecksService: ProductionOrderSensoryChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
@@ -203,6 +206,13 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderTenShellWeightChecksService.findById(checkId);
+  }
+
+  @Get('vial-inspection-checks/:checkId')
+  async findVialInspectionCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderVialInspectionChecksService.findById(checkId);
   }
 
   @Get('date-checks/images/:filename')
@@ -548,6 +558,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderTenShellWeightChecksService.upsert(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/vial-inspection-checks')
+  async findVialInspectionChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderVialInspectionChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/vial-inspection-checks')
+  async createVialInspectionCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderVialInspectionCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderVialInspectionChecksService.create(
       id,
       createDto,
       req.user,

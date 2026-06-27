@@ -12,6 +12,7 @@ import { ProductionOrderHardCapsuleLeakageChecksService } from './production-ord
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { ProductionOrderTenShellWeightChecksService } from './production-order-ten-shell-weight-checks.service';
+import { ProductionOrderVialInspectionChecksService } from './production-order-vial-inspection-checks.service';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
@@ -70,6 +71,11 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findByProductionOrder: jest.Mock;
     upsert: jest.Mock;
+  };
+  let productionOrderVialInspectionChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
   };
   let productionOrderCylinderCalibrationsService: {
     findByProductionOrder: jest.Mock;
@@ -148,6 +154,11 @@ describe('ProductionOrdersController', () => {
       findByProductionOrder: jest.fn(),
       upsert: jest.fn(),
     };
+    productionOrderVialInspectionChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
     productionOrderCylinderCalibrationsService = {
       findByProductionOrder: jest.fn(),
       upsert: jest.fn(),
@@ -213,6 +224,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderTenShellWeightChecksService,
           useValue: productionOrderTenShellWeightChecksService,
+        },
+        {
+          provide: ProductionOrderVialInspectionChecksService,
+          useValue: productionOrderVialInspectionChecksService,
         },
         {
           provide: ProductionOrderCylinderCalibrationsService,
@@ -671,6 +686,55 @@ describe('ProductionOrdersController', () => {
     ).resolves.toBe(result);
     expect(
       productionOrderTenShellWeightChecksService.upsert,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('gets vial inspection checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031, bag_number: 1 }];
+    productionOrderVialInspectionChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findVialInspectionChecks(2031)).resolves.toBe(
+      checks,
+    );
+    expect(
+      productionOrderVialInspectionChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a vial inspection check by id', async () => {
+    const check = { id: 1, production_order_id: 2031, bag_number: 1 };
+    productionOrderVialInspectionChecksService.findById.mockResolvedValue(
+      check,
+    );
+
+    await expect(controller.findVialInspectionCheckById(1)).resolves.toBe(
+      check,
+    );
+    expect(
+      productionOrderVialInspectionChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a vial inspection check using the authenticated user', async () => {
+    const createDto = {
+      bag_number: 1,
+      fiber_vial_count: 1,
+      particulate_count: 2,
+      damaged_count: 0,
+      other_defect_count: 3,
+      note: 'can theo doi',
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderVialInspectionChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createVialInspectionCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderVialInspectionChecksService.create,
     ).toHaveBeenCalledWith(2031, createDto, user);
   });
 
