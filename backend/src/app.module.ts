@@ -22,6 +22,7 @@ import { ProductionSpecificationsModule } from './modules/production-specificati
 import { ProductionOrderDeviationsModule } from './modules/production-order-deviations/production-order-deviations.module';
 import { FeaturesModule } from './modules/features/features.module';
 import { ProductLinesModule } from './modules/product-lines/product-lines.module';
+import { ProductionWorkshopsModule } from './modules/production-workshops/production-workshops.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ProductLinesModule } from './modules/product-lines/product-lines.module
     ProductionSpecificationsModule,
     FeaturesModule,
     ProductLinesModule,
+    ProductionWorkshopsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

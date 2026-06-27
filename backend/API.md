@@ -2268,6 +2268,63 @@ Gửi `"code": null` để backend sinh lại `code` từ `name`.
 DELETE /product-lines/:id
 ```
 
+## Production Workshops
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+### Lấy danh sách xưởng
+
+```http
+GET /production-workshops
+```
+
+### Lấy xưởng theo id
+
+```http
+GET /production-workshops/:id
+```
+
+### Tạo xưởng
+
+```http
+POST /production-workshops
+```
+
+Body:
+
+```json
+{
+  "code": "X001",
+  "name": "Xưởng sản xuất 1",
+  "description": "Xưởng sản xuất chính",
+  "address": "Khu A"
+}
+```
+
+Trong đó `description` và `address` là tùy chọn.
+
+### Cập nhật xưởng
+
+```http
+PUT /production-workshops/:id
+```
+
+Body gửi các field cần đổi:
+
+```json
+{
+  "name": "Xưởng sản xuất 1",
+  "description": "Xưởng sản xuất chính",
+  "address": "Khu B"
+}
+```
+
+### Xóa xưởng
+
+```http
+DELETE /production-workshops/:id
+```
+
 ## Email
 
 ### Gửi email

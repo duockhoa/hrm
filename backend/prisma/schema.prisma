@@ -274,6 +274,19 @@ model ProductLines {
   @@map("product_lines")
 }
 
+model ProductionWorkshops {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  name        String
+  description String?   @db.Text
+  address     String?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @default(now()) @updatedAt
+  deleted_at  DateTime?
+
+  @@map("production_workshops")
+}
+
 model ProductionOrders {
   id                       Int                                       @id
   item_code                String

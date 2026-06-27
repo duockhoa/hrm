@@ -6,6 +6,7 @@ const softDeleteDelegates = {
   Roles: 'roles',
   Departments: 'departments',
   Company: 'company',
+  ProductionWorkshops: 'productionWorkshops',
 } as const;
 
 type SoftDeleteModel = keyof typeof softDeleteDelegates;
