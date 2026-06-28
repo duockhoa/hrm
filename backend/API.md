@@ -2325,6 +2325,71 @@ Body gửi các field cần đổi:
 DELETE /production-workshops/:id
 ```
 
+## Production Workshop Pressure Differentials
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+### Lấy danh sách chênh áp theo xưởng
+
+```http
+GET /production-workshops/:id/pressure-differentials
+```
+
+Response sắp xếp theo `checked_at` mới nhất trước, sau đó `created_at` và `id` mới nhất trước.
+
+### Lấy bản ghi chênh áp theo id
+
+```http
+GET /production-workshops/pressure-differentials/:pressureDifferentialId
+```
+
+### Tạo bản ghi chênh áp
+
+```http
+POST /production-workshops/:id/pressure-differentials
+```
+
+Body:
+
+```json
+{
+  "gauge_name": "Đồng hồ khu pha chế",
+  "differential_pressure": 15,
+  "conclusion": "dat",
+  "checked_at": "2026-06-27T08:00:00.000Z"
+}
+```
+
+Trong đó:
+
+- `differential_pressure` là số nguyên.
+- `unit` được backend tự lưu là `Pa`.
+- `checked_at` là tùy chọn; nếu không gửi backend lấy thời điểm hiện tại.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
+
+### Cập nhật bản ghi chênh áp
+
+```http
+PUT /production-workshops/pressure-differentials/:pressureDifferentialId
+```
+
+Body gửi các field cần đổi:
+
+```json
+{
+  "gauge_name": "Đồng hồ khu pha chế",
+  "differential_pressure": 16,
+  "conclusion": "khong_dat",
+  "checked_at": "2026-06-27T09:00:00.000Z"
+}
+```
+
+### Xóa bản ghi chênh áp
+
+```http
+DELETE /production-workshops/pressure-differentials/:pressureDifferentialId
+```
+
 ## Email
 
 ### Gửi email
