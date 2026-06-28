@@ -299,13 +299,11 @@ model ProductionWorkshopPressureDifferentials {
   conclusion            String              @db.VarChar(50)
   created_by_id         Int
   createdBy             Users               @relation("ProductionWorkshopPressureDifferentialCreator", fields: [created_by_id], references: [id], map: "pw_pressure_diff_created_by_id_fkey")
-  checked_at            DateTime            @default(now())
   created_at            DateTime            @default(now())
   updated_at            DateTime            @default(now()) @updatedAt
 
   @@index([workshop_id], map: "pw_pressure_diff_workshop_id_fkey")
   @@index([created_by_id], map: "pw_pressure_diff_created_by_id_fkey")
-  @@index([checked_at], map: "pw_pressure_diff_checked_at_idx")
   @@map("production_workshop_pressure_differentials")
 }
 

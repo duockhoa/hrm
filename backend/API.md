@@ -2335,7 +2335,7 @@ Tất cả API trong nhóm này cần `Auth: Bearer`.
 GET /production-workshops/:id/pressure-differentials
 ```
 
-Response sắp xếp theo `checked_at` mới nhất trước, sau đó `created_at` và `id` mới nhất trước.
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
 
 ### Lấy bản ghi chênh áp theo id
 
@@ -2355,8 +2355,7 @@ Body:
 {
   "gauge_name": "Đồng hồ khu pha chế",
   "differential_pressure": 15,
-  "conclusion": "dat",
-  "checked_at": "2026-06-27T08:00:00.000Z"
+  "conclusion": "dat"
 }
 ```
 
@@ -2364,7 +2363,7 @@ Trong đó:
 
 - `differential_pressure` là số nguyên.
 - `unit` được backend tự lưu là `Pa`.
-- `checked_at` là tùy chọn; nếu không gửi backend lấy thời điểm hiện tại.
+- Thời điểm ghi nhận lấy từ `created_at`.
 - `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
 
 ### Cập nhật bản ghi chênh áp
@@ -2379,8 +2378,7 @@ Body gửi các field cần đổi:
 {
   "gauge_name": "Đồng hồ khu pha chế",
   "differential_pressure": 16,
-  "conclusion": "khong_dat",
-  "checked_at": "2026-06-27T09:00:00.000Z"
+  "conclusion": "khong_dat"
 }
 ```
 

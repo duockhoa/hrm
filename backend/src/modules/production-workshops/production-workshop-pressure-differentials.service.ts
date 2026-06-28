@@ -65,9 +65,6 @@ export class ProductionWorkshopPressureDifferentialsService {
       include: pressureDifferentialInclude,
       orderBy: [
         {
-          checked_at: 'desc',
-        },
-        {
           created_at: 'desc',
         },
         {
@@ -99,9 +96,6 @@ export class ProductionWorkshopPressureDifferentialsService {
           50,
         ),
         created_by_id: this.normalizeUserId(user),
-        checked_at:
-          this.normalizeOptionalDate(dto?.checked_at, 'checked_at') ??
-          new Date(),
       },
       include: pressureDifferentialInclude,
     });
@@ -135,13 +129,6 @@ export class ProductionWorkshopPressureDifferentialsService {
         dto.conclusion,
         'conclusion',
         50,
-      );
-    }
-
-    if (dto.checked_at !== undefined) {
-      data.checked_at = this.normalizeRequiredDate(
-        dto.checked_at,
-        'checked_at',
       );
     }
 
@@ -236,40 +223,6 @@ export class ProductionWorkshopPressureDifferentialsService {
     }
 
     return normalizedValue;
-  }
-
-  private normalizeOptionalDate(value: unknown, fieldName: string) {
-    if (
-      value === null ||
-      value === undefined ||
-      (typeof value === 'string' && value.trim() === '')
-    ) {
-      return null;
-    }
-
-    return this.normalizeRequiredDate(value, fieldName);
-  }
-
-  private normalizeRequiredDate(value: unknown, fieldName: string) {
-    if (value instanceof Date) {
-      if (Number.isNaN(value.getTime())) {
-        throw new BadRequestException(`${fieldName} must be a valid date`);
-      }
-
-      return value;
-    }
-
-    if (typeof value !== 'string' || value.trim() === '') {
-      throw new BadRequestException(`${fieldName} is required`);
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      throw new BadRequestException(`${fieldName} must be a valid date`);
-    }
-
-    return date;
   }
 
   private normalizeUserId(user?: AuthenticatedUser) {

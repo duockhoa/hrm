@@ -66,7 +66,6 @@ describe('ProductionWorkshopPressureDifferentialsService', () => {
           gauge_name: ' Dong ho khu pha che ',
           differential_pressure: '15',
           conclusion: ' dat ',
-          checked_at: '2026-06-27T08:00:00.000Z',
         },
         { id: '2' },
       ),
@@ -82,7 +81,6 @@ describe('ProductionWorkshopPressureDifferentialsService', () => {
         unit: 'Pa',
         conclusion: 'dat',
         created_by_id: 2,
-        checked_at: new Date('2026-06-27T08:00:00.000Z'),
       },
       include: expect.any(Object),
     });
@@ -120,9 +118,6 @@ describe('ProductionWorkshopPressureDifferentialsService', () => {
       },
       include: expect.any(Object),
       orderBy: [
-        {
-          checked_at: 'desc',
-        },
         {
           created_at: 'desc',
         },
