@@ -7,6 +7,7 @@ import { ProductionOrderSamplingRequestsService } from './production-order-sampl
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
+import { ProductionOrderFriabilityChecksService } from './production-order-friability-checks.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
@@ -43,6 +44,11 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderDensityChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
+  let productionOrderFriabilityChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -129,6 +135,11 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderFriabilityChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
     productionOrderDisintegrationChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -204,6 +215,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderDensityChecksService,
           useValue: productionOrderDensityChecksService,
+        },
+        {
+          provide: ProductionOrderFriabilityChecksService,
+          useValue: productionOrderFriabilityChecksService,
         },
         {
           provide: ProductionOrderDisintegrationChecksService,
@@ -455,6 +470,53 @@ describe('ProductionOrdersController', () => {
     );
   });
 
+  it('gets friability checks for a production order', async () => {
+    const friabilityChecks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderFriabilityChecksService.findAllByProductionOrder.mockResolvedValue(
+      friabilityChecks,
+    );
+
+    await expect(controller.findFriabilityChecks(2031)).resolves.toBe(
+      friabilityChecks,
+    );
+    expect(
+      productionOrderFriabilityChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a friability check by id', async () => {
+    const friabilityCheck = { id: 1, production_order_id: 2031 };
+    productionOrderFriabilityChecksService.findById.mockResolvedValue(
+      friabilityCheck,
+    );
+
+    await expect(controller.findFriabilityCheckById(1)).resolves.toBe(
+      friabilityCheck,
+    );
+    expect(
+      productionOrderFriabilityChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a friability check using the authenticated user', async () => {
+    const createDto = {
+      total_weight_before_check: 1000,
+      total_weight_after_check: 990,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderFriabilityChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createFriabilityCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderFriabilityChecksService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+    );
+  });
+
   it('gets disintegration checks for a production order', async () => {
     const disintegrationChecks = [{ id: 1, production_order_id: 2031 }];
     productionOrderDisintegrationChecksService.findAllByProductionOrder.mockResolvedValue(
@@ -651,9 +713,7 @@ describe('ProductionOrdersController', () => {
       check,
     );
 
-    await expect(controller.findTenShellWeightCheck(2031)).resolves.toBe(
-      check,
-    );
+    await expect(controller.findTenShellWeightCheck(2031)).resolves.toBe(check);
     expect(
       productionOrderTenShellWeightChecksService.findByProductionOrder,
     ).toHaveBeenCalledWith(2031);

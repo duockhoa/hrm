@@ -926,6 +926,89 @@ Lỗi thường gặp:
 - `400 water_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
 - `401 Authenticated user not found`
 
+## Production Order Friability Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này dùng để lưu kiểm tra độ mài mòn của viên theo từng lệnh sản xuất. Frontend gửi khối lượng trước và sau kiểm tra, backend tự tính phần trăm độ mài mòn.
+
+### Lấy danh sách kiểm tra độ mài mòn của lệnh sản xuất
+
+```http
+GET /production-orders/:id/friability-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "total_weight_before_check": "1000.000",
+    "total_weight_after_check": "990.000",
+    "weight_unit": "mg",
+    "friability_percent": "1.0000",
+    "created_by_id": 7,
+    "created_at": "2026-06-28T08:10:00.000Z",
+    "updated_at": "2026-06-28T08:10:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một bản ghi kiểm tra độ mài mòn theo ID
+
+```http
+GET /production-orders/friability-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Friability check not found`
+
+### Thêm dữ liệu kiểm tra độ mài mòn
+
+```http
+POST /production-orders/:id/friability-checks
+```
+
+Body:
+
+```json
+{
+  "total_weight_before_check": 1000,
+  "total_weight_after_check": 990
+}
+```
+
+Quy tắc:
+
+- Hai khối lượng là bắt buộc, lưu dạng `DECIMAL(12, 3)`.
+- Đơn vị mặc định là `mg`, backend tự lưu `weight_unit = "mg"`.
+- Có thể gửi số dạng chuỗi, ví dụ `"1000.000"` hoặc `"1000,000"`.
+- `total_weight_after_check` phải nhỏ hơn hoặc bằng `total_weight_before_check`.
+- Backend tự tính và lưu `friability_percent`; frontend không gửi field này.
+- Công thức: `((total_weight_before_check - total_weight_after_check) / total_weight_before_check) * 100`.
+- Thời điểm kiểm tra là `created_at`, lấy theo thời điểm tạo bản ghi.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 total_weight_before_check is required`
+- `400 total_weight_after_check must be less than or equal to total_weight_before_check`
+- `401 Authenticated user not found`
+
 ## Production Order Disintegration Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
