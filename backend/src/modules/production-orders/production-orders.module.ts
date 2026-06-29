@@ -12,6 +12,7 @@ import { ProductionOrderFinishedProductSummariesService } from './production-ord
 import { FeaturesModule } from '../features/features.module';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { ProductionOrderFriabilityChecksService } from './production-order-friability-checks.service';
+import { ProductionOrderSprayDoseChecksService } from './production-order-spray-dose-checks.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
@@ -32,6 +33,7 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
     ProductionOrderFinishedProductSummariesService,
     ProductionOrderDensityChecksService,
     ProductionOrderFriabilityChecksService,
+    ProductionOrderSprayDoseChecksService,
     ProductionOrderDisintegrationChecksService,
     ProductionOrderHardCapsuleLeakageChecksService,
     ProductionOrderBottleVolumeChecksService,

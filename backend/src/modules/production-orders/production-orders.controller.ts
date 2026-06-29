@@ -32,6 +32,8 @@ import { CreateProductionOrderDensityCheckDto } from './dto/create-production-or
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { CreateProductionOrderFriabilityCheckDto } from './dto/create-production-order-friability-check.dto';
 import { ProductionOrderFriabilityChecksService } from './production-order-friability-checks.service';
+import { CreateProductionOrderSprayDoseCheckDto } from './dto/create-production-order-spray-dose-check.dto';
+import { ProductionOrderSprayDoseChecksService } from './production-order-spray-dose-checks.service';
 import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-production-order-disintegration-check.dto';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { CreateProductionOrderHardCapsuleLeakageCheckDto } from './dto/create-production-order-hard-capsule-leakage-check.dto';
@@ -127,6 +129,7 @@ export class ProductionOrdersController {
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
     private readonly productionOrderFriabilityChecksService: ProductionOrderFriabilityChecksService,
+    private readonly productionOrderSprayDoseChecksService: ProductionOrderSprayDoseChecksService,
     private readonly productionOrderDisintegrationChecksService: ProductionOrderDisintegrationChecksService,
     private readonly productionOrderHardCapsuleLeakageChecksService: ProductionOrderHardCapsuleLeakageChecksService,
     private readonly productionOrderBottleVolumeChecksService: ProductionOrderBottleVolumeChecksService,
@@ -179,6 +182,13 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderFriabilityChecksService.findById(checkId);
+  }
+
+  @Get('spray-dose-checks/:checkId')
+  async findSprayDoseCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderSprayDoseChecksService.findById(checkId);
   }
 
   @Get('disintegration-checks/:checkId')
@@ -488,6 +498,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderFriabilityChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/spray-dose-checks')
+  async findSprayDoseChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderSprayDoseChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/spray-dose-checks')
+  async createSprayDoseCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderSprayDoseCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderSprayDoseChecksService.create(
       id,
       createDto,
       req.user,

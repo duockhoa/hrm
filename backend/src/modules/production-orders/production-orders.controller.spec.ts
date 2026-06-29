@@ -8,6 +8,7 @@ import { ProductionOrderEnvironmentChecksService } from './production-order-envi
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { ProductionOrderFriabilityChecksService } from './production-order-friability-checks.service';
+import { ProductionOrderSprayDoseChecksService } from './production-order-spray-dose-checks.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
@@ -49,6 +50,11 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderFriabilityChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
+  let productionOrderSprayDoseChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -140,6 +146,11 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderSprayDoseChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
     productionOrderDisintegrationChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -219,6 +230,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderFriabilityChecksService,
           useValue: productionOrderFriabilityChecksService,
+        },
+        {
+          provide: ProductionOrderSprayDoseChecksService,
+          useValue: productionOrderSprayDoseChecksService,
         },
         {
           provide: ProductionOrderDisintegrationChecksService,
@@ -511,6 +526,55 @@ describe('ProductionOrdersController', () => {
       controller.createFriabilityCheck(2031, createDto, { user }),
     ).resolves.toBe(result);
     expect(productionOrderFriabilityChecksService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+    );
+  });
+
+  it('gets spray dose checks for a production order', async () => {
+    const sprayDoseChecks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderSprayDoseChecksService.findAllByProductionOrder.mockResolvedValue(
+      sprayDoseChecks,
+    );
+
+    await expect(controller.findSprayDoseChecks(2031)).resolves.toBe(
+      sprayDoseChecks,
+    );
+    expect(
+      productionOrderSprayDoseChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a spray dose check by id', async () => {
+    const sprayDoseCheck = { id: 1, production_order_id: 2031 };
+    productionOrderSprayDoseChecksService.findById.mockResolvedValue(
+      sprayDoseCheck,
+    );
+
+    await expect(controller.findSprayDoseCheckById(1)).resolves.toBe(
+      sprayDoseCheck,
+    );
+    expect(productionOrderSprayDoseChecksService.findById).toHaveBeenCalledWith(
+      1,
+    );
+  });
+
+  it('creates a spray dose check using the authenticated user', async () => {
+    const createDto = {
+      bottle_1_spray_dose_count: 120,
+      bottle_2_spray_dose_count: 121,
+      bottle_3_spray_dose_count: 122,
+      bottle_4_spray_dose_count: 123,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSprayDoseChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createSprayDoseCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderSprayDoseChecksService.create).toHaveBeenCalledWith(
       2031,
       createDto,
       user,
