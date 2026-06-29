@@ -34,6 +34,8 @@ import { CreateProductionOrderFriabilityCheckDto } from './dto/create-production
 import { ProductionOrderFriabilityChecksService } from './production-order-friability-checks.service';
 import { CreateProductionOrderSprayDoseCheckDto } from './dto/create-production-order-spray-dose-check.dto';
 import { ProductionOrderSprayDoseChecksService } from './production-order-spray-dose-checks.service';
+import { CreateProductionOrderPostHomogenizationGranuleCheckDto } from './dto/create-production-order-post-homogenization-granule-check.dto';
+import { ProductionOrderPostHomogenizationGranuleChecksService } from './production-order-post-homogenization-granule-checks.service';
 import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-production-order-disintegration-check.dto';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { CreateProductionOrderHardCapsuleLeakageCheckDto } from './dto/create-production-order-hard-capsule-leakage-check.dto';
@@ -66,6 +68,11 @@ import {
   productionOrderSensoryCheckImageUploadOptions,
   removeUploadedSensoryCheckImage,
 } from './production-order-sensory-check-upload.config';
+import {
+  getPostHomogenizationGranuleCheckImagePath,
+  productionOrderPostHomogenizationGranuleCheckImageUploadOptions,
+  removeUploadedPostHomogenizationGranuleCheckImage,
+} from './production-order-post-homogenization-granule-check-upload.config';
 
 type DateCheckUploadFields = {
   request_file?: Express.Multer.File[];
@@ -75,6 +82,11 @@ type DateCheckUploadFields = {
 
 type SensoryCheckUploadFields = {
   sensory_image?: Express.Multer.File[];
+  image?: Express.Multer.File[];
+};
+
+type PostHomogenizationGranuleCheckUploadFields = {
+  granule_image?: Express.Multer.File[];
   image?: Express.Multer.File[];
 };
 
@@ -100,6 +112,10 @@ const getUploadedDateCheckFiles = (uploadedFiles?: DateCheckUploadFields) => [
 const getUploadedSensoryCheckImages = (
   uploadedFiles?: SensoryCheckUploadFields,
 ) => [...(uploadedFiles?.sensory_image ?? []), ...(uploadedFiles?.image ?? [])];
+
+const getUploadedPostHomogenizationGranuleCheckImages = (
+  uploadedFiles?: PostHomogenizationGranuleCheckUploadFields,
+) => [...(uploadedFiles?.granule_image ?? []), ...(uploadedFiles?.image ?? [])];
 
 const getAsciiFilenameFallback = (filename: string) => {
   const fallback = filename
@@ -130,6 +146,7 @@ export class ProductionOrdersController {
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
     private readonly productionOrderFriabilityChecksService: ProductionOrderFriabilityChecksService,
     private readonly productionOrderSprayDoseChecksService: ProductionOrderSprayDoseChecksService,
+    private readonly productionOrderPostHomogenizationGranuleChecksService: ProductionOrderPostHomogenizationGranuleChecksService,
     private readonly productionOrderDisintegrationChecksService: ProductionOrderDisintegrationChecksService,
     private readonly productionOrderHardCapsuleLeakageChecksService: ProductionOrderHardCapsuleLeakageChecksService,
     private readonly productionOrderBottleVolumeChecksService: ProductionOrderBottleVolumeChecksService,
@@ -189,6 +206,15 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderSprayDoseChecksService.findById(checkId);
+  }
+
+  @Get('post-homogenization-granule-checks/:checkId')
+  async findPostHomogenizationGranuleCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderPostHomogenizationGranuleChecksService.findById(
+      checkId,
+    );
   }
 
   @Get('disintegration-checks/:checkId')
@@ -287,6 +313,31 @@ export class ProductionOrdersController {
 
     if (!imageFile) {
       throw new NotFoundException('Sensory check image not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
+  @Get('post-homogenization-granule-checks/images/:filename')
+  async getPostHomogenizationGranuleCheckImage(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.productionOrderPostHomogenizationGranuleChecksService.findImageFile(
+        filename,
+      );
+
+    if (!imageFile) {
+      throw new NotFoundException(
+        'Post-homogenization granule check image not found',
+      );
     }
 
     response.set({
@@ -522,6 +573,63 @@ export class ProductionOrdersController {
       createDto,
       req.user,
     );
+  }
+
+  @Get(':id/post-homogenization-granule-checks')
+  async findPostHomogenizationGranuleChecks(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.productionOrderPostHomogenizationGranuleChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/post-homogenization-granule-checks')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'granule_image', maxCount: 1 },
+        { name: 'image', maxCount: 1 },
+      ],
+      productionOrderPostHomogenizationGranuleCheckImageUploadOptions,
+    ),
+  )
+  async createPostHomogenizationGranuleCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderPostHomogenizationGranuleCheckDto,
+    @UploadedFiles()
+    uploadedFiles: PostHomogenizationGranuleCheckUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    const uploadedImages =
+      getUploadedPostHomogenizationGranuleCheckImages(uploadedFiles);
+
+    if (uploadedImages.length > 1) {
+      await Promise.all(
+        uploadedImages.map(removeUploadedPostHomogenizationGranuleCheckImage),
+      );
+      throw new BadRequestException(
+        'Only one post-homogenization granule check image is allowed',
+      );
+    }
+
+    try {
+      return await this.productionOrderPostHomogenizationGranuleChecksService.create(
+        id,
+        createDto,
+        req.user,
+        {
+          imagePath: getPostHomogenizationGranuleCheckImagePath(
+            uploadedImages[0],
+          ),
+        },
+      );
+    } catch (error) {
+      await Promise.all(
+        uploadedImages.map(removeUploadedPostHomogenizationGranuleCheckImage),
+      );
+      throw error;
+    }
   }
 
   @Get(':id/disintegration-checks')

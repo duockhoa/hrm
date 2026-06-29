@@ -9,6 +9,7 @@ import { ProductionOrderFinishedProductSummariesService } from './production-ord
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { ProductionOrderFriabilityChecksService } from './production-order-friability-checks.service';
 import { ProductionOrderSprayDoseChecksService } from './production-order-spray-dose-checks.service';
+import { ProductionOrderPostHomogenizationGranuleChecksService } from './production-order-post-homogenization-granule-checks.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
@@ -58,6 +59,12 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+  };
+  let productionOrderPostHomogenizationGranuleChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    findImageFile: jest.Mock;
   };
   let productionOrderDisintegrationChecksService: {
     findById: jest.Mock;
@@ -151,6 +158,12 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderPostHomogenizationGranuleChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      findImageFile: jest.fn(),
+    };
     productionOrderDisintegrationChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -234,6 +247,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSprayDoseChecksService,
           useValue: productionOrderSprayDoseChecksService,
+        },
+        {
+          provide: ProductionOrderPostHomogenizationGranuleChecksService,
+          useValue: productionOrderPostHomogenizationGranuleChecksService,
         },
         {
           provide: ProductionOrderDisintegrationChecksService,
@@ -579,6 +596,60 @@ describe('ProductionOrdersController', () => {
       createDto,
       user,
     );
+  });
+
+  it('gets post-homogenization granule checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderPostHomogenizationGranuleChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(
+      controller.findPostHomogenizationGranuleChecks(2031),
+    ).resolves.toBe(checks);
+    expect(
+      productionOrderPostHomogenizationGranuleChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a post-homogenization granule check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderPostHomogenizationGranuleChecksService.findById.mockResolvedValue(
+      check,
+    );
+
+    await expect(
+      controller.findPostHomogenizationGranuleCheckById(1),
+    ).resolves.toBe(check);
+    expect(
+      productionOrderPostHomogenizationGranuleChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a post-homogenization granule check using the authenticated user', async () => {
+    const createDto = {
+      bulk_density: 0.52,
+      tapped_density: 0.68,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderPostHomogenizationGranuleChecksService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createPostHomogenizationGranuleCheck(
+        2031,
+        createDto,
+        undefined,
+        { user },
+      ),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderPostHomogenizationGranuleChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user, {
+      imagePath: undefined,
+    });
   });
 
   it('gets disintegration checks for a production order', async () => {
