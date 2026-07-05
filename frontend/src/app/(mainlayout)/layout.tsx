@@ -9,9 +9,6 @@ import {
   MdCalendarToday,
   MdWork,
   MdBusiness,
-  MdAttachMoney,
-  MdAssessment,
-  MdAccessTime,
 } from "react-icons/md";
 import useUsersStore from "@/store/users.store";
 import useDepartmentStore from "@/store/department.store";
@@ -53,30 +50,6 @@ const data = [
     name: "Quản lý hợp đồng",
     icon: <MdWork />,
     url: "/contract",
-  },
-  {
-    id: "6",
-    name: "Tuyển dụng",
-    icon: <MdPerson />,
-    url: "/recruitment",
-  },
-  {
-    id: "7",
-    name: "Lương",
-    icon: <MdAttachMoney />,
-    url: "/salary",
-  },
-  {
-    id: "8",
-    name: "Hiệu quả công việc",
-    icon: <MdAssessment />,
-    url: "/report",
-  },
-  {
-    id: "9",
-    name: "Chấm công",
-    icon: <MdAccessTime />,
-    url: "/attendance",
   },
 ];
 
