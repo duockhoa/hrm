@@ -203,6 +203,58 @@ GET /users/me
 GET /users/:id
 ```
 
+### Lấy role của user
+
+```http
+GET /users/:id/roles
+```
+
+Response gồm danh sách `userRoles`, mỗi item include `roles` và `rolePermissions`.
+
+### Gán role cho user
+
+```http
+POST /users/:id/roles
+```
+
+Body gán một role:
+
+```json
+{
+  "roleId": 1
+}
+```
+
+Hoặc gán nhiều role:
+
+```json
+{
+  "roleIds": [1, 2, 3]
+}
+```
+
+### Đồng bộ role của user
+
+```http
+PUT /users/:id/roles
+```
+
+Body:
+
+```json
+{
+  "roleIds": [1, 2]
+}
+```
+
+Gửi mảng rỗng `[]` để gỡ toàn bộ role của user.
+
+### Gỡ role khỏi user
+
+```http
+DELETE /users/:id/roles/:roleId
+```
+
 ### Tạo user
 
 ```http
@@ -379,9 +431,67 @@ Body:
 DELETE /departments/:name
 ```
 
+## Permissions
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Các API này chỉ quản trị danh sách permission, chưa tự gắn permission vào API nghiệp vụ.
+
+### Lấy danh sách permission
+
+```http
+GET /permissions
+```
+
+Response bao gồm `rolePermissions` và thông tin role đang dùng permission.
+
+### Lấy permission theo ID
+
+```http
+GET /permissions/:id
+```
+
+### Tạo permission
+
+```http
+POST /permissions
+```
+
+Body:
+
+```json
+{
+  "name": "production-orders.read",
+  "description": "Xem hồ sơ lô"
+}
+```
+
+### Cập nhật permission
+
+```http
+PUT /permissions/:id
+```
+
+Body:
+
+```json
+{
+  "name": "production-orders.read",
+  "description": "Xem danh sách và chi tiết hồ sơ lô"
+}
+```
+
+### Xóa permission
+
+```http
+DELETE /permissions/:id
+```
+
 ## Roles
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Các API này quản trị role và quan hệ role-permission, chưa yêu cầu permission cụ thể để gọi.
 
 ### Lấy danh sách role
 
@@ -390,6 +500,12 @@ GET /roles
 ```
 
 Response bao gồm `rolePermissions` và thông tin permission.
+
+### Lấy role theo ID
+
+```http
+GET /roles/:id
+```
 
 ### Tạo role
 
@@ -406,13 +522,43 @@ Body:
 }
 ```
 
-### Gán permission cho role
+Có thể dùng `name` thay cho `roleName`:
+
+```json
+{
+  "name": "admin",
+  "description": "Administrator"
+}
+```
+
+### Cập nhật role
 
 ```http
-POST /roles/:roleId/permission
+PUT /roles/:id
 ```
 
 Body:
+
+```json
+{
+  "name": "qa",
+  "description": "Quality Assurance"
+}
+```
+
+### Xóa role
+
+```http
+DELETE /roles/:id
+```
+
+### Gán permission cho role
+
+```http
+POST /roles/:roleId/permissions
+```
+
+Body gán một permission:
 
 ```json
 {
@@ -420,7 +566,43 @@ Body:
 }
 ```
 
+Hoặc gán nhiều permission:
+
+```json
+{
+  "permissionIds": [1, 2, 3]
+}
+```
+
+Route cũ vẫn dùng được:
+
+```http
+POST /roles/:roleId/permission
+```
+
+### Đồng bộ permission của role
+
+```http
+PUT /roles/:roleId/permissions
+```
+
+Body:
+
+```json
+{
+  "permissionIds": [1, 2]
+}
+```
+
+Gửi mảng rỗng `[]` để gỡ toàn bộ permission của role.
+
 ### Gỡ permission khỏi role
+
+```http
+DELETE /roles/:roleId/permissions/:permissionId
+```
+
+Route cũ vẫn dùng được:
 
 ```http
 DELETE /roles/:roleId/remove-permission/:permissionId
@@ -2706,5 +2888,4 @@ POST /
 
 Các controller sau đang tồn tại nhưng chưa khai báo route xử lý request:
 
-- `PermissionsController`
 - `ExternalSyncController`

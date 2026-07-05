@@ -1,13 +1,9 @@
 import { IsOptional, IsString } from 'class-validator';
 
-export class CreateRoleDto {
+export class UpdatePermissionDto {
   @IsOptional()
   @IsString()
   name?: string;
-
-  @IsOptional()
-  @IsString()
-  roleName?: string;
 
   @IsOptional()
   @IsString()

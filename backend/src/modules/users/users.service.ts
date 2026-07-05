@@ -1,10 +1,28 @@
-import { Injectable, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { compareSync, hash } from 'bcrypt';
 import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventNames } from 'src/event.interface';
 import { EmailService } from '../email/email.service';
+
+const USER_ROLE_INCLUDE = {
+  roles: {
+    include: {
+      rolePermissions: {
+        include: {
+          permissions: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.UserRolesInclude;
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -102,6 +120,93 @@ export class UsersService {
     return hashedPassword;
   }
 
+  async findRolesByUserId(userId: number) {
+    await this.ensureUserExists(userId);
+
+    return this.prisma.userRoles.findMany({
+      where: { user_id: userId },
+      include: USER_ROLE_INCLUDE,
+      orderBy: { id: 'asc' },
+    });
+  }
+
+  async addRoleToUser(userId: number, roleId: number) {
+    return this.addRolesToUser(userId, [roleId]);
+  }
+
+  async addRolesToUser(userId: number, roleIds: number[]) {
+    await this.ensureUserExists(userId);
+    const normalizedRoleIds = this.normalizeIds(roleIds, 'roleIds', false);
+    await this.ensureRolesExist(normalizedRoleIds);
+
+    const existingUserRoles = await this.prisma.userRoles.findMany({
+      where: {
+        user_id: userId,
+        role_id: { in: normalizedRoleIds },
+      },
+      select: { role_id: true },
+    });
+    const existingRoleIds = new Set(
+      existingUserRoles.map((userRole) => userRole.role_id),
+    );
+    const roleIdsToCreate = normalizedRoleIds.filter(
+      (roleId) => !existingRoleIds.has(roleId),
+    );
+
+    if (roleIdsToCreate.length > 0) {
+      await this.prisma.userRoles.createMany({
+        data: roleIdsToCreate.map((roleId) => ({
+          user_id: userId,
+          role_id: roleId,
+        })),
+      });
+    }
+
+    return this.findRolesByUserId(userId);
+  }
+
+  async syncRoles(userId: number, roleIds: number[]) {
+    await this.ensureUserExists(userId);
+    const normalizedRoleIds = this.normalizeIds(roleIds, 'roleIds', true);
+    await this.ensureRolesExist(normalizedRoleIds);
+
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.userRoles.deleteMany({
+        where: { user_id: userId },
+      });
+
+      if (normalizedRoleIds.length === 0) {
+        return;
+      }
+
+      await prisma.userRoles.createMany({
+        data: normalizedRoleIds.map((roleId) => ({
+          user_id: userId,
+          role_id: roleId,
+        })),
+      });
+    });
+
+    return this.findRolesByUserId(userId);
+  }
+
+  async removeRoleFromUser(userId: number, roleId: number) {
+    await this.ensureUserExists(userId);
+
+    const deleteResult = await this.prisma.userRoles.deleteMany({
+      where: {
+        user_id: userId,
+        role_id: roleId,
+      },
+    });
+
+    if (deleteResult.count === 0) {
+      throw new NotFoundException('User role not found');
+    }
+
+    return this.findRolesByUserId(userId);
+  }
+
   findByUsername(username: string) {
     const user = this.prisma.users.findUnique({ where: { username } });
     if (!user) {
@@ -127,5 +232,64 @@ export class UsersService {
       return user;
     }
     return null;
+  }
+
+  private async ensureUserExists(userId: number) {
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+  }
+
+  private async ensureRolesExist(roleIds: number[]) {
+    if (roleIds.length === 0) {
+      return;
+    }
+
+    const roles = await this.prisma.roles.findMany({
+      where: { id: { in: roleIds } },
+      select: { id: true },
+    });
+    const existingRoleIds = new Set(roles.map((role) => role.id));
+    const missingRoleIds = roleIds.filter(
+      (roleId) => !existingRoleIds.has(roleId),
+    );
+
+    if (missingRoleIds.length > 0) {
+      throw new NotFoundException(
+        `Roles not found: ${missingRoleIds.join(', ')}`,
+      );
+    }
+  }
+
+  private normalizeIds(ids: number[], fieldName: string, allowEmpty: boolean) {
+    if (!Array.isArray(ids)) {
+      throw new BadRequestException(`${fieldName} must be an array`);
+    }
+
+    const normalizedIds = [
+      ...new Set(
+        ids.map((id) => {
+          const normalizedId = Number(id);
+          if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+            throw new BadRequestException(
+              `${fieldName} must contain positive integers`,
+            );
+          }
+
+          return normalizedId;
+        }),
+      ),
+    ];
+
+    if (!allowEmpty && normalizedIds.length === 0) {
+      throw new BadRequestException(`${fieldName} must not be empty`);
+    }
+
+    return normalizedIds;
   }
 }

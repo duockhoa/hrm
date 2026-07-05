@@ -19,12 +19,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UseGuards } from '@nestjs/common';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/guards/roles.guard';
-import { PermissionsGuard } from 'src/guards/permissions.guard';
-import { Roles } from 'src/decorators/roles.decorator';
-import { Permissions } from 'src/decorators/permissions.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from 'src/cloudinary.service';
+import { AddUserRolesDto, SyncUserRolesDto } from './dto/update-user-roles.dto';
+
 @UseGuards(jwtAuthGuard)
 @Controller('users')
 @UsePipes(
@@ -52,6 +50,35 @@ export class UsersController {
   async getProfile(@Request() req: any) {
     const user = req.user;
     return user;
+  }
+
+  @Get(':id/roles')
+  async findRolesByUserId(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.findRolesByUserId(id);
+  }
+
+  @Post(':id/roles')
+  async addRolesToUser(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: AddUserRolesDto,
+  ) {
+    return this.usersService.addRolesToUser(id, this.getRoleIds(body));
+  }
+
+  @Put(':id/roles')
+  async syncRoles(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: SyncUserRolesDto,
+  ) {
+    return this.usersService.syncRoles(id, body.roleIds);
+  }
+
+  @Delete(':id/roles/:roleId')
+  async removeRoleFromUser(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('roleId', ParseIntPipe) roleId: number,
+  ) {
+    return this.usersService.removeRoleFromUser(id, roleId);
   }
 
   @Get(':id')
@@ -134,7 +161,6 @@ export class UsersController {
     return user;
   }
 
-  @UseGuards(jwtAuthGuard, PermissionsGuard)
   @Delete(':id')
   async deleteUser(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.deleteUser(id);
@@ -142,5 +168,9 @@ export class UsersController {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
     return user;
+  }
+
+  private getRoleIds(body: AddUserRolesDto) {
+    return body.roleIds ?? (body.roleId ? [body.roleId] : []);
   }
 }

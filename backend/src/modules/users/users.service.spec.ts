@@ -6,14 +6,47 @@ import { UsersService } from './users.service';
 
 describe('UsersService', () => {
   let service: UsersService;
+  let prismaService: {
+    users: {
+      findUnique: jest.Mock;
+    };
+    roles: {
+      findMany: jest.Mock;
+    };
+    userRoles: {
+      findMany: jest.Mock;
+      findFirst: jest.Mock;
+      createMany: jest.Mock;
+      delete: jest.Mock;
+      deleteMany: jest.Mock;
+    };
+    $transaction: jest.Mock;
+  };
 
   beforeEach(async () => {
+    prismaService = {
+      users: {
+        findUnique: jest.fn(),
+      },
+      roles: {
+        findMany: jest.fn(),
+      },
+      userRoles: {
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+        createMany: jest.fn(),
+        delete: jest.fn(),
+        deleteMany: jest.fn(),
+      },
+      $transaction: jest.fn((callback) => callback(prismaService)),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
         {
           provide: PrismaService,
-          useValue: {},
+          useValue: prismaService,
         },
         {
           provide: EventEmitter2,
@@ -35,5 +68,33 @@ describe('UsersService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('adds only missing roles to a user', async () => {
+    const userRoles = [{ id: 1, user_id: 1, role_id: 1 }];
+    prismaService.users.findUnique.mockResolvedValue({ id: 1 });
+    prismaService.roles.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    prismaService.userRoles.findMany
+      .mockResolvedValueOnce([{ role_id: 1 }])
+      .mockResolvedValueOnce(userRoles);
+    prismaService.userRoles.createMany.mockResolvedValue({ count: 1 });
+
+    await expect(service.addRolesToUser(1, [1, 2])).resolves.toBe(userRoles);
+
+    expect(prismaService.userRoles.createMany).toHaveBeenCalledWith({
+      data: [{ user_id: 1, role_id: 2 }],
+    });
+  });
+
+  it('syncs an empty role list by removing all user roles', async () => {
+    prismaService.users.findUnique.mockResolvedValue({ id: 1 });
+    prismaService.userRoles.findMany.mockResolvedValue([]);
+
+    await expect(service.syncRoles(1, [])).resolves.toEqual([]);
+
+    expect(prismaService.userRoles.deleteMany).toHaveBeenCalledWith({
+      where: { user_id: 1 },
+    });
+    expect(prismaService.userRoles.createMany).not.toHaveBeenCalled();
   });
 });
