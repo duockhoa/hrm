@@ -52,7 +52,7 @@ export default function DetailDepartmentHeader({
         <div
           className="flex items-center gap-2 hover:text-gray-900 cursor-pointer"
           onClick={() => {
-            router.push("/home", { scroll: false });
+            router.push("/department", { scroll: false });
           }}
         >
           <LuX />
