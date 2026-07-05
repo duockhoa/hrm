@@ -890,6 +890,24 @@ Các tên field được hỗ trợ: `stageId`, `stageIds`, `StageID`.
 
 Response: file `.xlsx`.
 
+### Export phiếu cân theo line
+
+```http
+POST /production-orders/:id/production-order-lines/weighing-ticket/export
+```
+
+Body có thể để `{}` để export tất cả line, hoặc lọc theo công đoạn giống API export phiếu xuất kho:
+
+```json
+{
+  "stageIds": [1, 2, 3]
+}
+```
+
+Các tên field được hỗ trợ: `stageId`, `stageIds`, `StageID`.
+
+Response: file `.xlsx`.
+
 ## Production Order Sampling Requests
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

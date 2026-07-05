@@ -7,6 +7,7 @@ import { PrismaService } from 'src/prisma.service';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
+import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { FeaturesModule } from '../features/features.module';
@@ -46,6 +47,7 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
     ProductionOrderSensoryChecksService,
     ProductionOrderDateChecksService,
     WarehouseReleaseExportService,
+    WeighingTicketExportService,
     ProductionOrderExportService,
     RolesGuard,
     PermissionsGuard,

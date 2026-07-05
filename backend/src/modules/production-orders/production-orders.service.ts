@@ -7,6 +7,7 @@ import { PrismaService } from 'src/prisma.service';
 import axios from 'axios';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
+import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
 import type {
   ExportProductionOrderLinesDto,
   ProductionOrderStageIdFilter,
@@ -130,12 +131,28 @@ const normalizeStageIds = (
   return [...new Set(stageIds.map((stageId) => normalizeStageId(stageId)))];
 };
 
+const filterProductionOrderLinesByStage = (
+  lines: ProductionOrderLineWithRelations[],
+  options?: ExportProductionOrderLinesDto,
+) => {
+  const stageIds = normalizeStageIds(getStageIdFilterInput(options));
+  const stageIdSet = stageIds ? new Set(stageIds) : undefined;
+
+  return stageIdSet
+    ? lines.filter(
+        (line) =>
+          typeof line.StageID === 'number' && stageIdSet.has(line.StageID),
+      )
+    : lines;
+};
+
 @Injectable()
 export class ProductionOrdersService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly featuresService: FeaturesService,
     private readonly warehouseReleaseExportService: WarehouseReleaseExportService,
+    private readonly weighingTicketExportService: WeighingTicketExportService,
     private readonly productionOrderExportService: ProductionOrderExportService,
   ) {}
 
@@ -342,16 +359,24 @@ export class ProductionOrdersService {
   ) {
     const { productionOrder, lines } =
       await this.findProductionOrderLineData(id);
-    const stageIds = normalizeStageIds(getStageIdFilterInput(options));
-    const stageIdSet = stageIds ? new Set(stageIds) : undefined;
-    const filteredLines = stageIdSet
-      ? lines.filter(
-          (line) =>
-            typeof line.StageID === 'number' && stageIdSet.has(line.StageID),
-        )
-      : lines;
+    const filteredLines = filterProductionOrderLinesByStage(lines, options);
 
     return this.warehouseReleaseExportService.export(
+      id,
+      filteredLines,
+      productionOrder,
+    );
+  }
+
+  async exportWeighingTicket(
+    id: number,
+    options?: ExportProductionOrderLinesDto,
+  ) {
+    const { productionOrder, lines } =
+      await this.findProductionOrderLineData(id);
+    const filteredLines = filterProductionOrderLinesByStage(lines, options);
+
+    return this.weighingTicketExportService.export(
       id,
       filteredLines,
       productionOrder,

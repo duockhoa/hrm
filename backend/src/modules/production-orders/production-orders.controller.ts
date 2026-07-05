@@ -898,4 +898,29 @@ export class ProductionOrdersController {
 
     return new StreamableFile(exportedFile.buffer);
   }
+
+  @Post(':id/production-order-lines/weighing-ticket/export')
+  async exportWeighingTicket(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() exportOptions: ExportProductionOrderLinesDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const exportedFile =
+      await this.productionOrdersService.exportWeighingTicket(
+        id,
+        exportOptions,
+      );
+    const filenameFallback = getAsciiFilenameFallback(exportedFile.filename);
+    const encodedFilename = encodeContentDispositionFilename(
+      exportedFile.filename,
+    );
+
+    response.set({
+      'Content-Disposition': `attachment; filename="${filenameFallback}"; filename*=UTF-8''${encodedFilename}`,
+      'Content-Length': exportedFile.buffer.length,
+      'Content-Type': exportedFile.contentType,
+    });
+
+    return new StreamableFile(exportedFile.buffer);
+  }
 }

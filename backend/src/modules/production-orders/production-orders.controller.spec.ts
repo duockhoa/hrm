@@ -30,6 +30,7 @@ describe('ProductionOrdersController', () => {
     findProductionOrderLines: jest.Mock;
     exportProductionOrder: jest.Mock;
     exportProductionOrderLines: jest.Mock;
+    exportWeighingTicket: jest.Mock;
   };
   let productionOrderSamplingRequestsService: {
     findAllByProductionOrder: jest.Mock;
@@ -128,6 +129,7 @@ describe('ProductionOrdersController', () => {
       findProductionOrderLines: jest.fn(),
       exportProductionOrder: jest.fn(),
       exportProductionOrderLines: jest.fn(),
+      exportWeighingTicket: jest.fn(),
     };
     productionOrderSamplingRequestsService = {
       findAllByProductionOrder: jest.fn(),
@@ -1222,5 +1224,39 @@ describe('ProductionOrdersController', () => {
       'Content-Type':
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
+  });
+
+  it('sets download headers and returns a streamable file when exporting a weighing ticket', async () => {
+    const buffer = Buffer.from('xlsx-content');
+    productionOrdersService.exportWeighingTicket.mockResolvedValue({
+      buffer,
+      contentType:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      filename: 'Phieu can Thanh pham test 010126.xlsx',
+    });
+    const response = {
+      set: jest.fn(),
+    } as unknown as Response;
+
+    const exportOptions = { stageIds: [2, 3] };
+
+    const result = await controller.exportWeighingTicket(
+      2031,
+      exportOptions,
+      response,
+    );
+
+    expect(productionOrdersService.exportWeighingTicket).toHaveBeenCalledWith(
+      2031,
+      exportOptions,
+    );
+    expect(response.set).toHaveBeenCalledWith({
+      'Content-Disposition':
+        'attachment; filename="Phieu can Thanh pham test 010126.xlsx"; filename*=UTF-8\'\'Phieu%20can%20Thanh%20pham%20test%20010126.xlsx',
+      'Content-Length': buffer.length,
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    expect(result).toBeInstanceOf(StreamableFile);
   });
 });
