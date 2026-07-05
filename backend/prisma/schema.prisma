@@ -34,6 +34,7 @@ model Users {
   createdProductionOrderEnvironmentChecks               ProductionOrderEnvironmentChecks[]               @relation("ProductionOrderEnvironmentCheckCreator")
   createdProductionOrderFinishedProductSummaries        ProductionOrderFinishedProductSummaries[]        @relation("ProductionOrderFinishedProductSummaryCreator")
   createdProductionOrderDensityChecks                   ProductionOrderDensityChecks[]                   @relation("ProductionOrderDensityCheckCreator")
+  createdProductionOrderSamplingRecords                 ProductionOrderSamplingRecords[]                 @relation("ProductionOrderSamplingRecordCreator")
   createdProductionOrderFriabilityChecks                ProductionOrderFriabilityChecks[]                @relation("ProductionOrderFriabilityCheckCreator")
   createdProductionOrderSprayDoseChecks                 ProductionOrderSprayDoseChecks[]                 @relation("ProductionOrderSprayDoseCheckCreator")
   createdProductionOrderPostHomogenizationGranuleChecks ProductionOrderPostHomogenizationGranuleChecks[] @relation("ProductionOrderPostHomogenizationGranuleCheckCreator")
@@ -335,6 +336,7 @@ model ProductionOrders {
   environmentChecks               ProductionOrderEnvironmentChecks[]
   finishedProductSummaries        ProductionOrderFinishedProductSummaries[]
   densityChecks                   ProductionOrderDensityChecks[]
+  samplingRecords                 ProductionOrderSamplingRecords[]
   friabilityChecks                ProductionOrderFriabilityChecks[]
   sprayDoseChecks                 ProductionOrderSprayDoseChecks[]
   postHomogenizationGranuleChecks ProductionOrderPostHomogenizationGranuleChecks[]
@@ -474,6 +476,23 @@ model ProductionOrderDensityChecks {
   @@index([production_order_id], map: "po_density_checks_po_id_fkey")
   @@index([created_by_id], map: "po_density_checks_created_by_id_fkey")
   @@map("production_order_density_checks")
+}
+
+model ProductionOrderSamplingRecords {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_sampling_records_po_id_fkey")
+  sampling_type       String           @db.VarChar(100)
+  quantity            Decimal          @db.Decimal(12, 2)
+  unit                String           @db.VarChar(50)
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderSamplingRecordCreator", fields: [created_by_id], references: [id], map: "po_sampling_records_created_by_id_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_sampling_records_po_id_fkey")
+  @@index([created_by_id], map: "po_sampling_records_created_by_id_fkey")
+  @@map("production_order_sampling_records")
 }
 
 model ProductionOrderFriabilityChecks {

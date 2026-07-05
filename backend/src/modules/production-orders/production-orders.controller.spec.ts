@@ -4,6 +4,7 @@ import { ProductionOrdersController } from './production-orders.controller';
 import { ProductionOrdersService } from './production-orders.service';
 import type { Response } from 'express';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
+import { ProductionOrderSamplingRecordsService } from './production-order-sampling-records.service';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
@@ -36,6 +37,13 @@ describe('ProductionOrdersController', () => {
   let productionOrderSamplingRequestsService: {
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+  };
+  let productionOrderSamplingRecordsService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderEnvironmentChecksService: {
     findById: jest.Mock;
@@ -137,6 +145,13 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
     };
+    productionOrderSamplingRecordsService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
     productionOrderEnvironmentChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -231,6 +246,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSamplingRequestsService,
           useValue: productionOrderSamplingRequestsService,
+        },
+        {
+          provide: ProductionOrderSamplingRecordsService,
+          useValue: productionOrderSamplingRecordsService,
         },
         {
           provide: ProductionOrderEnvironmentChecksService,
@@ -406,6 +425,81 @@ describe('ProductionOrdersController', () => {
       2031,
       createDto,
       user,
+    );
+  });
+
+  it('gets sampling records for a production order', async () => {
+    const samplingRecords = [{ id: 1, production_order_id: 2031 }];
+    productionOrderSamplingRecordsService.findAllByProductionOrder.mockResolvedValue(
+      samplingRecords,
+    );
+
+    await expect(controller.findSamplingRecords(2031)).resolves.toBe(
+      samplingRecords,
+    );
+    expect(
+      productionOrderSamplingRecordsService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a sampling record by id', async () => {
+    const samplingRecord = { id: 1, production_order_id: 2031 };
+    productionOrderSamplingRecordsService.findById.mockResolvedValue(
+      samplingRecord,
+    );
+
+    await expect(controller.findSamplingRecordById(1)).resolves.toBe(
+      samplingRecord,
+    );
+    expect(productionOrderSamplingRecordsService.findById).toHaveBeenCalledWith(
+      1,
+    );
+  });
+
+  it('creates a sampling record using the authenticated user', async () => {
+    const createDto = {
+      sampling_type: 'Dinh ky',
+      quantity: 12.5,
+      unit: 'mau',
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSamplingRecordsService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createSamplingRecord(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderSamplingRecordsService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+    );
+  });
+
+  it('updates a sampling record', async () => {
+    const updateDto = {
+      sampling_type: 'Dot xuat',
+      quantity: 10,
+    };
+    const result = { id: 1, sampling_type: 'Dot xuat' };
+    productionOrderSamplingRecordsService.update.mockResolvedValue(result);
+
+    await expect(controller.updateSamplingRecord(1, updateDto)).resolves.toBe(
+      result,
+    );
+    expect(productionOrderSamplingRecordsService.update).toHaveBeenCalledWith(
+      1,
+      updateDto,
+    );
+  });
+
+  it('deletes a sampling record', async () => {
+    const result = { id: 1 };
+    productionOrderSamplingRecordsService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteSamplingRecord(1)).resolves.toBe(result);
+    expect(productionOrderSamplingRecordsService.delete).toHaveBeenCalledWith(
+      1,
     );
   });
 

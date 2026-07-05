@@ -959,6 +959,118 @@ Ghi chú:
 - `resend` hiện được DTO hỗ trợ nhưng logic chặn gửi lại đang bị comment trong service.
 - Người gửi được lấy từ user đăng nhập.
 
+## Production Order Sampling Records
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu dữ liệu quá trình lấy mẫu của một lệnh sản xuất. Một lệnh sản xuất có thể có nhiều bản ghi lấy mẫu.
+
+### Lấy danh sách dữ liệu lấy mẫu của lệnh sản xuất
+
+```http
+GET /production-orders/:id/sampling-records
+```
+
+Response sắp xếp theo `created_at` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "sampling_type": "Dinh ky",
+    "quantity": "12.50",
+    "unit": "mau",
+    "created_by_id": 7,
+    "created_at": "2026-07-05T08:10:00.000Z",
+    "updated_at": "2026-07-05T08:10:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một bản ghi lấy mẫu theo ID
+
+```http
+GET /production-orders/sampling-records/:recordId
+```
+
+Lỗi thường gặp:
+
+- `404 Sampling record not found`
+
+### Thêm dữ liệu lấy mẫu
+
+```http
+POST /production-orders/:id/sampling-records
+```
+
+Body:
+
+```json
+{
+  "sampling_type": "Dinh ky",
+  "quantity": 12.5,
+  "unit": "mau"
+}
+```
+
+Quy tắc:
+
+- `sampling_type` bắt buộc, tối đa 100 ký tự.
+- `quantity` bắt buộc, lưu dạng `DECIMAL(12, 2)` và phải lớn hơn `0`.
+- Có thể gửi `quantity` dạng chuỗi, ví dụ `"12.50"` hoặc `"12,50"`.
+- `unit` bắt buộc, tối đa 50 ký tự.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 sampling_type is required`
+- `400 quantity must fit DECIMAL(12, 2) with up to 2 decimal places`
+- `401 Authenticated user not found`
+
+### Cập nhật dữ liệu lấy mẫu
+
+```http
+PATCH /production-orders/sampling-records/:recordId
+```
+
+Body: gửi một hoặc nhiều field cần đổi.
+
+```json
+{
+  "sampling_type": "Dot xuat",
+  "quantity": 10
+}
+```
+
+Lỗi thường gặp:
+
+- `404 Sampling record not found`
+- `400 At least one field is required`
+
+### Xóa dữ liệu lấy mẫu
+
+```http
+DELETE /production-orders/sampling-records/:recordId
+```
+
+Response trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Sampling record not found`
+
 ## Production Order Environment Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

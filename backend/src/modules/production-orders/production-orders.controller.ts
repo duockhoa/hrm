@@ -24,6 +24,9 @@ import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import type { ExportProductionOrderLinesDto } from './dto/export-production-order-lines.dto';
 import { CreateProductionOrderSamplingRequestDto } from './dto/create-production-order-sampling-request.dto';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
+import { CreateProductionOrderSamplingRecordDto } from './dto/create-production-order-sampling-record.dto';
+import { UpdateProductionOrderSamplingRecordDto } from './dto/update-production-order-sampling-record.dto';
+import { ProductionOrderSamplingRecordsService } from './production-order-sampling-records.service';
 import { CreateProductionOrderEnvironmentCheckDto } from './dto/create-production-order-environment-check.dto';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
@@ -141,6 +144,7 @@ export class ProductionOrdersController {
   constructor(
     private readonly productionOrdersService: ProductionOrdersService,
     private readonly productionOrderSamplingRequestsService: ProductionOrderSamplingRequestsService,
+    private readonly productionOrderSamplingRecordsService: ProductionOrderSamplingRecordsService,
     private readonly productionOrderEnvironmentChecksService: ProductionOrderEnvironmentChecksService,
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
@@ -192,6 +196,31 @@ export class ProductionOrdersController {
   @Get('density-checks/:checkId')
   async findDensityCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDensityChecksService.findById(checkId);
+  }
+
+  @Get('sampling-records/:recordId')
+  async findSamplingRecordById(
+    @Param('recordId', ParseIntPipe) recordId: number,
+  ) {
+    return this.productionOrderSamplingRecordsService.findById(recordId);
+  }
+
+  @Patch('sampling-records/:recordId')
+  async updateSamplingRecord(
+    @Param('recordId', ParseIntPipe) recordId: number,
+    @Body() updateDto: UpdateProductionOrderSamplingRecordDto,
+  ) {
+    return this.productionOrderSamplingRecordsService.update(
+      recordId,
+      updateDto,
+    );
+  }
+
+  @Delete('sampling-records/:recordId')
+  async deleteSamplingRecord(
+    @Param('recordId', ParseIntPipe) recordId: number,
+  ) {
+    return this.productionOrderSamplingRecordsService.delete(recordId);
   }
 
   @Get('friability-checks/:checkId')
@@ -489,6 +518,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderSamplingRequestsService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/sampling-records')
+  async findSamplingRecords(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderSamplingRecordsService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/sampling-records')
+  async createSamplingRecord(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderSamplingRecordDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderSamplingRecordsService.create(
       id,
       createDto,
       req.user,
