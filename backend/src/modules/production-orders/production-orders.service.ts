@@ -8,6 +8,7 @@ import axios from 'axios';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
+import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
 import type {
   ExportProductionOrderLinesDto,
   ProductionOrderStageIdFilter,
@@ -28,6 +29,7 @@ export type SapProductionOrderStage = {
 export type SapProductionOrderResponse = {
   AbsoluteEntry?: number | null;
   DocumentNumber?: number | null;
+  InventoryUOM?: string | null;
   ItemNo?: string | null;
   PlannedQuantity?: number | string | null;
   ProductDescription?: string | null;
@@ -153,6 +155,7 @@ export class ProductionOrdersService {
     private readonly featuresService: FeaturesService,
     private readonly warehouseReleaseExportService: WarehouseReleaseExportService,
     private readonly weighingTicketExportService: WeighingTicketExportService,
+    private readonly postWeighingMaterialCheckExportService: PostWeighingMaterialCheckExportService,
     private readonly productionOrderExportService: ProductionOrderExportService,
   ) {}
 
@@ -377,6 +380,21 @@ export class ProductionOrdersService {
     const filteredLines = filterProductionOrderLinesByStage(lines, options);
 
     return this.weighingTicketExportService.export(
+      id,
+      filteredLines,
+      productionOrder,
+    );
+  }
+
+  async exportPostWeighingMaterialCheck(
+    id: number,
+    options?: ExportProductionOrderLinesDto,
+  ) {
+    const { productionOrder, lines } =
+      await this.findProductionOrderLineData(id);
+    const filteredLines = filterProductionOrderLinesByStage(lines, options);
+
+    return this.postWeighingMaterialCheckExportService.export(
       id,
       filteredLines,
       productionOrder,

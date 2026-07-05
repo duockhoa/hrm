@@ -8,6 +8,7 @@ import { WarehouseReleaseExportService } from './exports/warehouse-release-expor
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
+import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { FeaturesModule } from '../features/features.module';
@@ -48,6 +49,7 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
     ProductionOrderDateChecksService,
     WarehouseReleaseExportService,
     WeighingTicketExportService,
+    PostWeighingMaterialCheckExportService,
     ProductionOrderExportService,
     RolesGuard,
     PermissionsGuard,

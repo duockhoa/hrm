@@ -31,6 +31,7 @@ describe('ProductionOrdersController', () => {
     exportProductionOrder: jest.Mock;
     exportProductionOrderLines: jest.Mock;
     exportWeighingTicket: jest.Mock;
+    exportPostWeighingMaterialCheck: jest.Mock;
   };
   let productionOrderSamplingRequestsService: {
     findAllByProductionOrder: jest.Mock;
@@ -130,6 +131,7 @@ describe('ProductionOrdersController', () => {
       exportProductionOrder: jest.fn(),
       exportProductionOrderLines: jest.fn(),
       exportWeighingTicket: jest.fn(),
+      exportPostWeighingMaterialCheck: jest.fn(),
     };
     productionOrderSamplingRequestsService = {
       findAllByProductionOrder: jest.fn(),
@@ -1253,6 +1255,39 @@ describe('ProductionOrdersController', () => {
     expect(response.set).toHaveBeenCalledWith({
       'Content-Disposition':
         'attachment; filename="Phieu can Thanh pham test 010126.xlsx"; filename*=UTF-8\'\'Phieu%20can%20Thanh%20pham%20test%20010126.xlsx',
+      'Content-Length': buffer.length,
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    expect(result).toBeInstanceOf(StreamableFile);
+  });
+
+  it('sets download headers and returns a streamable file when exporting a post-weighing material check', async () => {
+    const buffer = Buffer.from('xlsx-content');
+    productionOrdersService.exportPostWeighingMaterialCheck.mockResolvedValue({
+      buffer,
+      contentType:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      filename: 'Phieu kiem tra sau can Thanh pham test 010126.xlsx',
+    });
+    const response = {
+      set: jest.fn(),
+    } as unknown as Response;
+
+    const exportOptions = { stageIds: [2, 3] };
+
+    const result = await controller.exportPostWeighingMaterialCheck(
+      2031,
+      exportOptions,
+      response,
+    );
+
+    expect(
+      productionOrdersService.exportPostWeighingMaterialCheck,
+    ).toHaveBeenCalledWith(2031, exportOptions);
+    expect(response.set).toHaveBeenCalledWith({
+      'Content-Disposition':
+        'attachment; filename="Phieu kiem tra sau can Thanh pham test 010126.xlsx"; filename*=UTF-8\'\'Phieu%20kiem%20tra%20sau%20can%20Thanh%20pham%20test%20010126.xlsx',
       'Content-Length': buffer.length,
       'Content-Type':
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

@@ -13,27 +13,34 @@ import {
 const EXCEL_MIME_TYPE =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-const WEIGHING_TICKET_TEMPLATE_PATH = path.join(
+const POST_WEIGHING_MATERIAL_CHECK_TEMPLATE_PATH = path.join(
   process.cwd(),
   'templates',
-  'weighing_ticket_template',
-  'WeighingTicketTemplate.xlsx',
+  'post-weighing-material-check-template',
+  'post-weighing-material-check-template.xlsx',
 );
-const WEIGHING_TICKET_SHEET_NAME = 'Sheet1';
-const WEIGHING_TICKET_DATA_START_ROW = 12;
-const WEIGHING_TICKET_DATA_END_ROW = 116;
-const WEIGHING_TICKET_DEFAULT_DATA_ROW_HEIGHT = 13.9;
-const WEIGHING_TICKET_TEXT_LINE_HEIGHT = 12;
-const WEIGHING_TICKET_ROW_VERTICAL_PADDING = 2;
-const WEIGHING_TICKET_ROW_HEIGHT_BUFFER = 8;
-const WEIGHING_TICKET_ITEM_NAME_USABLE_WIDTH_RATIO = 1.05;
-const WEIGHING_TICKET_BATCH_NUMBER_USABLE_WIDTH_RATIO = 1.05;
+const POST_WEIGHING_MATERIAL_CHECK_SHEET_NAME = 'Sheet1';
+const POST_WEIGHING_MATERIAL_CHECK_DATA_START_ROW = 10;
+const POST_WEIGHING_MATERIAL_CHECK_DATA_END_ROW = 115;
+const POST_WEIGHING_MATERIAL_CHECK_DEFAULT_DATA_ROW_HEIGHT = 15;
+const POST_WEIGHING_MATERIAL_CHECK_TEXT_LINE_HEIGHT = 12;
+const POST_WEIGHING_MATERIAL_CHECK_ROW_VERTICAL_PADDING = 2;
+const POST_WEIGHING_MATERIAL_CHECK_ROW_HEIGHT_BUFFER = 8;
+const POST_WEIGHING_MATERIAL_CHECK_ITEM_NAME_USABLE_WIDTH_RATIO = 1.05;
 
 type RowContentMeasure = {
   value: unknown;
   startColumn: number;
   endColumn: number;
   usableWidthRatio?: number;
+};
+
+type PostWeighingMaterialCheckLine = {
+  itemNo: string | number | null;
+  itemName: string | number | null;
+  plannedQuantity: number;
+  unitOfMeasurement: string | number | null;
+  visualOrder: number;
 };
 
 const normalizeCellValue = (value: unknown): string | number | null => {
@@ -90,6 +97,8 @@ const formatDate = (value: unknown) => {
 
   return `${day}/${month}/${year}`;
 };
+
+const roundQuantity = (value: number) => Number(value.toFixed(6));
 
 const setCellValue = (
   worksheet: ExcelJS.Worksheet,
@@ -167,10 +176,10 @@ const getDataRowHeight = (
 
   return (
     Math.max(
-      WEIGHING_TICKET_DEFAULT_DATA_ROW_HEIGHT,
-      maxLineCount * WEIGHING_TICKET_TEXT_LINE_HEIGHT +
-        WEIGHING_TICKET_ROW_VERTICAL_PADDING,
-    ) + WEIGHING_TICKET_ROW_HEIGHT_BUFFER
+      POST_WEIGHING_MATERIAL_CHECK_DEFAULT_DATA_ROW_HEIGHT,
+      maxLineCount * POST_WEIGHING_MATERIAL_CHECK_TEXT_LINE_HEIGHT +
+        POST_WEIGHING_MATERIAL_CHECK_ROW_VERTICAL_PADDING,
+    ) + POST_WEIGHING_MATERIAL_CHECK_ROW_HEIGHT_BUFFER
   );
 };
 
@@ -194,10 +203,9 @@ const applyDataRowLayout = (
     };
   });
 
-  applyCellAlignment(worksheet, rowNumber, 2, 2, { horizontal: 'center' });
-  applyCellAlignment(worksheet, rowNumber, 3, 6, { horizontal: 'left' });
-  applyCellAlignment(worksheet, rowNumber, 7, 13, { horizontal: 'center' });
-  applyCellAlignment(worksheet, rowNumber, 14, 15, { horizontal: 'center' });
+  applyCellAlignment(worksheet, rowNumber, 2, 3, { horizontal: 'center' });
+  applyCellAlignment(worksheet, rowNumber, 4, 8, { horizontal: 'left' });
+  applyCellAlignment(worksheet, rowNumber, 9, 15, { horizontal: 'center' });
 };
 
 const applyCellAlignment = (
@@ -220,14 +228,63 @@ const applyCellAlignment = (
   }
 };
 
-const getWeighingTicketLines = (lines: ProductionOrderLineWithRelations[]) =>
-  lines
-    .filter((line) => line.ItemType === 'pit_Item')
-    .sort(
-      (firstLine, secondLine) =>
-        getNumberValue(firstLine.VisualOrder) -
-        getNumberValue(secondLine.VisualOrder),
+const getPostWeighingMaterialCheckLines = (
+  lines: ProductionOrderLineWithRelations[],
+) => {
+  const groupedLinesByItemNo = new Map<string, PostWeighingMaterialCheckLine>();
+  let fallbackLineKey = 0;
+
+  for (const line of lines) {
+    if (line.ItemType !== 'pit_Item') {
+      continue;
+    }
+
+    const itemNo = getLineValue(line, 'ItemNo');
+    const groupKey =
+      itemNo === null || itemNo === ''
+        ? `__line_${fallbackLineKey++}`
+        : String(itemNo);
+    const plannedQuantity = getNumberValue(line.PlannedQuantity);
+    const visualOrder = getNumberValue(line.VisualOrder);
+    const unitOfMeasurement = normalizeCellValue(
+      line.UnitOfMeasurement?.Code ?? line.UoMCode,
     );
+    const existingLine = groupedLinesByItemNo.get(groupKey);
+
+    if (!existingLine) {
+      groupedLinesByItemNo.set(groupKey, {
+        itemNo,
+        itemName: getLineValue(line, 'ItemName'),
+        plannedQuantity,
+        unitOfMeasurement,
+        visualOrder,
+      });
+      continue;
+    }
+
+    existingLine.plannedQuantity = roundQuantity(
+      existingLine.plannedQuantity + plannedQuantity,
+    );
+    existingLine.visualOrder = Math.min(existingLine.visualOrder, visualOrder);
+
+    if (!existingLine.itemName) {
+      existingLine.itemName = getLineValue(line, 'ItemName');
+    }
+
+    if (!existingLine.unitOfMeasurement) {
+      existingLine.unitOfMeasurement = unitOfMeasurement;
+    }
+  }
+
+  return Array.from(groupedLinesByItemNo.values())
+    .map((line) => ({
+      ...line,
+      plannedQuantity: roundQuantity(line.plannedQuantity),
+    }))
+    .sort(
+      (firstLine, secondLine) => firstLine.visualOrder - secondLine.visualOrder,
+    );
+};
 
 const sanitizeFilenamePart = (value: unknown) => {
   const normalizedValue = normalizeCellValue(value);
@@ -242,7 +299,7 @@ const sanitizeFilenamePart = (value: unknown) => {
     .trim();
 };
 
-const getWeighingTicketFilename = (
+const getPostWeighingMaterialCheckFilename = (
   productionOrderId: number,
   productionOrder?: SapProductionOrderResponse,
 ) => {
@@ -250,9 +307,11 @@ const getWeighingTicketFilename = (
     productionOrder?.ProductDescription,
   );
   const batchNumber = sanitizeFilenamePart(productionOrder?.U_SL);
-  const filenameParts = ['Phieu can', productDescription, batchNumber].filter(
-    Boolean,
-  );
+  const filenameParts = [
+    'Phieu kiem tra sau can',
+    productDescription,
+    batchNumber,
+  ].filter(Boolean);
 
   if (filenameParts.length === 1) {
     filenameParts.push(String(productionOrderId));
@@ -262,26 +321,28 @@ const getWeighingTicketFilename = (
 };
 
 @Injectable()
-export class WeighingTicketExportService {
+export class PostWeighingMaterialCheckExportService {
   async export(
     productionOrderId: number,
     lines: ProductionOrderLineWithRelations[],
     productionOrder?: SapProductionOrderResponse,
   ) {
-    const weighingTicketLines = getWeighingTicketLines(lines);
+    const postWeighingLines = getPostWeighingMaterialCheckLines(lines);
     const maxDataRows =
-      WEIGHING_TICKET_DATA_END_ROW - WEIGHING_TICKET_DATA_START_ROW + 1;
+      POST_WEIGHING_MATERIAL_CHECK_DATA_END_ROW -
+      POST_WEIGHING_MATERIAL_CHECK_DATA_START_ROW +
+      1;
 
-    if (weighingTicketLines.length > maxDataRows) {
+    if (postWeighingLines.length > maxDataRows) {
       throw new BadRequestException(
-        `Production order ${productionOrderId} has ${weighingTicketLines.length} item lines, but the weighing ticket template supports only ${maxDataRows} lines.`,
+        `Production order ${productionOrderId} has ${postWeighingLines.length} material lines after grouping, but the post-weighing material check template supports only ${maxDataRows} lines.`,
       );
     }
 
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(WEIGHING_TICKET_TEMPLATE_PATH);
+    await workbook.xlsx.readFile(POST_WEIGHING_MATERIAL_CHECK_TEMPLATE_PATH);
     const worksheet =
-      workbook.getWorksheet(WEIGHING_TICKET_SHEET_NAME) ??
+      workbook.getWorksheet(POST_WEIGHING_MATERIAL_CHECK_SHEET_NAME) ??
       workbook.worksheets[0];
 
     workbook.creator = 'HRM';
@@ -293,53 +354,40 @@ export class WeighingTicketExportService {
       orientation: 'portrait',
       fitToWidth: 1,
       fitToHeight: 0,
-      printTitlesRow: '10:11',
+      printTitlesRow: '8:9',
     };
 
     setCellValue(worksheet, 'D5', productionOrder?.ProductDescription);
     setCellValueAfterLabel(worksheet, 'Số lô:', productionOrder?.U_SL);
     setCellValue(worksheet, 'D6', getProductionOrderBatchSize(productionOrder));
 
-    for (const [index, line] of weighingTicketLines.entries()) {
-      const rowNumber = WEIGHING_TICKET_DATA_START_ROW + index;
-      const plannedQuantity = getNumberValue(line.PlannedQuantity);
-      const itemNo = getLineValue(line, 'ItemNo');
-      const itemName = getLineValue(line, 'ItemName');
-      const batchNumber = getLineValue(line, 'U_SL');
-      const unitOfMeasurement = normalizeCellValue(
-        line.UnitOfMeasurement?.Code ?? line.UoMCode,
-      );
+    for (const [index, line] of postWeighingLines.entries()) {
+      const rowNumber = POST_WEIGHING_MATERIAL_CHECK_DATA_START_ROW + index;
 
-      setCellValue(worksheet, `B${rowNumber}`, itemNo);
-      setCellValue(worksheet, `C${rowNumber}`, itemName);
-      setCellValue(worksheet, `G${rowNumber}`, batchNumber);
-      setCellValue(worksheet, `K${rowNumber}`, plannedQuantity);
-      setCellValue(worksheet, `M${rowNumber}`, unitOfMeasurement);
-      setCellValue(worksheet, `N${rowNumber}`, null);
+      setCellValue(worksheet, `B${rowNumber}`, line.itemNo);
+      setCellValue(worksheet, `D${rowNumber}`, line.itemName);
+      setCellValue(worksheet, `I${rowNumber}`, line.plannedQuantity);
+      setCellValue(worksheet, `L${rowNumber}`, line.unitOfMeasurement);
+      setCellValue(worksheet, `M${rowNumber}`, null);
 
       applyDataRowLayout(worksheet, rowNumber, [
-        { value: itemNo, startColumn: 2, endColumn: 2 },
+        { value: line.itemNo, startColumn: 2, endColumn: 3 },
         {
-          value: itemName,
-          startColumn: 3,
-          endColumn: 6,
-          usableWidthRatio: WEIGHING_TICKET_ITEM_NAME_USABLE_WIDTH_RATIO,
+          value: line.itemName,
+          startColumn: 4,
+          endColumn: 8,
+          usableWidthRatio:
+            POST_WEIGHING_MATERIAL_CHECK_ITEM_NAME_USABLE_WIDTH_RATIO,
         },
-        {
-          value: batchNumber,
-          startColumn: 7,
-          endColumn: 10,
-          usableWidthRatio: WEIGHING_TICKET_BATCH_NUMBER_USABLE_WIDTH_RATIO,
-        },
-        { value: plannedQuantity, startColumn: 11, endColumn: 12 },
-        { value: unitOfMeasurement, startColumn: 13, endColumn: 13 },
+        { value: line.plannedQuantity, startColumn: 9, endColumn: 11 },
+        { value: line.unitOfMeasurement, startColumn: 12, endColumn: 12 },
       ]);
     }
 
     for (
       let rowNumber =
-        WEIGHING_TICKET_DATA_START_ROW + weighingTicketLines.length;
-      rowNumber <= WEIGHING_TICKET_DATA_END_ROW;
+        POST_WEIGHING_MATERIAL_CHECK_DATA_START_ROW + postWeighingLines.length;
+      rowNumber <= POST_WEIGHING_MATERIAL_CHECK_DATA_END_ROW;
       rowNumber += 1
     ) {
       worksheet.getRow(rowNumber).hidden = true;
@@ -350,7 +398,10 @@ export class WeighingTicketExportService {
     return {
       buffer: Buffer.from(buffer),
       contentType: EXCEL_MIME_TYPE,
-      filename: getWeighingTicketFilename(productionOrderId, productionOrder),
+      filename: getPostWeighingMaterialCheckFilename(
+        productionOrderId,
+        productionOrder,
+      ),
     };
   }
 }

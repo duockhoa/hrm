@@ -908,6 +908,26 @@ Các tên field được hỗ trợ: `stageId`, `stageIds`, `StageID`.
 
 Response: file `.xlsx`.
 
+### Export phiếu kiểm tra nguyên liệu sau cân theo line
+
+```http
+POST /production-orders/:id/production-order-lines/post-weighing-material-check/export
+```
+
+Body có thể để `{}` để export tất cả line, hoặc lọc theo công đoạn giống API export phiếu xuất kho:
+
+```json
+{
+  "stageIds": [1, 2, 3]
+}
+```
+
+Các tên field được hỗ trợ: `stageId`, `stageIds`, `StageID`.
+
+Lưu ý: các line có cùng mã nguyên liệu `ItemNo` sẽ được gộp thành 1 dòng; backend cộng tổng `PlannedQuantity` và dùng tên nguyên liệu/đơn vị của dòng đầu tiên trong nhóm.
+
+Response: file `.xlsx`.
+
 ## Production Order Sampling Requests
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
