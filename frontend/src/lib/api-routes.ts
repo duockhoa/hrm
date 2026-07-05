@@ -27,10 +27,20 @@ const COMPANY = {
   base: "/companies",
 };
 
+const ROLES = {
+  base: "/roles",
+};
+
+const PERMISSIONS = {
+  base: "/permissions",
+};
+
 export const API_ROUTES = {
   auth: AUTH,
   users: USERS,
   internal: INTERNAL,
   departments: DEPARTMENT,
   companies: COMPANY,
+  roles: ROLES,
+  permissions: PERMISSIONS,
 };

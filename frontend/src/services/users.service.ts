@@ -6,4 +6,20 @@ const fetcherUsers = async () => {
   const response = await axiosClient.get(API_ROUTES.users.base);
   return response.data;
 };
-export default { fetcherUsers };
+
+const fetcherUserRoles = async (userId: number) => {
+  const response = await axiosClient.get(
+    `${API_ROUTES.users.base}/${userId}/roles`,
+  );
+  return response.data;
+};
+
+const syncUserRoles = async (userId: number, roleIds: number[]) => {
+  const response = await axiosClient.put(
+    `${API_ROUTES.users.base}/${userId}/roles`,
+    { roleIds },
+  );
+  return response.data;
+};
+
+export default { fetcherUsers, fetcherUserRoles, syncUserRoles };
