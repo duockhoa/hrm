@@ -51,6 +51,8 @@ model Users {
   createdProductionOrderDateCheckImages                 ProductionOrderDateCheckImages[]                 @relation("ProductionOrderDateCheckImageCreator")
   createdProductionWorkshopPressureDifferentials        ProductionWorkshopPressureDifferentials[]        @relation("ProductionWorkshopPressureDifferentialCreator")
   createdProductionOrderDisinfectantPreparations        ProductionOrderDisinfectantPreparations[]        @relation("ProductionOrderDisinfectantPreparationCreator")
+  createdProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]        @relation("ProductionOrderSteamSterilizationCheckCreator")
+  checkedProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]        @relation("ProductionOrderSteamSterilizationCheckChecker")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -352,6 +354,7 @@ model ProductionOrders {
   sensoryChecks                   ProductionOrderSensoryChecks[]
   dateChecks                      ProductionOrderDateChecks[]
   disinfectantPreparations        ProductionOrderDisinfectantPreparations[]
+  steamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
@@ -520,6 +523,30 @@ model ProductionOrderDisinfectantPreparations {
   @@index([workshop_id], map: "po_disinfectant_preps_workshop_id_fkey")
   @@index([created_by_id], map: "po_disinfectant_preps_created_by_id_fkey")
   @@map("production_order_disinfectant_preparations")
+}
+
+model ProductionOrderSteamSterilizationChecks {
+  id                             Int              @id @default(autoincrement())
+  production_order_id            Int
+  productionOrder                ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_steam_sterilization_checks_po_id_fkey")
+  equipment_name                 String?          @db.VarChar(255)
+  setting_temperature            Decimal?         @db.Decimal(8, 2)
+  setting_time                   Int?
+  configuration_image_path       String?          @db.Text
+  indicator_image_path           String?          @db.Text
+  reached_temperature_image_path String?          @db.Text
+  created_by_id                  Int
+  createdBy                      Users            @relation("ProductionOrderSteamSterilizationCheckCreator", fields: [created_by_id], references: [id], map: "po_steam_sterilization_checks_created_by_id_fkey")
+  checked_by_id                  Int?
+  checkedBy                      Users?           @relation("ProductionOrderSteamSterilizationCheckChecker", fields: [checked_by_id], references: [id], map: "po_steam_sterilization_checks_checked_by_id_fkey")
+  checked_at                     DateTime?
+  created_at                     DateTime         @default(now())
+  updated_at                     DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_steam_sterilization_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_steam_sterilization_checks_created_by_id_fkey")
+  @@index([checked_by_id], map: "po_steam_sterilization_checks_checked_by_id_fkey")
+  @@map("production_order_steam_sterilization_checks")
 }
 
 model ProductionOrderFriabilityChecks {
