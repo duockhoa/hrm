@@ -1071,6 +1071,144 @@ Lỗi thường gặp:
 
 - `404 Sampling record not found`
 
+## Production Order Disinfectant Preparations
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu bảng pha chế chất sát khuẩn theo lệnh sản xuất. Một lệnh sản xuất có thể có nhiều bản ghi pha chế.
+
+### Lấy danh sách pha chế chất sát khuẩn của lệnh sản xuất
+
+```http
+GET /production-orders/:id/disinfectant-preparations
+```
+
+Response sắp xếp theo `created_at` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "workshop_id": 2,
+    "disinfectant_name": "Con 70",
+    "purpose": "Sat khuan dung cu",
+    "base_material_name": "Con 96",
+    "base_material_content": "96.0000",
+    "base_material_amount_l": "7.3000",
+    "prepared_volume_l": "10.0000",
+    "actual_concentration": "70.0000",
+    "created_by_id": 7,
+    "created_at": "2026-07-05T08:10:00.000Z",
+    "updated_at": "2026-07-05T08:10:00.000Z",
+    "workshop": {
+      "id": 2,
+      "code": "SX01",
+      "name": "Xuong san xuat 1",
+      "description": null,
+      "address": null,
+      "created_at": "2026-07-05T08:00:00.000Z",
+      "updated_at": "2026-07-05T08:00:00.000Z",
+      "deleted_at": null
+    },
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một bản ghi pha chế theo ID
+
+```http
+GET /production-orders/disinfectant-preparations/:preparationId
+```
+
+Lỗi thường gặp:
+
+- `404 Disinfectant preparation not found`
+
+### Thêm bản ghi pha chế chất sát khuẩn
+
+```http
+POST /production-orders/:id/disinfectant-preparations
+```
+
+Body:
+
+```json
+{
+  "workshop_id": 2,
+  "disinfectant_name": "Con 70",
+  "purpose": "Sat khuan dung cu",
+  "base_material_name": "Con 96",
+  "base_material_content": 96,
+  "base_material_amount_l": 7.3,
+  "prepared_volume_l": 10,
+  "actual_concentration": 70
+}
+```
+
+Quy tắc:
+
+- `workshop_id` bắt buộc, phải tồn tại trong bảng xưởng sản xuất.
+- `disinfectant_name` bắt buộc, tối đa 255 ký tự.
+- `purpose` bắt buộc.
+- `base_material_name` bắt buộc, tối đa 255 ký tự.
+- `base_material_content` bắt buộc, lưu dạng `DECIMAL(10, 4)` và phải lớn hơn `0`.
+- `base_material_amount_l` bắt buộc, lưu dạng `DECIMAL(12, 4)`, phải lớn hơn `0`, đơn vị luôn là lít.
+- `prepared_volume_l` bắt buộc, lưu dạng `DECIMAL(12, 4)`, phải lớn hơn `0`, đơn vị luôn là lít.
+- `actual_concentration` bắt buộc, lưu dạng `DECIMAL(10, 4)` và phải lớn hơn `0`.
+- Các field số có thể gửi dạng chuỗi, ví dụ `"7.3000"` hoặc `"7,3000"`.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `404 Production workshop not found`
+- `400 disinfectant_name is required`
+- `400 base_material_amount_l must fit DECIMAL(12, 4) with up to 4 decimal places`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi pha chế chất sát khuẩn
+
+```http
+PATCH /production-orders/disinfectant-preparations/:preparationId
+```
+
+Body: gửi một hoặc nhiều field cần đổi.
+
+```json
+{
+  "actual_concentration": 71
+}
+```
+
+Lỗi thường gặp:
+
+- `404 Disinfectant preparation not found`
+- `404 Production workshop not found`
+- `400 At least one field is required`
+
+### Xóa bản ghi pha chế chất sát khuẩn
+
+```http
+DELETE /production-orders/disinfectant-preparations/:preparationId
+```
+
+Response trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Disinfectant preparation not found`
+
 ## Production Order Environment Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

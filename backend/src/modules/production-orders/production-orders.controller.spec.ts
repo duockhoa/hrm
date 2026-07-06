@@ -5,6 +5,7 @@ import { ProductionOrdersService } from './production-orders.service';
 import type { Response } from 'express';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderSamplingRecordsService } from './production-order-sampling-records.service';
+import { ProductionOrderDisinfectantPreparationsService } from './production-order-disinfectant-preparations.service';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
@@ -39,6 +40,13 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
   };
   let productionOrderSamplingRecordsService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderDisinfectantPreparationsService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -152,6 +160,13 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderDisinfectantPreparationsService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
     productionOrderEnvironmentChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -250,6 +265,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSamplingRecordsService,
           useValue: productionOrderSamplingRecordsService,
+        },
+        {
+          provide: ProductionOrderDisinfectantPreparationsService,
+          useValue: productionOrderDisinfectantPreparationsService,
         },
         {
           provide: ProductionOrderEnvironmentChecksService,
@@ -501,6 +520,90 @@ describe('ProductionOrdersController', () => {
     expect(productionOrderSamplingRecordsService.delete).toHaveBeenCalledWith(
       1,
     );
+  });
+
+  it('gets disinfectant preparations for a production order', async () => {
+    const preparations = [{ id: 1, production_order_id: 2031 }];
+    productionOrderDisinfectantPreparationsService.findAllByProductionOrder.mockResolvedValue(
+      preparations,
+    );
+
+    await expect(controller.findDisinfectantPreparations(2031)).resolves.toBe(
+      preparations,
+    );
+    expect(
+      productionOrderDisinfectantPreparationsService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a disinfectant preparation by id', async () => {
+    const preparation = { id: 1, production_order_id: 2031 };
+    productionOrderDisinfectantPreparationsService.findById.mockResolvedValue(
+      preparation,
+    );
+
+    await expect(controller.findDisinfectantPreparationById(1)).resolves.toBe(
+      preparation,
+    );
+    expect(
+      productionOrderDisinfectantPreparationsService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a disinfectant preparation using the authenticated user', async () => {
+    const createDto = {
+      workshop_id: 2,
+      disinfectant_name: 'Con 70',
+      purpose: 'Sat khuan dung cu',
+      base_material_name: 'Con 96',
+      base_material_content: 96,
+      base_material_amount_l: 7.3,
+      prepared_volume_l: 10,
+      actual_concentration: 70,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderDisinfectantPreparationsService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createDisinfectantPreparation(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderDisinfectantPreparationsService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a disinfectant preparation', async () => {
+    const updateDto = {
+      actual_concentration: 71,
+    };
+    const result = { id: 1, actual_concentration: '71.0000' };
+    productionOrderDisinfectantPreparationsService.update.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.updateDisinfectantPreparation(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderDisinfectantPreparationsService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a disinfectant preparation', async () => {
+    const result = { id: 1 };
+    productionOrderDisinfectantPreparationsService.delete.mockResolvedValue(
+      result,
+    );
+
+    await expect(controller.deleteDisinfectantPreparation(1)).resolves.toBe(
+      result,
+    );
+    expect(
+      productionOrderDisinfectantPreparationsService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets environment checks for a production order', async () => {

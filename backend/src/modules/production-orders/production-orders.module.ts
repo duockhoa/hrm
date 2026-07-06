@@ -7,6 +7,7 @@ import { PrismaService } from 'src/prisma.service';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderSamplingRecordsService } from './production-order-sampling-records.service';
+import { ProductionOrderDisinfectantPreparationsService } from './production-order-disinfectant-preparations.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
 import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
@@ -34,6 +35,7 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
     ProductionOrdersService,
     ProductionOrderSamplingRequestsService,
     ProductionOrderSamplingRecordsService,
+    ProductionOrderDisinfectantPreparationsService,
     ProductionOrderEnvironmentChecksService,
     ProductionOrderFinishedProductSummariesService,
     ProductionOrderDensityChecksService,

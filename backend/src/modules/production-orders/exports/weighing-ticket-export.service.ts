@@ -22,7 +22,7 @@ const WEIGHING_TICKET_TEMPLATE_PATH = path.join(
 const WEIGHING_TICKET_SHEET_NAME = 'Sheet1';
 const WEIGHING_TICKET_DATA_START_ROW = 12;
 const WEIGHING_TICKET_DATA_END_ROW = 116;
-const WEIGHING_TICKET_DEFAULT_DATA_ROW_HEIGHT = 13.9;
+const WEIGHING_TICKET_MIN_DATA_ROW_HEIGHT = 30;
 const WEIGHING_TICKET_TEXT_LINE_HEIGHT = 12;
 const WEIGHING_TICKET_ROW_VERTICAL_PADDING = 2;
 const WEIGHING_TICKET_ROW_HEIGHT_BUFFER = 8;
@@ -72,6 +72,8 @@ const getNumberValue = (value: unknown) => {
 
   return 0;
 };
+
+const roundQuantity = (value: number) => Number(value.toFixed(6));
 
 const formatDate = (value: unknown) => {
   if (!value) {
@@ -165,12 +167,11 @@ const getDataRowHeight = (
     ),
   );
 
-  return (
-    Math.max(
-      WEIGHING_TICKET_DEFAULT_DATA_ROW_HEIGHT,
-      maxLineCount * WEIGHING_TICKET_TEXT_LINE_HEIGHT +
-        WEIGHING_TICKET_ROW_VERTICAL_PADDING,
-    ) + WEIGHING_TICKET_ROW_HEIGHT_BUFFER
+  return Math.max(
+    WEIGHING_TICKET_MIN_DATA_ROW_HEIGHT,
+    maxLineCount * WEIGHING_TICKET_TEXT_LINE_HEIGHT +
+      WEIGHING_TICKET_ROW_VERTICAL_PADDING +
+      WEIGHING_TICKET_ROW_HEIGHT_BUFFER,
   );
 };
 
@@ -197,7 +198,7 @@ const applyDataRowLayout = (
   applyCellAlignment(worksheet, rowNumber, 2, 2, { horizontal: 'center' });
   applyCellAlignment(worksheet, rowNumber, 3, 6, { horizontal: 'left' });
   applyCellAlignment(worksheet, rowNumber, 7, 13, { horizontal: 'center' });
-  applyCellAlignment(worksheet, rowNumber, 14, 15, { horizontal: 'center' });
+  applyCellAlignment(worksheet, rowNumber, 14, 19, { horizontal: 'center' });
 };
 
 const applyCellAlignment = (
@@ -217,6 +218,88 @@ const applyCellAlignment = (
         ...alignment,
       },
     };
+  }
+};
+
+const getMaterialCodeMergeKey = (line: ProductionOrderLineWithRelations) => {
+  const itemNo = getLineValue(line, 'ItemNo');
+
+  if (itemNo === null || itemNo === '') {
+    return null;
+  }
+
+  const normalizedItemNo = String(itemNo).trim();
+
+  return normalizedItemNo === '' ? null : normalizedItemNo;
+};
+
+const applyMergedCellAlignment = (
+  worksheet: ExcelJS.Worksheet,
+  address: string,
+) => {
+  const cell = worksheet.getCell(address);
+
+  cell.style = {
+    ...cell.style,
+    alignment: {
+      ...cell.alignment,
+      horizontal: 'center',
+      vertical: 'middle',
+      wrapText: true,
+    },
+  };
+};
+
+const applyMaterialCodeGroupCells = (
+  worksheet: ExcelJS.Worksheet,
+  lines: ProductionOrderLineWithRelations[],
+) => {
+  if (lines.length === 0) {
+    return;
+  }
+
+  let groupStartIndex = 0;
+  let currentMaterialCode = getMaterialCodeMergeKey(lines[0]);
+
+  for (let index = 1; index <= lines.length; index += 1) {
+    const nextMaterialCode =
+      index < lines.length ? getMaterialCodeMergeKey(lines[index]) : null;
+
+    if (nextMaterialCode === currentMaterialCode) {
+      continue;
+    }
+
+    const groupLength = index - groupStartIndex;
+
+    const startRow = WEIGHING_TICKET_DATA_START_ROW + groupStartIndex;
+    const endRow = startRow + groupLength - 1;
+    const totalWeight = roundQuantity(
+      lines
+        .slice(groupStartIndex, index)
+        .reduce(
+          (total, line) => total + getNumberValue(line.PlannedQuantity),
+          0,
+        ),
+    );
+
+    if (currentMaterialCode !== null && groupLength > 1) {
+      for (let rowNumber = startRow; rowNumber <= endRow; rowNumber += 1) {
+        worksheet.unMergeCells(`P${rowNumber}:Q${rowNumber}`);
+        worksheet.unMergeCells(`R${rowNumber}:S${rowNumber}`);
+      }
+
+      worksheet.mergeCells(`P${startRow}:Q${endRow}`);
+      applyMergedCellAlignment(worksheet, `P${startRow}`);
+
+      worksheet.mergeCells(`R${startRow}:S${endRow}`);
+      setCellValue(worksheet, `R${startRow}`, totalWeight);
+      applyMergedCellAlignment(worksheet, `R${startRow}`);
+    } else {
+      setCellValue(worksheet, `R${startRow}`, totalWeight);
+    }
+
+    groupStartIndex = index;
+    currentMaterialCode = nextMaterialCode;
   }
 };
 
@@ -290,7 +373,8 @@ export class WeighingTicketExportService {
     worksheet.pageSetup = {
       ...worksheet.pageSetup,
       paperSize: 9,
-      orientation: 'portrait',
+      orientation: 'landscape',
+      fitToPage: true,
       fitToWidth: 1,
       fitToHeight: 0,
       printTitlesRow: '10:11',
@@ -316,6 +400,8 @@ export class WeighingTicketExportService {
       setCellValue(worksheet, `K${rowNumber}`, plannedQuantity);
       setCellValue(worksheet, `M${rowNumber}`, unitOfMeasurement);
       setCellValue(worksheet, `N${rowNumber}`, null);
+      setCellValue(worksheet, `P${rowNumber}`, null);
+      setCellValue(worksheet, `R${rowNumber}`, null);
 
       applyDataRowLayout(worksheet, rowNumber, [
         { value: itemNo, startColumn: 2, endColumn: 2 },
@@ -333,8 +419,13 @@ export class WeighingTicketExportService {
         },
         { value: plannedQuantity, startColumn: 11, endColumn: 12 },
         { value: unitOfMeasurement, startColumn: 13, endColumn: 13 },
+        { value: null, startColumn: 14, endColumn: 15 },
+        { value: null, startColumn: 16, endColumn: 17 },
+        { value: null, startColumn: 18, endColumn: 19 },
       ]);
     }
+
+    applyMaterialCodeGroupCells(worksheet, weighingTicketLines);
 
     for (
       let rowNumber =

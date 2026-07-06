@@ -27,6 +27,9 @@ import { ProductionOrderSamplingRequestsService } from './production-order-sampl
 import { CreateProductionOrderSamplingRecordDto } from './dto/create-production-order-sampling-record.dto';
 import { UpdateProductionOrderSamplingRecordDto } from './dto/update-production-order-sampling-record.dto';
 import { ProductionOrderSamplingRecordsService } from './production-order-sampling-records.service';
+import { CreateProductionOrderDisinfectantPreparationDto } from './dto/create-production-order-disinfectant-preparation.dto';
+import { UpdateProductionOrderDisinfectantPreparationDto } from './dto/update-production-order-disinfectant-preparation.dto';
+import { ProductionOrderDisinfectantPreparationsService } from './production-order-disinfectant-preparations.service';
 import { CreateProductionOrderEnvironmentCheckDto } from './dto/create-production-order-environment-check.dto';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
@@ -145,6 +148,7 @@ export class ProductionOrdersController {
     private readonly productionOrdersService: ProductionOrdersService,
     private readonly productionOrderSamplingRequestsService: ProductionOrderSamplingRequestsService,
     private readonly productionOrderSamplingRecordsService: ProductionOrderSamplingRecordsService,
+    private readonly productionOrderDisinfectantPreparationsService: ProductionOrderDisinfectantPreparationsService,
     private readonly productionOrderEnvironmentChecksService: ProductionOrderEnvironmentChecksService,
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
@@ -221,6 +225,35 @@ export class ProductionOrdersController {
     @Param('recordId', ParseIntPipe) recordId: number,
   ) {
     return this.productionOrderSamplingRecordsService.delete(recordId);
+  }
+
+  @Get('disinfectant-preparations/:preparationId')
+  async findDisinfectantPreparationById(
+    @Param('preparationId', ParseIntPipe) preparationId: number,
+  ) {
+    return this.productionOrderDisinfectantPreparationsService.findById(
+      preparationId,
+    );
+  }
+
+  @Patch('disinfectant-preparations/:preparationId')
+  async updateDisinfectantPreparation(
+    @Param('preparationId', ParseIntPipe) preparationId: number,
+    @Body() updateDto: UpdateProductionOrderDisinfectantPreparationDto,
+  ) {
+    return this.productionOrderDisinfectantPreparationsService.update(
+      preparationId,
+      updateDto,
+    );
+  }
+
+  @Delete('disinfectant-preparations/:preparationId')
+  async deleteDisinfectantPreparation(
+    @Param('preparationId', ParseIntPipe) preparationId: number,
+  ) {
+    return this.productionOrderDisinfectantPreparationsService.delete(
+      preparationId,
+    );
   }
 
   @Get('friability-checks/:checkId')
@@ -538,6 +571,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderSamplingRecordsService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/disinfectant-preparations')
+  async findDisinfectantPreparations(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderDisinfectantPreparationsService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/disinfectant-preparations')
+  async createDisinfectantPreparation(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderDisinfectantPreparationDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderDisinfectantPreparationsService.create(
       id,
       createDto,
       req.user,

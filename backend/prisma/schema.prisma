@@ -50,6 +50,7 @@ model Users {
   approvedProductionOrderDateChecks                     ProductionOrderDateChecks[]                      @relation("ProductionOrderDateCheckApprover")
   createdProductionOrderDateCheckImages                 ProductionOrderDateCheckImages[]                 @relation("ProductionOrderDateCheckImageCreator")
   createdProductionWorkshopPressureDifferentials        ProductionWorkshopPressureDifferentials[]        @relation("ProductionWorkshopPressureDifferentialCreator")
+  createdProductionOrderDisinfectantPreparations        ProductionOrderDisinfectantPreparations[]        @relation("ProductionOrderDisinfectantPreparationCreator")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -280,15 +281,16 @@ model ProductLines {
 }
 
 model ProductionWorkshops {
-  id                    Int                                       @id @default(autoincrement())
-  code                  String                                    @unique @db.VarChar(50)
-  name                  String
-  description           String?                                   @db.Text
-  address               String?
-  created_at            DateTime                                  @default(now())
-  updated_at            DateTime                                  @default(now()) @updatedAt
-  deleted_at            DateTime?
-  pressureDifferentials ProductionWorkshopPressureDifferentials[]
+  id                       Int                                       @id @default(autoincrement())
+  code                     String                                    @unique @db.VarChar(50)
+  name                     String
+  description              String?                                   @db.Text
+  address                  String?
+  created_at               DateTime                                  @default(now())
+  updated_at               DateTime                                  @default(now()) @updatedAt
+  deleted_at               DateTime?
+  pressureDifferentials    ProductionWorkshopPressureDifferentials[]
+  disinfectantPreparations ProductionOrderDisinfectantPreparations[]
 
   @@map("production_workshops")
 }
@@ -349,6 +351,7 @@ model ProductionOrders {
   cylinderCalibration             ProductionOrderCylinderCalibrations?
   sensoryChecks                   ProductionOrderSensoryChecks[]
   dateChecks                      ProductionOrderDateChecks[]
+  disinfectantPreparations        ProductionOrderDisinfectantPreparations[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
@@ -493,6 +496,30 @@ model ProductionOrderSamplingRecords {
   @@index([production_order_id], map: "po_sampling_records_po_id_fkey")
   @@index([created_by_id], map: "po_sampling_records_created_by_id_fkey")
   @@map("production_order_sampling_records")
+}
+
+model ProductionOrderDisinfectantPreparations {
+  id                     Int                 @id @default(autoincrement())
+  production_order_id    Int
+  productionOrder        ProductionOrders    @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_disinfectant_preps_po_id_fkey")
+  workshop_id            Int
+  workshop               ProductionWorkshops @relation(fields: [workshop_id], references: [id], map: "po_disinfectant_preps_workshop_id_fkey")
+  disinfectant_name      String              @db.VarChar(255)
+  purpose                String              @db.Text
+  base_material_name     String              @db.VarChar(255)
+  base_material_content  Decimal             @db.Decimal(10, 4)
+  base_material_amount_l Decimal             @db.Decimal(12, 4)
+  prepared_volume_l      Decimal             @db.Decimal(12, 4)
+  actual_concentration   Decimal             @db.Decimal(10, 4)
+  created_by_id          Int
+  createdBy              Users               @relation("ProductionOrderDisinfectantPreparationCreator", fields: [created_by_id], references: [id], map: "po_disinfectant_preps_created_by_id_fkey")
+  created_at             DateTime            @default(now())
+  updated_at             DateTime            @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_disinfectant_preps_po_id_fkey")
+  @@index([workshop_id], map: "po_disinfectant_preps_workshop_id_fkey")
+  @@index([created_by_id], map: "po_disinfectant_preps_created_by_id_fkey")
+  @@map("production_order_disinfectant_preparations")
 }
 
 model ProductionOrderFriabilityChecks {

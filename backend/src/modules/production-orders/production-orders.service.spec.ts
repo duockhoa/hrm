@@ -826,6 +826,20 @@ describe('ProductionOrdersService', () => {
             DocumentAbsoluteEntry: 2031,
             LineNumber: 8,
             VisualOrder: 8,
+            ItemNo: 'BB00075',
+            ItemName:
+              'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
+            ItemType: 'pit_Item',
+            StageID: 2,
+            UoMEntry: 172,
+            PlannedQuantity: 0.5,
+            StartDate: '2026-05-08',
+            U_SL: '010126-A000',
+          },
+          {
+            DocumentAbsoluteEntry: 2031,
+            LineNumber: 9,
+            VisualOrder: 9,
             ItemNo: 'BB00076',
             ItemName: 'Mang nhom',
             ItemType: 'pit_Item',
@@ -875,11 +889,15 @@ describe('ProductionOrdersService', () => {
       throw new Error('Worksheet not found');
     }
 
+    expect(worksheet.pageSetup.orientation).toBe('landscape');
+    expect(worksheet.pageSetup.fitToPage).toBe(true);
+    expect(worksheet.pageSetup.fitToWidth).toBe(1);
+    expect(worksheet.pageSetup.fitToHeight).toBe(0);
     expect(worksheet.getCell('E1').value).toBe('PHIẾU CÂN');
     expect(worksheet.getCell('D5').value).toBe('Thanh pham test');
-    expect(worksheet.getCell('L5').value).toBe('010126');
+    expect(worksheet.getCell('P5').value).toBe('010126');
     expect(worksheet.getCell('D6').value).toBe('1000 Kg');
-    expect(worksheet.getCell('L6').value).toBe('......./....../20…....');
+    expect(worksheet.getCell('P6').value).toBeNull();
     expect(worksheet.getCell('B12').value).toBe('BB00075');
     expect(worksheet.getCell('C12').value).toBe(
       'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
@@ -888,6 +906,8 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('K12').value).toBe(1.5);
     expect(worksheet.getCell('M12').value).toBe('Cai');
     expect(worksheet.getCell('N12').value).toBeNull();
+    expect(worksheet.getCell('P12').value).toBeNull();
+    expect(worksheet.getCell('R12').value).toBe(2);
     expect(worksheet.getRow(12).height).toBeGreaterThanOrEqual(46);
     expect(worksheet.getRow(12).height).toBeLessThan(51);
     expect(worksheet.getCell('B12').alignment).toEqual(
@@ -918,10 +938,25 @@ describe('ProductionOrdersService', () => {
         wrapText: true,
       }),
     );
-    expect(worksheet.getCell('G13').value).toBe('010126-A001');
-    expect(worksheet.getRow(13).height).toBeGreaterThan(21);
-    expect(worksheet.getRow(13).height).toBeLessThan(23);
-    expect(worksheet.getRow(14).hidden).toBe(true);
+    expect(worksheet.getCell('R12').alignment).toEqual(
+      expect.objectContaining({
+        horizontal: 'center',
+        vertical: 'middle',
+        wrapText: true,
+      }),
+    );
+    expect(worksheet.model.merges).toContain('P12:Q13');
+    expect(worksheet.model.merges).not.toContain('P12:Q12');
+    expect(worksheet.model.merges).not.toContain('P13:Q13');
+    expect(worksheet.model.merges).toContain('R12:S13');
+    expect(worksheet.model.merges).not.toContain('R12:S12');
+    expect(worksheet.model.merges).not.toContain('R13:S13');
+    expect(worksheet.getCell('B13').value).toBe('BB00075');
+    expect(worksheet.getCell('G13').value).toBe('010126-A000');
+    expect(worksheet.getCell('G14').value).toBe('010126-A001');
+    expect(worksheet.getCell('R14').value).toBe(2);
+    expect(worksheet.getRow(14).height).toBe(30);
+    expect(worksheet.getRow(15).hidden).toBe(true);
   });
 
   it('filters exported weighing ticket lines by stage ids', async () => {
