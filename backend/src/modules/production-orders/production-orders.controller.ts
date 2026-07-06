@@ -62,6 +62,9 @@ import { CreateProductionOrderDateCheckDto } from './dto/create-production-order
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
+import { CreateProductionOrderSteamSterilizationCheckDto } from './dto/create-production-order-steam-sterilization-check.dto';
+import { UpdateProductionOrderSteamSterilizationCheckDto } from './dto/update-production-order-steam-sterilization-check.dto';
+import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
 import {
   getDateCheckImagePaths,
   getDateCheckRequestFilePath,
@@ -79,6 +82,11 @@ import {
   productionOrderPostHomogenizationGranuleCheckImageUploadOptions,
   removeUploadedPostHomogenizationGranuleCheckImage,
 } from './production-order-post-homogenization-granule-check-upload.config';
+import {
+  getSteamSterilizationCheckImagePath,
+  productionOrderSteamSterilizationCheckImageUploadOptions,
+  removeUploadedSteamSterilizationCheckImages,
+} from './production-order-steam-sterilization-check-upload.config';
 
 type DateCheckUploadFields = {
   request_file?: Express.Multer.File[];
@@ -94,6 +102,12 @@ type SensoryCheckUploadFields = {
 type PostHomogenizationGranuleCheckUploadFields = {
   granule_image?: Express.Multer.File[];
   image?: Express.Multer.File[];
+};
+
+type SteamSterilizationCheckUploadFields = {
+  configuration_image?: Express.Multer.File[];
+  indicator_image?: Express.Multer.File[];
+  reached_temperature_image?: Express.Multer.File[];
 };
 
 const dateCheckRequestFileUploadFields = [
@@ -122,6 +136,34 @@ const getUploadedSensoryCheckImages = (
 const getUploadedPostHomogenizationGranuleCheckImages = (
   uploadedFiles?: PostHomogenizationGranuleCheckUploadFields,
 ) => [...(uploadedFiles?.granule_image ?? []), ...(uploadedFiles?.image ?? [])];
+
+const steamSterilizationCheckImageUploadFields = [
+  { name: 'configuration_image', maxCount: 1 },
+  { name: 'indicator_image', maxCount: 1 },
+  { name: 'reached_temperature_image', maxCount: 1 },
+];
+
+const getUploadedSteamSterilizationCheckImages = (
+  uploadedFiles?: SteamSterilizationCheckUploadFields,
+) => [
+  ...(uploadedFiles?.configuration_image ?? []),
+  ...(uploadedFiles?.indicator_image ?? []),
+  ...(uploadedFiles?.reached_temperature_image ?? []),
+];
+
+const getSteamSterilizationCheckUploadedImagePaths = (
+  uploadedFiles?: SteamSterilizationCheckUploadFields,
+) => ({
+  configurationImagePath: getSteamSterilizationCheckImagePath(
+    uploadedFiles?.configuration_image?.[0],
+  ),
+  indicatorImagePath: getSteamSterilizationCheckImagePath(
+    uploadedFiles?.indicator_image?.[0],
+  ),
+  reachedTemperatureImagePath: getSteamSterilizationCheckImagePath(
+    uploadedFiles?.reached_temperature_image?.[0],
+  ),
+});
 
 const getAsciiFilenameFallback = (filename: string) => {
   const fallback = filename
@@ -164,6 +206,7 @@ export class ProductionOrdersController {
     private readonly productionOrderCylinderCalibrationsService: ProductionOrderCylinderCalibrationsService,
     private readonly productionOrderSensoryChecksService: ProductionOrderSensoryChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
+    private readonly productionOrderSteamSterilizationChecksService: ProductionOrderSteamSterilizationChecksService,
   ) {}
 
   @Get()
@@ -411,9 +454,76 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Get('steam-sterilization-checks/images/:filename')
+  async getSteamSterilizationCheckImage(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.productionOrderSteamSterilizationChecksService.findImageFile(
+        filename,
+      );
+
+    if (!imageFile) {
+      throw new NotFoundException('Steam sterilization check image not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
   @Get('sensory-checks/:checkId')
   async findSensoryCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderSensoryChecksService.findById(checkId);
+  }
+
+  @Get('steam-sterilization-checks/:checkId')
+  async findSteamSterilizationCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderSteamSterilizationChecksService.findById(
+      checkId,
+    );
+  }
+
+  @Patch('steam-sterilization-checks/:checkId')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      steamSterilizationCheckImageUploadFields,
+      productionOrderSteamSterilizationCheckImageUploadOptions,
+    ),
+  )
+  async updateSteamSterilizationCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderSteamSterilizationCheckDto,
+    @UploadedFiles()
+    uploadedFiles: SteamSterilizationCheckUploadFields | undefined,
+  ) {
+    const uploadedImages =
+      getUploadedSteamSterilizationCheckImages(uploadedFiles);
+
+    try {
+      return await this.productionOrderSteamSterilizationChecksService.update(
+        checkId,
+        updateDto,
+        getSteamSterilizationCheckUploadedImagePaths(uploadedFiles),
+      );
+    } catch (error) {
+      await removeUploadedSteamSterilizationCheckImages(uploadedImages);
+      throw error;
+    }
+  }
+
+  @Delete('steam-sterilization-checks/:checkId')
+  async deleteSteamSterilizationCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderSteamSterilizationChecksService.delete(checkId);
   }
 
   @Get('date-checks/:checkId')
@@ -915,6 +1025,43 @@ export class ProductionOrdersController {
       );
     } catch (error) {
       await Promise.all(uploadedImages.map(removeUploadedSensoryCheckImage));
+      throw error;
+    }
+  }
+
+  @Get(':id/steam-sterilization-checks')
+  async findSteamSterilizationChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderSteamSterilizationChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/steam-sterilization-checks')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      steamSterilizationCheckImageUploadFields,
+      productionOrderSteamSterilizationCheckImageUploadOptions,
+    ),
+  )
+  async createSteamSterilizationCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderSteamSterilizationCheckDto,
+    @UploadedFiles()
+    uploadedFiles: SteamSterilizationCheckUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    const uploadedImages =
+      getUploadedSteamSterilizationCheckImages(uploadedFiles);
+
+    try {
+      return await this.productionOrderSteamSterilizationChecksService.create(
+        id,
+        createDto,
+        req.user,
+        getSteamSterilizationCheckUploadedImagePaths(uploadedFiles),
+      );
+    } catch (error) {
+      await removeUploadedSteamSterilizationCheckImages(uploadedImages);
       throw error;
     }
   }

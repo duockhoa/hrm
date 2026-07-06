@@ -27,6 +27,7 @@ import { ProductionOrderVialInspectionChecksService } from './production-order-v
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
+import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
 
 @Module({
   imports: [FeaturesModule],
@@ -51,6 +52,7 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
     ProductionOrderCylinderCalibrationsService,
     ProductionOrderSensoryChecksService,
     ProductionOrderDateChecksService,
+    ProductionOrderSteamSterilizationChecksService,
     WarehouseReleaseExportService,
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,

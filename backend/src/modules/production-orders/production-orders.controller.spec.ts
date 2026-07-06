@@ -21,6 +21,7 @@ import { ProductionOrderVialInspectionChecksService } from './production-order-v
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
+import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -136,6 +137,14 @@ describe('ProductionOrdersController', () => {
     findImageFile: jest.Mock;
     findRequestFile: jest.Mock;
   };
+  let productionOrderSteamSterilizationChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+    findImageFile: jest.Mock;
+  };
 
   beforeEach(async () => {
     productionOrdersService = {
@@ -250,6 +259,14 @@ describe('ProductionOrdersController', () => {
       findImageFile: jest.fn(),
       findRequestFile: jest.fn(),
     };
+    productionOrderSteamSterilizationChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findImageFile: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -329,6 +346,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderDateChecksService,
           useValue: productionOrderDateChecksService,
+        },
+        {
+          provide: ProductionOrderSteamSterilizationChecksService,
+          useValue: productionOrderSteamSterilizationChecksService,
         },
       ],
     }).compile();
@@ -1214,6 +1235,95 @@ describe('ProductionOrdersController', () => {
         imagePath: undefined,
       },
     );
+  });
+
+  it('gets steam sterilization checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderSteamSterilizationChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findSteamSterilizationChecks(2031)).resolves.toBe(
+      checks,
+    );
+    expect(
+      productionOrderSteamSterilizationChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a steam sterilization check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderSteamSterilizationChecksService.findById.mockResolvedValue(
+      check,
+    );
+
+    await expect(controller.findSteamSterilizationCheckById(1)).resolves.toBe(
+      check,
+    );
+    expect(
+      productionOrderSteamSterilizationChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a steam sterilization check using the authenticated user', async () => {
+    const createDto = {
+      equipment_name: 'Noi hap 1',
+      setting_temperature: 121,
+      setting_time: 30,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSteamSterilizationChecksService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createSteamSterilizationCheck(2031, createDto, undefined, {
+        user,
+      }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSteamSterilizationChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user, {
+      configurationImagePath: undefined,
+      indicatorImagePath: undefined,
+      reachedTemperatureImagePath: undefined,
+    });
+  });
+
+  it('updates a steam sterilization check', async () => {
+    const updateDto = {
+      setting_temperature: 122,
+    };
+    const result = { id: 1, setting_temperature: '122.00' };
+    productionOrderSteamSterilizationChecksService.update.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.updateSteamSterilizationCheck(1, updateDto, undefined),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSteamSterilizationChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto, {
+      configurationImagePath: undefined,
+      indicatorImagePath: undefined,
+      reachedTemperatureImagePath: undefined,
+    });
+  });
+
+  it('deletes a steam sterilization check', async () => {
+    const result = { id: 1 };
+    productionOrderSteamSterilizationChecksService.delete.mockResolvedValue(
+      result,
+    );
+
+    await expect(controller.deleteSteamSterilizationCheck(1)).resolves.toBe(
+      result,
+    );
+    expect(
+      productionOrderSteamSterilizationChecksService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets date checks for a production order', async () => {

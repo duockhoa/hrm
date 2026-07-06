@@ -1209,6 +1209,165 @@ Lỗi thường gặp:
 
 - `404 Disinfectant preparation not found`
 
+## Production Order Steam Sterilization Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu bảng theo dõi quá trình hấp theo lệnh sản xuất. Một lệnh sản xuất có thể có nhiều bản ghi theo dõi hấp.
+
+### Lấy danh sách theo dõi quá trình hấp của lệnh sản xuất
+
+```http
+GET /production-orders/:id/steam-sterilization-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "equipment_name": "Noi hap 1",
+    "setting_temperature": "121.50",
+    "setting_time": 30,
+    "configuration_image_path": "/production-orders/steam-sterilization-checks/images/config.jpg",
+    "indicator_image_path": "/production-orders/steam-sterilization-checks/images/indicator.jpg",
+    "reached_temperature_image_path": "/production-orders/steam-sterilization-checks/images/reached.jpg",
+    "created_by_id": 7,
+    "checked_by_id": 8,
+    "checked_at": "2026-07-06T08:00:00.000Z",
+    "created_at": "2026-07-06T08:10:00.000Z",
+    "updated_at": "2026-07-06T08:10:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    },
+    "checkedBy": {
+      "id": 8,
+      "username": "qa",
+      "name": "QA",
+      "email": "qa@example.com",
+      "department": "QA",
+      "position": "Checker"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi theo dõi quá trình hấp theo ID
+
+```http
+GET /production-orders/steam-sterilization-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Steam sterilization check not found`
+
+### Xem ảnh theo dõi quá trình hấp
+
+```http
+GET /production-orders/steam-sterilization-checks/images/:filename
+```
+
+API này trả về file ảnh đã upload nếu file đang được tham chiếu bởi một trong 3 field ảnh của bảng hấp.
+
+Lỗi thường gặp:
+
+- `404 Steam sterilization check image not found`
+
+### Thêm bản ghi theo dõi quá trình hấp
+
+```http
+POST /production-orders/:id/steam-sterilization-checks
+```
+
+Body có thể gửi `application/json` nếu không upload ảnh, hoặc `multipart/form-data` nếu có ảnh.
+
+Body JSON mẫu:
+
+```json
+{
+  "equipment_name": "Noi hap 1",
+  "setting_temperature": 121.5,
+  "setting_time": 30,
+  "checked_by_id": 8,
+  "checked_at": "2026-07-06T08:00:00.000Z"
+}
+```
+
+File fields khi dùng `multipart/form-data`:
+
+- `configuration_image`: hình ảnh cấu hình, tối đa 1 file.
+- `indicator_image`: hình ảnh chỉ thị, tối đa 1 file.
+- `reached_temperature_image`: hình ảnh đạt nhiệt, tối đa 1 file.
+
+Quy tắc:
+
+- `created_by_id` bắt buộc và lấy từ user đăng nhập, frontend không gửi field này.
+- `equipment_name`, `setting_temperature`, `setting_time`, `checked_by_id`, `checked_at` đều không bắt buộc.
+- `setting_temperature` nếu gửi thì lưu dạng `DECIMAL(8, 2)` và phải lớn hơn `0`.
+- `setting_time` nếu gửi thì phải là số nguyên dương.
+- `checked_by_id` nếu gửi thì phải tồn tại trong bảng `users`.
+- Ảnh chỉ nhận JPG, PNG, WEBP hoặc GIF, tối đa 20 MB/file.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `404 User not found`
+- `400 setting_temperature must fit DECIMAL(8, 2) with up to 2 decimal places`
+- `400 setting_time must be a positive integer`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi theo dõi quá trình hấp
+
+```http
+PATCH /production-orders/steam-sterilization-checks/:checkId
+```
+
+Body: gửi một hoặc nhiều field cần đổi. Có thể dùng `application/json` hoặc `multipart/form-data` nếu cần thay ảnh.
+
+Body JSON mẫu:
+
+```json
+{
+  "setting_temperature": 122,
+  "setting_time": null,
+  "checked_by_id": 8
+}
+```
+
+File fields khi dùng `multipart/form-data` giống API thêm mới. Nếu upload ảnh mới, path ảnh cũ của field đó sẽ được thay thế và file cũ sẽ bị xóa.
+
+Lỗi thường gặp:
+
+- `404 Steam sterilization check not found`
+- `404 User not found`
+- `400 At least one field is required`
+
+### Xóa bản ghi theo dõi quá trình hấp
+
+```http
+DELETE /production-orders/steam-sterilization-checks/:checkId
+```
+
+Response trả về bản ghi vừa xóa. Các file ảnh đang được tham chiếu bởi bản ghi cũng sẽ bị xóa.
+
+Lỗi thường gặp:
+
+- `404 Steam sterilization check not found`
+
 ## Production Order Environment Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
