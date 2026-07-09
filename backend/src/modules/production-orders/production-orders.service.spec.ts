@@ -906,8 +906,8 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('K12').value).toBe(1.5);
     expect(worksheet.getCell('M12').value).toBe('Cai');
     expect(worksheet.getCell('N12').value).toBeNull();
-    expect(worksheet.getCell('P12').value).toBeNull();
-    expect(worksheet.getCell('R12').value).toBe(2);
+    expect(worksheet.getCell('P12').value).toBe(2);
+    expect(worksheet.getCell('R12').value).toBe('Cai');
     expect(worksheet.getRow(12).height).toBeGreaterThanOrEqual(46);
     expect(worksheet.getRow(12).height).toBeLessThan(51);
     expect(worksheet.getCell('B12').alignment).toEqual(
@@ -938,6 +938,13 @@ describe('ProductionOrdersService', () => {
         wrapText: true,
       }),
     );
+    expect(worksheet.getCell('P12').alignment).toEqual(
+      expect.objectContaining({
+        horizontal: 'center',
+        vertical: 'middle',
+        wrapText: true,
+      }),
+    );
     expect(worksheet.getCell('R12').alignment).toEqual(
       expect.objectContaining({
         horizontal: 'center',
@@ -951,10 +958,13 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.model.merges).toContain('R12:S13');
     expect(worksheet.model.merges).not.toContain('R12:S12');
     expect(worksheet.model.merges).not.toContain('R13:S13');
+    expect(worksheet.getCell('P13').value).toBe(2);
+    expect(worksheet.getCell('R13').value).toBe('Cai');
     expect(worksheet.getCell('B13').value).toBe('BB00075');
     expect(worksheet.getCell('G13').value).toBe('010126-A000');
     expect(worksheet.getCell('G14').value).toBe('010126-A001');
-    expect(worksheet.getCell('R14').value).toBe(2);
+    expect(worksheet.getCell('P14').value).toBe(2);
+    expect(worksheet.getCell('R14').value).toBe('Cai');
     expect(worksheet.getRow(14).height).toBe(30);
     expect(worksheet.getRow(15).hidden).toBe(true);
   });
@@ -1037,8 +1047,8 @@ describe('ProductionOrdersService', () => {
     mockedAxiosGet.mockResolvedValueOnce({
       data: {
         ItemNo: 'TP00063',
-        InventoryUOM: 'Kg',
-        PlannedQuantity: 1000,
+        InventoryUOM: 'viên',
+        PlannedQuantity: 10000,
         ProductDescription: 'Thanh pham test',
         U_SL: '010126',
         ProductionOrderLines: [
@@ -1141,7 +1151,7 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('D5').value).toBe('Thanh pham test');
     expect(worksheet.getCell('L5').value).toBe('Số lô:');
     expect(worksheet.getCell('M5').value).toBe('010126');
-    expect(worksheet.getCell('D6').value).toBe('1000 Kg');
+    expect(worksheet.getCell('D6').value).toBe('10,000 viên');
     expect(worksheet.getCell('L6').value).toBe('......./....../20…....');
     expect(worksheet.getCell('B10').value).toBe('BB00075');
     expect(worksheet.getCell('D10').value).toBe(
@@ -1153,6 +1163,8 @@ describe('ProductionOrdersService', () => {
     expect(worksheet.getCell('B11').value).toBe('BB00076');
     expect(worksheet.getCell('I11').value).toBe(2);
     expect(worksheet.getCell('L11').value).toBe('Hop');
+    expect(worksheet.getRow(10).height).toBeGreaterThanOrEqual(30);
+    expect(worksheet.getRow(11).height).toBeGreaterThanOrEqual(30);
     expect(worksheet.getRow(12).hidden).toBe(true);
     expect(worksheet.getCell('B10').alignment).toEqual(
       expect.objectContaining({

@@ -22,7 +22,7 @@ const POST_WEIGHING_MATERIAL_CHECK_TEMPLATE_PATH = path.join(
 const POST_WEIGHING_MATERIAL_CHECK_SHEET_NAME = 'Sheet1';
 const POST_WEIGHING_MATERIAL_CHECK_DATA_START_ROW = 10;
 const POST_WEIGHING_MATERIAL_CHECK_DATA_END_ROW = 115;
-const POST_WEIGHING_MATERIAL_CHECK_DEFAULT_DATA_ROW_HEIGHT = 15;
+const POST_WEIGHING_MATERIAL_CHECK_MIN_DATA_ROW_HEIGHT = 30;
 const POST_WEIGHING_MATERIAL_CHECK_TEXT_LINE_HEIGHT = 12;
 const POST_WEIGHING_MATERIAL_CHECK_ROW_VERTICAL_PADDING = 2;
 const POST_WEIGHING_MATERIAL_CHECK_ROW_HEIGHT_BUFFER = 8;
@@ -174,12 +174,11 @@ const getDataRowHeight = (
     ),
   );
 
-  return (
-    Math.max(
-      POST_WEIGHING_MATERIAL_CHECK_DEFAULT_DATA_ROW_HEIGHT,
-      maxLineCount * POST_WEIGHING_MATERIAL_CHECK_TEXT_LINE_HEIGHT +
-        POST_WEIGHING_MATERIAL_CHECK_ROW_VERTICAL_PADDING,
-    ) + POST_WEIGHING_MATERIAL_CHECK_ROW_HEIGHT_BUFFER
+  return Math.max(
+    POST_WEIGHING_MATERIAL_CHECK_MIN_DATA_ROW_HEIGHT,
+    maxLineCount * POST_WEIGHING_MATERIAL_CHECK_TEXT_LINE_HEIGHT +
+      POST_WEIGHING_MATERIAL_CHECK_ROW_VERTICAL_PADDING +
+      POST_WEIGHING_MATERIAL_CHECK_ROW_HEIGHT_BUFFER,
   );
 };
 
@@ -359,7 +358,11 @@ export class PostWeighingMaterialCheckExportService {
 
     setCellValue(worksheet, 'D5', productionOrder?.ProductDescription);
     setCellValueAfterLabel(worksheet, 'Số lô:', productionOrder?.U_SL);
-    setCellValue(worksheet, 'D6', getProductionOrderBatchSize(productionOrder));
+    setCellValue(
+      worksheet,
+      'D6',
+      getProductionOrderBatchSize(productionOrder, { formatQuantity: true }),
+    );
 
     for (const [index, line] of postWeighingLines.entries()) {
       const rowNumber = POST_WEIGHING_MATERIAL_CHECK_DATA_START_ROW + index;

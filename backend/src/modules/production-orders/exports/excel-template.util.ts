@@ -5,6 +5,10 @@ type ProductionOrderLike = {
   [key: string]: unknown;
 };
 
+type ProductionOrderBatchSizeOptions = {
+  formatQuantity?: boolean;
+};
+
 type CellCoordinate = {
   column: number;
   row: number;
@@ -48,8 +52,43 @@ const getProductionOrderUnit = (productionOrder?: ProductionOrderLike) =>
       productionOrder?.unit,
   );
 
+const parseNumberLike = (value: string) => {
+  const trimmedValue = value.trim();
+  const hasComma = trimmedValue.includes(',');
+  const hasDot = trimmedValue.includes('.');
+  let normalizedValue = trimmedValue;
+
+  if (hasComma && hasDot) {
+    normalizedValue = trimmedValue.replace(/,/g, '');
+  } else if (hasComma) {
+    normalizedValue = /^\d{1,3}(,\d{3})+$/.test(trimmedValue)
+      ? trimmedValue.replace(/,/g, '')
+      : trimmedValue.replace(',', '.');
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(trimmedValue)) {
+    normalizedValue = trimmedValue.replace(/\./g, '');
+  }
+
+  const parsedValue = Number(normalizedValue);
+
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+};
+
+const formatBatchQuantity = (value: string | number) => {
+  const numericValue =
+    typeof value === 'number' ? value : parseNumberLike(String(value));
+
+  if (numericValue === null || !Number.isFinite(numericValue)) {
+    return value;
+  }
+
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 6,
+  }).format(numericValue);
+};
+
 export const getProductionOrderBatchSize = (
   productionOrder?: ProductionOrderLike,
+  options: ProductionOrderBatchSizeOptions = {},
 ) => {
   const plannedQuantity = normalizeTemplateValue(
     productionOrder?.PlannedQuantity,
@@ -60,11 +99,15 @@ export const getProductionOrderBatchSize = (
     return null;
   }
 
+  const batchQuantity = options.formatQuantity
+    ? formatBatchQuantity(plannedQuantity)
+    : plannedQuantity;
+
   if (unit === null) {
-    return plannedQuantity;
+    return batchQuantity;
   }
 
-  return `${plannedQuantity} ${unit}`;
+  return `${batchQuantity} ${unit}`;
 };
 
 const parseCellAddress = (address: string): CellCoordinate | null => {

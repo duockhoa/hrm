@@ -75,6 +75,9 @@ const getNumberValue = (value: unknown) => {
 
 const roundQuantity = (value: number) => Number(value.toFixed(6));
 
+const getLineUnitOfMeasurement = (line: ProductionOrderLineWithRelations) =>
+  normalizeCellValue(line.UnitOfMeasurement?.Code ?? line.UoMCode);
+
 const formatDate = (value: unknown) => {
   if (!value) {
     return '';
@@ -233,6 +236,14 @@ const getMaterialCodeMergeKey = (line: ProductionOrderLineWithRelations) => {
   return normalizedItemNo === '' ? null : normalizedItemNo;
 };
 
+const getGroupUnitOfMeasurement = (lines: ProductionOrderLineWithRelations[]) =>
+  lines
+    .map(getLineUnitOfMeasurement)
+    .find(
+      (unitOfMeasurement) =>
+        unitOfMeasurement !== null && unitOfMeasurement !== '',
+    ) ?? null;
+
 const applyMergedCellAlignment = (
   worksheet: ExcelJS.Worksheet,
   address: string,
@@ -273,14 +284,14 @@ const applyMaterialCodeGroupCells = (
 
     const startRow = WEIGHING_TICKET_DATA_START_ROW + groupStartIndex;
     const endRow = startRow + groupLength - 1;
+    const groupLines = lines.slice(groupStartIndex, index);
     const totalWeight = roundQuantity(
-      lines
-        .slice(groupStartIndex, index)
-        .reduce(
-          (total, line) => total + getNumberValue(line.PlannedQuantity),
-          0,
-        ),
+      groupLines.reduce(
+        (total, line) => total + getNumberValue(line.PlannedQuantity),
+        0,
+      ),
     );
+    const unitOfMeasurement = getGroupUnitOfMeasurement(groupLines);
 
     if (currentMaterialCode !== null && groupLength > 1) {
       for (let rowNumber = startRow; rowNumber <= endRow; rowNumber += 1) {
@@ -289,13 +300,15 @@ const applyMaterialCodeGroupCells = (
       }
 
       worksheet.mergeCells(`P${startRow}:Q${endRow}`);
+      setCellValue(worksheet, `P${startRow}`, totalWeight);
       applyMergedCellAlignment(worksheet, `P${startRow}`);
 
       worksheet.mergeCells(`R${startRow}:S${endRow}`);
-      setCellValue(worksheet, `R${startRow}`, totalWeight);
+      setCellValue(worksheet, `R${startRow}`, unitOfMeasurement);
       applyMergedCellAlignment(worksheet, `R${startRow}`);
     } else {
-      setCellValue(worksheet, `R${startRow}`, totalWeight);
+      setCellValue(worksheet, `P${startRow}`, totalWeight);
+      setCellValue(worksheet, `R${startRow}`, unitOfMeasurement);
     }
 
     groupStartIndex = index;
@@ -390,9 +403,7 @@ export class WeighingTicketExportService {
       const itemNo = getLineValue(line, 'ItemNo');
       const itemName = getLineValue(line, 'ItemName');
       const batchNumber = getLineValue(line, 'U_SL');
-      const unitOfMeasurement = normalizeCellValue(
-        line.UnitOfMeasurement?.Code ?? line.UoMCode,
-      );
+      const unitOfMeasurement = getLineUnitOfMeasurement(line);
 
       setCellValue(worksheet, `B${rowNumber}`, itemNo);
       setCellValue(worksheet, `C${rowNumber}`, itemName);
