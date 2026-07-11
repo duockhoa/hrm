@@ -66,6 +66,9 @@ import { ProductionOrderDateChecksService } from './production-order-date-checks
 import { CreateProductionOrderSteamSterilizationCheckDto } from './dto/create-production-order-steam-sterilization-check.dto';
 import { UpdateProductionOrderSteamSterilizationCheckDto } from './dto/update-production-order-steam-sterilization-check.dto';
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
+import { CreateProductionOrderSemiFinishedGrossWeightCheckDto } from './dto/create-production-order-semi-finished-gross-weight-check.dto';
+import { UpdateProductionOrderSemiFinishedGrossWeightCheckDto } from './dto/update-production-order-semi-finished-gross-weight-check.dto';
+import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 import {
   getDateCheckImagePaths,
   getDateCheckRequestFilePath,
@@ -208,6 +211,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSensoryChecksService: ProductionOrderSensoryChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
     private readonly productionOrderSteamSterilizationChecksService: ProductionOrderSteamSterilizationChecksService,
+    private readonly productionOrderSemiFinishedGrossWeightChecksService: ProductionOrderSemiFinishedGrossWeightChecksService,
   ) {}
 
   @Get()
@@ -369,6 +373,35 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderTenShellWeightChecksService.findById(checkId);
+  }
+
+  @Get('semi-finished-gross-weight-checks/:checkId')
+  async findSemiFinishedGrossWeightCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderSemiFinishedGrossWeightChecksService.findById(
+      checkId,
+    );
+  }
+
+  @Patch('semi-finished-gross-weight-checks/:checkId')
+  async updateSemiFinishedGrossWeightCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderSemiFinishedGrossWeightCheckDto,
+  ) {
+    return this.productionOrderSemiFinishedGrossWeightChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('semi-finished-gross-weight-checks/:checkId')
+  async deleteSemiFinishedGrossWeightCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderSemiFinishedGrossWeightChecksService.delete(
+      checkId,
+    );
   }
 
   @Get('vial-inspection-checks/:checkId')
@@ -950,6 +983,28 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderTenShellWeightChecksService.upsert(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/semi-finished-gross-weight-checks')
+  async findSemiFinishedGrossWeightChecks(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.productionOrderSemiFinishedGrossWeightChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/semi-finished-gross-weight-checks')
+  async createSemiFinishedGrossWeightCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderSemiFinishedGrossWeightCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderSemiFinishedGrossWeightChecksService.create(
       id,
       createDto,
       req.user,

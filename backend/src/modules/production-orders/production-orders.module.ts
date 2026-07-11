@@ -28,6 +28,7 @@ import { ProductionOrderDateChecksService } from './production-order-date-checks
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
+import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 
 @Module({
   imports: [FeaturesModule],
@@ -53,6 +54,7 @@ import { ProductionOrderSteamSterilizationChecksService } from './production-ord
     ProductionOrderSensoryChecksService,
     ProductionOrderDateChecksService,
     ProductionOrderSteamSterilizationChecksService,
+    ProductionOrderSemiFinishedGrossWeightChecksService,
     WarehouseReleaseExportService,
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,

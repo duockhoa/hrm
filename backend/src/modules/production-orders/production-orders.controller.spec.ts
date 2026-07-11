@@ -22,6 +22,7 @@ import { ProductionOrderCylinderCalibrationsService } from './production-order-c
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
+import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -146,6 +147,13 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
     findImageFile: jest.Mock;
   };
+  let productionOrderSemiFinishedGrossWeightChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
 
   beforeEach(async () => {
     productionOrdersService = {
@@ -269,6 +277,13 @@ describe('ProductionOrdersController', () => {
       delete: jest.fn(),
       findImageFile: jest.fn(),
     };
+    productionOrderSemiFinishedGrossWeightChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -352,6 +367,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSteamSterilizationChecksService,
           useValue: productionOrderSteamSterilizationChecksService,
+        },
+        {
+          provide: ProductionOrderSemiFinishedGrossWeightChecksService,
+          useValue: productionOrderSemiFinishedGrossWeightChecksService,
         },
       ],
     }).compile();
@@ -1120,6 +1139,87 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderTenShellWeightChecksService.upsert,
     ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('gets semi-finished gross weight checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderSemiFinishedGrossWeightChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(
+      controller.findSemiFinishedGrossWeightChecks(2031),
+    ).resolves.toBe(checks);
+    expect(
+      productionOrderSemiFinishedGrossWeightChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a semi-finished gross weight check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderSemiFinishedGrossWeightChecksService.findById.mockResolvedValue(
+      check,
+    );
+
+    await expect(
+      controller.findSemiFinishedGrossWeightCheckById(1),
+    ).resolves.toBe(check);
+    expect(
+      productionOrderSemiFinishedGrossWeightChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a semi-finished gross weight check', async () => {
+    const createDto = {
+      requirement: 'Khối lượng cả vỏ từ 0.480 g đến 0.520 g',
+      unit_1_gross_weight: 0.501,
+      unit_2_gross_weight: 0.498,
+      unit_3_gross_weight: 0.503,
+      unit_4_gross_weight: 0.5,
+      unit_5_gross_weight: 0.499,
+      unit_6_gross_weight: 0.502,
+    };
+    const user = { id: 7 };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSemiFinishedGrossWeightChecksService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createSemiFinishedGrossWeightCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSemiFinishedGrossWeightChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a semi-finished gross weight check', async () => {
+    const updateDto = { unit_2_gross_weight: 0.51 };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSemiFinishedGrossWeightChecksService.update.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.updateSemiFinishedGrossWeightCheck(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSemiFinishedGrossWeightChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a semi-finished gross weight check', async () => {
+    const result = { id: 1 };
+    productionOrderSemiFinishedGrossWeightChecksService.delete.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.deleteSemiFinishedGrossWeightCheck(1),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSemiFinishedGrossWeightChecksService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets vial inspection checks for a production order', async () => {

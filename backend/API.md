@@ -2412,6 +2412,137 @@ Lỗi thường gặp:
 - `400 ten_shells_weight must be greater than 0`
 - `401 Authenticated user not found`
 
+## Production Order Semi-Finished Gross Weight Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu yêu cầu tại thời điểm nhập và khối lượng bán thành phẩm cả vỏ của 6 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị luôn là `g`.
+
+### Lấy danh sách theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/semi-finished-gross-weight-checks
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "requirement": "Khối lượng cả vỏ từ 0.480 g đến 0.520 g",
+    "unit_1_gross_weight": "0.501",
+    "unit_2_gross_weight": "0.498",
+    "unit_3_gross_weight": "0.503",
+    "unit_4_gross_weight": "0.500",
+    "unit_5_gross_weight": "0.499",
+    "unit_6_gross_weight": "0.502",
+    "unit": "g",
+    "created_by_id": 7,
+    "created_at": "2026-07-11T00:00:00.000Z",
+    "updated_at": "2026-07-11T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi theo ID
+
+```http
+GET /production-orders/semi-finished-gross-weight-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Semi-finished product gross weight check not found`
+
+### Tạo bản ghi
+
+```http
+POST /production-orders/:id/semi-finished-gross-weight-checks
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "requirement": "Khối lượng cả vỏ từ 0.480 g đến 0.520 g",
+  "unit_1_gross_weight": 0.501,
+  "unit_2_gross_weight": 0.498,
+  "unit_3_gross_weight": 0.503,
+  "unit_4_gross_weight": 0.5,
+  "unit_5_gross_weight": 0.499,
+  "unit_6_gross_weight": 0.502
+}
+```
+
+Quy tắc:
+
+- `requirement` bắt buộc, không được là chuỗi rỗng và được lưu dạng `TEXT`.
+- Cả 6 field khối lượng đều bắt buộc và phải lớn hơn `0`.
+- Khối lượng lưu dạng `DECIMAL(10, 3)`, tối đa 3 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `0.501`, `"0.501"` hoặc `"0,501"`.
+- `unit` luôn là `g`, backend tự lưu; frontend không gửi field này.
+- `production_order_id` lấy từ `:id`.
+- `created_by_id` lấy từ user đăng nhập.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 requirement is required`
+- `400 requirement must be a string`
+- `400 unit_1_gross_weight is required`
+- `400 unit_1_gross_weight must fit DECIMAL(10, 3) with up to 3 decimal places`
+- `400 unit_1_gross_weight must be greater than 0`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi
+
+```http
+PATCH /production-orders/semi-finished-gross-weight-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi các field muốn cập nhật:
+
+```json
+{
+  "requirement": "Yêu cầu mới tại thời điểm cập nhật",
+  "unit_3_gross_weight": 0.515
+}
+```
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra `requirement` và khối lượng giống API tạo.
+- `404 Semi-finished product gross weight check not found`
+
+### Xóa bản ghi
+
+```http
+DELETE /production-orders/semi-finished-gross-weight-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Semi-finished product gross weight check not found`
+
 ## Production Order Cylinder Calibrations
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
