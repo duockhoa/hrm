@@ -16,14 +16,23 @@ type AuthenticatedUser = {
 const GROSS_WEIGHT_DECIMAL_PATTERN = /^\d+(?:\.\d{1,3})?$/;
 const GROSS_WEIGHT_INTEGER_DIGITS = 7;
 const WEIGHT_UNIT = 'g';
-const GROSS_WEIGHT_FIELDS = [
-  'unit_1_gross_weight',
+const REQUIRED_GROSS_WEIGHT_FIELDS = ['unit_1_gross_weight'] as const;
+const OPTIONAL_GROSS_WEIGHT_FIELDS = [
   'unit_2_gross_weight',
   'unit_3_gross_weight',
   'unit_4_gross_weight',
   'unit_5_gross_weight',
   'unit_6_gross_weight',
 ] as const;
+
+type CreateGrossWeightData = {
+  unit_1_gross_weight: Prisma.Decimal;
+  unit_2_gross_weight: Prisma.Decimal | null;
+  unit_3_gross_weight: Prisma.Decimal | null;
+  unit_4_gross_weight: Prisma.Decimal | null;
+  unit_5_gross_weight: Prisma.Decimal | null;
+  unit_6_gross_weight: Prisma.Decimal | null;
+};
 
 const creatorSelect = {
   id: true,
@@ -86,7 +95,7 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
         data: {
           production_order_id: productionOrderId,
           requirement: this.normalizeRequirement(dto?.requirement),
-          ...this.normalizeRequiredWeights(dto),
+          ...this.normalizeCreateWeights(dto),
           unit: WEIGHT_UNIT,
           created_by_id: this.normalizeUserId(user),
         },
@@ -121,15 +130,35 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
     );
   }
 
-  private normalizeRequiredWeights(
+  private normalizeCreateWeights(
     dto: CreateProductionOrderSemiFinishedGrossWeightCheckDto,
-  ) {
-    return Object.fromEntries(
-      GROSS_WEIGHT_FIELDS.map((field) => [
-        field,
-        this.normalizeGrossWeight(dto?.[field], field),
-      ]),
-    ) as Record<(typeof GROSS_WEIGHT_FIELDS)[number], Prisma.Decimal>;
+  ): CreateGrossWeightData {
+    return {
+      unit_1_gross_weight: this.normalizeRequiredGrossWeight(
+        dto?.unit_1_gross_weight,
+        'unit_1_gross_weight',
+      ),
+      unit_2_gross_weight: this.normalizeOptionalGrossWeight(
+        dto?.unit_2_gross_weight,
+        'unit_2_gross_weight',
+      ),
+      unit_3_gross_weight: this.normalizeOptionalGrossWeight(
+        dto?.unit_3_gross_weight,
+        'unit_3_gross_weight',
+      ),
+      unit_4_gross_weight: this.normalizeOptionalGrossWeight(
+        dto?.unit_4_gross_weight,
+        'unit_4_gross_weight',
+      ),
+      unit_5_gross_weight: this.normalizeOptionalGrossWeight(
+        dto?.unit_5_gross_weight,
+        'unit_5_gross_weight',
+      ),
+      unit_6_gross_weight: this.normalizeOptionalGrossWeight(
+        dto?.unit_6_gross_weight,
+        'unit_6_gross_weight',
+      ),
+    };
   }
 
   private normalizeUpdateData(
@@ -143,9 +172,21 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
       data.requirement = this.normalizeRequirement(updateDto.requirement);
     }
 
-    for (const field of GROSS_WEIGHT_FIELDS) {
+    for (const field of REQUIRED_GROSS_WEIGHT_FIELDS) {
       if (field in updateDto) {
-        data[field] = this.normalizeGrossWeight(updateDto[field], field);
+        data[field] = this.normalizeRequiredGrossWeight(
+          updateDto[field],
+          field,
+        );
+      }
+    }
+
+    for (const field of OPTIONAL_GROSS_WEIGHT_FIELDS) {
+      if (field in updateDto) {
+        data[field] = this.normalizeOptionalGrossWeight(
+          updateDto[field],
+          field,
+        );
       }
     }
 
@@ -174,15 +215,31 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
     return requirement;
   }
 
-  private normalizeGrossWeight(value: unknown, fieldName: string) {
-    if (
-      value === null ||
-      value === undefined ||
-      (typeof value === 'string' && value.trim() === '')
-    ) {
+  private normalizeRequiredGrossWeight(value: unknown, fieldName: string) {
+    if (this.isEmptyGrossWeight(value)) {
       throw new BadRequestException(`${fieldName} is required`);
     }
 
+    return this.normalizeGrossWeightValue(value, fieldName);
+  }
+
+  private normalizeOptionalGrossWeight(value: unknown, fieldName: string) {
+    if (this.isEmptyGrossWeight(value)) {
+      return null;
+    }
+
+    return this.normalizeGrossWeightValue(value, fieldName);
+  }
+
+  private isEmptyGrossWeight(value: unknown) {
+    return (
+      value === null ||
+      value === undefined ||
+      (typeof value === 'string' && value.trim() === '')
+    );
+  }
+
+  private normalizeGrossWeightValue(value: unknown, fieldName: string) {
     const normalizedValue =
       typeof value === 'number'
         ? String(value)

@@ -714,11 +714,11 @@ model ProductionOrderSemiFinishedProductGrossWeightChecks {
   productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_semi_finished_gross_weight_po_fkey")
   requirement         String           @db.Text
   unit_1_gross_weight Decimal          @db.Decimal(10, 3)
-  unit_2_gross_weight Decimal          @db.Decimal(10, 3)
-  unit_3_gross_weight Decimal          @db.Decimal(10, 3)
-  unit_4_gross_weight Decimal          @db.Decimal(10, 3)
-  unit_5_gross_weight Decimal          @db.Decimal(10, 3)
-  unit_6_gross_weight Decimal          @db.Decimal(10, 3)
+  unit_2_gross_weight Decimal?         @db.Decimal(10, 3)
+  unit_3_gross_weight Decimal?         @db.Decimal(10, 3)
+  unit_4_gross_weight Decimal?         @db.Decimal(10, 3)
+  unit_5_gross_weight Decimal?         @db.Decimal(10, 3)
+  unit_6_gross_weight Decimal?         @db.Decimal(10, 3)
   unit                String           @default("g") @db.VarChar(10)
   created_by_id       Int
   createdBy           Users            @relation("ProductionOrderSemiFinishedGrossWeightCheckCreator", fields: [created_by_id], references: [id], map: "po_semi_finished_gross_weight_user_fkey")
