@@ -94,7 +94,7 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
       {
         data: {
           production_order_id: productionOrderId,
-          requirement: this.normalizeRequirement(dto?.requirement),
+          requirement: this.normalizeOptionalRequirement(dto?.requirement),
           ...this.normalizeCreateWeights(dto),
           unit: WEIGHT_UNIT,
           created_by_id: this.normalizeUserId(user),
@@ -169,7 +169,9 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
       {};
 
     if ('requirement' in updateDto) {
-      data.requirement = this.normalizeRequirement(updateDto.requirement);
+      data.requirement = this.normalizeOptionalRequirement(
+        updateDto.requirement,
+      );
     }
 
     for (const field of REQUIRED_GROSS_WEIGHT_FIELDS) {
@@ -197,9 +199,9 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
     return data;
   }
 
-  private normalizeRequirement(value: unknown) {
+  private normalizeOptionalRequirement(value: unknown) {
     if (value === null || value === undefined) {
-      throw new BadRequestException('requirement is required');
+      return null;
     }
 
     if (typeof value !== 'string') {
@@ -209,7 +211,7 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
     const requirement = value.trim();
 
     if (!requirement) {
-      throw new BadRequestException('requirement is required');
+      return null;
     }
 
     return requirement;

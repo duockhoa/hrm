@@ -23,6 +23,7 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
+import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -148,6 +149,13 @@ describe('ProductionOrdersController', () => {
     findImageFile: jest.Mock;
   };
   let productionOrderSemiFinishedGrossWeightChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderSemiFinishedNetWeightChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -284,6 +292,13 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderSemiFinishedNetWeightChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -371,6 +386,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSemiFinishedGrossWeightChecksService,
           useValue: productionOrderSemiFinishedGrossWeightChecksService,
+        },
+        {
+          provide: ProductionOrderSemiFinishedNetWeightChecksService,
+          useValue: productionOrderSemiFinishedNetWeightChecksService,
         },
       ],
     }).compile();
@@ -1219,6 +1238,84 @@ describe('ProductionOrdersController', () => {
     ).resolves.toBe(result);
     expect(
       productionOrderSemiFinishedGrossWeightChecksService.delete,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('gets semi-finished net weight checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderSemiFinishedNetWeightChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(
+      controller.findSemiFinishedNetWeightChecks(2031),
+    ).resolves.toBe(checks);
+    expect(
+      productionOrderSemiFinishedNetWeightChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a semi-finished net weight check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderSemiFinishedNetWeightChecksService.findById.mockResolvedValue(
+      check,
+    );
+
+    await expect(
+      controller.findSemiFinishedNetWeightCheckById(1),
+    ).resolves.toBe(check);
+    expect(
+      productionOrderSemiFinishedNetWeightChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a semi-finished net weight check', async () => {
+    const createDto = {
+      requirement: 'Khối lượng không vỏ từ 0.380 g đến 0.420 g',
+      unit_1_net_weight: 0.401,
+      unit_2_net_weight: 0.398,
+      unit: 'mg',
+    };
+    const user = { id: 7 };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSemiFinishedNetWeightChecksService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createSemiFinishedNetWeightCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSemiFinishedNetWeightChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a semi-finished net weight check', async () => {
+    const updateDto = { unit_2_net_weight: 0.41, unit: 'mg' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSemiFinishedNetWeightChecksService.update.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.updateSemiFinishedNetWeightCheck(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSemiFinishedNetWeightChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a semi-finished net weight check', async () => {
+    const result = { id: 1 };
+    productionOrderSemiFinishedNetWeightChecksService.delete.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.deleteSemiFinishedNetWeightCheck(1),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSemiFinishedNetWeightChecksService.delete,
     ).toHaveBeenCalledWith(1);
   });
 

@@ -2479,14 +2479,13 @@ Body:
 
 ```json
 {
-  "requirement": "Khối lượng cả vỏ từ 0.480 g đến 0.520 g",
   "unit_1_gross_weight": 0.501
 }
 ```
 
 Quy tắc:
 
-- `requirement` bắt buộc, không được là chuỗi rỗng và được lưu dạng `TEXT`.
+- `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
 - `unit_1_gross_weight` bắt buộc và phải lớn hơn `0`.
 - `unit_2_gross_weight` đến `unit_6_gross_weight` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
 - Khi có giá trị, khối lượng phải lớn hơn `0`, lưu dạng `DECIMAL(10, 3)` và tối đa 3 chữ số sau dấu phẩy.
@@ -2498,7 +2497,6 @@ Quy tắc:
 Lỗi thường gặp:
 
 - `404 Production order not found`
-- `400 requirement is required`
 - `400 requirement must be a string`
 - `400 unit_1_gross_weight is required`
 - `400 unit_1_gross_weight must fit DECIMAL(10, 3) with up to 3 decimal places`
@@ -2524,6 +2522,7 @@ Body chỉ cần gửi các field muốn cập nhật:
 ```
 
 `unit_2_gross_weight` đến `unit_6_gross_weight` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_gross_weight` không được xóa vì là giá trị bắt buộc.
+`requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 
 Lỗi thường gặp:
 
@@ -2542,6 +2541,140 @@ API trả về bản ghi vừa xóa.
 Lỗi thường gặp:
 
 - `404 Semi-finished product gross weight check not found`
+
+## Production Order Semi-Finished Net Weight Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu yêu cầu tại thời điểm nhập và khối lượng bán thành phẩm không có vỏ của tối đa 6 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị mặc định là `g`, nhưng frontend có thể gửi hoặc sửa `unit` khi cần; chỉ đơn vị 1 là bắt buộc.
+
+### Lấy danh sách theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/semi-finished-net-weight-checks
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "requirement": "Khối lượng không vỏ từ 0.380 g đến 0.420 g",
+    "unit_1_net_weight": "0.401",
+    "unit_2_net_weight": "0.398",
+    "unit_3_net_weight": null,
+    "unit_4_net_weight": null,
+    "unit_5_net_weight": null,
+    "unit_6_net_weight": null,
+    "unit": "g",
+    "created_by_id": 7,
+    "created_at": "2026-07-11T00:00:00.000Z",
+    "updated_at": "2026-07-11T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi theo ID
+
+```http
+GET /production-orders/semi-finished-net-weight-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Semi-finished product net weight check not found`
+
+### Tạo bản ghi
+
+```http
+POST /production-orders/:id/semi-finished-net-weight-checks
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "unit_1_net_weight": 0.401,
+  "unit_2_net_weight": 0.398,
+  "unit": "g"
+}
+```
+
+Quy tắc:
+
+- `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `unit_1_net_weight` bắt buộc và phải lớn hơn `0`.
+- `unit_2_net_weight` đến `unit_6_net_weight` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- Khi có giá trị, khối lượng phải lớn hơn `0`, lưu dạng `DECIMAL(10, 3)` và tối đa 3 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `0.401`, `"0.401"` hoặc `"0,401"`.
+- `unit` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `g`; nếu gửi thì phải là chuỗi không rỗng và tối đa 10 ký tự.
+- `production_order_id` lấy từ `:id`.
+- `created_by_id` lấy từ user đăng nhập.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 requirement must be a string`
+- `400 unit_1_net_weight is required`
+- `400 unit_1_net_weight must fit DECIMAL(10, 3) with up to 3 decimal places`
+- `400 unit_1_net_weight must be greater than 0`
+- `400 unit must be a string`
+- `400 unit must be at most 10 characters`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi
+
+```http
+PATCH /production-orders/semi-finished-net-weight-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi các field muốn cập nhật:
+
+```json
+{
+  "requirement": "Yêu cầu mới tại thời điểm cập nhật",
+  "unit_3_net_weight": null,
+  "unit": "mg"
+}
+```
+
+`unit_2_net_weight` đến `unit_6_net_weight` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_net_weight` không được xóa vì là giá trị bắt buộc. `unit` có thể sửa, nhưng không được gửi `null` hoặc chuỗi rỗng trong API cập nhật.
+`requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra `requirement`, khối lượng và `unit` giống API tạo.
+- `400 unit is required`
+- `404 Semi-finished product net weight check not found`
+
+### Xóa bản ghi
+
+```http
+DELETE /production-orders/semi-finished-net-weight-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Semi-finished product net weight check not found`
 
 ## Production Order Cylinder Calibrations
 
