@@ -49,6 +49,7 @@ import { ProductionOrderHardCapsuleLeakageChecksService } from './production-ord
 import { CreateProductionOrderBottleVolumeCheckDto } from './dto/create-production-order-bottle-volume-check.dto';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
 import { CreateProductionOrderShellWeightCheckDto } from './dto/create-production-order-shell-weight-check.dto';
+import { UpdateProductionOrderShellWeightCheckDto } from './dto/update-production-order-shell-weight-check.dto';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { CreateProductionOrderTenShellWeightCheckDto } from './dto/create-production-order-ten-shell-weight-check.dto';
 import { ProductionOrderTenShellWeightChecksService } from './production-order-ten-shell-weight-checks.service';
@@ -350,6 +351,17 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderShellWeightChecksService.findById(checkId);
+  }
+
+  @Patch('shell-weight-checks/:checkId')
+  async updateShellWeightCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderShellWeightCheckDto,
+  ) {
+    return this.productionOrderShellWeightChecksService.update(
+      checkId,
+      updateDto,
+    );
   }
 
   @Get('ten-shell-weight-checks/:checkId')

@@ -16,6 +16,7 @@ describe('ProductionOrderShellWeightChecksService', () => {
       findUnique: jest.Mock;
       findMany: jest.Mock;
       create: jest.Mock;
+      update: jest.Mock;
     };
   };
 
@@ -39,6 +40,7 @@ describe('ProductionOrderShellWeightChecksService', () => {
         findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -164,5 +166,50 @@ describe('ProductionOrderShellWeightChecksService', () => {
     await expect(service.create(2031, validDto)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+  });
+
+  it('updates only the provided shell weights', async () => {
+    const existingCheck = { id: 1, production_order_id: 2031 };
+    const updatedCheck = { ...existingCheck, shell_2_weight: '51.25' };
+    prismaService.productionOrderShellWeightChecks.findUnique.mockResolvedValue(
+      existingCheck,
+    );
+    prismaService.productionOrderShellWeightChecks.update.mockResolvedValue(
+      updatedCheck,
+    );
+
+    await expect(service.update(1, { shell_2_weight: '51,25' })).resolves.toBe(
+      updatedCheck,
+    );
+    expect(
+      prismaService.productionOrderShellWeightChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: { shell_2_weight: new Prisma.Decimal('51.25') },
+      }),
+    );
+  });
+
+  it('rejects an empty shell weight update', async () => {
+    prismaService.productionOrderShellWeightChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+      },
+    );
+
+    await expect(service.update(1, {})).rejects.toThrow(
+      'At least one field is required',
+    );
+  });
+
+  it('throws NotFoundException when updating a missing shell weight check', async () => {
+    prismaService.productionOrderShellWeightChecks.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(
+      service.update(1, { shell_1_weight: 50 }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

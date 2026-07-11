@@ -2302,6 +2302,37 @@ Lỗi thường gặp:
 - `400 shell_1_weight must be greater than 0`
 - `401 Authenticated user not found`
 
+### Cập nhật khối lượng từng vỏ
+
+```http
+PATCH /production-orders/shell-weight-checks/:checkId
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+Body chỉ cần gửi các khối lượng muốn cập nhật:
+
+```json
+{
+  "shell_2_weight": 51.25,
+  "shell_7_weight": 50.15
+}
+```
+
+Quy tắc:
+
+- Có thể cập nhật một hoặc nhiều field từ `shell_1_weight` đến `shell_10_weight`.
+- Mỗi giá trị được gửi phải lớn hơn `0`, lưu dạng `DECIMAL(10, 2)` và có đơn vị cố định là `mg`.
+- API trả về bản ghi sau khi cập nhật, kèm thông tin `createdBy`.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 shell_1_weight is required`
+- `400 shell_1_weight must fit DECIMAL(10, 2) with up to 2 decimal places`
+- `400 shell_1_weight must be greater than 0`
+- `404 Shell weight check not found`
+
 ## Production Order Ten-Shell Weight Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

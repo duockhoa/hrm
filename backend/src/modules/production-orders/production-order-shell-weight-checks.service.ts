@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderShellWeightCheckDto } from './dto/create-production-order-shell-weight-check.dto';
+import { UpdateProductionOrderShellWeightCheckDto } from './dto/update-production-order-shell-weight-check.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -37,12 +38,10 @@ export class ProductionOrderShellWeightChecksService {
 
   async findById(checkId: number) {
     const check =
-      await this.prismaService.productionOrderShellWeightChecks.findUnique(
-        {
-          where: { id: checkId },
-          include: shellWeightCheckInclude,
-        },
-      );
+      await this.prismaService.productionOrderShellWeightChecks.findUnique({
+        where: { id: checkId },
+        include: shellWeightCheckInclude,
+      });
 
     if (!check) {
       throw new NotFoundException('Shell weight check not found');
@@ -116,6 +115,45 @@ export class ProductionOrderShellWeightChecksService {
       },
       include: shellWeightCheckInclude,
     });
+  }
+
+  async update(checkId: number, dto: UpdateProductionOrderShellWeightCheckDto) {
+    await this.findById(checkId);
+
+    return this.prismaService.productionOrderShellWeightChecks.update({
+      where: { id: checkId },
+      data: this.normalizeUpdateData(dto),
+      include: shellWeightCheckInclude,
+    });
+  }
+
+  private normalizeUpdateData(dto: UpdateProductionOrderShellWeightCheckDto) {
+    const updateDto = dto ?? {};
+    const data: Prisma.ProductionOrderShellWeightChecksUpdateInput = {};
+    const weightFields = [
+      'shell_1_weight',
+      'shell_2_weight',
+      'shell_3_weight',
+      'shell_4_weight',
+      'shell_5_weight',
+      'shell_6_weight',
+      'shell_7_weight',
+      'shell_8_weight',
+      'shell_9_weight',
+      'shell_10_weight',
+    ] as const;
+
+    for (const field of weightFields) {
+      if (field in updateDto) {
+        data[field] = this.normalizeRequiredWeight(updateDto[field], field);
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    return data;
   }
 
   private async ensureProductionOrderExists(productionOrderId: number) {

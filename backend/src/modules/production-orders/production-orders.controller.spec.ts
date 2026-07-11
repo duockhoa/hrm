@@ -104,6 +104,7 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
   };
   let productionOrderTenShellWeightChecksService: {
     findById: jest.Mock;
@@ -226,6 +227,7 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
     };
     productionOrderTenShellWeightChecksService = {
       findById: jest.fn(),
@@ -1061,6 +1063,20 @@ describe('ProductionOrdersController', () => {
       2031,
       createDto,
       user,
+    );
+  });
+
+  it('updates a shell weight check', async () => {
+    const updateDto = { shell_3_weight: 51.25 };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderShellWeightChecksService.update.mockResolvedValue(result);
+
+    await expect(controller.updateShellWeightCheck(1, updateDto)).resolves.toBe(
+      result,
+    );
+    expect(productionOrderShellWeightChecksService.update).toHaveBeenCalledWith(
+      1,
+      updateDto,
     );
   });
 
