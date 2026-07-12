@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderHardCapsuleLeakageCheckDto } from './dto/create-production-order-hard-capsule-leakage-check.dto';
+import { UpdateProductionOrderHardCapsuleLeakageCheckDto } from './dto/update-production-order-hard-capsule-leakage-check.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -31,6 +32,17 @@ const hardCapsuleLeakageCheckInclude = {
     select: hardCapsuleLeakageCheckCreatorSelect,
   },
 } satisfies Prisma.ProductionOrderHardCapsuleLeakageChecksInclude;
+
+const hardCapsuleLeakageCheckValidationSelect = {
+  id: true,
+  tested_capsule_count: true,
+  leaked_capsule_count: true,
+} satisfies Prisma.ProductionOrderHardCapsuleLeakageChecksSelect;
+
+type HardCapsuleLeakageCheckValidationData =
+  Prisma.ProductionOrderHardCapsuleLeakageChecksGetPayload<{
+    select: typeof hardCapsuleLeakageCheckValidationSelect;
+  }>;
 
 const HARD_CAPSULE_LEAKAGE_CHECK_STAGE_ALIASES = new Map([
   ['before-coating', HARD_CAPSULE_LEAKAGE_CHECK_STAGES.BEFORE_COATING],
@@ -121,6 +133,78 @@ export class ProductionOrderHardCapsuleLeakageChecksService {
     });
   }
 
+  async update(
+    checkId: number,
+    dto: UpdateProductionOrderHardCapsuleLeakageCheckDto,
+  ) {
+    const existingCheck = await this.findValidationDataByIdOrThrow(checkId);
+
+    return this.prismaService.productionOrderHardCapsuleLeakageChecks.update({
+      where: { id: checkId },
+      data: this.normalizeUpdateData(dto, existingCheck),
+      include: hardCapsuleLeakageCheckInclude,
+    });
+  }
+
+  async delete(checkId: number) {
+    await this.findValidationDataByIdOrThrow(checkId);
+
+    return this.prismaService.productionOrderHardCapsuleLeakageChecks.delete({
+      where: { id: checkId },
+      include: hardCapsuleLeakageCheckInclude,
+    });
+  }
+
+  private normalizeUpdateData(
+    dto: UpdateProductionOrderHardCapsuleLeakageCheckDto,
+    existingCheck: HardCapsuleLeakageCheckValidationData,
+  ) {
+    const updateDto = dto ?? {};
+    const data: Prisma.ProductionOrderHardCapsuleLeakageChecksUpdateInput = {};
+    const hasStage = 'stage' in updateDto;
+    const hasTestedCapsuleCount = 'tested_capsule_count' in updateDto;
+    const hasLeakedCapsuleCount = 'leaked_capsule_count' in updateDto;
+
+    if (!hasStage && !hasTestedCapsuleCount && !hasLeakedCapsuleCount) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    if (hasStage) {
+      data.stage = this.normalizeStage(updateDto.stage);
+    }
+
+    const testedCapsuleCount = hasTestedCapsuleCount
+      ? this.normalizeRequiredInteger(
+          updateDto.tested_capsule_count,
+          'tested_capsule_count',
+          1,
+        )
+      : existingCheck.tested_capsule_count;
+    const leakedCapsuleCount = hasLeakedCapsuleCount
+      ? this.normalizeRequiredInteger(
+          updateDto.leaked_capsule_count,
+          'leaked_capsule_count',
+          0,
+        )
+      : existingCheck.leaked_capsule_count;
+
+    if (leakedCapsuleCount > testedCapsuleCount) {
+      throw new BadRequestException(
+        'leaked_capsule_count cannot exceed tested_capsule_count',
+      );
+    }
+
+    if (hasTestedCapsuleCount) {
+      data.tested_capsule_count = testedCapsuleCount;
+    }
+
+    if (hasLeakedCapsuleCount) {
+      data.leaked_capsule_count = leakedCapsuleCount;
+    }
+
+    return data;
+  }
+
   private async ensureProductionOrderExists(productionOrderId: number) {
     const productionOrder =
       await this.prismaService.productionOrders.findUnique({
@@ -135,6 +219,22 @@ export class ProductionOrderHardCapsuleLeakageChecksService {
     if (!productionOrder) {
       throw new NotFoundException('Production order not found');
     }
+  }
+
+  private async findValidationDataByIdOrThrow(checkId: number) {
+    const hardCapsuleLeakageCheck =
+      await this.prismaService.productionOrderHardCapsuleLeakageChecks.findUnique(
+        {
+          where: { id: checkId },
+          select: hardCapsuleLeakageCheckValidationSelect,
+        },
+      );
+
+    if (!hardCapsuleLeakageCheck) {
+      throw new NotFoundException('Hard capsule leakage check not found');
+    }
+
+    return hardCapsuleLeakageCheck;
   }
 
   private normalizeStage(value: unknown) {

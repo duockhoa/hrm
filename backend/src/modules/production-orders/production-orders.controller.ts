@@ -47,6 +47,7 @@ import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-produc
 import { UpdateProductionOrderDisintegrationCheckDto } from './dto/update-production-order-disintegration-check.dto';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { CreateProductionOrderHardCapsuleLeakageCheckDto } from './dto/create-production-order-hard-capsule-leakage-check.dto';
+import { UpdateProductionOrderHardCapsuleLeakageCheckDto } from './dto/update-production-order-hard-capsule-leakage-check.dto';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { CreateProductionOrderBottleVolumeCheckDto } from './dto/create-production-order-bottle-volume-check.dto';
 import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
@@ -385,6 +386,24 @@ export class ProductionOrdersController {
     return this.productionOrderHardCapsuleLeakageChecksService.findById(
       checkId,
     );
+  }
+
+  @Patch('hard-capsule-leakage-checks/:checkId')
+  async updateHardCapsuleLeakageCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderHardCapsuleLeakageCheckDto,
+  ) {
+    return this.productionOrderHardCapsuleLeakageChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('hard-capsule-leakage-checks/:checkId')
+  async deleteHardCapsuleLeakageCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderHardCapsuleLeakageChecksService.delete(checkId);
   }
 
   @Get('bottle-volume-checks/:checkId')

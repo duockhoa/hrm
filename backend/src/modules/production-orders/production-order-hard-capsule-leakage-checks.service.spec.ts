@@ -17,6 +17,8 @@ describe('ProductionOrderHardCapsuleLeakageChecksService', () => {
       findUnique: jest.Mock;
       findMany: jest.Mock;
       create: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
     };
   };
 
@@ -29,6 +31,8 @@ describe('ProductionOrderHardCapsuleLeakageChecksService', () => {
         findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -138,6 +142,110 @@ describe('ProductionOrderHardCapsuleLeakageChecksService', () => {
 
     await expect(service.findAllByProductionOrder(2031)).rejects.toBeInstanceOf(
       NotFoundException,
+    );
+  });
+
+  it('updates only the provided fields and validates final capsule counts', async () => {
+    const updatedLeakageCheck = {
+      id: 1,
+      stage: 'after_coating',
+      tested_capsule_count: 100,
+      leaked_capsule_count: 5,
+    };
+    prismaService.productionOrderHardCapsuleLeakageChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+        tested_capsule_count: 100,
+        leaked_capsule_count: 2,
+      },
+    );
+    prismaService.productionOrderHardCapsuleLeakageChecks.update.mockResolvedValue(
+      updatedLeakageCheck,
+    );
+
+    await expect(
+      service.update(1, {
+        stage: 'Sau bao',
+        leaked_capsule_count: '5',
+      }),
+    ).resolves.toBe(updatedLeakageCheck);
+    expect(
+      prismaService.productionOrderHardCapsuleLeakageChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: {
+          stage: 'after_coating',
+          leaked_capsule_count: 5,
+        },
+      }),
+    );
+  });
+
+  it('rejects an update without any supported fields', async () => {
+    prismaService.productionOrderHardCapsuleLeakageChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+        tested_capsule_count: 100,
+        leaked_capsule_count: 2,
+      },
+    );
+
+    await expect(service.update(1, {})).rejects.toThrow(
+      'At least one field is required',
+    );
+  });
+
+  it('rejects an update when leaked count exceeds the final tested count', async () => {
+    prismaService.productionOrderHardCapsuleLeakageChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+        tested_capsule_count: 100,
+        leaked_capsule_count: 20,
+      },
+    );
+
+    await expect(
+      service.update(1, {
+        tested_capsule_count: 10,
+      }),
+    ).rejects.toThrow(
+      'leaked_capsule_count cannot exceed tested_capsule_count',
+    );
+  });
+
+  it('throws NotFoundException when updating a missing leakage check', async () => {
+    prismaService.productionOrderHardCapsuleLeakageChecks.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(
+      service.update(1, {
+        leaked_capsule_count: 1,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deletes an existing leakage check', async () => {
+    const deletedLeakageCheck = { id: 1 };
+    prismaService.productionOrderHardCapsuleLeakageChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+        tested_capsule_count: 100,
+        leaked_capsule_count: 2,
+      },
+    );
+    prismaService.productionOrderHardCapsuleLeakageChecks.delete.mockResolvedValue(
+      deletedLeakageCheck,
+    );
+
+    await expect(service.delete(1)).resolves.toBe(deletedLeakageCheck);
+    expect(
+      prismaService.productionOrderHardCapsuleLeakageChecks.delete,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+      }),
     );
   });
 

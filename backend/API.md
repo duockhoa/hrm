@@ -2089,6 +2089,49 @@ Lỗi thường gặp:
 - `400 leaked_capsule_count cannot exceed tested_capsule_count`
 - `401 Authenticated user not found`
 
+### Cập nhật dữ liệu kiểm tra độ rò rỉ
+
+```http
+PATCH /production-orders/hard-capsule-leakage-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "stage": "after_coating",
+  "leaked_capsule_count": 1
+}
+```
+
+Quy tắc:
+
+- Có thể sửa `stage`, `tested_capsule_count`, `leaked_capsule_count`, hoặc kết hợp các field này.
+- Validate và normalize giống API tạo.
+- Nếu chỉ sửa một trong hai số lượng, backend dùng số lượng còn lại đang có trong DB để kiểm tra `leaked_capsule_count` không vượt `tested_capsule_count`.
+- Không sửa `production_order_id`, `created_by_id`, `checked_at`, `created_at`.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 stage must be before_coating or after_coating`
+- `400 tested_capsule_count must be greater than or equal to 1`
+- `400 leaked_capsule_count cannot exceed tested_capsule_count`
+- `404 Hard capsule leakage check not found`
+
+### Xóa dữ liệu kiểm tra độ rò rỉ
+
+```http
+DELETE /production-orders/hard-capsule-leakage-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Hard capsule leakage check not found`
+
 ## Production Order Bottle Volume Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

@@ -101,6 +101,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderBottleVolumeChecksService: {
     findById: jest.Mock;
@@ -249,6 +251,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderBottleVolumeChecksService = {
       findById: jest.fn(),
@@ -1081,6 +1085,37 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderHardCapsuleLeakageChecksService.create,
     ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a hard capsule leakage check', async () => {
+    const updateDto = {
+      leaked_capsule_count: 1,
+    };
+    const result = { id: 1, leaked_capsule_count: 1 };
+    productionOrderHardCapsuleLeakageChecksService.update.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.updateHardCapsuleLeakageCheck(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderHardCapsuleLeakageChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a hard capsule leakage check', async () => {
+    const result = { id: 1 };
+    productionOrderHardCapsuleLeakageChecksService.delete.mockResolvedValue(
+      result,
+    );
+
+    await expect(controller.deleteHardCapsuleLeakageCheck(1)).resolves.toBe(
+      result,
+    );
+    expect(
+      productionOrderHardCapsuleLeakageChecksService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets bottle volume checks for a production order', async () => {
