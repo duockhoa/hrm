@@ -18,6 +18,8 @@ describe('ProductionOrderSensoryChecksService', () => {
       findMany: jest.Mock;
       findFirst: jest.Mock;
       create: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
     };
   };
 
@@ -31,6 +33,8 @@ describe('ProductionOrderSensoryChecksService', () => {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -138,6 +142,106 @@ describe('ProductionOrderSensoryChecksService', () => {
         { id: 7 },
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('updates a sensory check with normalized text and image path', async () => {
+    const updatedCheck = { id: 1, color: 'vang dam' };
+    prismaService.productionOrderSensoryChecks.findUnique.mockResolvedValue({
+      id: 1,
+      color: 'vang nhat',
+      smell: null,
+      taste: null,
+      note: null,
+      image_path: '/production-orders/sensory-checks/images/old.jpg',
+    });
+    prismaService.productionOrderSensoryChecks.update.mockResolvedValue(
+      updatedCheck,
+    );
+
+    await expect(
+      service.update(
+        1,
+        {
+          color: ' vang dam ',
+          note: ' dat ',
+        },
+        {
+          imagePath: '/production-orders/sensory-checks/images/new.jpg',
+        },
+      ),
+    ).resolves.toBe(updatedCheck);
+    expect(
+      prismaService.productionOrderSensoryChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: {
+          color: 'vang dam',
+          note: 'dat',
+          image_path: '/production-orders/sensory-checks/images/new.jpg',
+        },
+      }),
+    );
+  });
+
+  it('rejects an empty sensory check update', async () => {
+    prismaService.productionOrderSensoryChecks.findUnique.mockResolvedValue({
+      id: 1,
+      color: 'vang nhat',
+      smell: null,
+      taste: null,
+      note: null,
+      image_path: null,
+    });
+
+    await expect(service.update(1, {})).rejects.toThrow(
+      'At least one field is required',
+    );
+    expect(
+      prismaService.productionOrderSensoryChecks.update,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('rejects clearing the last sensory check value', async () => {
+    prismaService.productionOrderSensoryChecks.findUnique.mockResolvedValue({
+      id: 1,
+      color: 'vang nhat',
+      smell: null,
+      taste: null,
+      note: null,
+      image_path: null,
+    });
+
+    await expect(service.update(1, { color: '' })).rejects.toThrow(
+      'At least one sensory check value is required',
+    );
+    expect(
+      prismaService.productionOrderSensoryChecks.update,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('deletes an existing sensory check', async () => {
+    const deletedCheck = { id: 1 };
+    prismaService.productionOrderSensoryChecks.findUnique.mockResolvedValue({
+      id: 1,
+      color: null,
+      smell: null,
+      taste: null,
+      note: null,
+      image_path: '/production-orders/sensory-checks/images/old.jpg',
+    });
+    prismaService.productionOrderSensoryChecks.delete.mockResolvedValue(
+      deletedCheck,
+    );
+
+    await expect(service.delete(1)).resolves.toBe(deletedCheck);
+    expect(
+      prismaService.productionOrderSensoryChecks.delete,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+      }),
+    );
   });
 
   it('rejects an empty sensory check', async () => {

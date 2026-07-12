@@ -198,3 +198,24 @@ export const removeUploadedSensoryCheckImage = async (
 
   await unlink(file.path).catch(() => undefined);
 };
+
+export const removeSensoryCheckImageByPath = async (
+  imagePath?: string | null,
+) => {
+  if (
+    !imagePath?.startsWith(`${PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_ROUTE}/`)
+  ) {
+    return;
+  }
+
+  const filename = imagePath.slice(
+    PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_ROUTE.length + 1,
+  );
+  const filePath = getResolvedFilePath(filename);
+
+  if (!filePath) {
+    return;
+  }
+
+  await unlink(filePath).catch(() => undefined);
+};

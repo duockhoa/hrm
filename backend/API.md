@@ -3329,6 +3329,59 @@ Lỗi thường gặp:
 - `400 Only one sensory check image is allowed`
 - `401 Authenticated user not found`
 
+### Cập nhật dữ liệu thử mùi vị
+
+```http
+PATCH /production-orders/sensory-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "color": "Vàng đậm",
+  "note": "Kiểm lại theo mẫu chuẩn"
+}
+```
+
+Nếu cần thay ảnh, gửi `multipart/form-data` với field ảnh `image` hoặc `sensory_image`:
+
+```text
+color=Vàng đậm
+image=<file>
+```
+
+Quy tắc:
+
+- Có thể cập nhật `color`, `smell`, `taste`, `note`, hoặc thay ảnh.
+- `color`, `smell`, `taste`, `note` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- Sau cập nhật, bản ghi vẫn phải còn ít nhất một trong các dữ liệu: `color`, `smell`, `taste`, `note`, hoặc ảnh.
+- Nếu gửi ảnh mới, backend cập nhật `image_path` và xóa file ảnh cũ nếu có.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 At least one sensory check value is required`
+- `400 color must be at most 255 characters`
+- `400 smell must be at most 255 characters`
+- `400 taste must be at most 255 characters`
+- `400 note must be a string`
+- `400 Only one sensory check image is allowed`
+- `404 Sensory check not found`
+
+### Xóa dữ liệu thử mùi vị
+
+```http
+DELETE /production-orders/sensory-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa. Nếu bản ghi có ảnh, backend xóa file ảnh tương ứng.
+
+Lỗi thường gặp:
+
+- `404 Sensory check not found`
+
 ### Xem ảnh thử mùi vị
 
 ```http

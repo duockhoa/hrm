@@ -138,6 +138,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
     findImageFile: jest.Mock;
   };
   let productionOrderTenUnitSensoryChecksService: {
@@ -299,6 +301,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
       findImageFile: jest.fn(),
     };
     productionOrderTenUnitSensoryChecksService = {
@@ -1703,6 +1707,33 @@ describe('ProductionOrdersController', () => {
         imagePath: undefined,
       },
     );
+  });
+
+  it('updates a sensory check', async () => {
+    const updateDto = {
+      color: 'vang dam',
+    };
+    const result = { id: 1, color: 'vang dam' };
+    productionOrderSensoryChecksService.update.mockResolvedValue(result);
+
+    await expect(
+      controller.updateSensoryCheck(1, updateDto, undefined),
+    ).resolves.toBe(result);
+    expect(productionOrderSensoryChecksService.update).toHaveBeenCalledWith(
+      1,
+      updateDto,
+      {
+        imagePath: undefined,
+      },
+    );
+  });
+
+  it('deletes a sensory check', async () => {
+    const result = { id: 1 };
+    productionOrderSensoryChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteSensoryCheck(1)).resolves.toBe(result);
+    expect(productionOrderSensoryChecksService.delete).toHaveBeenCalledWith(1);
   });
 
   it('gets ten-unit sensory checks for a production order', async () => {

@@ -7,8 +7,10 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderSensoryCheckDto } from './dto/create-production-order-sensory-check.dto';
+import { UpdateProductionOrderSensoryCheckDto } from './dto/update-production-order-sensory-check.dto';
 import {
   getSensoryCheckImageLookupPaths,
+  removeSensoryCheckImageByPath,
   resolveSensoryCheckImageFile,
 } from './production-order-sensory-check-upload.config';
 
@@ -32,6 +34,19 @@ const sensoryCheckInclude = {
     select: sensoryCheckCreatorSelect,
   },
 } satisfies Prisma.ProductionOrderSensoryChecksInclude;
+
+const sensoryCheckValueSelect = {
+  id: true,
+  color: true,
+  smell: true,
+  taste: true,
+  note: true,
+  image_path: true,
+} satisfies Prisma.ProductionOrderSensoryChecksSelect;
+
+type SensoryCheckValues = Prisma.ProductionOrderSensoryChecksGetPayload<{
+  select: typeof sensoryCheckValueSelect;
+}>;
 
 @Injectable()
 export class ProductionOrderSensoryChecksService {
@@ -132,6 +147,106 @@ export class ProductionOrderSensoryChecksService {
     });
   }
 
+  async update(
+    checkId: number,
+    dto: UpdateProductionOrderSensoryCheckDto,
+    files: {
+      imagePath?: string;
+    } = {},
+  ) {
+    const existingCheck = await this.findValuesByIdOrThrow(checkId);
+    const data = this.normalizeUpdateData(dto, files);
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    this.ensureUpdatedCheckHasValue(existingCheck, data);
+
+    const updatedCheck =
+      await this.prismaService.productionOrderSensoryChecks.update({
+        where: { id: checkId },
+        data,
+        include: sensoryCheckInclude,
+      });
+
+    if (
+      files.imagePath &&
+      existingCheck.image_path &&
+      existingCheck.image_path !== files.imagePath
+    ) {
+      await removeSensoryCheckImageByPath(existingCheck.image_path);
+    }
+
+    return updatedCheck;
+  }
+
+  async delete(checkId: number) {
+    const existingCheck = await this.findValuesByIdOrThrow(checkId);
+
+    const deletedCheck =
+      await this.prismaService.productionOrderSensoryChecks.delete({
+        where: { id: checkId },
+        include: sensoryCheckInclude,
+      });
+
+    await removeSensoryCheckImageByPath(existingCheck.image_path);
+
+    return deletedCheck;
+  }
+
+  private normalizeUpdateData(
+    dto: UpdateProductionOrderSensoryCheckDto,
+    files: {
+      imagePath?: string;
+    },
+  ) {
+    const updateDto = dto ?? {};
+    const data: Prisma.ProductionOrderSensoryChecksUpdateInput = {};
+
+    if ('color' in updateDto) {
+      data.color = this.normalizeOptionalText(updateDto.color, 'color');
+    }
+
+    if ('smell' in updateDto) {
+      data.smell = this.normalizeOptionalText(updateDto.smell, 'smell');
+    }
+
+    if ('taste' in updateDto) {
+      data.taste = this.normalizeOptionalText(updateDto.taste, 'taste');
+    }
+
+    if ('note' in updateDto) {
+      data.note = this.normalizeOptionalLongText(updateDto.note, 'note');
+    }
+
+    if (files.imagePath) {
+      data.image_path = files.imagePath;
+    }
+
+    return data;
+  }
+
+  private ensureUpdatedCheckHasValue(
+    existingCheck: SensoryCheckValues,
+    data: Prisma.ProductionOrderSensoryChecksUpdateInput,
+  ) {
+    const finalValues = {
+      color: 'color' in data ? data.color : existingCheck.color,
+      smell: 'smell' in data ? data.smell : existingCheck.smell,
+      taste: 'taste' in data ? data.taste : existingCheck.taste,
+      note: 'note' in data ? data.note : existingCheck.note,
+      image_path:
+        'image_path' in data ? data.image_path : existingCheck.image_path,
+    };
+
+    if (Object.values(finalValues).every((value) => value === null)) {
+      throw new BadRequestException(
+        'At least one sensory check value is required',
+      );
+    }
+  }
+
   private async ensureProductionOrderExists(productionOrderId: number) {
     const productionOrder =
       await this.prismaService.productionOrders.findUnique({
@@ -146,6 +261,20 @@ export class ProductionOrderSensoryChecksService {
     if (!productionOrder) {
       throw new NotFoundException('Production order not found');
     }
+  }
+
+  private async findValuesByIdOrThrow(checkId: number) {
+    const sensoryCheck =
+      await this.prismaService.productionOrderSensoryChecks.findUnique({
+        where: { id: checkId },
+        select: sensoryCheckValueSelect,
+      });
+
+    if (!sensoryCheck) {
+      throw new NotFoundException('Sensory check not found');
+    }
+
+    return sensoryCheck;
   }
 
   private normalizeOptionalText(value: unknown, fieldName: string) {

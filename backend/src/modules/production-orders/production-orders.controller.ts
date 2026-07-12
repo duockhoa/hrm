@@ -63,6 +63,7 @@ import { CreateProductionOrderCylinderCalibrationDto } from './dto/create-produc
 import { UpdateProductionOrderCylinderCalibrationDto } from './dto/update-production-order-cylinder-calibration.dto';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { CreateProductionOrderSensoryCheckDto } from './dto/create-production-order-sensory-check.dto';
+import { UpdateProductionOrderSensoryCheckDto } from './dto/update-production-order-sensory-check.dto';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 import { CreateProductionOrderTenUnitSensoryCheckDto } from './dto/create-production-order-ten-unit-sensory-check.dto';
 import { UpdateProductionOrderTenUnitSensoryCheckDto } from './dto/update-production-order-ten-unit-sensory-check.dto';
@@ -661,6 +662,47 @@ export class ProductionOrdersController {
   @Get('sensory-checks/:checkId')
   async findSensoryCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderSensoryChecksService.findById(checkId);
+  }
+
+  @Patch('sensory-checks/:checkId')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'sensory_image', maxCount: 1 },
+        { name: 'image', maxCount: 1 },
+      ],
+      productionOrderSensoryCheckImageUploadOptions,
+    ),
+  )
+  async updateSensoryCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderSensoryCheckDto,
+    @UploadedFiles() uploadedFiles: SensoryCheckUploadFields | undefined,
+  ) {
+    const uploadedImages = getUploadedSensoryCheckImages(uploadedFiles);
+
+    if (uploadedImages.length > 1) {
+      await Promise.all(uploadedImages.map(removeUploadedSensoryCheckImage));
+      throw new BadRequestException('Only one sensory check image is allowed');
+    }
+
+    try {
+      return await this.productionOrderSensoryChecksService.update(
+        checkId,
+        updateDto,
+        {
+          imagePath: getSensoryCheckImagePath(uploadedImages[0]),
+        },
+      );
+    } catch (error) {
+      await Promise.all(uploadedImages.map(removeUploadedSensoryCheckImage));
+      throw error;
+    }
+  }
+
+  @Delete('sensory-checks/:checkId')
+  async deleteSensoryCheck(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderSensoryChecksService.delete(checkId);
   }
 
   @Get('ten-unit-sensory-checks/:checkId')
