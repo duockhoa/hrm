@@ -30,6 +30,7 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
+import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 
 @Module({
   imports: [FeaturesModule],
@@ -57,6 +58,7 @@ import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-
     ProductionOrderSteamSterilizationChecksService,
     ProductionOrderSemiFinishedGrossWeightChecksService,
     ProductionOrderSemiFinishedNetWeightChecksService,
+    ProductionOrderLeakTightnessChecksService,
     WarehouseReleaseExportService,
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,

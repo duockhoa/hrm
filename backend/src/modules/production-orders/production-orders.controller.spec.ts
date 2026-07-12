@@ -24,6 +24,7 @@ import { ProductionOrderDateChecksService } from './production-order-date-checks
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
+import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -156,6 +157,13 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderSemiFinishedNetWeightChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderLeakTightnessChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -299,6 +307,13 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderLeakTightnessChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -390,6 +405,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSemiFinishedNetWeightChecksService,
           useValue: productionOrderSemiFinishedNetWeightChecksService,
+        },
+        {
+          provide: ProductionOrderLeakTightnessChecksService,
+          useValue: productionOrderLeakTightnessChecksService,
         },
       ],
     }).compile();
@@ -1316,11 +1335,76 @@ describe('ProductionOrdersController', () => {
       result,
     );
 
-    await expect(
-      controller.deleteSemiFinishedNetWeightCheck(1),
-    ).resolves.toBe(result);
+    await expect(controller.deleteSemiFinishedNetWeightCheck(1)).resolves.toBe(
+      result,
+    );
     expect(
       productionOrderSemiFinishedNetWeightChecksService.delete,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('gets leak tightness checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderLeakTightnessChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findLeakTightnessChecks(2031)).resolves.toBe(
+      checks,
+    );
+    expect(
+      productionOrderLeakTightnessChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a leak tightness check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderLeakTightnessChecksService.findById.mockResolvedValue(check);
+
+    await expect(controller.findLeakTightnessCheckById(1)).resolves.toBe(check);
+    expect(
+      productionOrderLeakTightnessChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a leak tightness check using the authenticated user', async () => {
+    const createDto = {
+      requirement: 'Không được rò rỉ',
+      unit_1_result: true,
+      unit_2_result: false,
+    };
+    const user = { id: 7 };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderLeakTightnessChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createLeakTightnessCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderLeakTightnessChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a leak tightness check', async () => {
+    const updateDto = { unit_2_result: true };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderLeakTightnessChecksService.update.mockResolvedValue(result);
+
+    await expect(
+      controller.updateLeakTightnessCheck(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderLeakTightnessChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a leak tightness check', async () => {
+    const result = { id: 1 };
+    productionOrderLeakTightnessChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteLeakTightnessCheck(1)).resolves.toBe(result);
+    expect(
+      productionOrderLeakTightnessChecksService.delete,
     ).toHaveBeenCalledWith(1);
   });
 

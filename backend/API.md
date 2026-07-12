@@ -2686,6 +2686,144 @@ Lỗi thường gặp:
 
 - `404 Semi-finished product net weight check not found`
 
+## Production Order Leak Tightness Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu yêu cầu tại thời điểm nhập và kết quả kiểm tra độ kín của tối đa 10 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra; chỉ đơn vị 1 là bắt buộc.
+
+Kết quả trả về là boolean:
+
+- `true`: đạt/kín.
+- `false`: không đạt/không kín.
+- `null`: chưa kiểm tra; chỉ áp dụng cho đơn vị 2 đến đơn vị 10.
+
+### Lấy danh sách theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/leak-tightness-checks
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "requirement": "Không được rò rỉ",
+    "unit_1_result": true,
+    "unit_2_result": true,
+    "unit_3_result": false,
+    "unit_4_result": null,
+    "unit_5_result": null,
+    "unit_6_result": null,
+    "unit_7_result": null,
+    "unit_8_result": null,
+    "unit_9_result": null,
+    "unit_10_result": null,
+    "created_by_id": 7,
+    "created_at": "2026-07-12T00:00:00.000Z",
+    "updated_at": "2026-07-12T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi theo ID
+
+```http
+GET /production-orders/leak-tightness-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Leak tightness check not found`
+
+### Tạo bản ghi
+
+```http
+POST /production-orders/:id/leak-tightness-checks
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "requirement": "Không được rò rỉ",
+  "unit_1_result": true,
+  "unit_2_result": "đạt",
+  "unit_3_result": "không kín"
+}
+```
+
+Quy tắc:
+
+- `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `unit_1_result` bắt buộc.
+- `unit_2_result` đến `unit_10_result` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- Frontend nên gửi `true` cho đạt/kín và `false` cho không đạt/không kín.
+- Backend cũng chấp nhận `1`, `0`, `"pass"`, `"fail"`, `"đạt"`, `"không đạt"`, `"kín"` và `"không kín"`.
+- `production_order_id` lấy từ `:id`.
+- `created_by_id` lấy từ user đăng nhập.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 requirement must be a string`
+- `400 unit_1_result is required`
+- `400 unit_1_result must be a boolean or pass/fail value`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi
+
+```http
+PATCH /production-orders/leak-tightness-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi các field muốn cập nhật:
+
+```json
+{
+  "requirement": "Yêu cầu mới tại thời điểm cập nhật",
+  "unit_2_result": false,
+  "unit_3_result": null
+}
+```
+
+`unit_2_result` đến `unit_10_result` có thể gửi `null` hoặc chuỗi rỗng để xóa kết quả. `unit_1_result` không được xóa vì là giá trị bắt buộc. `requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra `requirement` và kết quả giống API tạo.
+- `404 Leak tightness check not found`
+
+### Xóa bản ghi
+
+```http
+DELETE /production-orders/leak-tightness-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Leak tightness check not found`
+
 ## Production Order Cylinder Calibrations
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

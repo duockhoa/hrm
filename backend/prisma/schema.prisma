@@ -55,6 +55,7 @@ model Users {
   checkedProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]             @relation("ProductionOrderSteamSterilizationCheckChecker")
   createdProductionOrderSemiFinishedGrossWeightChecks   ProductionOrderSemiFinishedProductGrossWeightChecks[] @relation("ProductionOrderSemiFinishedGrossWeightCheckCreator")
   createdProductionOrderSemiFinishedNetWeightChecks     ProductionOrderSemiFinishedProductNetWeightChecks[]   @relation("ProductionOrderSemiFinishedNetWeightCheckCreator")
+  createdProductionOrderLeakTightnessChecks             ProductionOrderLeakTightnessChecks[]                  @relation("ProductionOrderLeakTightnessCheckCreator")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -353,6 +354,7 @@ model ProductionOrders {
   tenShellWeightCheck                  ProductionOrderTenShellWeightChecks?
   semiFinishedProductGrossWeightChecks ProductionOrderSemiFinishedProductGrossWeightChecks[]
   semiFinishedProductNetWeightChecks   ProductionOrderSemiFinishedProductNetWeightChecks[]
+  leakTightnessChecks                  ProductionOrderLeakTightnessChecks[]
   vialInspectionChecks                 ProductionOrderVialInspectionChecks[]
   cylinderCalibration                  ProductionOrderCylinderCalibrations?
   sensoryChecks                        ProductionOrderSensoryChecks[]
@@ -756,6 +758,31 @@ model ProductionOrderSemiFinishedProductNetWeightChecks {
   updated_at          DateTime         @default(now()) @updatedAt
 
   @@map("production_order_semi_finished_product_net_weight_checks")
+}
+
+model ProductionOrderLeakTightnessChecks {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_leak_tightness_po_fkey")
+  requirement         String?          @db.Text
+  unit_1_result       Boolean
+  unit_2_result       Boolean?
+  unit_3_result       Boolean?
+  unit_4_result       Boolean?
+  unit_5_result       Boolean?
+  unit_6_result       Boolean?
+  unit_7_result       Boolean?
+  unit_8_result       Boolean?
+  unit_9_result       Boolean?
+  unit_10_result      Boolean?
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderLeakTightnessCheckCreator", fields: [created_by_id], references: [id], map: "po_leak_tightness_user_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_leak_tightness_po_idx")
+  @@index([created_by_id], map: "po_leak_tightness_user_idx")
+  @@map("production_order_leak_tightness_checks")
 }
 
 model ProductionOrderVialInspectionChecks {

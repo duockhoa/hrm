@@ -72,6 +72,9 @@ import { ProductionOrderSemiFinishedGrossWeightChecksService } from './productio
 import { CreateProductionOrderSemiFinishedNetWeightCheckDto } from './dto/create-production-order-semi-finished-net-weight-check.dto';
 import { UpdateProductionOrderSemiFinishedNetWeightCheckDto } from './dto/update-production-order-semi-finished-net-weight-check.dto';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
+import { CreateProductionOrderLeakTightnessCheckDto } from './dto/create-production-order-leak-tightness-check.dto';
+import { UpdateProductionOrderLeakTightnessCheckDto } from './dto/update-production-order-leak-tightness-check.dto';
+import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 import {
   getDateCheckImagePaths,
   getDateCheckRequestFilePath,
@@ -216,6 +219,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSteamSterilizationChecksService: ProductionOrderSteamSterilizationChecksService,
     private readonly productionOrderSemiFinishedGrossWeightChecksService: ProductionOrderSemiFinishedGrossWeightChecksService,
     private readonly productionOrderSemiFinishedNetWeightChecksService: ProductionOrderSemiFinishedNetWeightChecksService,
+    private readonly productionOrderLeakTightnessChecksService: ProductionOrderLeakTightnessChecksService,
   ) {}
 
   @Get()
@@ -435,6 +439,31 @@ export class ProductionOrdersController {
     return this.productionOrderSemiFinishedNetWeightChecksService.delete(
       checkId,
     );
+  }
+
+  @Get('leak-tightness-checks/:checkId')
+  async findLeakTightnessCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderLeakTightnessChecksService.findById(checkId);
+  }
+
+  @Patch('leak-tightness-checks/:checkId')
+  async updateLeakTightnessCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderLeakTightnessCheckDto,
+  ) {
+    return this.productionOrderLeakTightnessChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('leak-tightness-checks/:checkId')
+  async deleteLeakTightnessCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderLeakTightnessChecksService.delete(checkId);
   }
 
   @Get('vial-inspection-checks/:checkId')
@@ -1045,9 +1074,7 @@ export class ProductionOrdersController {
   }
 
   @Get(':id/semi-finished-net-weight-checks')
-  async findSemiFinishedNetWeightChecks(
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  async findSemiFinishedNetWeightChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderSemiFinishedNetWeightChecksService.findAllByProductionOrder(
       id,
     );
@@ -1060,6 +1087,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderSemiFinishedNetWeightChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/leak-tightness-checks')
+  async findLeakTightnessChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderLeakTightnessChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/leak-tightness-checks')
+  async createLeakTightnessCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderLeakTightnessCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderLeakTightnessChecksService.create(
       id,
       createDto,
       req.user,
