@@ -40,7 +40,7 @@ model Users {
   createdProductionOrderPostHomogenizationGranuleChecks ProductionOrderPostHomogenizationGranuleChecks[]      @relation("ProductionOrderPostHomogenizationGranuleCheckCreator")
   createdProductionOrderDisintegrationChecks            ProductionOrderDisintegrationChecks[]                 @relation("ProductionOrderDisintegrationCheckCreator")
   createdProductionOrderHardCapsuleLeakageChecks        ProductionOrderHardCapsuleLeakageChecks[]             @relation("ProductionOrderHardCapsuleLeakageCheckCreator")
-  createdProductionOrderBottleVolumeChecks              ProductionOrderBottleVolumeChecks[]                   @relation("ProductionOrderBottleVolumeCheckCreator")
+  createdProductionOrderVolumeChecks                    ProductionOrderVolumeChecks[]                         @relation("ProductionOrderVolumeCheckCreator")
   createdProductionOrderShellWeightChecks               ProductionOrderShellWeightChecks[]                    @relation("ProductionOrderShellWeightCheckCreator")
   createdProductionOrderTenShellWeightChecks            ProductionOrderTenShellWeightChecks[]                 @relation("ProductionOrderTenShellWeightCheckCreator")
   createdProductionOrderVialInspectionChecks            ProductionOrderVialInspectionChecks[]                 @relation("ProductionOrderVialInspectionCheckCreator")
@@ -350,7 +350,7 @@ model ProductionOrders {
   postHomogenizationGranuleChecks      ProductionOrderPostHomogenizationGranuleChecks[]
   disintegrationChecks                 ProductionOrderDisintegrationChecks[]
   hardCapsuleLeakageChecks             ProductionOrderHardCapsuleLeakageChecks[]
-  bottleVolumeChecks                   ProductionOrderBottleVolumeChecks[]
+  volumeChecks                         ProductionOrderVolumeChecks[]
   shellWeightChecks                    ProductionOrderShellWeightChecks[]
   tenShellWeightCheck                  ProductionOrderTenShellWeightChecks?
   semiFinishedProductGrossWeightChecks ProductionOrderSemiFinishedProductGrossWeightChecks[]
@@ -653,25 +653,27 @@ model ProductionOrderHardCapsuleLeakageChecks {
   @@map("production_order_hard_capsule_leakage_checks")
 }
 
-model ProductionOrderBottleVolumeChecks {
+model ProductionOrderVolumeChecks {
   id                  Int              @id @default(autoincrement())
   production_order_id Int
-  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_bottle_volume_checks_po_id_fkey")
-  bottle_1_volume     Decimal?         @db.Decimal(10, 2)
-  bottle_2_volume     Decimal?         @db.Decimal(10, 2)
-  bottle_3_volume     Decimal?         @db.Decimal(10, 2)
-  bottle_4_volume     Decimal?         @db.Decimal(10, 2)
-  bottle_5_volume     Decimal?         @db.Decimal(10, 2)
-  bottle_6_volume     Decimal?         @db.Decimal(10, 2)
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_volume_checks_po_id_fkey")
+  package_type        String?          @db.VarChar(50)
+  requirement         String?          @db.Text
+  unit_1_volume       Decimal          @db.Decimal(10, 2)
+  unit_2_volume       Decimal?         @db.Decimal(10, 2)
+  unit_3_volume       Decimal?         @db.Decimal(10, 2)
+  unit_4_volume       Decimal?         @db.Decimal(10, 2)
+  unit_5_volume       Decimal?         @db.Decimal(10, 2)
+  unit_6_volume       Decimal?         @db.Decimal(10, 2)
   unit                String           @default("ml") @db.VarChar(10)
   created_by_id       Int
-  createdBy           Users            @relation("ProductionOrderBottleVolumeCheckCreator", fields: [created_by_id], references: [id], map: "po_bottle_volume_checks_created_by_id_fkey")
+  createdBy           Users            @relation("ProductionOrderVolumeCheckCreator", fields: [created_by_id], references: [id], map: "po_volume_checks_created_by_id_fkey")
   created_at          DateTime         @default(now())
   updated_at          DateTime         @default(now()) @updatedAt
 
-  @@index([production_order_id], map: "po_bottle_volume_checks_po_id_fkey")
-  @@index([created_by_id], map: "po_bottle_volume_checks_created_by_id_fkey")
-  @@map("production_order_bottle_volume_checks")
+  @@index([production_order_id], map: "po_volume_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_volume_checks_created_by_id_fkey")
+  @@map("production_order_volume_checks")
 }
 
 model ProductionOrderShellWeightChecks {

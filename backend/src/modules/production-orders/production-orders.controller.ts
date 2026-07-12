@@ -50,8 +50,9 @@ import { ProductionOrderDisintegrationChecksService } from './production-order-d
 import { CreateProductionOrderHardCapsuleLeakageCheckDto } from './dto/create-production-order-hard-capsule-leakage-check.dto';
 import { UpdateProductionOrderHardCapsuleLeakageCheckDto } from './dto/update-production-order-hard-capsule-leakage-check.dto';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
-import { CreateProductionOrderBottleVolumeCheckDto } from './dto/create-production-order-bottle-volume-check.dto';
-import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
+import { CreateProductionOrderVolumeCheckDto } from './dto/create-production-order-volume-check.dto';
+import { UpdateProductionOrderVolumeCheckDto } from './dto/update-production-order-volume-check.dto';
+import { ProductionOrderVolumeChecksService } from './production-order-volume-checks.service';
 import { CreateProductionOrderShellWeightCheckDto } from './dto/create-production-order-shell-weight-check.dto';
 import { UpdateProductionOrderShellWeightCheckDto } from './dto/update-production-order-shell-weight-check.dto';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
@@ -219,7 +220,7 @@ export class ProductionOrdersController {
     private readonly productionOrderPostHomogenizationGranuleChecksService: ProductionOrderPostHomogenizationGranuleChecksService,
     private readonly productionOrderDisintegrationChecksService: ProductionOrderDisintegrationChecksService,
     private readonly productionOrderHardCapsuleLeakageChecksService: ProductionOrderHardCapsuleLeakageChecksService,
-    private readonly productionOrderBottleVolumeChecksService: ProductionOrderBottleVolumeChecksService,
+    private readonly productionOrderVolumeChecksService: ProductionOrderVolumeChecksService,
     private readonly productionOrderShellWeightChecksService: ProductionOrderShellWeightChecksService,
     private readonly productionOrderTenShellWeightChecksService: ProductionOrderTenShellWeightChecksService,
     private readonly productionOrderVialInspectionChecksService: ProductionOrderVialInspectionChecksService,
@@ -427,11 +428,22 @@ export class ProductionOrdersController {
     return this.productionOrderHardCapsuleLeakageChecksService.delete(checkId);
   }
 
-  @Get('bottle-volume-checks/:checkId')
-  async findBottleVolumeCheckById(
+  @Get('volume-checks/:checkId')
+  async findVolumeCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderVolumeChecksService.findById(checkId);
+  }
+
+  @Patch('volume-checks/:checkId')
+  async updateVolumeCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderVolumeCheckDto,
   ) {
-    return this.productionOrderBottleVolumeChecksService.findById(checkId);
+    return this.productionOrderVolumeChecksService.update(checkId, updateDto);
+  }
+
+  @Delete('volume-checks/:checkId')
+  async deleteVolumeCheck(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderVolumeChecksService.delete(checkId);
   }
 
   @Get('shell-weight-checks/:checkId')
@@ -1151,20 +1163,18 @@ export class ProductionOrdersController {
     );
   }
 
-  @Get(':id/bottle-volume-checks')
-  async findBottleVolumeChecks(@Param('id', ParseIntPipe) id: number) {
-    return this.productionOrderBottleVolumeChecksService.findAllByProductionOrder(
-      id,
-    );
+  @Get(':id/volume-checks')
+  async findVolumeChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderVolumeChecksService.findAllByProductionOrder(id);
   }
 
-  @Post(':id/bottle-volume-checks')
-  async createBottleVolumeCheck(
+  @Post(':id/volume-checks')
+  async createVolumeCheck(
     @Param('id', ParseIntPipe) id: number,
-    @Body() createDto: CreateProductionOrderBottleVolumeCheckDto,
+    @Body() createDto: CreateProductionOrderVolumeCheckDto,
     @Request() req: any,
   ) {
-    return this.productionOrderBottleVolumeChecksService.create(
+    return this.productionOrderVolumeChecksService.create(
       id,
       createDto,
       req.user,

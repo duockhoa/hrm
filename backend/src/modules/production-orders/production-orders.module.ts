@@ -20,7 +20,7 @@ import { ProductionOrderSprayDoseChecksService } from './production-order-spray-
 import { ProductionOrderPostHomogenizationGranuleChecksService } from './production-order-post-homogenization-granule-checks.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
-import { ProductionOrderBottleVolumeChecksService } from './production-order-bottle-volume-checks.service';
+import { ProductionOrderVolumeChecksService } from './production-order-volume-checks.service';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { ProductionOrderTenShellWeightChecksService } from './production-order-ten-shell-weight-checks.service';
 import { ProductionOrderVialInspectionChecksService } from './production-order-vial-inspection-checks.service';
@@ -49,7 +49,7 @@ import { ProductionOrderTenUnitSensoryChecksService } from './production-order-t
     ProductionOrderPostHomogenizationGranuleChecksService,
     ProductionOrderDisintegrationChecksService,
     ProductionOrderHardCapsuleLeakageChecksService,
-    ProductionOrderBottleVolumeChecksService,
+    ProductionOrderVolumeChecksService,
     ProductionOrderShellWeightChecksService,
     ProductionOrderTenShellWeightChecksService,
     ProductionOrderVialInspectionChecksService,

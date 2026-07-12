@@ -2174,16 +2174,16 @@ Lỗi thường gặp:
 
 - `404 Hard capsule leakage check not found`
 
-## Production Order Bottle Volume Checks
+## Production Order Volume Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu các lần kiểm tra thể tích của tối đa 6 lọ thuộc một lệnh sản xuất. Mỗi bản ghi cần ít nhất 1 giá trị thể tích và có đơn vị cố định là `ml`.
+Nhóm API này lưu kiểm tra thể tích cho tối đa 6 đơn vị của một lệnh sản xuất. Dùng được cho cả `gói` và `lọ`. Đây là bảng/API mới, độc lập với nhóm API cũ `Production Order Bottle Volume Checks`.
 
-### Lấy danh sách kiểm tra thể tích 6 lọ
+### Lấy danh sách kiểm tra thể tích
 
 ```http
-GET /production-orders/:id/bottle-volume-checks
+GET /production-orders/:id/volume-checks
 ```
 
 Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
@@ -2195,16 +2195,18 @@ Response mẫu:
   {
     "id": 1,
     "production_order_id": 2031,
-    "bottle_1_volume": "10.01",
-    "bottle_2_volume": null,
-    "bottle_3_volume": null,
-    "bottle_4_volume": null,
-    "bottle_5_volume": null,
-    "bottle_6_volume": null,
+    "package_type": null,
+    "requirement": "Thể tích đạt theo tiêu chuẩn",
+    "unit_1_volume": "10.01",
+    "unit_2_volume": null,
+    "unit_3_volume": null,
+    "unit_4_volume": null,
+    "unit_5_volume": null,
+    "unit_6_volume": null,
     "unit": "ml",
     "created_by_id": 7,
-    "created_at": "2026-06-21T08:00:00.000Z",
-    "updated_at": "2026-06-21T08:00:00.000Z",
+    "created_at": "2026-07-12T08:00:00.000Z",
+    "updated_at": "2026-07-12T08:00:00.000Z",
     "createdBy": {
       "id": 7,
       "username": "binh",
@@ -2220,44 +2222,102 @@ Response mẫu:
 ### Lấy một bản ghi kiểm tra thể tích theo ID
 
 ```http
-GET /production-orders/bottle-volume-checks/:checkId
+GET /production-orders/volume-checks/:checkId
 ```
 
 Lỗi thường gặp:
 
-- `404 Bottle volume check not found`
+- `404 Volume check not found`
 
-### Thêm dữ liệu kiểm tra thể tích 6 lọ
+### Thêm dữ liệu kiểm tra thể tích
 
 ```http
-POST /production-orders/:id/bottle-volume-checks
+POST /production-orders/:id/volume-checks
+Content-Type: application/json
 ```
 
 Body:
 
 ```json
 {
-  "bottle_1_volume": 10.01
+  "requirement": "Thể tích đạt theo tiêu chuẩn",
+  "unit_1_volume": 10.01,
+  "unit_2_volume": 10.02
 }
 ```
 
 Quy tắc:
 
-- Phải nhập ít nhất 1 trong 6 field `bottle_1_volume` đến `bottle_6_volume`; các field còn thiếu được lưu là `null`.
-- Mỗi giá trị được nhập phải lớn hơn `0`, lưu dạng `DECIMAL(10, 2)` và có tối đa 2 chữ số sau dấu phẩy.
+- `package_type` không bắt buộc, ví dụ: `goi`, `lo`. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`.
+- `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`.
+- `unit_1_volume` bắt buộc.
+- `unit_2_volume` đến `unit_6_volume` không bắt buộc. Các field còn thiếu, gửi `null`, hoặc chuỗi rỗng sẽ lưu `null`.
+- Mỗi giá trị thể tích phải lớn hơn `0`.
+- Lưu dạng `DECIMAL(10, 2)`, tối đa 2 chữ số sau dấu phẩy.
 - Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `10.02`, `"10.02"` hoặc `"10,02"`.
 - `unit` luôn là `ml`, do backend tự lưu; frontend không gửi field này.
 - `production_order_id` lấy từ `:id`.
-- Người kiểm tra là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
-- `created_at` là thời điểm kiểm tra.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
 
 Lỗi thường gặp:
 
 - `404 Production order not found`
-- `400 At least one bottle volume is required`
-- `400 bottle_1_volume must fit DECIMAL(10, 2) with up to 2 decimal places`
-- `400 bottle_1_volume must be greater than 0`
+- `400 package_type must be a string`
+- `400 package_type must be at most 50 characters`
+- `400 requirement must be a string`
+- `400 unit_1_volume is required`
+- `400 unit_1_volume must fit DECIMAL(10, 2) with up to 2 decimal places`
+- `400 unit_1_volume must be greater than 0`
 - `401 Authenticated user not found`
+
+### Cập nhật dữ liệu kiểm tra thể tích
+
+```http
+PATCH /production-orders/volume-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "package_type": null,
+  "requirement": null,
+  "unit_2_volume": null
+}
+```
+
+Quy tắc:
+
+- Có thể cập nhật `package_type`, `requirement`, `unit_1_volume` đến `unit_6_volume`.
+- `package_type` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- `requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- `unit_2_volume` đến `unit_6_volume` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- `unit_1_volume` không được xóa vì là giá trị bắt buộc.
+- Giá trị thể tích validate giống API tạo.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 package_type must be a string`
+- `400 package_type must be at most 50 characters`
+- `400 requirement must be a string`
+- `400 unit_1_volume is required`
+- `400 unit_1_volume must fit DECIMAL(10, 2) with up to 2 decimal places`
+- `400 unit_1_volume must be greater than 0`
+- `404 Volume check not found`
+
+### Xóa dữ liệu kiểm tra thể tích
+
+```http
+DELETE /production-orders/volume-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Volume check not found`
 
 ## Production Order Vial Inspection Checks
 
