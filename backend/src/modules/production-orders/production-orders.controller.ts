@@ -62,6 +62,9 @@ import { CreateProductionOrderCylinderCalibrationDto } from './dto/create-produc
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { CreateProductionOrderSensoryCheckDto } from './dto/create-production-order-sensory-check.dto';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
+import { CreateProductionOrderTenUnitSensoryCheckDto } from './dto/create-production-order-ten-unit-sensory-check.dto';
+import { UpdateProductionOrderTenUnitSensoryCheckDto } from './dto/update-production-order-ten-unit-sensory-check.dto';
+import { ProductionOrderTenUnitSensoryChecksService } from './production-order-ten-unit-sensory-checks.service';
 import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
@@ -218,6 +221,7 @@ export class ProductionOrdersController {
     private readonly productionOrderVialInspectionChecksService: ProductionOrderVialInspectionChecksService,
     private readonly productionOrderCylinderCalibrationsService: ProductionOrderCylinderCalibrationsService,
     private readonly productionOrderSensoryChecksService: ProductionOrderSensoryChecksService,
+    private readonly productionOrderTenUnitSensoryChecksService: ProductionOrderTenUnitSensoryChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
     private readonly productionOrderSteamSterilizationChecksService: ProductionOrderSteamSterilizationChecksService,
     private readonly productionOrderSemiFinishedGrossWeightChecksService: ProductionOrderSemiFinishedGrossWeightChecksService,
@@ -642,6 +646,31 @@ export class ProductionOrdersController {
   @Get('sensory-checks/:checkId')
   async findSensoryCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderSensoryChecksService.findById(checkId);
+  }
+
+  @Get('ten-unit-sensory-checks/:checkId')
+  async findTenUnitSensoryCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderTenUnitSensoryChecksService.findById(checkId);
+  }
+
+  @Patch('ten-unit-sensory-checks/:checkId')
+  async updateTenUnitSensoryCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderTenUnitSensoryCheckDto,
+  ) {
+    return this.productionOrderTenUnitSensoryChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('ten-unit-sensory-checks/:checkId')
+  async deleteTenUnitSensoryCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderTenUnitSensoryChecksService.delete(checkId);
   }
 
   @Get('steam-sterilization-checks/:checkId')
@@ -1288,6 +1317,26 @@ export class ProductionOrdersController {
       await removeUploadedSteamSterilizationCheckImages(uploadedImages);
       throw error;
     }
+  }
+
+  @Get(':id/ten-unit-sensory-checks')
+  async findTenUnitSensoryChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderTenUnitSensoryChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/ten-unit-sensory-checks')
+  async createTenUnitSensoryCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderTenUnitSensoryCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderTenUnitSensoryChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
   }
 
   @Get(':id/date-checks')

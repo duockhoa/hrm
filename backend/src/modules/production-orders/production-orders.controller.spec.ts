@@ -20,6 +20,7 @@ import { ProductionOrderTenShellWeightChecksService } from './production-order-t
 import { ProductionOrderVialInspectionChecksService } from './production-order-vial-inspection-checks.service';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
+import { ProductionOrderTenUnitSensoryChecksService } from './production-order-ten-unit-sensory-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
@@ -134,6 +135,13 @@ describe('ProductionOrdersController', () => {
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
     findImageFile: jest.Mock;
+  };
+  let productionOrderTenUnitSensoryChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderDateChecksService: {
     findById: jest.Mock;
@@ -285,6 +293,13 @@ describe('ProductionOrdersController', () => {
       create: jest.fn(),
       findImageFile: jest.fn(),
     };
+    productionOrderTenUnitSensoryChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
     productionOrderDateChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -401,6 +416,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSensoryChecksService,
           useValue: productionOrderSensoryChecksService,
+        },
+        {
+          provide: ProductionOrderTenUnitSensoryChecksService,
+          useValue: productionOrderTenUnitSensoryChecksService,
         },
         {
           provide: ProductionOrderDateChecksService,
@@ -1624,6 +1643,79 @@ describe('ProductionOrdersController', () => {
         imagePath: undefined,
       },
     );
+  });
+
+  it('gets ten-unit sensory checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderTenUnitSensoryChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findTenUnitSensoryChecks(2031)).resolves.toBe(
+      checks,
+    );
+    expect(
+      productionOrderTenUnitSensoryChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a ten-unit sensory check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderTenUnitSensoryChecksService.findById.mockResolvedValue(
+      check,
+    );
+
+    await expect(controller.findTenUnitSensoryCheckById(1)).resolves.toBe(
+      check,
+    );
+    expect(
+      productionOrderTenUnitSensoryChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a ten-unit sensory check using the authenticated user', async () => {
+    const createDto = {
+      requirement: 'Đạt yêu cầu cảm quan',
+      unit_1_result: true,
+      unit_2_result: 'Đạt',
+      note: 'Theo mẫu chuẩn',
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderTenUnitSensoryChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createTenUnitSensoryCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderTenUnitSensoryChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a ten-unit sensory check', async () => {
+    const updateDto = {
+      unit_2_result: null,
+      note: 'Kiểm lại',
+    };
+    const result = { id: 1, unit_2_result: null };
+    productionOrderTenUnitSensoryChecksService.update.mockResolvedValue(result);
+
+    await expect(
+      controller.updateTenUnitSensoryCheck(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderTenUnitSensoryChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a ten-unit sensory check', async () => {
+    const result = { id: 1 };
+    productionOrderTenUnitSensoryChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteTenUnitSensoryCheck(1)).resolves.toBe(result);
+    expect(
+      productionOrderTenUnitSensoryChecksService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets steam sterilization checks for a production order', async () => {

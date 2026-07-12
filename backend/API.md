@@ -3010,6 +3010,133 @@ Lỗi thường gặp:
 - `400 calibration_number must fit DECIMAL(10, 4) with up to 4 decimal places`
 - `401 Authenticated user not found`
 
+## Production Order Ten-Unit Sensory Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu kiểm tra cảm quan theo tối đa 10 đơn vị của một lệnh sản xuất. Chỉ đơn vị 1 bắt buộc, các đơn vị 2-10 có thể để trống. Nhóm này không xử lý upload ảnh; API cảm quan có ảnh vẫn nằm ở nhóm `Production Order Sensory Checks`.
+
+### Lấy danh sách kiểm tra cảm quan 10 đơn vị
+
+```http
+GET /production-orders/:id/ten-unit-sensory-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "requirement": "Đạt yêu cầu cảm quan",
+    "unit_1_result": true,
+    "unit_2_result": true,
+    "unit_3_result": false,
+    "unit_4_result": null,
+    "unit_5_result": null,
+    "unit_6_result": null,
+    "unit_7_result": null,
+    "unit_8_result": null,
+    "unit_9_result": null,
+    "unit_10_result": null,
+    "note": "Theo mẫu chuẩn",
+    "created_by_id": 7,
+    "created_at": "2026-07-12T08:10:00.000Z",
+    "updated_at": "2026-07-12T08:10:00.000Z"
+  }
+]
+```
+
+### Lấy một bản ghi kiểm tra cảm quan 10 đơn vị theo ID
+
+```http
+GET /production-orders/ten-unit-sensory-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Ten-unit sensory check not found`
+
+### Thêm dữ liệu kiểm tra cảm quan 10 đơn vị
+
+```http
+POST /production-orders/:id/ten-unit-sensory-checks
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "requirement": "Đạt yêu cầu cảm quan",
+  "unit_1_result": "Đạt",
+  "unit_2_result": "Đạt",
+  "unit_3_result": "Không đạt",
+  "note": "Theo mẫu chuẩn"
+}
+```
+
+Quy tắc:
+
+- `requirement` không bắt buộc. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`.
+- `unit_1_result` bắt buộc.
+- `unit_2_result` đến `unit_10_result` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
+- Các field `unit_*_result` khi có giá trị có thể gửi boolean, `1`/`0`, hoặc chuỗi như `Đạt`, `Không đạt`, `dat`, `khong dat`, `pass`, `fail`.
+- `note` không bắt buộc. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`.
+- `production_order_id` lấy từ `:id`.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 unit_1_result is required`
+- `400 unit_3_result must be a boolean or pass/fail value`
+- `401 Authenticated user not found`
+
+### Cập nhật dữ liệu kiểm tra cảm quan 10 đơn vị
+
+```http
+PATCH /production-orders/ten-unit-sensory-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "unit_2_result": null,
+  "note": "Kiểm lại theo mẫu chuẩn"
+}
+```
+
+Quy tắc:
+
+- Có thể cập nhật `requirement`, `unit_1_result` đến `unit_10_result`, và `note`.
+- `unit_2_result` đến `unit_10_result`, `requirement`, `note` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- `unit_1_result` không được xóa vì là giá trị bắt buộc.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 unit_1_result is required`
+- `400 unit_3_result must be a boolean or pass/fail value`
+- `404 Ten-unit sensory check not found`
+
+### Xóa dữ liệu kiểm tra cảm quan 10 đơn vị
+
+```http
+DELETE /production-orders/ten-unit-sensory-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Ten-unit sensory check not found`
+
 ## Production Order Sensory Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
