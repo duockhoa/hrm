@@ -24,6 +24,10 @@ const OPTIONAL_NET_WEIGHT_FIELDS = [
   'unit_4_net_weight',
   'unit_5_net_weight',
   'unit_6_net_weight',
+  'unit_7_net_weight',
+  'unit_8_net_weight',
+  'unit_9_net_weight',
+  'unit_10_net_weight',
 ] as const;
 
 type CreateNetWeightData = {
@@ -33,6 +37,10 @@ type CreateNetWeightData = {
   unit_4_net_weight: Prisma.Decimal | null;
   unit_5_net_weight: Prisma.Decimal | null;
   unit_6_net_weight: Prisma.Decimal | null;
+  unit_7_net_weight: Prisma.Decimal | null;
+  unit_8_net_weight: Prisma.Decimal | null;
+  unit_9_net_weight: Prisma.Decimal | null;
+  unit_10_net_weight: Prisma.Decimal | null;
 };
 
 const creatorSelect = {
@@ -158,6 +166,22 @@ export class ProductionOrderSemiFinishedNetWeightChecksService {
       unit_6_net_weight: this.normalizeOptionalNetWeight(
         dto?.unit_6_net_weight,
         'unit_6_net_weight',
+      ),
+      unit_7_net_weight: this.normalizeOptionalNetWeight(
+        dto?.unit_7_net_weight,
+        'unit_7_net_weight',
+      ),
+      unit_8_net_weight: this.normalizeOptionalNetWeight(
+        dto?.unit_8_net_weight,
+        'unit_8_net_weight',
+      ),
+      unit_9_net_weight: this.normalizeOptionalNetWeight(
+        dto?.unit_9_net_weight,
+        'unit_9_net_weight',
+      ),
+      unit_10_net_weight: this.normalizeOptionalNetWeight(
+        dto?.unit_10_net_weight,
+        'unit_10_net_weight',
       ),
     };
   }

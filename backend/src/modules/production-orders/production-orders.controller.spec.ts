@@ -1197,6 +1197,10 @@ describe('ProductionOrdersController', () => {
       unit_4_gross_weight: 0.5,
       unit_5_gross_weight: 0.499,
       unit_6_gross_weight: 0.502,
+      unit_7_gross_weight: 0.497,
+      unit_8_gross_weight: 0.504,
+      unit_9_gross_weight: 0.496,
+      unit_10_gross_weight: 0.505,
     };
     const user = { id: 7 };
     const result = { id: 1, production_order_id: 2031 };
@@ -1274,6 +1278,7 @@ describe('ProductionOrdersController', () => {
       requirement: 'Khối lượng không vỏ từ 0.380 g đến 0.420 g',
       unit_1_net_weight: 0.401,
       unit_2_net_weight: 0.398,
+      unit_10_net_weight: 0.405,
       unit: 'mg',
     };
     const user = { id: 7 };

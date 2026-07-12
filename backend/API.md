@@ -2416,7 +2416,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu yêu cầu tại thời điểm nhập và khối lượng bán thành phẩm cả vỏ của tối đa 6 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị luôn là `g`; chỉ đơn vị 1 là bắt buộc.
+Nhóm API này lưu yêu cầu tại thời điểm nhập và khối lượng bán thành phẩm cả vỏ của tối đa 10 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị luôn là `g`; chỉ đơn vị 1 là bắt buộc.
 
 ### Lấy danh sách theo lệnh sản xuất
 
@@ -2438,6 +2438,10 @@ Response mẫu:
     "unit_4_gross_weight": null,
     "unit_5_gross_weight": null,
     "unit_6_gross_weight": null,
+    "unit_7_gross_weight": null,
+    "unit_8_gross_weight": null,
+    "unit_9_gross_weight": null,
+    "unit_10_gross_weight": null,
     "unit": "g",
     "created_by_id": 7,
     "created_at": "2026-07-11T00:00:00.000Z",
@@ -2479,7 +2483,8 @@ Body:
 
 ```json
 {
-  "unit_1_gross_weight": 0.501
+  "unit_1_gross_weight": 0.501,
+  "unit_10_gross_weight": 0.505
 }
 ```
 
@@ -2487,7 +2492,7 @@ Quy tắc:
 
 - `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
 - `unit_1_gross_weight` bắt buộc và phải lớn hơn `0`.
-- `unit_2_gross_weight` đến `unit_6_gross_weight` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `unit_2_gross_weight` đến `unit_10_gross_weight` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
 - Khi có giá trị, khối lượng phải lớn hơn `0`, lưu dạng `DECIMAL(10, 3)` và tối đa 3 chữ số sau dấu phẩy.
 - Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `0.501`, `"0.501"` hoặc `"0,501"`.
 - `unit` luôn là `g`, backend tự lưu; frontend không gửi field này.
@@ -2521,7 +2526,7 @@ Body chỉ cần gửi các field muốn cập nhật:
 }
 ```
 
-`unit_2_gross_weight` đến `unit_6_gross_weight` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_gross_weight` không được xóa vì là giá trị bắt buộc.
+`unit_2_gross_weight` đến `unit_10_gross_weight` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_gross_weight` không được xóa vì là giá trị bắt buộc.
 `requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 
 Lỗi thường gặp:
@@ -2546,7 +2551,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu yêu cầu tại thời điểm nhập và khối lượng bán thành phẩm không có vỏ của tối đa 6 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị mặc định là `g`, nhưng frontend có thể gửi hoặc sửa `unit` khi cần; chỉ đơn vị 1 là bắt buộc.
+Nhóm API này lưu yêu cầu tại thời điểm nhập và khối lượng bán thành phẩm không có vỏ của tối đa 10 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị mặc định là `g`, nhưng frontend có thể gửi hoặc sửa `unit` khi cần; chỉ đơn vị 1 là bắt buộc.
 
 ### Lấy danh sách theo lệnh sản xuất
 
@@ -2568,6 +2573,10 @@ Response mẫu:
     "unit_4_net_weight": null,
     "unit_5_net_weight": null,
     "unit_6_net_weight": null,
+    "unit_7_net_weight": null,
+    "unit_8_net_weight": null,
+    "unit_9_net_weight": null,
+    "unit_10_net_weight": null,
     "unit": "g",
     "created_by_id": 7,
     "created_at": "2026-07-11T00:00:00.000Z",
@@ -2611,6 +2620,7 @@ Body:
 {
   "unit_1_net_weight": 0.401,
   "unit_2_net_weight": 0.398,
+  "unit_10_net_weight": 0.405,
   "unit": "g"
 }
 ```
@@ -2619,7 +2629,7 @@ Quy tắc:
 
 - `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
 - `unit_1_net_weight` bắt buộc và phải lớn hơn `0`.
-- `unit_2_net_weight` đến `unit_6_net_weight` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `unit_2_net_weight` đến `unit_10_net_weight` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
 - Khi có giá trị, khối lượng phải lớn hơn `0`, lưu dạng `DECIMAL(10, 3)` và tối đa 3 chữ số sau dấu phẩy.
 - Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `0.401`, `"0.401"` hoặc `"0,401"`.
 - `unit` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `g`; nếu gửi thì phải là chuỗi không rỗng và tối đa 10 ký tự.
@@ -2654,7 +2664,7 @@ Body chỉ cần gửi các field muốn cập nhật:
 }
 ```
 
-`unit_2_net_weight` đến `unit_6_net_weight` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_net_weight` không được xóa vì là giá trị bắt buộc. `unit` có thể sửa, nhưng không được gửi `null` hoặc chuỗi rỗng trong API cập nhật.
+`unit_2_net_weight` đến `unit_10_net_weight` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_net_weight` không được xóa vì là giá trị bắt buộc. `unit` có thể sửa, nhưng không được gửi `null` hoặc chuỗi rỗng trong API cập nhật.
 `requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 
 Lỗi thường gặp:

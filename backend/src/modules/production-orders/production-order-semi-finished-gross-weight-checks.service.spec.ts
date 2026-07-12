@@ -29,6 +29,10 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
     unit_4_gross_weight: 0.5,
     unit_5_gross_weight: 0.499,
     unit_6_gross_weight: 0.502,
+    unit_7_gross_weight: 0.497,
+    unit_8_gross_weight: 0.504,
+    unit_9_gross_weight: 0.496,
+    unit_10_gross_weight: 0.505,
   };
 
   beforeEach(async () => {
@@ -106,6 +110,10 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
           unit_4_gross_weight: new Prisma.Decimal('0.5'),
           unit_5_gross_weight: new Prisma.Decimal('0.499'),
           unit_6_gross_weight: new Prisma.Decimal('0.502'),
+          unit_7_gross_weight: new Prisma.Decimal('0.497'),
+          unit_8_gross_weight: new Prisma.Decimal('0.504'),
+          unit_9_gross_weight: new Prisma.Decimal('0.496'),
+          unit_10_gross_weight: new Prisma.Decimal('0.505'),
           unit: 'g',
           created_by_id: 7,
         },
@@ -141,13 +149,17 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
           unit_4_gross_weight: null,
           unit_5_gross_weight: null,
           unit_6_gross_weight: null,
+          unit_7_gross_weight: null,
+          unit_8_gross_weight: null,
+          unit_9_gross_weight: null,
+          unit_10_gross_weight: null,
         }),
       }),
     );
   });
 
   it('updates only provided fields', async () => {
-    const updatedCheck = { id: 1, unit_3_gross_weight: '0.515' };
+    const updatedCheck = { id: 1, unit_10_gross_weight: '0.515' };
     prismaService.productionOrderSemiFinishedProductGrossWeightChecks.findUnique.mockResolvedValue(
       { id: 1 },
     );
@@ -158,7 +170,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
     await expect(
       service.update(1, {
         requirement: 'Yêu cầu mới',
-        unit_3_gross_weight: '0,515',
+        unit_10_gross_weight: '0,515',
       }),
     ).resolves.toBe(updatedCheck);
     expect(
@@ -168,7 +180,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
         where: { id: 1 },
         data: {
           requirement: 'Yêu cầu mới',
-          unit_3_gross_weight: new Prisma.Decimal('0.515'),
+          unit_10_gross_weight: new Prisma.Decimal('0.515'),
         },
       }),
     );

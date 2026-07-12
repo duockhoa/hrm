@@ -23,6 +23,10 @@ const OPTIONAL_GROSS_WEIGHT_FIELDS = [
   'unit_4_gross_weight',
   'unit_5_gross_weight',
   'unit_6_gross_weight',
+  'unit_7_gross_weight',
+  'unit_8_gross_weight',
+  'unit_9_gross_weight',
+  'unit_10_gross_weight',
 ] as const;
 
 type CreateGrossWeightData = {
@@ -32,6 +36,10 @@ type CreateGrossWeightData = {
   unit_4_gross_weight: Prisma.Decimal | null;
   unit_5_gross_weight: Prisma.Decimal | null;
   unit_6_gross_weight: Prisma.Decimal | null;
+  unit_7_gross_weight: Prisma.Decimal | null;
+  unit_8_gross_weight: Prisma.Decimal | null;
+  unit_9_gross_weight: Prisma.Decimal | null;
+  unit_10_gross_weight: Prisma.Decimal | null;
 };
 
 const creatorSelect = {
@@ -157,6 +165,22 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
       unit_6_gross_weight: this.normalizeOptionalGrossWeight(
         dto?.unit_6_gross_weight,
         'unit_6_gross_weight',
+      ),
+      unit_7_gross_weight: this.normalizeOptionalGrossWeight(
+        dto?.unit_7_gross_weight,
+        'unit_7_gross_weight',
+      ),
+      unit_8_gross_weight: this.normalizeOptionalGrossWeight(
+        dto?.unit_8_gross_weight,
+        'unit_8_gross_weight',
+      ),
+      unit_9_gross_weight: this.normalizeOptionalGrossWeight(
+        dto?.unit_9_gross_weight,
+        'unit_9_gross_weight',
+      ),
+      unit_10_gross_weight: this.normalizeOptionalGrossWeight(
+        dto?.unit_10_gross_weight,
+        'unit_10_gross_weight',
       ),
     };
   }

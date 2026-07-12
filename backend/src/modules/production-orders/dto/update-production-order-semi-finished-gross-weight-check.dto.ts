@@ -6,4 +6,8 @@ export class UpdateProductionOrderSemiFinishedGrossWeightCheckDto {
   unit_4_gross_weight?: number | string | null;
   unit_5_gross_weight?: number | string | null;
   unit_6_gross_weight?: number | string | null;
+  unit_7_gross_weight?: number | string | null;
+  unit_8_gross_weight?: number | string | null;
+  unit_9_gross_weight?: number | string | null;
+  unit_10_gross_weight?: number | string | null;
 }

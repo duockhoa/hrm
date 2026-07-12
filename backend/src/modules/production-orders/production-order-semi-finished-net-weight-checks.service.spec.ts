@@ -29,6 +29,10 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
     unit_4_net_weight: 0.4,
     unit_5_net_weight: 0.399,
     unit_6_net_weight: 0.402,
+    unit_7_net_weight: 0.397,
+    unit_8_net_weight: 0.404,
+    unit_9_net_weight: 0.396,
+    unit_10_net_weight: 0.405,
     unit: 'mg',
   };
 
@@ -106,6 +110,10 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
           unit_4_net_weight: new Prisma.Decimal('0.4'),
           unit_5_net_weight: new Prisma.Decimal('0.399'),
           unit_6_net_weight: new Prisma.Decimal('0.402'),
+          unit_7_net_weight: new Prisma.Decimal('0.397'),
+          unit_8_net_weight: new Prisma.Decimal('0.404'),
+          unit_9_net_weight: new Prisma.Decimal('0.396'),
+          unit_10_net_weight: new Prisma.Decimal('0.405'),
           unit: 'mg',
           created_by_id: 7,
         },
@@ -141,6 +149,10 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
           unit_4_net_weight: null,
           unit_5_net_weight: null,
           unit_6_net_weight: null,
+          unit_7_net_weight: null,
+          unit_8_net_weight: null,
+          unit_9_net_weight: null,
+          unit_10_net_weight: null,
           unit: 'g',
         }),
       }),
@@ -148,7 +160,7 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
   });
 
   it('updates only provided fields including unit', async () => {
-    const updatedCheck = { id: 1, unit_3_net_weight: '0.415', unit: 'mg' };
+    const updatedCheck = { id: 1, unit_10_net_weight: '0.415', unit: 'mg' };
     prismaService.productionOrderSemiFinishedProductNetWeightChecks.findUnique.mockResolvedValue(
       { id: 1 },
     );
@@ -159,7 +171,7 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
     await expect(
       service.update(1, {
         requirement: 'Yêu cầu mới',
-        unit_3_net_weight: '0,415',
+        unit_10_net_weight: '0,415',
         unit: ' mg ',
       }),
     ).resolves.toBe(updatedCheck);
@@ -170,7 +182,7 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
         where: { id: 1 },
         data: {
           requirement: 'Yêu cầu mới',
-          unit_3_net_weight: new Prisma.Decimal('0.415'),
+          unit_10_net_weight: new Prisma.Decimal('0.415'),
           unit: 'mg',
         },
       }),
