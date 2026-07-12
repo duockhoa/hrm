@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderVialInspectionCheckDto } from './dto/create-production-order-vial-inspection-check.dto';
+import { UpdateProductionOrderVialInspectionCheckDto } from './dto/update-production-order-vial-inspection-check.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -98,6 +99,91 @@ export class ProductionOrderVialInspectionChecksService {
     });
   }
 
+  async update(
+    checkId: number,
+    dto: UpdateProductionOrderVialInspectionCheckDto,
+  ) {
+    await this.findById(checkId);
+
+    return this.prismaService.productionOrderVialInspectionChecks.update({
+      where: { id: checkId },
+      data: this.normalizeUpdateData(dto),
+      include: vialInspectionCheckInclude,
+    });
+  }
+
+  async delete(checkId: number) {
+    await this.findById(checkId);
+
+    return this.prismaService.productionOrderVialInspectionChecks.delete({
+      where: { id: checkId },
+      include: vialInspectionCheckInclude,
+    });
+  }
+
+  private normalizeUpdateData(
+    dto: UpdateProductionOrderVialInspectionCheckDto,
+  ) {
+    const updateDto = dto ?? {};
+    const hasBagNumber = 'bag_number' in updateDto;
+    const hasFiberVialCount = 'fiber_vial_count' in updateDto;
+    const hasParticulateCount = 'particulate_count' in updateDto;
+    const hasDamagedCount = 'damaged_count' in updateDto;
+    const hasOtherDefectCount = 'other_defect_count' in updateDto;
+    const hasNote = 'note' in updateDto;
+
+    if (
+      !hasBagNumber &&
+      !hasFiberVialCount &&
+      !hasParticulateCount &&
+      !hasDamagedCount &&
+      !hasOtherDefectCount &&
+      !hasNote
+    ) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    const data: Prisma.ProductionOrderVialInspectionChecksUpdateInput = {};
+
+    if (hasBagNumber) {
+      data.bag_number = this.normalizeRequiredBagNumber(updateDto.bag_number);
+    }
+
+    if (hasFiberVialCount) {
+      data.fiber_vial_count = this.normalizeRequiredNonNegativeInt(
+        updateDto.fiber_vial_count,
+        'fiber_vial_count',
+      );
+    }
+
+    if (hasParticulateCount) {
+      data.particulate_count = this.normalizeRequiredNonNegativeInt(
+        updateDto.particulate_count,
+        'particulate_count',
+      );
+    }
+
+    if (hasDamagedCount) {
+      data.damaged_count = this.normalizeRequiredNonNegativeInt(
+        updateDto.damaged_count,
+        'damaged_count',
+      );
+    }
+
+    if (hasOtherDefectCount) {
+      data.other_defect_count = this.normalizeRequiredNonNegativeInt(
+        updateDto.other_defect_count,
+        'other_defect_count',
+      );
+    }
+
+    if (hasNote) {
+      data.note = this.normalizeOptionalLongText(updateDto.note, 'note');
+    }
+
+    return data;
+  }
+
   private async ensureProductionOrderExists(productionOrderId: number) {
     const productionOrder =
       await this.prismaService.productionOrders.findUnique({
@@ -111,10 +197,7 @@ export class ProductionOrderVialInspectionChecksService {
   }
 
   private normalizeRequiredBagNumber(value: unknown) {
-    const bagNumber = this.normalizeRequiredNonNegativeInt(
-      value,
-      'bag_number',
-    );
+    const bagNumber = this.normalizeRequiredNonNegativeInt(value, 'bag_number');
 
     if (bagNumber <= 0) {
       throw new BadRequestException('bag_number must be greater than 0');

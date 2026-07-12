@@ -58,6 +58,7 @@ import { ProductionOrderShellWeightChecksService } from './production-order-shel
 import { CreateProductionOrderTenShellWeightCheckDto } from './dto/create-production-order-ten-shell-weight-check.dto';
 import { ProductionOrderTenShellWeightChecksService } from './production-order-ten-shell-weight-checks.service';
 import { CreateProductionOrderVialInspectionCheckDto } from './dto/create-production-order-vial-inspection-check.dto';
+import { UpdateProductionOrderVialInspectionCheckDto } from './dto/update-production-order-vial-inspection-check.dto';
 import { ProductionOrderVialInspectionChecksService } from './production-order-vial-inspection-checks.service';
 import { CreateProductionOrderCylinderCalibrationDto } from './dto/create-production-order-cylinder-calibration.dto';
 import { UpdateProductionOrderCylinderCalibrationDto } from './dto/update-production-order-cylinder-calibration.dto';
@@ -546,6 +547,24 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderVialInspectionChecksService.findById(checkId);
+  }
+
+  @Patch('vial-inspection-checks/:checkId')
+  async updateVialInspectionCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderVialInspectionCheckDto,
+  ) {
+    return this.productionOrderVialInspectionChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('vial-inspection-checks/:checkId')
+  async deleteVialInspectionCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderVialInspectionChecksService.delete(checkId);
   }
 
   @Get('date-checks/images/:filename')

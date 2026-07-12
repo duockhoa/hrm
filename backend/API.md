@@ -2362,6 +2362,54 @@ Lỗi thường gặp:
 - `400 note must be a string`
 - `401 Authenticated user not found`
 
+### Cập nhật dữ liệu soi lọ
+
+```http
+PATCH /production-orders/vial-inspection-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "bag_number": 2,
+  "particulate_count": 4,
+  "note": null
+}
+```
+
+Quy tắc:
+
+- Có thể cập nhật `bag_number`, `fiber_vial_count`, `particulate_count`, `damaged_count`, `other_defect_count`, `note`.
+- Các field số lượng validate giống API tạo.
+- `note` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 bag_number is required`
+- `400 bag_number must be a non-negative integer`
+- `400 bag_number must be greater than 0`
+- `400 fiber_vial_count must be a non-negative integer`
+- `400 particulate_count must be a non-negative integer`
+- `400 damaged_count must be a non-negative integer`
+- `400 other_defect_count must be a non-negative integer`
+- `400 note must be a string`
+- `404 Vial inspection check not found`
+
+### Xóa dữ liệu soi lọ
+
+```http
+DELETE /production-orders/vial-inspection-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Vial inspection check not found`
+
 ## Production Order Shell Weight Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

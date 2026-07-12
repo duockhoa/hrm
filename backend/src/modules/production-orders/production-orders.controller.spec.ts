@@ -127,6 +127,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderCylinderCalibrationsService: {
     findByProductionOrder: jest.Mock;
@@ -290,6 +292,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderCylinderCalibrationsService = {
       findByProductionOrder: jest.fn(),
@@ -1598,6 +1602,32 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderVialInspectionChecksService.create,
     ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a vial inspection check', async () => {
+    const updateDto = {
+      bag_number: 2,
+      note: null,
+    };
+    const result = { id: 1, production_order_id: 2031, bag_number: 2 };
+    productionOrderVialInspectionChecksService.update.mockResolvedValue(result);
+
+    await expect(
+      controller.updateVialInspectionCheck(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderVialInspectionChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a vial inspection check', async () => {
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderVialInspectionChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteVialInspectionCheck(1)).resolves.toBe(result);
+    expect(
+      productionOrderVialInspectionChecksService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets a cylinder calibration for a production order', async () => {
