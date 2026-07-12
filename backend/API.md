@@ -2532,7 +2532,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu yêu cầu tại thời điểm nhập và khối lượng bán thành phẩm cả vỏ của tối đa 10 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị luôn là `g`; chỉ đơn vị 1 là bắt buộc.
+Nhóm API này lưu yêu cầu tại thời điểm nhập và khối lượng bán thành phẩm cả vỏ của tối đa 10 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị mặc định là `g`, nhưng frontend có thể gửi hoặc sửa `unit` khi cần; chỉ đơn vị 1 là bắt buộc.
 
 ### Lấy danh sách theo lệnh sản xuất
 
@@ -2600,7 +2600,8 @@ Body:
 ```json
 {
   "unit_1_gross_weight": 0.501,
-  "unit_10_gross_weight": 0.505
+  "unit_10_gross_weight": 0.505,
+  "unit": "g"
 }
 ```
 
@@ -2611,7 +2612,7 @@ Quy tắc:
 - `unit_2_gross_weight` đến `unit_10_gross_weight` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
 - Khi có giá trị, khối lượng phải lớn hơn `0`, lưu dạng `DECIMAL(10, 3)` và tối đa 3 chữ số sau dấu phẩy.
 - Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `0.501`, `"0.501"` hoặc `"0,501"`.
-- `unit` luôn là `g`, backend tự lưu; frontend không gửi field này.
+- `unit` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `g`; nếu gửi thì phải là chuỗi không rỗng và tối đa 10 ký tự.
 - `production_order_id` lấy từ `:id`.
 - `created_by_id` lấy từ user đăng nhập.
 
@@ -2624,6 +2625,8 @@ Lỗi thường gặp:
 - `400 unit_1_gross_weight must be greater than 0`
 - `400 unit_2_gross_weight must fit DECIMAL(10, 3) with up to 3 decimal places`
 - `400 unit_2_gross_weight must be greater than 0`
+- `400 unit must be a string`
+- `400 unit must be at most 10 characters`
 - `401 Authenticated user not found`
 
 ### Cập nhật bản ghi
@@ -2638,11 +2641,12 @@ Body chỉ cần gửi các field muốn cập nhật:
 ```json
 {
   "requirement": "Yêu cầu mới tại thời điểm cập nhật",
-  "unit_3_gross_weight": null
+  "unit_3_gross_weight": null,
+  "unit": "mg"
 }
 ```
 
-`unit_2_gross_weight` đến `unit_10_gross_weight` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_gross_weight` không được xóa vì là giá trị bắt buộc.
+`unit_2_gross_weight` đến `unit_10_gross_weight` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_gross_weight` không được xóa vì là giá trị bắt buộc. `unit` có thể sửa, nhưng không được gửi `null` hoặc chuỗi rỗng trong API cập nhật.
 `requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 
 Lỗi thường gặp:
@@ -3042,7 +3046,6 @@ Response mẫu:
     "unit_8_result": null,
     "unit_9_result": null,
     "unit_10_result": null,
-    "note": "Theo mẫu chuẩn",
     "created_by_id": 7,
     "created_at": "2026-07-12T08:10:00.000Z",
     "updated_at": "2026-07-12T08:10:00.000Z"
@@ -3074,8 +3077,7 @@ Body:
   "requirement": "Đạt yêu cầu cảm quan",
   "unit_1_result": "Đạt",
   "unit_2_result": "Đạt",
-  "unit_3_result": "Không đạt",
-  "note": "Theo mẫu chuẩn"
+  "unit_3_result": "Không đạt"
 }
 ```
 
@@ -3085,7 +3087,6 @@ Quy tắc:
 - `unit_1_result` bắt buộc.
 - `unit_2_result` đến `unit_10_result` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
 - Các field `unit_*_result` khi có giá trị có thể gửi boolean, `1`/`0`, hoặc chuỗi như `Đạt`, `Không đạt`, `dat`, `khong dat`, `pass`, `fail`.
-- `note` không bắt buộc. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`.
 - `production_order_id` lấy từ `:id`.
 - `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
 
@@ -3107,15 +3108,14 @@ Body chỉ cần gửi field muốn cập nhật:
 
 ```json
 {
-  "unit_2_result": null,
-  "note": "Kiểm lại theo mẫu chuẩn"
+  "unit_2_result": null
 }
 ```
 
 Quy tắc:
 
-- Có thể cập nhật `requirement`, `unit_1_result` đến `unit_10_result`, và `note`.
-- `unit_2_result` đến `unit_10_result`, `requirement`, `note` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- Có thể cập nhật `requirement` và `unit_1_result` đến `unit_10_result`.
+- `unit_2_result` đến `unit_10_result` và `requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 - `unit_1_result` không được xóa vì là giá trị bắt buộc.
 
 Lỗi thường gặp:

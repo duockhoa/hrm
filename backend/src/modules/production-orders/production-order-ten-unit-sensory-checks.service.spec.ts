@@ -85,7 +85,6 @@ describe('ProductionOrderTenUnitSensoryChecksService', () => {
           unit_2_result: 'đạt',
           unit_3_result: 'không đạt',
           unit_10_result: 0,
-          note: '  Theo mẫu chuẩn  ',
         },
         { id: 7 },
       ),
@@ -107,7 +106,6 @@ describe('ProductionOrderTenUnitSensoryChecksService', () => {
           unit_8_result: null,
           unit_9_result: null,
           unit_10_result: false,
-          note: 'Theo mẫu chuẩn',
           created_by_id: 7,
         },
       }),
@@ -124,14 +122,14 @@ describe('ProductionOrderTenUnitSensoryChecksService', () => {
     );
 
     await expect(
-      service.update(1, { requirement: '', unit_2_result: null, note: null }),
+      service.update(1, { requirement: '', unit_2_result: null }),
     ).resolves.toBe(updatedCheck);
     expect(
       prismaService.productionOrderTenUnitSensoryChecks.update,
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 1 },
-        data: { requirement: null, unit_2_result: null, note: null },
+        data: { requirement: null, unit_2_result: null },
       }),
     );
   });

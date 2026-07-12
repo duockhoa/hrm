@@ -15,7 +15,8 @@ type AuthenticatedUser = {
 
 const GROSS_WEIGHT_DECIMAL_PATTERN = /^\d+(?:\.\d{1,3})?$/;
 const GROSS_WEIGHT_INTEGER_DIGITS = 7;
-const WEIGHT_UNIT = 'g';
+const DEFAULT_WEIGHT_UNIT = 'g';
+const MAX_UNIT_LENGTH = 10;
 const REQUIRED_GROSS_WEIGHT_FIELDS = ['unit_1_gross_weight'] as const;
 const OPTIONAL_GROSS_WEIGHT_FIELDS = [
   'unit_2_gross_weight',
@@ -104,7 +105,7 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
           production_order_id: productionOrderId,
           requirement: this.normalizeOptionalRequirement(dto?.requirement),
           ...this.normalizeCreateWeights(dto),
-          unit: WEIGHT_UNIT,
+          unit: this.normalizeCreateUnit(dto?.unit),
           created_by_id: this.normalizeUserId(user),
         },
         include: grossWeightCheckInclude,
@@ -198,6 +199,10 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
       );
     }
 
+    if ('unit' in updateDto) {
+      data.unit = this.normalizeUnit(updateDto.unit);
+    }
+
     for (const field of REQUIRED_GROSS_WEIGHT_FIELDS) {
       if (field in updateDto) {
         data[field] = this.normalizeRequiredGrossWeight(
@@ -241,6 +246,34 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
     return requirement;
   }
 
+  private normalizeCreateUnit(value: unknown) {
+    if (this.isEmptyText(value)) {
+      return DEFAULT_WEIGHT_UNIT;
+    }
+
+    return this.normalizeUnit(value);
+  }
+
+  private normalizeUnit(value: unknown) {
+    if (this.isEmptyText(value)) {
+      throw new BadRequestException('unit is required');
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('unit must be a string');
+    }
+
+    const unit = value.trim();
+
+    if (unit.length > MAX_UNIT_LENGTH) {
+      throw new BadRequestException(
+        `unit must be at most ${MAX_UNIT_LENGTH} characters`,
+      );
+    }
+
+    return unit;
+  }
+
   private normalizeRequiredGrossWeight(value: unknown, fieldName: string) {
     if (this.isEmptyGrossWeight(value)) {
       throw new BadRequestException(`${fieldName} is required`);
@@ -258,6 +291,14 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
   }
 
   private isEmptyGrossWeight(value: unknown) {
+    return (
+      value === null ||
+      value === undefined ||
+      (typeof value === 'string' && value.trim() === '')
+    );
+  }
+
+  private isEmptyText(value: unknown) {
     return (
       value === null ||
       value === undefined ||

@@ -23,6 +23,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
 
   const validDto = {
     requirement: 'Khối lượng cả vỏ từ 0.480 g đến 0.520 g',
+    unit: 'mg',
     unit_1_gross_weight: 0.501,
     unit_2_gross_weight: '0,498',
     unit_3_gross_weight: 0.503,
@@ -87,7 +88,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
     await expect(service.findById(1)).resolves.toBe(check);
   });
 
-  it('creates a check with requirement, weights and fixed g unit', async () => {
+  it('creates a check with requirement, weights and frontend unit', async () => {
     const createdCheck = { id: 1, production_order_id: 2031 };
     prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
     prismaService.productionOrderSemiFinishedProductGrossWeightChecks.create.mockResolvedValue(
@@ -114,7 +115,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
           unit_8_gross_weight: new Prisma.Decimal('0.504'),
           unit_9_gross_weight: new Prisma.Decimal('0.496'),
           unit_10_gross_weight: new Prisma.Decimal('0.505'),
-          unit: 'g',
+          unit: 'mg',
           created_by_id: 7,
         },
       }),
@@ -143,6 +144,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           requirement: null,
+          unit: 'g',
           unit_1_gross_weight: new Prisma.Decimal('0.501'),
           unit_2_gross_weight: null,
           unit_3_gross_weight: null,
@@ -159,7 +161,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
   });
 
   it('updates only provided fields', async () => {
-    const updatedCheck = { id: 1, unit_10_gross_weight: '0.515' };
+    const updatedCheck = { id: 1, unit_10_gross_weight: '0.515', unit: 'mg' };
     prismaService.productionOrderSemiFinishedProductGrossWeightChecks.findUnique.mockResolvedValue(
       { id: 1 },
     );
@@ -170,6 +172,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
     await expect(
       service.update(1, {
         requirement: 'Yêu cầu mới',
+        unit: ' mg ',
         unit_10_gross_weight: '0,515',
       }),
     ).resolves.toBe(updatedCheck);
@@ -180,6 +183,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
         where: { id: 1 },
         data: {
           requirement: 'Yêu cầu mới',
+          unit: 'mg',
           unit_10_gross_weight: new Prisma.Decimal('0.515'),
         },
       }),
@@ -256,6 +260,36 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
         { id: 7 },
       ),
     ).rejects.toThrow('requirement must be a string');
+  });
+
+  it('rejects a non-string unit', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        { ...validDto, unit: 1 as unknown as string },
+        { id: 7 },
+      ),
+    ).rejects.toThrow('unit must be a string');
+  });
+
+  it('rejects clearing unit on update', async () => {
+    prismaService.productionOrderSemiFinishedProductGrossWeightChecks.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+
+    await expect(service.update(1, { unit: '  ' })).rejects.toThrow(
+      'unit is required',
+    );
+  });
+
+  it('rejects a unit longer than ten characters', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(2031, { ...validDto, unit: 'kilograms-1' }, { id: 7 }),
+    ).rejects.toThrow('unit must be at most 10 characters');
   });
 
   it('rejects a missing unit 1 gross weight', async () => {

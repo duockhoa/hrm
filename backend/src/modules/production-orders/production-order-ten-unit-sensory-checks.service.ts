@@ -140,7 +140,6 @@ export class ProductionOrderTenUnitSensoryChecksService {
           dto?.unit_10_result,
           'unit_10_result',
         ),
-        note: this.normalizeOptionalText(dto?.note, 'note'),
         created_by_id: this.normalizeUserId(user),
       },
       include: tenUnitSensoryCheckInclude,
@@ -192,10 +191,6 @@ export class ProductionOrderTenUnitSensoryChecksService {
       if (field in updateDto) {
         data[field] = this.normalizeOptionalResult(updateDto[field], field);
       }
-    }
-
-    if ('note' in updateDto) {
-      data.note = this.normalizeOptionalText(updateDto.note, 'note');
     }
 
     if (Object.keys(data).length === 0) {

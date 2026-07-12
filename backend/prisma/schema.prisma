@@ -802,7 +802,6 @@ model ProductionOrderTenUnitSensoryChecks {
   unit_8_result       Boolean?
   unit_9_result       Boolean?
   unit_10_result      Boolean?
-  note                String?          @db.Text
   created_by_id       Int
   createdBy           Users            @relation("ProductionOrderTenUnitSensoryCheckCreator", fields: [created_by_id], references: [id], map: "po_ten_unit_sensory_checks_user_fkey")
   created_at          DateTime         @default(now())

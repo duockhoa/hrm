@@ -10,5 +10,4 @@ export class CreateProductionOrderTenUnitSensoryCheckDto {
   unit_8_result?: boolean | number | string | null;
   unit_9_result?: boolean | number | string | null;
   unit_10_result?: boolean | number | string | null;
-  note?: string | null;
 }

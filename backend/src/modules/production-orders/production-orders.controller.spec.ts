@@ -1316,6 +1316,7 @@ describe('ProductionOrdersController', () => {
   it('creates a semi-finished gross weight check', async () => {
     const createDto = {
       requirement: 'Khối lượng cả vỏ từ 0.480 g đến 0.520 g',
+      unit: 'mg',
       unit_1_gross_weight: 0.501,
       unit_2_gross_weight: 0.498,
       unit_3_gross_weight: 0.503,
@@ -1342,7 +1343,7 @@ describe('ProductionOrdersController', () => {
   });
 
   it('updates a semi-finished gross weight check', async () => {
-    const updateDto = { unit_2_gross_weight: 0.51 };
+    const updateDto = { unit_2_gross_weight: 0.51, unit: 'mg' };
     const result = { id: 1, production_order_id: 2031 };
     productionOrderSemiFinishedGrossWeightChecksService.update.mockResolvedValue(
       result,
@@ -1678,7 +1679,6 @@ describe('ProductionOrdersController', () => {
       requirement: 'Đạt yêu cầu cảm quan',
       unit_1_result: true,
       unit_2_result: 'Đạt',
-      note: 'Theo mẫu chuẩn',
     };
     const user = { id: 7, name: 'Binh' };
     const result = { id: 1, production_order_id: 2031 };
@@ -1695,7 +1695,6 @@ describe('ProductionOrdersController', () => {
   it('updates a ten-unit sensory check', async () => {
     const updateDto = {
       unit_2_result: null,
-      note: 'Kiểm lại',
     };
     const result = { id: 1, unit_2_result: null };
     productionOrderTenUnitSensoryChecksService.update.mockResolvedValue(result);
