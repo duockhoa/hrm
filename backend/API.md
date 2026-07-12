@@ -1904,12 +1904,7 @@ Body:
 ```json
 {
   "dosage_form_stage": "film_coated_tablet",
-  "unit_1_passed": "Đạt",
-  "unit_2_passed": "Đạt",
-  "unit_3_passed": true,
-  "unit_4_passed": "Không đạt",
-  "unit_5_passed": false,
-  "unit_6_passed": "khong dat"
+  "unit_1_passed": "Đạt"
 }
 ```
 
@@ -1917,9 +1912,10 @@ Quy tắc:
 
 - `dosage_form_stage` bắt buộc và không được rỗng.
 - `dosage_form_stage` có thể dùng các giá trị như `tablet`, `film_coated_tablet`, `capsule`.
-- `unit_1_passed` đến `unit_6_passed` đều bắt buộc.
-- Các field `unit_*_passed` có thể gửi boolean, `1`/`0`, hoặc chuỗi như `Đạt`, `Không đạt`, `dat`, `khong dat`, `pass`, `fail`.
-- Backend normalize kết quả về boolean trước khi lưu DB.
+- `unit_1_passed` bắt buộc.
+- `unit_2_passed` đến `unit_6_passed` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
+- Các field `unit_*_passed` khi có giá trị có thể gửi boolean, `1`/`0`, hoặc chuỗi như `Đạt`, `Không đạt`, `dat`, `khong dat`, `pass`, `fail`.
+- Backend normalize kết quả về boolean hoặc `null` trước khi lưu DB.
 - `production_order_id` lấy từ `:id`.
 - `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
 - `checked_at` lấy theo thời điểm tạo bản ghi.
@@ -1931,6 +1927,42 @@ Lỗi thường gặp:
 - `400 unit_1_passed is required`
 - `400 unit_6_passed must be pass or fail`
 - `401 Authenticated user not found`
+
+### Cập nhật dữ liệu kiểm tra độ rã
+
+```http
+PATCH /production-orders/disintegration-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi các field muốn cập nhật:
+
+```json
+{
+  "dosage_form_stage": "film_coated_tablet",
+  "unit_6_passed": null
+}
+```
+
+Quy tắc validate và normalize giống API tạo. Với `unit_2_passed` đến `unit_6_passed`, gửi `null` hoặc chuỗi rỗng sẽ cập nhật field đó về `null`. Riêng `unit_1_passed` vẫn bắt buộc có giá trị hợp lệ nếu được gửi trong body.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra `dosage_form_stage` và `unit_*_passed` giống API tạo.
+- `404 Disintegration check not found`
+
+### Xóa dữ liệu kiểm tra độ rã
+
+```http
+DELETE /production-orders/disintegration-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Disintegration check not found`
 
 ## Production Order Hard Capsule Leakage Checks
 

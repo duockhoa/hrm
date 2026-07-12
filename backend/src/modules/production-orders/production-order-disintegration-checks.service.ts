@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-production-order-disintegration-check.dto';
+import { UpdateProductionOrderDisintegrationCheckDto } from './dto/update-production-order-disintegration-check.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -35,6 +36,14 @@ const PASS_RESULT_FALSE_VALUES = new Set([
   'fail',
   'khong-dat',
 ]);
+
+const OPTIONAL_PASS_RESULT_FIELDS = [
+  'unit_2_passed',
+  'unit_3_passed',
+  'unit_4_passed',
+  'unit_5_passed',
+  'unit_6_passed',
+] as const;
 
 @Injectable()
 export class ProductionOrderDisintegrationChecksService {
@@ -96,23 +105,23 @@ export class ProductionOrderDisintegrationChecksService {
           dto?.unit_1_passed,
           'unit_1_passed',
         ),
-        unit_2_passed: this.normalizePassResult(
+        unit_2_passed: this.normalizeOptionalPassResult(
           dto?.unit_2_passed,
           'unit_2_passed',
         ),
-        unit_3_passed: this.normalizePassResult(
+        unit_3_passed: this.normalizeOptionalPassResult(
           dto?.unit_3_passed,
           'unit_3_passed',
         ),
-        unit_4_passed: this.normalizePassResult(
+        unit_4_passed: this.normalizeOptionalPassResult(
           dto?.unit_4_passed,
           'unit_4_passed',
         ),
-        unit_5_passed: this.normalizePassResult(
+        unit_5_passed: this.normalizeOptionalPassResult(
           dto?.unit_5_passed,
           'unit_5_passed',
         ),
-        unit_6_passed: this.normalizePassResult(
+        unit_6_passed: this.normalizeOptionalPassResult(
           dto?.unit_6_passed,
           'unit_6_passed',
         ),
@@ -120,6 +129,61 @@ export class ProductionOrderDisintegrationChecksService {
       },
       include: disintegrationCheckInclude,
     });
+  }
+
+  async update(
+    checkId: number,
+    dto: UpdateProductionOrderDisintegrationCheckDto,
+  ) {
+    await this.ensureCheckExists(checkId);
+
+    return this.prismaService.productionOrderDisintegrationChecks.update({
+      where: { id: checkId },
+      data: this.normalizeUpdateData(dto),
+      include: disintegrationCheckInclude,
+    });
+  }
+
+  async delete(checkId: number) {
+    await this.ensureCheckExists(checkId);
+
+    return this.prismaService.productionOrderDisintegrationChecks.delete({
+      where: { id: checkId },
+      include: disintegrationCheckInclude,
+    });
+  }
+
+  private normalizeUpdateData(
+    dto: UpdateProductionOrderDisintegrationCheckDto,
+  ) {
+    const updateDto = dto ?? {};
+    const data: Prisma.ProductionOrderDisintegrationChecksUpdateInput = {};
+
+    if ('dosage_form_stage' in updateDto) {
+      data.dosage_form_stage = this.normalizeRequiredString(
+        updateDto.dosage_form_stage,
+        'dosage_form_stage',
+      );
+    }
+
+    if ('unit_1_passed' in updateDto) {
+      data.unit_1_passed = this.normalizePassResult(
+        updateDto.unit_1_passed,
+        'unit_1_passed',
+      );
+    }
+
+    for (const field of OPTIONAL_PASS_RESULT_FIELDS) {
+      if (field in updateDto) {
+        data[field] = this.normalizeOptionalPassResult(updateDto[field], field);
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    return data;
   }
 
   private async ensureProductionOrderExists(productionOrderId: number) {
@@ -138,6 +202,18 @@ export class ProductionOrderDisintegrationChecksService {
     }
   }
 
+  private async ensureCheckExists(checkId: number) {
+    const disintegrationCheck =
+      await this.prismaService.productionOrderDisintegrationChecks.findUnique({
+        where: { id: checkId },
+        select: { id: true },
+      });
+
+    if (!disintegrationCheck) {
+      throw new NotFoundException('Disintegration check not found');
+    }
+  }
+
   private normalizeRequiredString(value: unknown, fieldName: string) {
     if (typeof value !== 'string' || value.trim() === '') {
       throw new BadRequestException(`${fieldName} is required`);
@@ -151,6 +227,26 @@ export class ProductionOrderDisintegrationChecksService {
       throw new BadRequestException(`${fieldName} is required`);
     }
 
+    if (typeof value === 'string' && value.trim() === '') {
+      throw new BadRequestException(`${fieldName} is required`);
+    }
+
+    return this.normalizePassResultValue(value, fieldName);
+  }
+
+  private normalizeOptionalPassResult(value: unknown, fieldName: string) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === 'string' && value.trim() === '') {
+      return null;
+    }
+
+    return this.normalizePassResultValue(value, fieldName);
+  }
+
+  private normalizePassResultValue(value: unknown, fieldName: string) {
     if (typeof value === 'boolean') {
       return value;
     }

@@ -617,11 +617,11 @@ model ProductionOrderDisintegrationChecks {
   productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_disintegration_checks_po_id_fkey")
   dosage_form_stage   String
   unit_1_passed       Boolean
-  unit_2_passed       Boolean
-  unit_3_passed       Boolean
-  unit_4_passed       Boolean
-  unit_5_passed       Boolean
-  unit_6_passed       Boolean
+  unit_2_passed       Boolean?
+  unit_3_passed       Boolean?
+  unit_4_passed       Boolean?
+  unit_5_passed       Boolean?
+  unit_6_passed       Boolean?
   created_by_id       Int
   createdBy           Users            @relation("ProductionOrderDisintegrationCheckCreator", fields: [created_by_id], references: [id], map: "po_disintegration_checks_created_by_id_fkey")
   checked_at          DateTime         @default(now())

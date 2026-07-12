@@ -43,6 +43,7 @@ import { ProductionOrderSprayDoseChecksService } from './production-order-spray-
 import { CreateProductionOrderPostHomogenizationGranuleCheckDto } from './dto/create-production-order-post-homogenization-granule-check.dto';
 import { ProductionOrderPostHomogenizationGranuleChecksService } from './production-order-post-homogenization-granule-checks.service';
 import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-production-order-disintegration-check.dto';
+import { UpdateProductionOrderDisintegrationCheckDto } from './dto/update-production-order-disintegration-check.dto';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { CreateProductionOrderHardCapsuleLeakageCheckDto } from './dto/create-production-order-hard-capsule-leakage-check.dto';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
@@ -340,6 +341,24 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderDisintegrationChecksService.findById(checkId);
+  }
+
+  @Patch('disintegration-checks/:checkId')
+  async updateDisintegrationCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderDisintegrationCheckDto,
+  ) {
+    return this.productionOrderDisintegrationChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('disintegration-checks/:checkId')
+  async deleteDisintegrationCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderDisintegrationChecksService.delete(checkId);
   }
 
   @Get('hard-capsule-leakage-checks/:checkId')

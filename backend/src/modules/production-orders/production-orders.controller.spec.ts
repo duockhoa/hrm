@@ -92,6 +92,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderHardCapsuleLeakageChecksService: {
     findById: jest.Mock;
@@ -236,6 +238,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderHardCapsuleLeakageChecksService = {
       findById: jest.fn(),
@@ -965,11 +969,6 @@ describe('ProductionOrdersController', () => {
     const createDto = {
       dosage_form_stage: 'tablet',
       unit_1_passed: true,
-      unit_2_passed: true,
-      unit_3_passed: true,
-      unit_4_passed: true,
-      unit_5_passed: true,
-      unit_6_passed: false,
     };
     const user = { id: 7, name: 'Binh' };
     const result = { id: 1, production_order_id: 2031 };
@@ -981,6 +980,29 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderDisintegrationChecksService.create,
     ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a disintegration check', async () => {
+    const updateDto = { unit_6_passed: null };
+    const result = { id: 1, unit_6_passed: null };
+    productionOrderDisintegrationChecksService.update.mockResolvedValue(result);
+
+    await expect(
+      controller.updateDisintegrationCheck(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderDisintegrationChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a disintegration check', async () => {
+    const result = { id: 1 };
+    productionOrderDisintegrationChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteDisintegrationCheck(1)).resolves.toBe(result);
+    expect(
+      productionOrderDisintegrationChecksService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets hard capsule leakage checks for a production order', async () => {
