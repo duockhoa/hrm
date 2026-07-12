@@ -131,6 +131,8 @@ describe('ProductionOrdersController', () => {
   let productionOrderCylinderCalibrationsService: {
     findByProductionOrder: jest.Mock;
     upsert: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderSensoryChecksService: {
     findById: jest.Mock;
@@ -290,6 +292,8 @@ describe('ProductionOrdersController', () => {
     productionOrderCylinderCalibrationsService = {
       findByProductionOrder: jest.fn(),
       upsert: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderSensoryChecksService = {
       findById: jest.fn(),
@@ -1626,6 +1630,33 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderCylinderCalibrationsService.upsert,
     ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a cylinder calibration', async () => {
+    const updateDto = {
+      cylinder_code: 'OD-002',
+    };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderCylinderCalibrationsService.update.mockResolvedValue(result);
+
+    await expect(
+      controller.updateCylinderCalibration(2031, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderCylinderCalibrationsService.update,
+    ).toHaveBeenCalledWith(2031, updateDto);
+  });
+
+  it('deletes a cylinder calibration', async () => {
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderCylinderCalibrationsService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteCylinderCalibration(2031)).resolves.toBe(
+      result,
+    );
+    expect(
+      productionOrderCylinderCalibrationsService.delete,
+    ).toHaveBeenCalledWith(2031);
   });
 
   it('gets sensory checks for a production order', async () => {

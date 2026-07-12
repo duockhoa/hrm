@@ -60,6 +60,7 @@ import { ProductionOrderTenShellWeightChecksService } from './production-order-t
 import { CreateProductionOrderVialInspectionCheckDto } from './dto/create-production-order-vial-inspection-check.dto';
 import { ProductionOrderVialInspectionChecksService } from './production-order-vial-inspection-checks.service';
 import { CreateProductionOrderCylinderCalibrationDto } from './dto/create-production-order-cylinder-calibration.dto';
+import { UpdateProductionOrderCylinderCalibrationDto } from './dto/update-production-order-cylinder-calibration.dto';
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { CreateProductionOrderSensoryCheckDto } from './dto/create-production-order-sensory-check.dto';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
@@ -1249,6 +1250,22 @@ export class ProductionOrdersController {
       createDto,
       req.user,
     );
+  }
+
+  @Patch(':id/cylinder-calibration')
+  async updateCylinderCalibration(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDto: UpdateProductionOrderCylinderCalibrationDto,
+  ) {
+    return this.productionOrderCylinderCalibrationsService.update(
+      id,
+      updateDto,
+    );
+  }
+
+  @Delete(':id/cylinder-calibration')
+  async deleteCylinderCalibration(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderCylinderCalibrationsService.delete(id);
   }
 
   @Get(':id/sensory-checks')

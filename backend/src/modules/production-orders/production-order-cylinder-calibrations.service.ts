@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderCylinderCalibrationDto } from './dto/create-production-order-cylinder-calibration.dto';
+import { UpdateProductionOrderCylinderCalibrationDto } from './dto/update-production-order-cylinder-calibration.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -76,6 +77,57 @@ export class ProductionOrderCylinderCalibrationsService {
     });
   }
 
+  async update(
+    productionOrderId: number,
+    dto: UpdateProductionOrderCylinderCalibrationDto,
+  ) {
+    await this.ensureCalibrationExists(productionOrderId);
+
+    return this.prismaService.productionOrderCylinderCalibrations.update({
+      where: {
+        production_order_id: productionOrderId,
+      },
+      data: this.normalizeUpdateData(dto),
+      include: cylinderCalibrationInclude,
+    });
+  }
+
+  async delete(productionOrderId: number) {
+    await this.ensureCalibrationExists(productionOrderId);
+
+    return this.prismaService.productionOrderCylinderCalibrations.delete({
+      where: {
+        production_order_id: productionOrderId,
+      },
+      include: cylinderCalibrationInclude,
+    });
+  }
+
+  private normalizeUpdateData(
+    dto: UpdateProductionOrderCylinderCalibrationDto,
+  ) {
+    const updateDto = dto ?? {};
+    const data: Prisma.ProductionOrderCylinderCalibrationsUpdateInput = {};
+
+    if ('cylinder_code' in updateDto) {
+      data.cylinder_code = this.normalizeOptionalCylinderCode(
+        updateDto.cylinder_code,
+      );
+    }
+
+    if ('calibration_number' in updateDto) {
+      data.calibration_number = this.normalizeRequiredCalibrationNumber(
+        updateDto.calibration_number,
+      );
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    return data;
+  }
+
   private async ensureProductionOrderExists(productionOrderId: number) {
     const productionOrder =
       await this.prismaService.productionOrders.findUnique({
@@ -89,6 +141,24 @@ export class ProductionOrderCylinderCalibrationsService {
 
     if (!productionOrder) {
       throw new NotFoundException('Production order not found');
+    }
+  }
+
+  private async ensureCalibrationExists(productionOrderId: number) {
+    await this.ensureProductionOrderExists(productionOrderId);
+
+    const calibration =
+      await this.prismaService.productionOrderCylinderCalibrations.findUnique({
+        where: {
+          production_order_id: productionOrderId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!calibration) {
+      throw new NotFoundException('Cylinder calibration not found');
     }
   }
 

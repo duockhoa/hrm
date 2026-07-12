@@ -3056,6 +3056,51 @@ Lỗi thường gặp:
 - `400 calibration_number must fit DECIMAL(10, 4) with up to 4 decimal places`
 - `401 Authenticated user not found`
 
+### Cập nhật thông số hiệu chỉnh ống đong
+
+```http
+PATCH /production-orders/:id/cylinder-calibration
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "cylinder_code": "OD-002"
+}
+```
+
+Quy tắc:
+
+- `:id` là `production_order_id`.
+- Có thể cập nhật `cylinder_code`, `calibration_number`, hoặc cả hai.
+- `cylinder_code` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- `calibration_number` nếu gửi thì bắt buộc có giá trị hợp lệ, không được gửi `null` hoặc chuỗi rỗng.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `404 Cylinder calibration not found`
+- `400 At least one field is required`
+- `400 cylinder_code must be a string`
+- `400 cylinder_code must be at most 100 characters`
+- `400 calibration_number is required`
+- `400 calibration_number must fit DECIMAL(10, 4) with up to 4 decimal places`
+
+### Xóa thông số hiệu chỉnh ống đong
+
+```http
+DELETE /production-orders/:id/cylinder-calibration
+```
+
+`:id` là `production_order_id`. API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `404 Cylinder calibration not found`
+
 ## Production Order Ten-Unit Sensory Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

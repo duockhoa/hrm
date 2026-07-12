@@ -17,6 +17,8 @@ describe('ProductionOrderCylinderCalibrationsService', () => {
     productionOrderCylinderCalibrations: {
       findUnique: jest.Mock;
       upsert: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
     };
   };
 
@@ -28,6 +30,8 @@ describe('ProductionOrderCylinderCalibrationsService', () => {
       productionOrderCylinderCalibrations: {
         findUnique: jest.fn(),
         upsert: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -172,6 +176,104 @@ describe('ProductionOrderCylinderCalibrationsService', () => {
     const upsertArg =
       prismaService.productionOrderCylinderCalibrations.upsert.mock.calls[0][0];
     expect(upsertArg.create.calibration_number.toString()).toBe('-0.1234');
+  });
+
+  it('updates only provided fields', async () => {
+    const calibration = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrderCylinderCalibrations.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderCylinderCalibrations.update.mockResolvedValue(
+      calibration,
+    );
+
+    await expect(
+      service.update(2031, {
+        cylinder_code: ' OD-002 ',
+      }),
+    ).resolves.toBe(calibration);
+    expect(
+      prismaService.productionOrderCylinderCalibrations.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          production_order_id: 2031,
+        },
+        data: {
+          cylinder_code: 'OD-002',
+        },
+      }),
+    );
+  });
+
+  it('updates calibration number and can clear cylinder code', async () => {
+    const calibration = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrderCylinderCalibrations.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderCylinderCalibrations.update.mockResolvedValue(
+      calibration,
+    );
+
+    await expect(
+      service.update(2031, {
+        cylinder_code: '',
+        calibration_number: '0,5678',
+      }),
+    ).resolves.toBe(calibration);
+
+    const updateArg =
+      prismaService.productionOrderCylinderCalibrations.update.mock.calls[0][0];
+    expect(updateArg.data).toEqual({
+      cylinder_code: null,
+      calibration_number: new Prisma.Decimal('0.5678'),
+    });
+  });
+
+  it('rejects an empty update', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrderCylinderCalibrations.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+
+    await expect(service.update(2031, {})).rejects.toThrow(
+      'At least one field is required',
+    );
+  });
+
+  it('throws NotFoundException when updating a missing calibration', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrderCylinderCalibrations.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(
+      service.update(2031, { cylinder_code: 'OD-002' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deletes an existing calibration', async () => {
+    const calibration = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrderCylinderCalibrations.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderCylinderCalibrations.delete.mockResolvedValue(
+      calibration,
+    );
+
+    await expect(service.delete(2031)).resolves.toBe(calibration);
+    expect(
+      prismaService.productionOrderCylinderCalibrations.delete,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          production_order_id: 2031,
+        },
+      }),
+    );
   });
 
   it('rejects a calibration number with more than four decimal places', async () => {
