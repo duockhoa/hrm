@@ -76,6 +76,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderSprayDoseChecksService: {
     findById: jest.Mock;
@@ -222,6 +224,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderSprayDoseChecksService = {
       findById: jest.fn(),
@@ -831,6 +835,32 @@ describe('ProductionOrdersController', () => {
       2031,
       createDto,
       user,
+    );
+  });
+
+  it('updates a friability check', async () => {
+    const updateDto = {
+      total_weight_after_check: 980,
+    };
+    const result = { id: 1, total_weight_after_check: 980 };
+    productionOrderFriabilityChecksService.update.mockResolvedValue(result);
+
+    await expect(controller.updateFriabilityCheck(1, updateDto)).resolves.toBe(
+      result,
+    );
+    expect(productionOrderFriabilityChecksService.update).toHaveBeenCalledWith(
+      1,
+      updateDto,
+    );
+  });
+
+  it('deletes a friability check', async () => {
+    const result = { id: 1 };
+    productionOrderFriabilityChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteFriabilityCheck(1)).resolves.toBe(result);
+    expect(productionOrderFriabilityChecksService.delete).toHaveBeenCalledWith(
+      1,
     );
   });
 

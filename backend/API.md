@@ -1638,6 +1638,47 @@ Lỗi thường gặp:
 - `400 total_weight_after_check must be less than or equal to total_weight_before_check`
 - `401 Authenticated user not found`
 
+### Cập nhật dữ liệu kiểm tra độ mài mòn
+
+```http
+PATCH /production-orders/friability-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "total_weight_after_check": 980
+}
+```
+
+Quy tắc:
+
+- Có thể sửa `total_weight_before_check`, `total_weight_after_check`, hoặc cả hai.
+- Giá trị gửi lên validate giống API tạo.
+- Backend tự tính lại và lưu `friability_percent` sau khi cập nhật; frontend không gửi field này.
+- Nếu chỉ sửa một khối lượng, backend dùng khối lượng còn lại đang có trong DB để tính lại `friability_percent`.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 total_weight_before_check is required`
+- `400 total_weight_after_check must be less than or equal to total_weight_before_check`
+- `404 Friability check not found`
+
+### Xóa dữ liệu kiểm tra độ mài mòn
+
+```http
+DELETE /production-orders/friability-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Friability check not found`
+
 ## Production Order Spray Dose Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

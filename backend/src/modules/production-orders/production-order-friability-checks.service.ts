@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderFriabilityCheckDto } from './dto/create-production-order-friability-check.dto';
+import { UpdateProductionOrderFriabilityCheckDto } from './dto/update-production-order-friability-check.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -30,6 +31,16 @@ const friabilityCheckInclude = {
     select: friabilityCheckCreatorSelect,
   },
 } satisfies Prisma.ProductionOrderFriabilityChecksInclude;
+
+const friabilityCheckWeightSelect = {
+  id: true,
+  total_weight_before_check: true,
+  total_weight_after_check: true,
+} satisfies Prisma.ProductionOrderFriabilityChecksSelect;
+
+type FriabilityCheckWeights = Prisma.ProductionOrderFriabilityChecksGetPayload<{
+  select: typeof friabilityCheckWeightSelect;
+}>;
 
 @Injectable()
 export class ProductionOrderFriabilityChecksService {
@@ -103,6 +114,67 @@ export class ProductionOrderFriabilityChecksService {
     });
   }
 
+  async update(checkId: number, dto: UpdateProductionOrderFriabilityCheckDto) {
+    const existingCheck = await this.findWeightsByIdOrThrow(checkId);
+
+    return this.prismaService.productionOrderFriabilityChecks.update({
+      where: { id: checkId },
+      data: this.normalizeUpdateData(dto, existingCheck),
+      include: friabilityCheckInclude,
+    });
+  }
+
+  async delete(checkId: number) {
+    await this.findWeightsByIdOrThrow(checkId);
+
+    return this.prismaService.productionOrderFriabilityChecks.delete({
+      where: { id: checkId },
+      include: friabilityCheckInclude,
+    });
+  }
+
+  private normalizeUpdateData(
+    dto: UpdateProductionOrderFriabilityCheckDto,
+    existingCheck: FriabilityCheckWeights,
+  ) {
+    const updateDto = dto ?? {};
+    const hasBeforeWeight = 'total_weight_before_check' in updateDto;
+    const hasAfterWeight = 'total_weight_after_check' in updateDto;
+
+    if (!hasBeforeWeight && !hasAfterWeight) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    const totalWeightBeforeCheck = hasBeforeWeight
+      ? this.normalizeRequiredWeight(
+          updateDto.total_weight_before_check,
+          'total_weight_before_check',
+        )
+      : existingCheck.total_weight_before_check;
+    const totalWeightAfterCheck = hasAfterWeight
+      ? this.normalizeRequiredWeight(
+          updateDto.total_weight_after_check,
+          'total_weight_after_check',
+        )
+      : existingCheck.total_weight_after_check;
+    const data: Prisma.ProductionOrderFriabilityChecksUpdateInput = {
+      friability_percent: this.calculateFriabilityPercent(
+        totalWeightBeforeCheck,
+        totalWeightAfterCheck,
+      ),
+    };
+
+    if (hasBeforeWeight) {
+      data.total_weight_before_check = totalWeightBeforeCheck;
+    }
+
+    if (hasAfterWeight) {
+      data.total_weight_after_check = totalWeightAfterCheck;
+    }
+
+    return data;
+  }
+
   private calculateFriabilityPercent(
     totalWeightBeforeCheck: Prisma.Decimal,
     totalWeightAfterCheck: Prisma.Decimal,
@@ -136,6 +208,20 @@ export class ProductionOrderFriabilityChecksService {
     if (!productionOrder) {
       throw new NotFoundException('Production order not found');
     }
+  }
+
+  private async findWeightsByIdOrThrow(checkId: number) {
+    const friabilityCheck =
+      await this.prismaService.productionOrderFriabilityChecks.findUnique({
+        where: { id: checkId },
+        select: friabilityCheckWeightSelect,
+      });
+
+    if (!friabilityCheck) {
+      throw new NotFoundException('Friability check not found');
+    }
+
+    return friabilityCheck;
   }
 
   private normalizeRequiredWeight(value: unknown, fieldName: string) {

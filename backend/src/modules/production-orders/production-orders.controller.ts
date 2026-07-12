@@ -37,6 +37,7 @@ import { ProductionOrderFinishedProductSummariesService } from './production-ord
 import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { CreateProductionOrderFriabilityCheckDto } from './dto/create-production-order-friability-check.dto';
+import { UpdateProductionOrderFriabilityCheckDto } from './dto/update-production-order-friability-check.dto';
 import { ProductionOrderFriabilityChecksService } from './production-order-friability-checks.service';
 import { CreateProductionOrderSprayDoseCheckDto } from './dto/create-production-order-spray-dose-check.dto';
 import { ProductionOrderSprayDoseChecksService } from './production-order-spray-dose-checks.service';
@@ -318,6 +319,22 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderFriabilityChecksService.findById(checkId);
+  }
+
+  @Patch('friability-checks/:checkId')
+  async updateFriabilityCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderFriabilityCheckDto,
+  ) {
+    return this.productionOrderFriabilityChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('friability-checks/:checkId')
+  async deleteFriabilityCheck(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderFriabilityChecksService.delete(checkId);
   }
 
   @Get('spray-dose-checks/:checkId')
