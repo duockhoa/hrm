@@ -1555,6 +1555,48 @@ Lỗi thường gặp:
 - `400 water_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
 - `401 Authenticated user not found`
 
+### Cập nhật dữ liệu tỉ trọng
+
+```http
+PATCH /production-orders/density-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "solution_pycnometer_mass_g": 76
+}
+```
+
+Quy tắc:
+
+- Có thể sửa `empty_pycnometer_mass_g`, `solution_pycnometer_mass_g`, `water_pycnometer_mass_g`, hoặc kết hợp các field này.
+- Giá trị gửi lên validate giống API tạo.
+- Backend tự tính lại và lưu `density` sau khi cập nhật; frontend không gửi field này.
+- Nếu chỉ sửa một khối lượng, backend dùng các khối lượng còn lại đang có trong DB để tính lại `density`.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 empty_pycnometer_mass_g is required`
+- `400 solution_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
+- `400 water_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
+- `404 Density check not found`
+
+### Xóa dữ liệu tỉ trọng
+
+```http
+DELETE /production-orders/density-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Density check not found`
+
 ## Production Order Friability Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
+import { UpdateProductionOrderDensityCheckDto } from './dto/update-production-order-density-check.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -29,6 +30,17 @@ const densityCheckInclude = {
     select: densityCheckCreatorSelect,
   },
 } satisfies Prisma.ProductionOrderDensityChecksInclude;
+
+const densityCheckMassSelect = {
+  id: true,
+  empty_pycnometer_mass_g: true,
+  solution_pycnometer_mass_g: true,
+  water_pycnometer_mass_g: true,
+} satisfies Prisma.ProductionOrderDensityChecksSelect;
+
+type DensityCheckMasses = Prisma.ProductionOrderDensityChecksGetPayload<{
+  select: typeof densityCheckMassSelect;
+}>;
 
 @Injectable()
 export class ProductionOrderDensityChecksService {
@@ -107,6 +119,79 @@ export class ProductionOrderDensityChecksService {
     });
   }
 
+  async update(checkId: number, dto: UpdateProductionOrderDensityCheckDto) {
+    const existingCheck = await this.findMassesByIdOrThrow(checkId);
+
+    return this.prismaService.productionOrderDensityChecks.update({
+      where: { id: checkId },
+      data: this.normalizeUpdateData(dto, existingCheck),
+      include: densityCheckInclude,
+    });
+  }
+
+  async delete(checkId: number) {
+    await this.findMassesByIdOrThrow(checkId);
+
+    return this.prismaService.productionOrderDensityChecks.delete({
+      where: { id: checkId },
+      include: densityCheckInclude,
+    });
+  }
+
+  private normalizeUpdateData(
+    dto: UpdateProductionOrderDensityCheckDto,
+    existingCheck: DensityCheckMasses,
+  ) {
+    const updateDto = dto ?? {};
+    const hasEmptyMass = 'empty_pycnometer_mass_g' in updateDto;
+    const hasSolutionMass = 'solution_pycnometer_mass_g' in updateDto;
+    const hasWaterMass = 'water_pycnometer_mass_g' in updateDto;
+
+    if (!hasEmptyMass && !hasSolutionMass && !hasWaterMass) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    const emptyPycnometerMass = hasEmptyMass
+      ? this.normalizeRequiredMass(
+          updateDto.empty_pycnometer_mass_g,
+          'empty_pycnometer_mass_g',
+        )
+      : existingCheck.empty_pycnometer_mass_g;
+    const solutionPycnometerMass = hasSolutionMass
+      ? this.normalizeRequiredMass(
+          updateDto.solution_pycnometer_mass_g,
+          'solution_pycnometer_mass_g',
+        )
+      : existingCheck.solution_pycnometer_mass_g;
+    const waterPycnometerMass = hasWaterMass
+      ? this.normalizeRequiredMass(
+          updateDto.water_pycnometer_mass_g,
+          'water_pycnometer_mass_g',
+        )
+      : existingCheck.water_pycnometer_mass_g;
+    const data: Prisma.ProductionOrderDensityChecksUpdateInput = {
+      density: this.calculateDensity(
+        emptyPycnometerMass,
+        solutionPycnometerMass,
+        waterPycnometerMass,
+      ),
+    };
+
+    if (hasEmptyMass) {
+      data.empty_pycnometer_mass_g = emptyPycnometerMass;
+    }
+
+    if (hasSolutionMass) {
+      data.solution_pycnometer_mass_g = solutionPycnometerMass;
+    }
+
+    if (hasWaterMass) {
+      data.water_pycnometer_mass_g = waterPycnometerMass;
+    }
+
+    return data;
+  }
+
   private calculateDensity(
     emptyPycnometerMass: Prisma.Decimal,
     solutionPycnometerMass: Prisma.Decimal,
@@ -144,6 +229,20 @@ export class ProductionOrderDensityChecksService {
     if (!productionOrder) {
       throw new NotFoundException('Production order not found');
     }
+  }
+
+  private async findMassesByIdOrThrow(checkId: number) {
+    const densityCheck =
+      await this.prismaService.productionOrderDensityChecks.findUnique({
+        where: { id: checkId },
+        select: densityCheckMassSelect,
+      });
+
+    if (!densityCheck) {
+      throw new NotFoundException('Density check not found');
+    }
+
+    return densityCheck;
   }
 
   private normalizeRequiredMass(value: unknown, fieldName: string) {

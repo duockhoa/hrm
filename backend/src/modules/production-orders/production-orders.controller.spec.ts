@@ -72,6 +72,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderFriabilityChecksService: {
     findById: jest.Mock;
@@ -229,6 +231,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderFriabilityChecksService = {
       findById: jest.fn(),
@@ -812,6 +816,30 @@ describe('ProductionOrdersController', () => {
       createDto,
       user,
     );
+  });
+
+  it('updates a density check', async () => {
+    const updateDto = {
+      solution_pycnometer_mass_g: 76,
+    };
+    const result = { id: 1, solution_pycnometer_mass_g: 76 };
+    productionOrderDensityChecksService.update.mockResolvedValue(result);
+
+    await expect(controller.updateDensityCheck(1, updateDto)).resolves.toBe(
+      result,
+    );
+    expect(productionOrderDensityChecksService.update).toHaveBeenCalledWith(
+      1,
+      updateDto,
+    );
+  });
+
+  it('deletes a density check', async () => {
+    const result = { id: 1 };
+    productionOrderDensityChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteDensityCheck(1)).resolves.toBe(result);
+    expect(productionOrderDensityChecksService.delete).toHaveBeenCalledWith(1);
   });
 
   it('gets friability checks for a production order', async () => {

@@ -35,6 +35,7 @@ import { ProductionOrderEnvironmentChecksService } from './production-order-envi
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
+import { UpdateProductionOrderDensityCheckDto } from './dto/update-production-order-density-check.dto';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
 import { CreateProductionOrderFriabilityCheckDto } from './dto/create-production-order-friability-check.dto';
 import { UpdateProductionOrderFriabilityCheckDto } from './dto/update-production-order-friability-check.dto';
@@ -263,6 +264,19 @@ export class ProductionOrdersController {
   @Get('density-checks/:checkId')
   async findDensityCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDensityChecksService.findById(checkId);
+  }
+
+  @Patch('density-checks/:checkId')
+  async updateDensityCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderDensityCheckDto,
+  ) {
+    return this.productionOrderDensityChecksService.update(checkId, updateDto);
+  }
+
+  @Delete('density-checks/:checkId')
+  async deleteDensityCheck(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderDensityChecksService.delete(checkId);
   }
 
   @Get('sampling-records/:recordId')
