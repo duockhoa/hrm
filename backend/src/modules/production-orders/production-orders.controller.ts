@@ -44,6 +44,7 @@ import { CreateProductionOrderSprayDoseCheckDto } from './dto/create-production-
 import { UpdateProductionOrderSprayDoseCheckDto } from './dto/update-production-order-spray-dose-check.dto';
 import { ProductionOrderSprayDoseChecksService } from './production-order-spray-dose-checks.service';
 import { CreateProductionOrderPostHomogenizationGranuleCheckDto } from './dto/create-production-order-post-homogenization-granule-check.dto';
+import { UpdateProductionOrderPostHomogenizationGranuleCheckDto } from './dto/update-production-order-post-homogenization-granule-check.dto';
 import { ProductionOrderPostHomogenizationGranuleChecksService } from './production-order-post-homogenization-granule-checks.service';
 import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-production-order-disintegration-check.dto';
 import { UpdateProductionOrderDisintegrationCheckDto } from './dto/update-production-order-disintegration-check.dto';
@@ -389,6 +390,61 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderPostHomogenizationGranuleChecksService.findById(
+      checkId,
+    );
+  }
+
+  @Patch('post-homogenization-granule-checks/:checkId')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'granule_image', maxCount: 1 },
+        { name: 'image', maxCount: 1 },
+      ],
+      productionOrderPostHomogenizationGranuleCheckImageUploadOptions,
+    ),
+  )
+  async updatePostHomogenizationGranuleCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderPostHomogenizationGranuleCheckDto,
+    @UploadedFiles()
+    uploadedFiles: PostHomogenizationGranuleCheckUploadFields | undefined,
+  ) {
+    const uploadedImages =
+      getUploadedPostHomogenizationGranuleCheckImages(uploadedFiles);
+
+    if (uploadedImages.length > 1) {
+      await Promise.all(
+        uploadedImages.map(removeUploadedPostHomogenizationGranuleCheckImage),
+      );
+      throw new BadRequestException(
+        'Only one post-homogenization granule check image is allowed',
+      );
+    }
+
+    try {
+      return await this.productionOrderPostHomogenizationGranuleChecksService.update(
+        checkId,
+        updateDto,
+        {
+          imagePath: getPostHomogenizationGranuleCheckImagePath(
+            uploadedImages[0],
+          ),
+        },
+      );
+    } catch (error) {
+      await Promise.all(
+        uploadedImages.map(removeUploadedPostHomogenizationGranuleCheckImage),
+      );
+      throw error;
+    }
+  }
+
+  @Delete('post-homogenization-granule-checks/:checkId')
+  async deletePostHomogenizationGranuleCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderPostHomogenizationGranuleChecksService.delete(
       checkId,
     );
   }

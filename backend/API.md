@@ -1967,6 +1967,55 @@ Lỗi thường gặp:
 - `400 image must be a JPG, PNG, WEBP, or GIF image`
 - `401 Authenticated user not found`
 
+### Cập nhật kiểm tra cốm sau đồng nhất
+
+```http
+PATCH /production-orders/post-homogenization-granule-checks/:checkId
+```
+
+Body JSON nếu không đổi ảnh:
+
+```json
+{
+  "tapped_density": 0.7
+}
+```
+
+Nếu có ảnh mới, gửi `multipart/form-data`:
+
+- `bulk_density`: `0.52`
+- `tapped_density`: `0.70`
+- `granule_image` hoặc `image`: file ảnh, tối đa 1 file
+
+Quy tắc:
+
+- Có thể cập nhật `bulk_density`, `tapped_density`, và ảnh kiểm tra.
+- Gửi ít nhất một field hoặc một ảnh mới.
+- Nếu chỉ cập nhật một tỷ trọng, backend dùng tỷ trọng còn lại trên bản ghi hiện có để tính lại `carr_index`.
+- `bulk_density` và `tapped_density` khi gửi phải là số thập phân hợp lệ `DECIMAL(12, 6)` và lớn hơn `0`.
+- `tapped_density` phải lớn hơn hoặc bằng `bulk_density`.
+- Nếu gửi ảnh mới, backend cập nhật `image_path` và xóa file ảnh cũ nếu có.
+
+Lỗi thường gặp:
+
+- `404 Post-homogenization granule check not found`
+- `400 At least one field is required`
+- `400 bulk_density is required`
+- `400 tapped_density must be greater than or equal to bulk_density`
+- `400 image must be a JPG, PNG, WEBP, or GIF image`
+
+### Xóa kiểm tra cốm sau đồng nhất
+
+```http
+DELETE /production-orders/post-homogenization-granule-checks/:checkId
+```
+
+API này xóa cứng bản ghi kiểm tra cốm sau đồng nhất và xóa file ảnh đã lưu nếu có.
+
+Lỗi thường gặp:
+
+- `404 Post-homogenization granule check not found`
+
 ## Production Order Disintegration Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

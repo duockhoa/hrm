@@ -216,3 +216,26 @@ export const removeUploadedPostHomogenizationGranuleCheckImage = async (
 
   await unlink(file.path).catch(() => undefined);
 };
+
+export const removePostHomogenizationGranuleCheckImageByPath = async (
+  imagePath?: string | null,
+) => {
+  if (
+    !imagePath?.startsWith(
+      `${PRODUCTION_ORDER_POST_HOMOGENIZATION_GRANULE_CHECK_IMAGE_ROUTE}/`,
+    )
+  ) {
+    return;
+  }
+
+  const filename = imagePath.slice(
+    PRODUCTION_ORDER_POST_HOMOGENIZATION_GRANULE_CHECK_IMAGE_ROUTE.length + 1,
+  );
+  const filePath = getResolvedFilePath(filename);
+
+  if (!filePath) {
+    return;
+  }
+
+  await unlink(filePath).catch(() => undefined);
+};

@@ -7,8 +7,10 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderPostHomogenizationGranuleCheckDto } from './dto/create-production-order-post-homogenization-granule-check.dto';
+import { UpdateProductionOrderPostHomogenizationGranuleCheckDto } from './dto/update-production-order-post-homogenization-granule-check.dto';
 import {
   getPostHomogenizationGranuleCheckImageLookupPaths,
+  removePostHomogenizationGranuleCheckImageByPath,
   resolvePostHomogenizationGranuleCheckImageFile,
 } from './production-order-post-homogenization-granule-check-upload.config';
 
@@ -34,6 +36,18 @@ const postHomogenizationGranuleCheckInclude = {
     select: postHomogenizationGranuleCheckCreatorSelect,
   },
 } satisfies Prisma.ProductionOrderPostHomogenizationGranuleChecksInclude;
+
+const postHomogenizationGranuleCheckValueSelect = {
+  id: true,
+  bulk_density: true,
+  tapped_density: true,
+  image_path: true,
+} satisfies Prisma.ProductionOrderPostHomogenizationGranuleChecksSelect;
+
+type PostHomogenizationGranuleCheckValues =
+  Prisma.ProductionOrderPostHomogenizationGranuleChecksGetPayload<{
+    select: typeof postHomogenizationGranuleCheckValueSelect;
+  }>;
 
 @Injectable()
 export class ProductionOrderPostHomogenizationGranuleChecksService {
@@ -145,6 +159,56 @@ export class ProductionOrderPostHomogenizationGranuleChecksService {
     );
   }
 
+  async update(
+    checkId: number,
+    dto: UpdateProductionOrderPostHomogenizationGranuleCheckDto,
+    files: {
+      imagePath?: string;
+    } = {},
+  ) {
+    const existingCheck = await this.findValuesByIdOrThrow(checkId);
+    const data = this.normalizeUpdateData(dto, files, existingCheck);
+
+    const updatedCheck =
+      await this.prismaService.productionOrderPostHomogenizationGranuleChecks.update(
+        {
+          where: { id: checkId },
+          data,
+          include: postHomogenizationGranuleCheckInclude,
+        },
+      );
+
+    if (
+      files.imagePath &&
+      existingCheck.image_path &&
+      existingCheck.image_path !== files.imagePath
+    ) {
+      await removePostHomogenizationGranuleCheckImageByPath(
+        existingCheck.image_path,
+      );
+    }
+
+    return updatedCheck;
+  }
+
+  async delete(checkId: number) {
+    const existingCheck = await this.findValuesByIdOrThrow(checkId);
+
+    const deletedCheck =
+      await this.prismaService.productionOrderPostHomogenizationGranuleChecks.delete(
+        {
+          where: { id: checkId },
+          include: postHomogenizationGranuleCheckInclude,
+        },
+      );
+
+    await removePostHomogenizationGranuleCheckImageByPath(
+      existingCheck.image_path,
+    );
+
+    return deletedCheck;
+  }
+
   private calculateCarrIndex(
     bulkDensity: Prisma.Decimal,
     tappedDensity: Prisma.Decimal,
@@ -174,6 +238,70 @@ export class ProductionOrderPostHomogenizationGranuleChecksService {
     if (!productionOrder) {
       throw new NotFoundException('Production order not found');
     }
+  }
+
+  private async findValuesByIdOrThrow(checkId: number) {
+    const check =
+      await this.prismaService.productionOrderPostHomogenizationGranuleChecks.findUnique(
+        {
+          where: { id: checkId },
+          select: postHomogenizationGranuleCheckValueSelect,
+        },
+      );
+
+    if (!check) {
+      throw new NotFoundException(
+        'Post-homogenization granule check not found',
+      );
+    }
+
+    return check;
+  }
+
+  private normalizeUpdateData(
+    dto: UpdateProductionOrderPostHomogenizationGranuleCheckDto,
+    files: {
+      imagePath?: string;
+    },
+    existingCheck: PostHomogenizationGranuleCheckValues,
+  ) {
+    const updateDto = dto ?? {};
+    const hasBulkDensity = 'bulk_density' in updateDto;
+    const hasTappedDensity = 'tapped_density' in updateDto;
+    const data: Prisma.ProductionOrderPostHomogenizationGranuleChecksUpdateInput =
+      {};
+
+    if (!hasBulkDensity && !hasTappedDensity && !files.imagePath) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    const bulkDensity = hasBulkDensity
+      ? this.normalizeRequiredDensity(updateDto.bulk_density, 'bulk_density')
+      : existingCheck.bulk_density;
+    const tappedDensity = hasTappedDensity
+      ? this.normalizeRequiredDensity(
+          updateDto.tapped_density,
+          'tapped_density',
+        )
+      : existingCheck.tapped_density;
+
+    if (hasBulkDensity) {
+      data.bulk_density = bulkDensity;
+    }
+
+    if (hasTappedDensity) {
+      data.tapped_density = tappedDensity;
+    }
+
+    if (hasBulkDensity || hasTappedDensity) {
+      data.carr_index = this.calculateCarrIndex(bulkDensity, tappedDensity);
+    }
+
+    if (files.imagePath) {
+      data.image_path = files.imagePath;
+    }
+
+    return data;
   }
 
   private normalizeRequiredDensity(value: unknown, fieldName: string) {

@@ -3,6 +3,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma.service';
 import { ProductionOrderPostHomogenizationGranuleChecksService } from './production-order-post-homogenization-granule-checks.service';
@@ -18,6 +19,8 @@ describe('ProductionOrderPostHomogenizationGranuleChecksService', () => {
       findMany: jest.Mock;
       findFirst: jest.Mock;
       create: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
     };
   };
 
@@ -31,6 +34,8 @@ describe('ProductionOrderPostHomogenizationGranuleChecksService', () => {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -153,6 +158,97 @@ describe('ProductionOrderPostHomogenizationGranuleChecksService', () => {
 
     await expect(service.findAllByProductionOrder(2031)).rejects.toBeInstanceOf(
       NotFoundException,
+    );
+  });
+
+  it('updates a post-homogenization granule check and recalculates Carr index', async () => {
+    const updatedCheck = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrderPostHomogenizationGranuleChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+        bulk_density: new Prisma.Decimal('0.52'),
+        tapped_density: new Prisma.Decimal('0.68'),
+        image_path:
+          '/production-orders/post-homogenization-granule-checks/images/old.jpg',
+      },
+    );
+    prismaService.productionOrderPostHomogenizationGranuleChecks.update.mockResolvedValue(
+      updatedCheck,
+    );
+
+    await expect(
+      service.update(
+        1,
+        {
+          tapped_density: '0.700000',
+        },
+        {
+          imagePath:
+            '/production-orders/post-homogenization-granule-checks/images/new.jpg',
+        },
+      ),
+    ).resolves.toBe(updatedCheck);
+
+    const updateArg =
+      prismaService.productionOrderPostHomogenizationGranuleChecks.update.mock
+        .calls[0][0];
+    expect(updateArg.where).toEqual({ id: 1 });
+    expect(updateArg.data.bulk_density).toBeUndefined();
+    expect(updateArg.data.tapped_density.toString()).toBe('0.7');
+    expect(updateArg.data.carr_index.toString()).toBe('25.7143');
+    expect(updateArg.data.image_path).toBe(
+      '/production-orders/post-homogenization-granule-checks/images/new.jpg',
+    );
+  });
+
+  it('rejects a post-homogenization granule update without any supported fields', async () => {
+    prismaService.productionOrderPostHomogenizationGranuleChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+        bulk_density: new Prisma.Decimal('0.52'),
+        tapped_density: new Prisma.Decimal('0.68'),
+        image_path: null,
+      },
+    );
+
+    await expect(service.update(1, {})).rejects.toThrow(
+      'At least one field is required',
+    );
+  });
+
+  it('throws NotFoundException when updating a missing post-homogenization granule check', async () => {
+    prismaService.productionOrderPostHomogenizationGranuleChecks.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(
+      service.update(1, {
+        tapped_density: 0.68,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deletes an existing post-homogenization granule check', async () => {
+    const deletedCheck = { id: 1 };
+    prismaService.productionOrderPostHomogenizationGranuleChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+        bulk_density: new Prisma.Decimal('0.52'),
+        tapped_density: new Prisma.Decimal('0.68'),
+        image_path: null,
+      },
+    );
+    prismaService.productionOrderPostHomogenizationGranuleChecks.delete.mockResolvedValue(
+      deletedCheck,
+    );
+
+    await expect(service.delete(1)).resolves.toBe(deletedCheck);
+    expect(
+      prismaService.productionOrderPostHomogenizationGranuleChecks.delete,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+      }),
     );
   });
 

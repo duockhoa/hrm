@@ -93,6 +93,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
     findImageFile: jest.Mock;
   };
   let productionOrderDisintegrationChecksService: {
@@ -262,6 +264,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
       findImageFile: jest.fn(),
     };
     productionOrderDisintegrationChecksService = {
@@ -1066,6 +1070,39 @@ describe('ProductionOrdersController', () => {
     ).toHaveBeenCalledWith(2031, createDto, user, {
       imagePath: undefined,
     });
+  });
+
+  it('updates a post-homogenization granule check', async () => {
+    const updateDto = {
+      tapped_density: 0.7,
+    };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderPostHomogenizationGranuleChecksService.update.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.updatePostHomogenizationGranuleCheck(1, updateDto, undefined),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderPostHomogenizationGranuleChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto, {
+      imagePath: undefined,
+    });
+  });
+
+  it('deletes a post-homogenization granule check', async () => {
+    const result = { id: 1 };
+    productionOrderPostHomogenizationGranuleChecksService.delete.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.deletePostHomogenizationGranuleCheck(1),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderPostHomogenizationGranuleChecksService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets disintegration checks for a production order', async () => {
