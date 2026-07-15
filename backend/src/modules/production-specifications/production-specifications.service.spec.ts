@@ -96,6 +96,10 @@ describe('ProductionSpecificationsService', () => {
         lower_allowed_limit: null,
         upper_allowed_limit: null,
         unit: null,
+        spray_dose_lower_allowed_limit: null,
+        spray_dose_upper_allowed_limit: null,
+        spray_dose_lower_control_limit: null,
+        spray_dose_upper_control_limit: null,
       },
       include: {
         item: true,
@@ -135,6 +139,39 @@ describe('ProductionSpecificationsService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           product_line_id: 3,
+        }),
+      }),
+    );
+  });
+
+  it('updates spray dose limits', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00003' });
+    prismaService.productionSpecifications.findUnique.mockResolvedValue({
+      item_code: 'TP00003',
+      deleted_at: null,
+    });
+    prismaService.productionSpecifications.update.mockResolvedValue({
+      item_code: 'TP00003',
+      spray_dose_lower_allowed_limit: '90',
+      spray_dose_upper_allowed_limit: '110',
+      spray_dose_lower_control_limit: '95.5',
+      spray_dose_upper_control_limit: '105.5',
+    });
+
+    await service.update('TP00003', {
+      spray_dose_lower_allowed_limit: 90,
+      spray_dose_upper_allowed_limit: '110',
+      spray_dose_lower_control_limit: '95.5',
+      spray_dose_upper_control_limit: '105.5',
+    });
+
+    expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          spray_dose_lower_allowed_limit: expect.any(Object),
+          spray_dose_upper_allowed_limit: expect.any(Object),
+          spray_dose_lower_control_limit: expect.any(Object),
+          spray_dose_upper_control_limit: expect.any(Object),
         }),
       }),
     );

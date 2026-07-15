@@ -1725,7 +1725,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này dùng để lưu kiểm tra số lượng liều xịt của sản phẩm theo từng lệnh sản xuất. Frontend gửi số liều xịt của 4 lọ, backend tự lưu người kiểm tra từ user đăng nhập.
+Nhóm API này dùng để lưu kiểm tra số lượng liều xịt của sản phẩm theo từng lệnh sản xuất. Frontend gửi yêu cầu và số liều xịt của 6 lọ, backend tự lưu người kiểm tra từ user đăng nhập.
 
 ### Lấy danh sách kiểm tra số lượng liều xịt của lệnh sản xuất
 
@@ -1742,10 +1742,13 @@ Response mẫu:
   {
     "id": 1,
     "production_order_id": 2031,
+    "requirement": "90 - 110 dose",
     "bottle_1_spray_dose_count": 120,
     "bottle_2_spray_dose_count": 121,
     "bottle_3_spray_dose_count": 122,
     "bottle_4_spray_dose_count": 123,
+    "bottle_5_spray_dose_count": 124,
+    "bottle_6_spray_dose_count": 125,
     "unit": "dose",
     "created_by_id": 7,
     "created_at": "2026-06-29T08:10:00.000Z",
@@ -1786,18 +1789,23 @@ Body:
 
 ```json
 {
+  "requirement": "90 - 110 dose",
   "bottle_1_spray_dose_count": 120,
   "bottle_2_spray_dose_count": 121,
   "bottle_3_spray_dose_count": 122,
-  "bottle_4_spray_dose_count": 123
+  "bottle_4_spray_dose_count": 123,
+  "bottle_5_spray_dose_count": 124,
+  "bottle_6_spray_dose_count": 125
 }
 ```
 
 Quy tắc:
 
-- Bốn số liều xịt là bắt buộc, lưu dạng `INTEGER`.
+- `requirement` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
+- `bottle_1_spray_dose_count` là bắt buộc, lưu dạng `INTEGER`.
+- `bottle_2_spray_dose_count` đến `bottle_6_spray_dose_count` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
 - Có thể gửi số dạng chuỗi, ví dụ `"120"`.
-- Các số liều xịt phải là số nguyên dương.
+- Các số liều xịt khi có giá trị phải là số nguyên dương.
 - Đơn vị mặc định là `dose`, backend tự lưu `unit = "dose"`.
 - Thời điểm kiểm tra là `created_at`, lấy theo thời điểm tạo bản ghi.
 - `created_by_id` là người kiểm tra, lấy từ user đăng nhập, frontend không gửi field này.
@@ -1806,8 +1814,52 @@ Lỗi thường gặp:
 
 - `404 Production order not found`
 - `400 bottle_1_spray_dose_count is required`
-- `400 bottle_4_spray_dose_count must be a positive integer`
+- `400 bottle_6_spray_dose_count must be a positive integer`
+- `400 requirement must be a string`
 - `401 Authenticated user not found`
+
+### Cập nhật kiểm tra số lượng liều xịt
+
+```http
+PATCH /production-orders/spray-dose-checks/:checkId
+```
+
+Body: gửi các field cần đổi.
+
+```json
+{
+  "requirement": "95 - 105 dose",
+  "bottle_2_spray_dose_count": null,
+  "bottle_6_spray_dose_count": 126
+}
+```
+
+Quy tắc:
+
+- Có thể cập nhật `requirement` và `bottle_1_spray_dose_count` đến `bottle_6_spray_dose_count`.
+- `requirement` và `bottle_2_spray_dose_count` đến `bottle_6_spray_dose_count` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- `bottle_1_spray_dose_count` không được xóa vì là giá trị bắt buộc.
+- Các số liều xịt khi có giá trị phải là số nguyên dương.
+
+Lỗi thường gặp:
+
+- `404 Spray dose check not found`
+- `400 At least one field is required`
+- `400 bottle_1_spray_dose_count is required`
+- `400 bottle_6_spray_dose_count must be a positive integer`
+- `400 requirement must be a string`
+
+### Xóa kiểm tra số lượng liều xịt
+
+```http
+DELETE /production-orders/spray-dose-checks/:checkId
+```
+
+API này xóa cứng bản ghi kiểm tra số lượng liều xịt.
+
+Lỗi thường gặp:
+
+- `404 Spray dose check not found`
 
 ## Production Order Post-Homogenization Granule Checks
 
@@ -4009,7 +4061,11 @@ Body:
   "upper_control_limit": 105,
   "lower_allowed_limit": 90,
   "upper_allowed_limit": 110,
-  "unit": "%"
+  "unit": "%",
+  "spray_dose_lower_allowed_limit": 90,
+  "spray_dose_upper_allowed_limit": 110,
+  "spray_dose_lower_control_limit": 95,
+  "spray_dose_upper_control_limit": 105
 }
 ```
 
@@ -4018,7 +4074,7 @@ Quy tắc:
 - `item_code` phải tồn tại trong bảng `items`.
 - `product_line_id` là tùy chọn và phải tồn tại trong bảng `product_lines`.
 - Backend vẫn nhận `product_line` dạng text để tương thích request cũ; nếu gửi text, hệ thống sẽ tìm hoặc tạo `product_lines` tương ứng.
-- Các field giới hạn là số thập phân, tối đa 6 chữ số sau dấu phẩy.
+- Các field giới hạn, bao gồm giới hạn số liều xịt, là số thập phân, tối đa 6 chữ số sau dấu phẩy.
 - Nếu specification đã bị soft delete, API create/update có thể restore bản ghi.
 
 Response include thêm `productLine`.
@@ -4035,7 +4091,11 @@ Body: gửi các field cần đổi.
 {
   "lower_control_limit": 96,
   "upper_control_limit": 104,
-  "unit": "%"
+  "unit": "%",
+  "spray_dose_lower_allowed_limit": 90,
+  "spray_dose_upper_allowed_limit": 110,
+  "spray_dose_lower_control_limit": 95,
+  "spray_dose_upper_control_limit": 105
 }
 ```
 

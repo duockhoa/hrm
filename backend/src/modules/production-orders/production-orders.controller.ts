@@ -41,6 +41,7 @@ import { CreateProductionOrderFriabilityCheckDto } from './dto/create-production
 import { UpdateProductionOrderFriabilityCheckDto } from './dto/update-production-order-friability-check.dto';
 import { ProductionOrderFriabilityChecksService } from './production-order-friability-checks.service';
 import { CreateProductionOrderSprayDoseCheckDto } from './dto/create-production-order-spray-dose-check.dto';
+import { UpdateProductionOrderSprayDoseCheckDto } from './dto/update-production-order-spray-dose-check.dto';
 import { ProductionOrderSprayDoseChecksService } from './production-order-spray-dose-checks.service';
 import { CreateProductionOrderPostHomogenizationGranuleCheckDto } from './dto/create-production-order-post-homogenization-granule-check.dto';
 import { ProductionOrderPostHomogenizationGranuleChecksService } from './production-order-post-homogenization-granule-checks.service';
@@ -365,6 +366,22 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderSprayDoseChecksService.findById(checkId);
+  }
+
+  @Patch('spray-dose-checks/:checkId')
+  async updateSprayDoseCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderSprayDoseCheckDto,
+  ) {
+    return this.productionOrderSprayDoseChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('spray-dose-checks/:checkId')
+  async deleteSprayDoseCheck(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderSprayDoseChecksService.delete(checkId);
   }
 
   @Get('post-homogenization-granule-checks/:checkId')

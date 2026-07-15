@@ -86,6 +86,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderPostHomogenizationGranuleChecksService: {
     findById: jest.Mock;
@@ -253,6 +255,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderPostHomogenizationGranuleChecksService = {
       findById: jest.fn(),
@@ -961,10 +965,13 @@ describe('ProductionOrdersController', () => {
 
   it('creates a spray dose check using the authenticated user', async () => {
     const createDto = {
+      requirement: '90 - 110 dose',
       bottle_1_spray_dose_count: 120,
       bottle_2_spray_dose_count: 121,
       bottle_3_spray_dose_count: 122,
       bottle_4_spray_dose_count: 123,
+      bottle_5_spray_dose_count: 124,
+      bottle_6_spray_dose_count: 125,
     };
     const user = { id: 7, name: 'Binh' };
     const result = { id: 1, production_order_id: 2031 };
@@ -977,6 +984,33 @@ describe('ProductionOrdersController', () => {
       2031,
       createDto,
       user,
+    );
+  });
+
+  it('updates a spray dose check', async () => {
+    const updateDto = {
+      requirement: '95 - 105 dose',
+      bottle_2_spray_dose_count: null,
+    };
+    const result = { id: 1, requirement: '95 - 105 dose' };
+    productionOrderSprayDoseChecksService.update.mockResolvedValue(result);
+
+    await expect(controller.updateSprayDoseCheck(1, updateDto)).resolves.toBe(
+      result,
+    );
+    expect(productionOrderSprayDoseChecksService.update).toHaveBeenCalledWith(
+      1,
+      updateDto,
+    );
+  });
+
+  it('deletes a spray dose check', async () => {
+    const result = { id: 1 };
+    productionOrderSprayDoseChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteSprayDoseCheck(1)).resolves.toBe(result);
+    expect(productionOrderSprayDoseChecksService.delete).toHaveBeenCalledWith(
+      1,
     );
   });
 

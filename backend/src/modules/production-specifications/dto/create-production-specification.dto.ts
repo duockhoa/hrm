@@ -9,4 +9,8 @@ export class CreateProductionSpecificationDto {
   lower_allowed_limit?: string | number | null;
   upper_allowed_limit?: string | number | null;
   unit?: string | null;
+  spray_dose_lower_allowed_limit?: string | number | null;
+  spray_dose_upper_allowed_limit?: string | number | null;
+  spray_dose_lower_control_limit?: string | number | null;
+  spray_dose_upper_control_limit?: string | number | null;
 }

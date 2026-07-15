@@ -221,6 +221,22 @@ export class ProductionSpecificationsService {
         'upper_allowed_limit',
       ),
       unit: this.normalizeOptionalString(dto.unit, 'unit'),
+      spray_dose_lower_allowed_limit: this.normalizeOptionalDecimal(
+        dto.spray_dose_lower_allowed_limit,
+        'spray_dose_lower_allowed_limit',
+      ),
+      spray_dose_upper_allowed_limit: this.normalizeOptionalDecimal(
+        dto.spray_dose_upper_allowed_limit,
+        'spray_dose_upper_allowed_limit',
+      ),
+      spray_dose_lower_control_limit: this.normalizeOptionalDecimal(
+        dto.spray_dose_lower_control_limit,
+        'spray_dose_lower_control_limit',
+      ),
+      spray_dose_upper_control_limit: this.normalizeOptionalDecimal(
+        dto.spray_dose_upper_control_limit,
+        'spray_dose_upper_control_limit',
+      ),
     };
   }
 
@@ -268,6 +284,34 @@ export class ProductionSpecificationsService {
 
     if (dto.unit !== undefined) {
       data.unit = this.normalizeOptionalString(dto.unit, 'unit');
+    }
+
+    if (dto.spray_dose_lower_allowed_limit !== undefined) {
+      data.spray_dose_lower_allowed_limit = this.normalizeOptionalDecimal(
+        dto.spray_dose_lower_allowed_limit,
+        'spray_dose_lower_allowed_limit',
+      );
+    }
+
+    if (dto.spray_dose_upper_allowed_limit !== undefined) {
+      data.spray_dose_upper_allowed_limit = this.normalizeOptionalDecimal(
+        dto.spray_dose_upper_allowed_limit,
+        'spray_dose_upper_allowed_limit',
+      );
+    }
+
+    if (dto.spray_dose_lower_control_limit !== undefined) {
+      data.spray_dose_lower_control_limit = this.normalizeOptionalDecimal(
+        dto.spray_dose_lower_control_limit,
+        'spray_dose_lower_control_limit',
+      );
+    }
+
+    if (dto.spray_dose_upper_control_limit !== undefined) {
+      data.spray_dose_upper_control_limit = this.normalizeOptionalDecimal(
+        dto.spray_dose_upper_control_limit,
+        'spray_dose_upper_control_limit',
+      );
     }
 
     if (Object.keys(data).length === 0) {

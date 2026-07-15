@@ -1,4 +1,4 @@
-export class CreateProductionOrderSprayDoseCheckDto {
+export class UpdateProductionOrderSprayDoseCheckDto {
   requirement?: string | null;
   bottle_1_spray_dose_count?: number | string | null;
   bottle_2_spray_dose_count?: number | string | null;
