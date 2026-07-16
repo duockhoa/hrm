@@ -58,6 +58,7 @@ model Users {
   createdProductionOrderLeakTightnessChecks             ProductionOrderLeakTightnessChecks[]                  @relation("ProductionOrderLeakTightnessCheckCreator")
   createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                 @relation("ProductionOrderTenUnitSensoryCheckCreator")
   checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]        @relation("ProductionOrderPostPreparationSolutionCheckChecker")
+  approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                @relation("ProductionOrderFactoryReleaseReviewApprover")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -365,9 +366,36 @@ model ProductionOrders {
   disinfectantPreparations             ProductionOrderDisinfectantPreparations[]
   steamSterilizationChecks             ProductionOrderSteamSterilizationChecks[]
   postPreparationSolutionChecks        ProductionOrderPostPreparationSolutionChecks[]
+  factoryReleaseReviews                ProductionOrderFactoryReleaseReviews[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
+}
+
+model ProductionOrderFactoryReleaseReviews {
+  id                            Int              @id @default(autoincrement())
+  production_order_id           Int
+  productionOrder               ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_factory_release_reviews_po_id_fkey")
+  approved_by_id                Int?
+  approvedBy                    Users?           @relation("ProductionOrderFactoryReleaseReviewApprover", fields: [approved_by_id], references: [id], map: "po_factory_release_reviews_approved_by_id_fkey")
+  registration_number           String
+  raw_material_test_result      String?          @db.Text
+  water_test_result             String?          @db.Text
+  compressed_air_test_result    String?          @db.Text
+  filter_integrity_test_result  String?          @db.Text
+  packaging_inspection_result   String?          @db.Text
+  finished_product_test_result  String?          @db.Text
+  sterilization_result          String?          @db.Text
+  online_particle_result        String?          @db.Text
+  yield_quantity                String?          @db.Text
+  deviation                     String?          @db.Text
+  environment_monitoring_result String?          @db.Text
+  created_at                    DateTime         @default(now())
+  updated_at                    DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_factory_release_reviews_po_id_fkey")
+  @@index([approved_by_id], map: "po_factory_release_reviews_approved_by_id_fkey")
+  @@map("production_order_factory_release_reviews")
 }
 
 model ProductionSpecifications {

@@ -33,6 +33,7 @@ import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 import { ProductionOrderTenUnitSensoryChecksService } from './production-order-ten-unit-sensory-checks.service';
 import { ProductionOrderPostPreparationSolutionChecksService } from './production-order-post-preparation-solution-checks.service';
+import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 
 @Module({
   imports: [FeaturesModule],
@@ -63,6 +64,7 @@ import { ProductionOrderPostPreparationSolutionChecksService } from './productio
     ProductionOrderLeakTightnessChecksService,
     ProductionOrderTenUnitSensoryChecksService,
     ProductionOrderPostPreparationSolutionChecksService,
+    ProductionOrderFactoryReleaseReviewsService,
     WarehouseReleaseExportService,
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,

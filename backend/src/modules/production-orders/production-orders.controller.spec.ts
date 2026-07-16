@@ -27,6 +27,7 @@ import { ProductionOrderSteamSterilizationChecksService } from './production-ord
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
+import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -201,6 +202,13 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderLeakTightnessChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderFactoryReleaseReviewsService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -386,6 +394,13 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderFactoryReleaseReviewsService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -489,6 +504,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderLeakTightnessChecksService,
           useValue: productionOrderLeakTightnessChecksService,
+        },
+        {
+          provide: ProductionOrderFactoryReleaseReviewsService,
+          useValue: productionOrderFactoryReleaseReviewsService,
         },
       ],
     }).compile();
@@ -1669,6 +1688,82 @@ describe('ProductionOrdersController', () => {
     await expect(controller.deleteLeakTightnessCheck(1)).resolves.toBe(result);
     expect(
       productionOrderLeakTightnessChecksService.delete,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('gets factory release reviews for a production order', async () => {
+    const reviews = [{ id: 1, production_order_id: 2031 }];
+    productionOrderFactoryReleaseReviewsService.findAllByProductionOrder.mockResolvedValue(
+      reviews,
+    );
+
+    await expect(controller.findFactoryReleaseReviews(2031)).resolves.toBe(
+      reviews,
+    );
+    expect(
+      productionOrderFactoryReleaseReviewsService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a factory release review by id', async () => {
+    const review = { id: 1, production_order_id: 2031 };
+    productionOrderFactoryReleaseReviewsService.findById.mockResolvedValue(
+      review,
+    );
+
+    await expect(controller.findFactoryReleaseReviewById(1)).resolves.toBe(
+      review,
+    );
+    expect(
+      productionOrderFactoryReleaseReviewsService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a factory release review', async () => {
+    const createDto = {
+      registration_number: 'VD-12345-26',
+      raw_material_test_result: 'Đạt',
+      yield_quantity: '1200.5',
+    };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderFactoryReleaseReviewsService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createFactoryReleaseReview(2031, createDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderFactoryReleaseReviewsService.create,
+    ).toHaveBeenCalledWith(2031, createDto);
+  });
+
+  it('updates a factory release review', async () => {
+    const updateDto = { deviation: 'Không có' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderFactoryReleaseReviewsService.update.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.updateFactoryReleaseReview(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderFactoryReleaseReviewsService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a factory release review', async () => {
+    const result = { id: 1 };
+    productionOrderFactoryReleaseReviewsService.delete.mockResolvedValue(
+      result,
+    );
+
+    await expect(controller.deleteFactoryReleaseReview(1)).resolves.toBe(
+      result,
+    );
+    expect(
+      productionOrderFactoryReleaseReviewsService.delete,
     ).toHaveBeenCalledWith(1);
   });
 

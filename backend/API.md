@@ -4490,6 +4490,69 @@ Body gửi các field cần đổi:
 DELETE /production-workshops/pressure-differentials/:pressureDifferentialId
 ```
 
+## Xét Duyệt Xuất Xưởng
+
+Các API này nằm dưới module production order và yêu cầu Bearer token như các API `/production-orders` khác.
+
+### Danh sách xét duyệt xuất xưởng theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/factory-release-reviews
+```
+
+### Chi tiết xét duyệt xuất xưởng
+
+```http
+GET /production-orders/factory-release-reviews/:reviewId
+```
+
+### Tạo xét duyệt xuất xưởng
+
+```http
+POST /production-orders/:id/factory-release-reviews
+```
+
+Body:
+
+```json
+{
+  "approved_by_id": 7,
+  "registration_number": "Còn hiệu lực",
+  "raw_material_test_result": "Đạt",
+  "water_test_result": "Đạt",
+  "compressed_air_test_result": "Đạt",
+  "filter_integrity_test_result": "Đạt",
+  "packaging_inspection_result": "Đạt",
+  "finished_product_test_result": "Đạt",
+  "sterilization_result": "Đạt",
+  "online_particle_result": "Đạt",
+  "yield_quantity": "Đạt yêu cầu",
+  "deviation": "Không có",
+  "environment_monitoring_result": "Đạt"
+}
+```
+
+Quy tắc:
+
+- `registration_number` bắt buộc.
+- `approved_by_id` không bắt buộc; nếu gửi phải là id user tồn tại.
+- Các field kết quả, `packaging_inspection_result`, `sterilization_result`, `online_particle_result`, `deviation`, `environment_monitoring_result` là text không bắt buộc.
+- `yield_quantity` không bắt buộc, lưu dạng text.
+
+### Cập nhật xét duyệt xuất xưởng
+
+```http
+PATCH /production-orders/factory-release-reviews/:reviewId
+```
+
+Body gửi các field cần đổi. Gửi `null` hoặc chuỗi rỗng để xóa các field không bắt buộc.
+
+### Xóa xét duyệt xuất xưởng
+
+```http
+DELETE /production-orders/factory-release-reviews/:reviewId
+```
+
 ## Email
 
 ### Gửi email

@@ -91,6 +91,9 @@ import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-
 import { CreateProductionOrderLeakTightnessCheckDto } from './dto/create-production-order-leak-tightness-check.dto';
 import { UpdateProductionOrderLeakTightnessCheckDto } from './dto/update-production-order-leak-tightness-check.dto';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
+import { CreateProductionOrderFactoryReleaseReviewDto } from './dto/create-production-order-factory-release-review.dto';
+import { UpdateProductionOrderFactoryReleaseReviewDto } from './dto/update-production-order-factory-release-review.dto';
+import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 import {
   getDateCheckImagePaths,
   getDateCheckRequestFilePath,
@@ -266,6 +269,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSemiFinishedGrossWeightChecksService: ProductionOrderSemiFinishedGrossWeightChecksService,
     private readonly productionOrderSemiFinishedNetWeightChecksService: ProductionOrderSemiFinishedNetWeightChecksService,
     private readonly productionOrderLeakTightnessChecksService: ProductionOrderLeakTightnessChecksService,
+    private readonly productionOrderFactoryReleaseReviewsService: ProductionOrderFactoryReleaseReviewsService,
   ) {}
 
   @Get()
@@ -297,6 +301,31 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderEnvironmentChecksService.findById(checkId);
+  }
+
+  @Get('factory-release-reviews/:reviewId')
+  async findFactoryReleaseReviewById(
+    @Param('reviewId', ParseIntPipe) reviewId: number,
+  ) {
+    return this.productionOrderFactoryReleaseReviewsService.findById(reviewId);
+  }
+
+  @Patch('factory-release-reviews/:reviewId')
+  async updateFactoryReleaseReview(
+    @Param('reviewId', ParseIntPipe) reviewId: number,
+    @Body() updateDto: UpdateProductionOrderFactoryReleaseReviewDto,
+  ) {
+    return this.productionOrderFactoryReleaseReviewsService.update(
+      reviewId,
+      updateDto,
+    );
+  }
+
+  @Delete('factory-release-reviews/:reviewId')
+  async deleteFactoryReleaseReview(
+    @Param('reviewId', ParseIntPipe) reviewId: number,
+  ) {
+    return this.productionOrderFactoryReleaseReviewsService.delete(reviewId);
   }
 
   @Get('density-checks/:checkId')
@@ -1718,6 +1747,24 @@ export class ProductionOrdersController {
       id,
       createDto,
       req.user,
+    );
+  }
+
+  @Get(':id/factory-release-reviews')
+  async findFactoryReleaseReviews(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderFactoryReleaseReviewsService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/factory-release-reviews')
+  async createFactoryReleaseReview(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderFactoryReleaseReviewDto,
+  ) {
+    return this.productionOrderFactoryReleaseReviewsService.create(
+      id,
+      createDto,
     );
   }
 
