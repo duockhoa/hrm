@@ -57,6 +57,7 @@ model Users {
   createdProductionOrderSemiFinishedNetWeightChecks     ProductionOrderSemiFinishedProductNetWeightChecks[]   @relation("ProductionOrderSemiFinishedNetWeightCheckCreator")
   createdProductionOrderLeakTightnessChecks             ProductionOrderLeakTightnessChecks[]                  @relation("ProductionOrderLeakTightnessCheckCreator")
   createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                 @relation("ProductionOrderTenUnitSensoryCheckCreator")
+  checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]        @relation("ProductionOrderPostPreparationSolutionCheckChecker")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -363,6 +364,7 @@ model ProductionOrders {
   dateChecks                           ProductionOrderDateChecks[]
   disinfectantPreparations             ProductionOrderDisinfectantPreparations[]
   steamSterilizationChecks             ProductionOrderSteamSterilizationChecks[]
+  postPreparationSolutionChecks        ProductionOrderPostPreparationSolutionChecks[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
@@ -618,6 +620,25 @@ model ProductionOrderPostHomogenizationGranuleChecks {
   @@index([production_order_id], map: "po_post_homogenization_granule_checks_po_id_fkey")
   @@index([created_by_id], map: "po_post_homogenization_granule_checks_created_by_id_fkey")
   @@map("production_order_post_homogenization_granule_checks")
+}
+
+model ProductionOrderPostPreparationSolutionChecks {
+  id                      Int              @id @default(autoincrement())
+  production_order_id     Int
+  productionOrder         ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_post_preparation_solution_checks_po_id_fkey")
+  final_volume_image_path String?          @db.Text
+  solution_color          String?          @db.Text
+  solution_image_path     String?          @db.Text
+  solution_clarity        String?          @db.Text
+  solution_ph             Decimal?         @db.Decimal(5, 2)
+  checked_by_id           Int?
+  checkedBy               Users?           @relation("ProductionOrderPostPreparationSolutionCheckChecker", fields: [checked_by_id], references: [id], map: "po_post_preparation_solution_checks_checked_by_id_fkey")
+  created_at              DateTime         @default(now())
+  updated_at              DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_post_preparation_solution_checks_po_id_fkey")
+  @@index([checked_by_id], map: "po_post_preparation_solution_checks_checked_by_id_fkey")
+  @@map("production_order_post_preparation_solution_checks")
 }
 
 model ProductionOrderDisintegrationChecks {

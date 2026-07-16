@@ -46,6 +46,9 @@ import { ProductionOrderSprayDoseChecksService } from './production-order-spray-
 import { CreateProductionOrderPostHomogenizationGranuleCheckDto } from './dto/create-production-order-post-homogenization-granule-check.dto';
 import { UpdateProductionOrderPostHomogenizationGranuleCheckDto } from './dto/update-production-order-post-homogenization-granule-check.dto';
 import { ProductionOrderPostHomogenizationGranuleChecksService } from './production-order-post-homogenization-granule-checks.service';
+import { CreateProductionOrderPostPreparationSolutionCheckDto } from './dto/create-production-order-post-preparation-solution-check.dto';
+import { UpdateProductionOrderPostPreparationSolutionCheckDto } from './dto/update-production-order-post-preparation-solution-check.dto';
+import { ProductionOrderPostPreparationSolutionChecksService } from './production-order-post-preparation-solution-checks.service';
 import { CreateProductionOrderDisintegrationCheckDto } from './dto/create-production-order-disintegration-check.dto';
 import { UpdateProductionOrderDisintegrationCheckDto } from './dto/update-production-order-disintegration-check.dto';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
@@ -106,6 +109,11 @@ import {
   removeUploadedPostHomogenizationGranuleCheckImage,
 } from './production-order-post-homogenization-granule-check-upload.config';
 import {
+  getPostPreparationSolutionCheckImagePath,
+  productionOrderPostPreparationSolutionCheckImageUploadOptions,
+  removeUploadedPostPreparationSolutionCheckImage,
+} from './production-order-post-preparation-solution-check-upload.config';
+import {
   getSteamSterilizationCheckImagePath,
   productionOrderSteamSterilizationCheckImageUploadOptions,
   removeUploadedSteamSterilizationCheckImages,
@@ -125,6 +133,11 @@ type SensoryCheckUploadFields = {
 type PostHomogenizationGranuleCheckUploadFields = {
   granule_image?: Express.Multer.File[];
   image?: Express.Multer.File[];
+};
+
+type PostPreparationSolutionCheckUploadFields = {
+  final_volume_image?: Express.Multer.File[];
+  solution_image?: Express.Multer.File[];
 };
 
 type SteamSterilizationCheckUploadFields = {
@@ -159,6 +172,24 @@ const getUploadedSensoryCheckImages = (
 const getUploadedPostHomogenizationGranuleCheckImages = (
   uploadedFiles?: PostHomogenizationGranuleCheckUploadFields,
 ) => [...(uploadedFiles?.granule_image ?? []), ...(uploadedFiles?.image ?? [])];
+
+const getUploadedPostPreparationSolutionCheckImages = (
+  uploadedFiles?: PostPreparationSolutionCheckUploadFields,
+) => [
+  ...(uploadedFiles?.final_volume_image ?? []),
+  ...(uploadedFiles?.solution_image ?? []),
+];
+
+const getPostPreparationSolutionCheckUploadedImagePaths = (
+  uploadedFiles?: PostPreparationSolutionCheckUploadFields,
+) => ({
+  finalVolumeImagePath: getPostPreparationSolutionCheckImagePath(
+    uploadedFiles?.final_volume_image?.[0],
+  ),
+  solutionImagePath: getPostPreparationSolutionCheckImagePath(
+    uploadedFiles?.solution_image?.[0],
+  ),
+});
 
 const steamSterilizationCheckImageUploadFields = [
   { name: 'configuration_image', maxCount: 1 },
@@ -220,6 +251,7 @@ export class ProductionOrdersController {
     private readonly productionOrderFriabilityChecksService: ProductionOrderFriabilityChecksService,
     private readonly productionOrderSprayDoseChecksService: ProductionOrderSprayDoseChecksService,
     private readonly productionOrderPostHomogenizationGranuleChecksService: ProductionOrderPostHomogenizationGranuleChecksService,
+    private readonly productionOrderPostPreparationSolutionChecksService: ProductionOrderPostPreparationSolutionChecksService,
     private readonly productionOrderDisintegrationChecksService: ProductionOrderDisintegrationChecksService,
     private readonly productionOrderHardCapsuleLeakageChecksService: ProductionOrderHardCapsuleLeakageChecksService,
     private readonly productionOrderVolumeChecksService: ProductionOrderVolumeChecksService,
@@ -445,6 +477,57 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderPostHomogenizationGranuleChecksService.delete(
+      checkId,
+    );
+  }
+
+  @Get('post-preparation-solution-checks/:checkId')
+  async findPostPreparationSolutionCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderPostPreparationSolutionChecksService.findById(
+      checkId,
+    );
+  }
+
+  @Patch('post-preparation-solution-checks/:checkId')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'final_volume_image', maxCount: 1 },
+        { name: 'solution_image', maxCount: 1 },
+      ],
+      productionOrderPostPreparationSolutionCheckImageUploadOptions,
+    ),
+  )
+  async updatePostPreparationSolutionCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderPostPreparationSolutionCheckDto,
+    @UploadedFiles()
+    uploadedFiles: PostPreparationSolutionCheckUploadFields | undefined,
+  ) {
+    const uploadedImages =
+      getUploadedPostPreparationSolutionCheckImages(uploadedFiles);
+
+    try {
+      return await this.productionOrderPostPreparationSolutionChecksService.update(
+        checkId,
+        updateDto,
+        getPostPreparationSolutionCheckUploadedImagePaths(uploadedFiles),
+      );
+    } catch (error) {
+      await Promise.all(
+        uploadedImages.map(removeUploadedPostPreparationSolutionCheckImage),
+      );
+      throw error;
+    }
+  }
+
+  @Delete('post-preparation-solution-checks/:checkId')
+  async deletePostPreparationSolutionCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderPostPreparationSolutionChecksService.delete(
       checkId,
     );
   }
@@ -728,6 +811,31 @@ export class ProductionOrdersController {
     if (!imageFile) {
       throw new NotFoundException(
         'Post-homogenization granule check image not found',
+      );
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
+  @Get('post-preparation-solution-checks/images/:filename')
+  async getPostPreparationSolutionCheckImage(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.productionOrderPostPreparationSolutionChecksService.findImageFile(
+        filename,
+      );
+
+    if (!imageFile) {
+      throw new NotFoundException(
+        'Post-preparation solution check image not found',
       );
     }
 
@@ -1191,6 +1299,48 @@ export class ProductionOrdersController {
     } catch (error) {
       await Promise.all(
         uploadedImages.map(removeUploadedPostHomogenizationGranuleCheckImage),
+      );
+      throw error;
+    }
+  }
+
+  @Get(':id/post-preparation-solution-checks')
+  async findPostPreparationSolutionChecks(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.productionOrderPostPreparationSolutionChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/post-preparation-solution-checks')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'final_volume_image', maxCount: 1 },
+        { name: 'solution_image', maxCount: 1 },
+      ],
+      productionOrderPostPreparationSolutionCheckImageUploadOptions,
+    ),
+  )
+  async createPostPreparationSolutionCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderPostPreparationSolutionCheckDto,
+    @UploadedFiles()
+    uploadedFiles: PostPreparationSolutionCheckUploadFields | undefined,
+  ) {
+    const uploadedImages =
+      getUploadedPostPreparationSolutionCheckImages(uploadedFiles);
+
+    try {
+      return await this.productionOrderPostPreparationSolutionChecksService.create(
+        id,
+        createDto,
+        getPostPreparationSolutionCheckUploadedImagePaths(uploadedFiles),
+      );
+    } catch (error) {
+      await Promise.all(
+        uploadedImages.map(removeUploadedPostPreparationSolutionCheckImage),
       );
       throw error;
     }

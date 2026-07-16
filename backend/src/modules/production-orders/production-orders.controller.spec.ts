@@ -12,6 +12,7 @@ import { ProductionOrderDensityChecksService } from './production-order-density-
 import { ProductionOrderFriabilityChecksService } from './production-order-friability-checks.service';
 import { ProductionOrderSprayDoseChecksService } from './production-order-spray-dose-checks.service';
 import { ProductionOrderPostHomogenizationGranuleChecksService } from './production-order-post-homogenization-granule-checks.service';
+import { ProductionOrderPostPreparationSolutionChecksService } from './production-order-post-preparation-solution-checks.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 import { ProductionOrderHardCapsuleLeakageChecksService } from './production-order-hard-capsule-leakage-checks.service';
 import { ProductionOrderVolumeChecksService } from './production-order-volume-checks.service';
@@ -90,6 +91,14 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderPostHomogenizationGranuleChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+    findImageFile: jest.Mock;
+  };
+  let productionOrderPostPreparationSolutionChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -268,6 +277,14 @@ describe('ProductionOrdersController', () => {
       delete: jest.fn(),
       findImageFile: jest.fn(),
     };
+    productionOrderPostPreparationSolutionChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findImageFile: jest.fn(),
+    };
     productionOrderDisintegrationChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -412,6 +429,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderPostHomogenizationGranuleChecksService,
           useValue: productionOrderPostHomogenizationGranuleChecksService,
+        },
+        {
+          provide: ProductionOrderPostPreparationSolutionChecksService,
+          useValue: productionOrderPostPreparationSolutionChecksService,
         },
         {
           provide: ProductionOrderDisintegrationChecksService,

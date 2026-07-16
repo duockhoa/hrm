@@ -2016,6 +2016,159 @@ Lỗi thường gặp:
 
 - `404 Post-homogenization granule check not found`
 
+## Production Order Post-Preparation Solution Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu kiểm tra dịch sau pha chế theo từng lệnh sản xuất. Tất cả thông tin nghiệp vụ đều không bắt buộc.
+
+### Lấy danh sách kiểm tra dịch sau pha chế của lệnh sản xuất
+
+```http
+GET /production-orders/:id/post-preparation-solution-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "final_volume_image_path": "/production-orders/post-preparation-solution-checks/images/the-tich-cuoi.jpg",
+    "solution_color": "Vàng nhạt",
+    "solution_image_path": "/production-orders/post-preparation-solution-checks/images/dich-sau-pha-che.jpg",
+    "solution_clarity": "Trong",
+    "solution_ph": "6.50",
+    "checked_by_id": 7,
+    "created_at": "2026-07-15T08:10:00.000Z",
+    "updated_at": "2026-07-15T08:10:00.000Z",
+    "checkedBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi kiểm tra dịch sau pha chế theo ID
+
+```http
+GET /production-orders/post-preparation-solution-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Post-preparation solution check not found`
+
+### Lấy ảnh kiểm tra dịch sau pha chế
+
+```http
+GET /production-orders/post-preparation-solution-checks/images/:filename
+```
+
+Lỗi thường gặp:
+
+- `404 Post-preparation solution check image not found`
+
+### Thêm kiểm tra dịch sau pha chế
+
+```http
+POST /production-orders/:id/post-preparation-solution-checks
+```
+
+Body JSON nếu không gửi ảnh:
+
+```json
+{
+  "solution_color": "Vàng nhạt",
+  "solution_clarity": "Trong",
+  "solution_ph": 6.5,
+  "checked_by_id": 7
+}
+```
+
+Nếu có ảnh, gửi `multipart/form-data`:
+
+- `solution_color`: `Vàng nhạt`
+- `solution_clarity`: `Trong`
+- `solution_ph`: `6.5`
+- `checked_by_id`: `7`
+- `final_volume_image`: file ảnh thể tích cuối
+- `solution_image`: file ảnh dịch
+
+Quy tắc:
+
+- Tất cả field nghiệp vụ đều không bắt buộc.
+- `solution_color` và `solution_clarity` lưu dạng text; gửi `null` hoặc chuỗi rỗng thì lưu `null`.
+- `solution_ph` không bắt buộc, lưu dạng `DECIMAL(5, 2)`, tối đa 2 chữ số sau dấu phẩy và phải nằm trong khoảng `0` đến `14`.
+- `checked_by_id` không bắt buộc; nếu gửi thì phải tồn tại trong bảng `users`.
+- Ảnh phải là JPG, PNG, WEBP hoặc GIF.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `404 Checked user not found`
+- `400 solution_color must be a string`
+- `400 solution_ph must fit DECIMAL(5, 2) with up to 2 decimal places`
+- `400 solution_ph must be between 0 and 14`
+- `400 image must be a JPG, PNG, WEBP, or GIF image`
+
+### Cập nhật kiểm tra dịch sau pha chế
+
+```http
+PATCH /production-orders/post-preparation-solution-checks/:checkId
+```
+
+Body JSON nếu không đổi ảnh:
+
+```json
+{
+  "solution_clarity": "Trong, không có cặn",
+  "solution_ph": null
+}
+```
+
+Nếu có ảnh mới, gửi `multipart/form-data` với các field tương tự API tạo.
+
+Quy tắc:
+
+- Có thể cập nhật `solution_color`, `solution_clarity`, `solution_ph`, `checked_by_id`, `final_volume_image`, `solution_image`.
+- Gửi ít nhất một field hoặc một ảnh mới.
+- `solution_color`, `solution_clarity`, `solution_ph`, `checked_by_id` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- Nếu gửi ảnh mới, backend cập nhật đường dẫn ảnh tương ứng và xóa file ảnh cũ nếu có.
+
+Lỗi thường gặp:
+
+- `404 Post-preparation solution check not found`
+- `404 Checked user not found`
+- `400 At least one field is required`
+- `400 solution_ph must fit DECIMAL(5, 2) with up to 2 decimal places`
+- `400 solution_ph must be between 0 and 14`
+- `400 image must be a JPG, PNG, WEBP, or GIF image`
+
+### Xóa kiểm tra dịch sau pha chế
+
+```http
+DELETE /production-orders/post-preparation-solution-checks/:checkId
+```
+
+API này xóa cứng bản ghi kiểm tra dịch sau pha chế và xóa file ảnh đã lưu nếu có.
+
+Lỗi thường gặp:
+
+- `404 Post-preparation solution check not found`
+
 ## Production Order Disintegration Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
