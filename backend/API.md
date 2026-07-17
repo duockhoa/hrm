@@ -3210,6 +3210,140 @@ Lỗi thường gặp:
 
 - `404 Semi-finished product net weight check not found`
 
+## Production Order Semi-Finished Product Summaries
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu bảng tổng kết sản lượng bán thành phẩm theo từng lệnh sản xuất. Một lệnh sản xuất có thể có nhiều dòng tổng kết theo giai đoạn. Các lượng đều không bắt buộc; đơn vị tính của tổng kết dập viên luôn là `kg`.
+
+### Lấy danh sách theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/semi-finished-product-summaries
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "stage": "Đóng gói",
+    "input_quantity": "100.500",
+    "input_unit": "kg",
+    "packed_quantity": "95.000",
+    "packed_unit": "kg",
+    "leftover_quantity": "3.000",
+    "leftover_unit": "kg",
+    "waste_quantity": "2.500",
+    "waste_unit": "kg",
+    "created_by_id": 7,
+    "created_at": "2026-07-17T00:00:00.000Z",
+    "updated_at": "2026-07-17T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi theo ID
+
+```http
+GET /production-orders/semi-finished-product-summaries/:summaryId
+```
+
+Lỗi thường gặp:
+
+- `404 Semi-finished product summary not found`
+
+### Tạo bản ghi
+
+```http
+POST /production-orders/:id/semi-finished-product-summaries
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "stage": "Đóng gói",
+  "input_quantity": "100.5",
+  "packed_quantity": "95",
+  "leftover_quantity": "3",
+  "waste_quantity": "2.5"
+}
+```
+
+Quy tắc:
+
+- `stage` không bắt buộc, tối đa 100 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `input_quantity`, `packed_quantity`, `leftover_quantity`, `waste_quantity` đều không bắt buộc.
+- Khi có giá trị, các lượng lưu dạng `DECIMAL(12, 3)` và tối đa 3 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `100.5`, `"100.5"` hoặc `"100,5"`.
+- `input_unit`, `packed_unit`, `leftover_unit`, `waste_unit` luôn được backend lưu là `kg`; frontend không cần gửi các field này.
+- `production_order_id` lấy từ `:id`.
+- `created_by_id` lấy từ user đăng nhập.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 stage must be a string`
+- `400 stage must be at most 100 characters`
+- `400 input_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 packed_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 leftover_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 waste_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi
+
+```http
+PATCH /production-orders/semi-finished-product-summaries/:summaryId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi các field muốn cập nhật:
+
+```json
+{
+  "stage": "Hoàn tất đóng gói",
+  "leftover_quantity": null,
+  "waste_quantity": "2.25"
+}
+```
+
+Các field lượng không bắt buộc có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. Các field đơn vị luôn là `kg`.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra `stage`, lượng và đơn vị giống API tạo.
+- `404 Semi-finished product summary not found`
+
+### Xóa bản ghi
+
+```http
+DELETE /production-orders/semi-finished-product-summaries/:summaryId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Semi-finished product summary not found`
+
 ## Production Order Leak Tightness Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

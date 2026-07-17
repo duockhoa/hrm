@@ -55,6 +55,7 @@ model Users {
   checkedProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]             @relation("ProductionOrderSteamSterilizationCheckChecker")
   createdProductionOrderSemiFinishedGrossWeightChecks   ProductionOrderSemiFinishedProductGrossWeightChecks[] @relation("ProductionOrderSemiFinishedGrossWeightCheckCreator")
   createdProductionOrderSemiFinishedNetWeightChecks     ProductionOrderSemiFinishedProductNetWeightChecks[]   @relation("ProductionOrderSemiFinishedNetWeightCheckCreator")
+  createdProductionOrderSemiFinishedProductSummaries    ProductionOrderSemiFinishedProductSummaries[]         @relation("ProductionOrderSemiFinishedProductSummaryCreator")
   createdProductionOrderLeakTightnessChecks             ProductionOrderLeakTightnessChecks[]                  @relation("ProductionOrderLeakTightnessCheckCreator")
   createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                 @relation("ProductionOrderTenUnitSensoryCheckCreator")
   checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]        @relation("ProductionOrderPostPreparationSolutionCheckChecker")
@@ -357,6 +358,7 @@ model ProductionOrders {
   tenShellWeightCheck                  ProductionOrderTenShellWeightChecks?
   semiFinishedProductGrossWeightChecks ProductionOrderSemiFinishedProductGrossWeightChecks[]
   semiFinishedProductNetWeightChecks   ProductionOrderSemiFinishedProductNetWeightChecks[]
+  semiFinishedProductSummaries         ProductionOrderSemiFinishedProductSummaries[]
   leakTightnessChecks                  ProductionOrderLeakTightnessChecks[]
   tenUnitSensoryChecks                 ProductionOrderTenUnitSensoryChecks[]
   vialInspectionChecks                 ProductionOrderVialInspectionChecks[]
@@ -818,6 +820,29 @@ model ProductionOrderSemiFinishedProductNetWeightChecks {
   updated_at          DateTime         @default(now()) @updatedAt
 
   @@map("production_order_semi_finished_product_net_weight_checks")
+}
+
+model ProductionOrderSemiFinishedProductSummaries {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_semi_finished_summary_po_fkey")
+  stage               String?          @db.VarChar(100)
+  input_quantity      Decimal?         @db.Decimal(12, 3)
+  input_unit          String           @default("kg") @db.VarChar(20)
+  packed_quantity     Decimal?         @db.Decimal(12, 3)
+  packed_unit         String           @default("kg") @db.VarChar(20)
+  leftover_quantity   Decimal?         @db.Decimal(12, 3)
+  leftover_unit       String           @default("kg") @db.VarChar(20)
+  waste_quantity      Decimal?         @db.Decimal(12, 3)
+  waste_unit          String           @default("kg") @db.VarChar(20)
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderSemiFinishedProductSummaryCreator", fields: [created_by_id], references: [id], map: "po_semi_finished_summary_user_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_semi_finished_summary_po_idx")
+  @@index([created_by_id], map: "po_semi_finished_summary_user_idx")
+  @@map("production_order_semi_finished_product_summaries")
 }
 
 model ProductionOrderLeakTightnessChecks {

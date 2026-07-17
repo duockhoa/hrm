@@ -30,6 +30,7 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
+import { ProductionOrderSemiFinishedProductSummariesService } from './production-order-semi-finished-product-summaries.service';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 import { ProductionOrderTenUnitSensoryChecksService } from './production-order-ten-unit-sensory-checks.service';
 import { ProductionOrderPostPreparationSolutionChecksService } from './production-order-post-preparation-solution-checks.service';
@@ -61,6 +62,7 @@ import { ProductionOrderFactoryReleaseReviewsService } from './production-order-
     ProductionOrderSteamSterilizationChecksService,
     ProductionOrderSemiFinishedGrossWeightChecksService,
     ProductionOrderSemiFinishedNetWeightChecksService,
+    ProductionOrderSemiFinishedProductSummariesService,
     ProductionOrderLeakTightnessChecksService,
     ProductionOrderTenUnitSensoryChecksService,
     ProductionOrderPostPreparationSolutionChecksService,

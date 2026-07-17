@@ -88,6 +88,9 @@ import { ProductionOrderSemiFinishedGrossWeightChecksService } from './productio
 import { CreateProductionOrderSemiFinishedNetWeightCheckDto } from './dto/create-production-order-semi-finished-net-weight-check.dto';
 import { UpdateProductionOrderSemiFinishedNetWeightCheckDto } from './dto/update-production-order-semi-finished-net-weight-check.dto';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
+import { CreateProductionOrderSemiFinishedProductSummaryDto } from './dto/create-production-order-semi-finished-product-summary.dto';
+import { UpdateProductionOrderSemiFinishedProductSummaryDto } from './dto/update-production-order-semi-finished-product-summary.dto';
+import { ProductionOrderSemiFinishedProductSummariesService } from './production-order-semi-finished-product-summaries.service';
 import { CreateProductionOrderLeakTightnessCheckDto } from './dto/create-production-order-leak-tightness-check.dto';
 import { UpdateProductionOrderLeakTightnessCheckDto } from './dto/update-production-order-leak-tightness-check.dto';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
@@ -268,6 +271,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSteamSterilizationChecksService: ProductionOrderSteamSterilizationChecksService,
     private readonly productionOrderSemiFinishedGrossWeightChecksService: ProductionOrderSemiFinishedGrossWeightChecksService,
     private readonly productionOrderSemiFinishedNetWeightChecksService: ProductionOrderSemiFinishedNetWeightChecksService,
+    private readonly productionOrderSemiFinishedProductSummariesService: ProductionOrderSemiFinishedProductSummariesService,
     private readonly productionOrderLeakTightnessChecksService: ProductionOrderLeakTightnessChecksService,
     private readonly productionOrderFactoryReleaseReviewsService: ProductionOrderFactoryReleaseReviewsService,
   ) {}
@@ -691,6 +695,35 @@ export class ProductionOrdersController {
   ) {
     return this.productionOrderSemiFinishedNetWeightChecksService.findById(
       checkId,
+    );
+  }
+
+  @Get('semi-finished-product-summaries/:summaryId')
+  async findSemiFinishedProductSummaryById(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderSemiFinishedProductSummariesService.findById(
+      summaryId,
+    );
+  }
+
+  @Patch('semi-finished-product-summaries/:summaryId')
+  async updateSemiFinishedProductSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Body() updateDto: UpdateProductionOrderSemiFinishedProductSummaryDto,
+  ) {
+    return this.productionOrderSemiFinishedProductSummariesService.update(
+      summaryId,
+      updateDto,
+    );
+  }
+
+  @Delete('semi-finished-product-summaries/:summaryId')
+  async deleteSemiFinishedProductSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderSemiFinishedProductSummariesService.delete(
+      summaryId,
     );
   }
 
@@ -1509,6 +1542,28 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderSemiFinishedNetWeightChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/semi-finished-product-summaries')
+  async findSemiFinishedProductSummaries(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.productionOrderSemiFinishedProductSummariesService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/semi-finished-product-summaries')
+  async createSemiFinishedProductSummary(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderSemiFinishedProductSummaryDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderSemiFinishedProductSummariesService.create(
       id,
       createDto,
       req.user,
