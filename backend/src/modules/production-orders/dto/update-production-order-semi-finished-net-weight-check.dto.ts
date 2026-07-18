@@ -1,5 +1,6 @@
 export class UpdateProductionOrderSemiFinishedNetWeightCheckDto {
   requirement?: string | null;
+  dosage_form_stage?: string | null;
   unit_1_net_weight?: number | string | null;
   unit_2_net_weight?: number | string | null;
   unit_3_net_weight?: number | string | null;

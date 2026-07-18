@@ -23,6 +23,7 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
 
   const validDto = {
     requirement: 'Khối lượng không vỏ từ 0.380 g đến 0.420 g',
+    dosage_form_stage: 'film_coated_tablet',
     unit_1_net_weight: 0.401,
     unit_2_net_weight: '0,398',
     unit_3_net_weight: 0.403,
@@ -104,6 +105,7 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
         data: {
           production_order_id: 2031,
           requirement: validDto.requirement,
+          dosage_form_stage: 'film_coated_tablet',
           unit_1_net_weight: new Prisma.Decimal('0.401'),
           unit_2_net_weight: new Prisma.Decimal('0.398'),
           unit_3_net_weight: new Prisma.Decimal('0.403'),
@@ -143,6 +145,7 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           requirement: null,
+          dosage_form_stage: null,
           unit_1_net_weight: new Prisma.Decimal('0.401'),
           unit_2_net_weight: null,
           unit_3_net_weight: null,
@@ -159,7 +162,7 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
     );
   });
 
-  it('updates only provided fields including unit', async () => {
+  it('updates only provided fields including unit and dosage form stage', async () => {
     const updatedCheck = { id: 1, unit_10_net_weight: '0.415', unit: 'mg' };
     prismaService.productionOrderSemiFinishedProductNetWeightChecks.findUnique.mockResolvedValue(
       { id: 1 },
@@ -171,6 +174,7 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
     await expect(
       service.update(1, {
         requirement: 'Yêu cầu mới',
+        dosage_form_stage: ' tablet ',
         unit_10_net_weight: '0,415',
         unit: ' mg ',
       }),
@@ -182,6 +186,7 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
         where: { id: 1 },
         data: {
           requirement: 'Yêu cầu mới',
+          dosage_form_stage: 'tablet',
           unit_10_net_weight: new Prisma.Decimal('0.415'),
           unit: 'mg',
         },
@@ -198,9 +203,9 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
       updatedCheck,
     );
 
-    await expect(
-      service.update(1, { unit_3_net_weight: null }),
-    ).resolves.toBe(updatedCheck);
+    await expect(service.update(1, { unit_3_net_weight: null })).resolves.toBe(
+      updatedCheck,
+    );
     expect(
       prismaService.productionOrderSemiFinishedProductNetWeightChecks.update,
     ).toHaveBeenCalledWith(
@@ -237,6 +242,30 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
     );
   });
 
+  it('clears dosage form stage on update', async () => {
+    const updatedCheck = { id: 1, dosage_form_stage: null };
+    prismaService.productionOrderSemiFinishedProductNetWeightChecks.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderSemiFinishedProductNetWeightChecks.update.mockResolvedValue(
+      updatedCheck,
+    );
+
+    await expect(service.update(1, { dosage_form_stage: '  ' })).resolves.toBe(
+      updatedCheck,
+    );
+    expect(
+      prismaService.productionOrderSemiFinishedProductNetWeightChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: {
+          dosage_form_stage: null,
+        },
+      }),
+    );
+  });
+
   it('deletes a check', async () => {
     const deletedCheck = { id: 1 };
     prismaService.productionOrderSemiFinishedProductNetWeightChecks.findUnique.mockResolvedValue(
@@ -261,15 +290,38 @@ describe('ProductionOrderSemiFinishedNetWeightChecksService', () => {
     ).rejects.toThrow('requirement must be a string');
   });
 
-  it('rejects a missing unit 1 net weight', async () => {
+  it('rejects a non-string dosage form stage', async () => {
     prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
 
     await expect(
       service.create(
         2031,
-        { ...validDto, unit_1_net_weight: null },
+        { ...validDto, dosage_form_stage: 123 as unknown as string },
         { id: 7 },
       ),
+    ).rejects.toThrow('dosage_form_stage must be a string');
+  });
+
+  it('rejects a dosage form stage longer than the database column', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        {
+          ...validDto,
+          dosage_form_stage: 'a'.repeat(51),
+        },
+        { id: 7 },
+      ),
+    ).rejects.toThrow('dosage_form_stage must be at most 50 characters');
+  });
+
+  it('rejects a missing unit 1 net weight', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(2031, { ...validDto, unit_1_net_weight: null }, { id: 7 }),
     ).rejects.toThrow('unit_1_net_weight is required');
   });
 

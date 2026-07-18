@@ -3076,6 +3076,7 @@ Lỗi thường gặp:
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
 Nhóm API này lưu yêu cầu tại thời điểm nhập và khối lượng bán thành phẩm không có vỏ của tối đa 10 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị mặc định là `g`, nhưng frontend có thể gửi hoặc sửa `unit` khi cần; chỉ đơn vị 1 là bắt buộc.
+`dosage_form_stage` là thông tin dạng kiểm tra, ví dụ `tablet`, `capsule`, `film_coated_tablet`.
 
 ### Lấy danh sách theo lệnh sản xuất
 
@@ -3091,6 +3092,7 @@ Response mẫu:
     "id": 1,
     "production_order_id": 2031,
     "requirement": "Khối lượng không vỏ từ 0.380 g đến 0.420 g",
+    "dosage_form_stage": "film_coated_tablet",
     "unit_1_net_weight": "0.401",
     "unit_2_net_weight": "0.398",
     "unit_3_net_weight": null,
@@ -3142,6 +3144,7 @@ Body:
 
 ```json
 {
+  "dosage_form_stage": "film_coated_tablet",
   "unit_1_net_weight": 0.401,
   "unit_2_net_weight": 0.398,
   "unit_10_net_weight": 0.405,
@@ -3152,6 +3155,7 @@ Body:
 Quy tắc:
 
 - `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `dosage_form_stage` không bắt buộc, tối đa 50 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`. Giá trị gợi ý: `tablet`, `capsule`, `film_coated_tablet`.
 - `unit_1_net_weight` bắt buộc và phải lớn hơn `0`.
 - `unit_2_net_weight` đến `unit_10_net_weight` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
 - Khi có giá trị, khối lượng phải lớn hơn `0`, lưu dạng `DECIMAL(10, 3)` và tối đa 3 chữ số sau dấu phẩy.
@@ -3164,6 +3168,8 @@ Lỗi thường gặp:
 
 - `404 Production order not found`
 - `400 requirement must be a string`
+- `400 dosage_form_stage must be a string`
+- `400 dosage_form_stage must be at most 50 characters`
 - `400 unit_1_net_weight is required`
 - `400 unit_1_net_weight must fit DECIMAL(10, 3) with up to 3 decimal places`
 - `400 unit_1_net_weight must be greater than 0`
@@ -3183,13 +3189,14 @@ Body chỉ cần gửi các field muốn cập nhật:
 ```json
 {
   "requirement": "Yêu cầu mới tại thời điểm cập nhật",
+  "dosage_form_stage": "tablet",
   "unit_3_net_weight": null,
   "unit": "mg"
 }
 ```
 
 `unit_2_net_weight` đến `unit_10_net_weight` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_net_weight` không được xóa vì là giá trị bắt buộc. `unit` có thể sửa, nhưng không được gửi `null` hoặc chuỗi rỗng trong API cập nhật.
-`requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+`requirement` và `dosage_form_stage` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 
 Lỗi thường gặp:
 

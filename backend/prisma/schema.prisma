@@ -808,6 +808,7 @@ model ProductionOrderSemiFinishedProductNetWeightChecks {
   production_order_id Int
   productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_semi_finished_net_weight_po_fkey")
   requirement         String?          @db.Text
+  dosage_form_stage   String?          @db.VarChar(50)
   unit_1_net_weight   Decimal          @db.Decimal(10, 3)
   unit_2_net_weight   Decimal?         @db.Decimal(10, 3)
   unit_3_net_weight   Decimal?         @db.Decimal(10, 3)

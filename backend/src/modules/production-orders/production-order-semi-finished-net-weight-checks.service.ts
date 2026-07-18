@@ -17,6 +17,7 @@ const NET_WEIGHT_DECIMAL_PATTERN = /^\d+(?:\.\d{1,3})?$/;
 const NET_WEIGHT_INTEGER_DIGITS = 7;
 const DEFAULT_WEIGHT_UNIT = 'g';
 const MAX_UNIT_LENGTH = 10;
+const MAX_DOSAGE_FORM_STAGE_LENGTH = 50;
 const REQUIRED_NET_WEIGHT_FIELDS = ['unit_1_net_weight'] as const;
 const OPTIONAL_NET_WEIGHT_FIELDS = [
   'unit_2_net_weight',
@@ -104,6 +105,9 @@ export class ProductionOrderSemiFinishedNetWeightChecksService {
         data: {
           production_order_id: productionOrderId,
           requirement: this.normalizeOptionalRequirement(dto?.requirement),
+          dosage_form_stage: this.normalizeOptionalDosageFormStage(
+            dto?.dosage_form_stage,
+          ),
           ...this.normalizeCreateWeights(dto),
           unit: this.normalizeCreateUnit(dto?.unit),
           created_by_id: this.normalizeUserId(user),
@@ -199,16 +203,19 @@ export class ProductionOrderSemiFinishedNetWeightChecksService {
       );
     }
 
+    if ('dosage_form_stage' in updateDto) {
+      data.dosage_form_stage = this.normalizeOptionalDosageFormStage(
+        updateDto.dosage_form_stage,
+      );
+    }
+
     if ('unit' in updateDto) {
       data.unit = this.normalizeUnit(updateDto.unit);
     }
 
     for (const field of REQUIRED_NET_WEIGHT_FIELDS) {
       if (field in updateDto) {
-        data[field] = this.normalizeRequiredNetWeight(
-          updateDto[field],
-          field,
-        );
+        data[field] = this.normalizeRequiredNetWeight(updateDto[field], field);
       }
     }
 
@@ -241,6 +248,26 @@ export class ProductionOrderSemiFinishedNetWeightChecksService {
     }
 
     return requirement;
+  }
+
+  private normalizeOptionalDosageFormStage(value: unknown) {
+    if (this.isEmptyText(value)) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('dosage_form_stage must be a string');
+    }
+
+    const dosageFormStage = value.trim();
+
+    if (dosageFormStage.length > MAX_DOSAGE_FORM_STAGE_LENGTH) {
+      throw new BadRequestException(
+        `dosage_form_stage must be at most ${MAX_DOSAGE_FORM_STAGE_LENGTH} characters`,
+      );
+    }
+
+    return dosageFormStage;
   }
 
   private normalizeCreateUnit(value: unknown) {
