@@ -3362,7 +3362,8 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu yêu cầu tại thời điểm nhập và kết quả kiểm tra độ kín của tối đa 10 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra; chỉ đơn vị 1 là bắt buộc.
+Nhóm API này lưu dạng bào chế, yêu cầu tại thời điểm nhập và kết quả kiểm tra độ kín của tối đa 10 đơn vị. Một lệnh sản xuất có thể có nhiều lần kiểm tra; chỉ đơn vị 1 là bắt buộc.
+`dosage_form_stage` là thông tin dạng bào chế/dạng kiểm tra, ví dụ `tablet`, `capsule`, `film_coated_tablet`.
 
 Kết quả trả về là boolean:
 
@@ -3384,6 +3385,7 @@ Response mẫu:
     "id": 1,
     "production_order_id": 2031,
     "requirement": "Không được rò rỉ",
+    "dosage_form_stage": "film_coated_tablet",
     "unit_1_result": true,
     "unit_2_result": true,
     "unit_3_result": false,
@@ -3435,6 +3437,7 @@ Body:
 ```json
 {
   "requirement": "Không được rò rỉ",
+  "dosage_form_stage": "film_coated_tablet",
   "unit_1_result": true,
   "unit_2_result": "đạt",
   "unit_3_result": "không kín"
@@ -3444,6 +3447,7 @@ Body:
 Quy tắc:
 
 - `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `dosage_form_stage` không bắt buộc, tối đa 50 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`. Giá trị gợi ý: `tablet`, `capsule`, `film_coated_tablet`.
 - `unit_1_result` bắt buộc.
 - `unit_2_result` đến `unit_10_result` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
 - Frontend nên gửi `true` cho đạt/kín và `false` cho không đạt/không kín.
@@ -3455,6 +3459,8 @@ Lỗi thường gặp:
 
 - `404 Production order not found`
 - `400 requirement must be a string`
+- `400 dosage_form_stage must be a string`
+- `400 dosage_form_stage must be at most 50 characters`
 - `400 unit_1_result is required`
 - `400 unit_1_result must be a boolean or pass/fail value`
 - `401 Authenticated user not found`
@@ -3471,12 +3477,13 @@ Body chỉ cần gửi các field muốn cập nhật:
 ```json
 {
   "requirement": "Yêu cầu mới tại thời điểm cập nhật",
+  "dosage_form_stage": "tablet",
   "unit_2_result": false,
   "unit_3_result": null
 }
 ```
 
-`unit_2_result` đến `unit_10_result` có thể gửi `null` hoặc chuỗi rỗng để xóa kết quả. `unit_1_result` không được xóa vì là giá trị bắt buộc. `requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+`unit_2_result` đến `unit_10_result` có thể gửi `null` hoặc chuỗi rỗng để xóa kết quả. `unit_1_result` không được xóa vì là giá trị bắt buộc. `requirement` và `dosage_form_stage` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 
 Lỗi thường gặp:
 

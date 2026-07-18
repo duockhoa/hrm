@@ -856,6 +856,7 @@ model ProductionOrderLeakTightnessChecks {
   production_order_id Int
   productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_leak_tightness_po_fkey")
   requirement         String?          @db.Text
+  dosage_form_stage   String?          @db.VarChar(50)
   unit_1_result       Boolean
   unit_2_result       Boolean?
   unit_3_result       Boolean?

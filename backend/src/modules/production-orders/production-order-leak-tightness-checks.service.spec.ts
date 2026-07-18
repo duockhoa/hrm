@@ -72,6 +72,7 @@ describe('ProductionOrderLeakTightnessChecksService', () => {
         2031,
         {
           requirement: '  Không được rò rỉ  ',
+          dosage_form_stage: ' film_coated_tablet ',
           unit_1_result: true,
           unit_2_result: 'đạt',
           unit_3_result: 'không kín',
@@ -87,6 +88,7 @@ describe('ProductionOrderLeakTightnessChecksService', () => {
         data: {
           production_order_id: 2031,
           requirement: 'Không được rò rỉ',
+          dosage_form_stage: 'film_coated_tablet',
           unit_1_result: true,
           unit_2_result: true,
           unit_3_result: false,
@@ -125,6 +127,28 @@ describe('ProductionOrderLeakTightnessChecksService', () => {
     );
   });
 
+  it('can clear dosage form stage on update', async () => {
+    const updatedCheck = { id: 1, dosage_form_stage: null };
+    prismaService.productionOrderLeakTightnessChecks.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderLeakTightnessChecks.update.mockResolvedValue(
+      updatedCheck,
+    );
+
+    await expect(service.update(1, { dosage_form_stage: '  ' })).resolves.toBe(
+      updatedCheck,
+    );
+    expect(
+      prismaService.productionOrderLeakTightnessChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: { dosage_form_stage: null },
+      }),
+    );
+  });
+
   it('deletes an existing check', async () => {
     const deletedCheck = { id: 1 };
     prismaService.productionOrderLeakTightnessChecks.findUnique.mockResolvedValue(
@@ -151,6 +175,36 @@ describe('ProductionOrderLeakTightnessChecksService', () => {
     await expect(
       service.create(2031, { unit_1_result: 'maybe' }, { id: 7 }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects an invalid dosage form stage', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        {
+          dosage_form_stage: 123 as unknown as string,
+          unit_1_result: true,
+        },
+        { id: 7 },
+      ),
+    ).rejects.toThrow('dosage_form_stage must be a string');
+  });
+
+  it('rejects a dosage form stage longer than 50 characters', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        {
+          dosage_form_stage: 'a'.repeat(51),
+          unit_1_result: true,
+        },
+        { id: 7 },
+      ),
+    ).rejects.toThrow('dosage_form_stage must be at most 50 characters');
   });
 
   it('rejects clearing unit 1 on update', async () => {
