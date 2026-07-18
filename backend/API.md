@@ -4408,7 +4408,12 @@ Body:
   "spray_dose_lower_allowed_limit": 90,
   "spray_dose_upper_allowed_limit": 110,
   "spray_dose_lower_control_limit": 95,
-  "spray_dose_upper_control_limit": 105
+  "spray_dose_upper_control_limit": 105,
+  "film_coated_tablet_weight_lower_control_limit": 195,
+  "film_coated_tablet_weight_upper_control_limit": 205,
+  "film_coated_tablet_weight_lower_allowed_limit": 190,
+  "film_coated_tablet_weight_upper_allowed_limit": 210,
+  "film_coated_tablet_weight_unit": "mg"
 }
 ```
 
@@ -4417,7 +4422,8 @@ Quy tắc:
 - `item_code` phải tồn tại trong bảng `items`.
 - `product_line_id` là tùy chọn và phải tồn tại trong bảng `product_lines`.
 - Backend vẫn nhận `product_line` dạng text để tương thích request cũ; nếu gửi text, hệ thống sẽ tìm hoặc tạo `product_lines` tương ứng.
-- Các field giới hạn, bao gồm giới hạn số liều xịt, là số thập phân, tối đa 6 chữ số sau dấu phẩy.
+- Các field giới hạn, bao gồm giới hạn số liều xịt và khối lượng viên nén bao phim, là số thập phân, tối đa 6 chữ số sau dấu phẩy.
+- `film_coated_tablet_weight_unit` là đơn vị khối lượng viên nén bao phim, ví dụ `mg` hoặc `g`.
 - Nếu specification đã bị soft delete, API create/update có thể restore bản ghi.
 
 Response include thêm `productLine`.
@@ -4438,7 +4444,12 @@ Body: gửi các field cần đổi.
   "spray_dose_lower_allowed_limit": 90,
   "spray_dose_upper_allowed_limit": 110,
   "spray_dose_lower_control_limit": 95,
-  "spray_dose_upper_control_limit": 105
+  "spray_dose_upper_control_limit": 105,
+  "film_coated_tablet_weight_lower_control_limit": 195,
+  "film_coated_tablet_weight_upper_control_limit": 205,
+  "film_coated_tablet_weight_lower_allowed_limit": 190,
+  "film_coated_tablet_weight_upper_allowed_limit": 210,
+  "film_coated_tablet_weight_unit": "mg"
 }
 ```
 

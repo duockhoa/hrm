@@ -13,4 +13,9 @@ export class CreateProductionSpecificationDto {
   spray_dose_upper_allowed_limit?: string | number | null;
   spray_dose_lower_control_limit?: string | number | null;
   spray_dose_upper_control_limit?: string | number | null;
+  film_coated_tablet_weight_lower_control_limit?: string | number | null;
+  film_coated_tablet_weight_upper_control_limit?: string | number | null;
+  film_coated_tablet_weight_lower_allowed_limit?: string | number | null;
+  film_coated_tablet_weight_upper_allowed_limit?: string | number | null;
+  film_coated_tablet_weight_unit?: string | null;
 }

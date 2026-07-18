@@ -401,23 +401,28 @@ model ProductionOrderFactoryReleaseReviews {
 }
 
 model ProductionSpecifications {
-  item_code                      String        @id
-  item                           Items         @relation(fields: [item_code], references: [item_code])
-  product_line_id                Int?
-  productLine                    ProductLines? @relation(fields: [product_line_id], references: [id], onDelete: SetNull)
-  dosage_form                    String?
-  lower_control_limit            Decimal?      @db.Decimal(18, 6)
-  upper_control_limit            Decimal?      @db.Decimal(18, 6)
-  lower_allowed_limit            Decimal?      @db.Decimal(18, 6)
-  upper_allowed_limit            Decimal?      @db.Decimal(18, 6)
-  unit                           String?
-  spray_dose_lower_allowed_limit Decimal?      @db.Decimal(18, 6)
-  spray_dose_upper_allowed_limit Decimal?      @db.Decimal(18, 6)
-  spray_dose_lower_control_limit Decimal?      @db.Decimal(18, 6)
-  spray_dose_upper_control_limit Decimal?      @db.Decimal(18, 6)
-  created_at                     DateTime      @default(now())
-  updated_at                     DateTime      @default(now()) @updatedAt
-  deleted_at                     DateTime?
+  item_code                                     String        @id
+  item                                          Items         @relation(fields: [item_code], references: [item_code])
+  product_line_id                               Int?
+  productLine                                   ProductLines? @relation(fields: [product_line_id], references: [id], onDelete: SetNull)
+  dosage_form                                   String?
+  lower_control_limit                           Decimal?      @db.Decimal(18, 6)
+  upper_control_limit                           Decimal?      @db.Decimal(18, 6)
+  lower_allowed_limit                           Decimal?      @db.Decimal(18, 6)
+  upper_allowed_limit                           Decimal?      @db.Decimal(18, 6)
+  unit                                          String?
+  spray_dose_lower_allowed_limit                Decimal?      @db.Decimal(18, 6)
+  spray_dose_upper_allowed_limit                Decimal?      @db.Decimal(18, 6)
+  spray_dose_lower_control_limit                Decimal?      @db.Decimal(18, 6)
+  spray_dose_upper_control_limit                Decimal?      @db.Decimal(18, 6)
+  film_coated_tablet_weight_lower_control_limit Decimal?      @db.Decimal(18, 6)
+  film_coated_tablet_weight_upper_control_limit Decimal?      @db.Decimal(18, 6)
+  film_coated_tablet_weight_lower_allowed_limit Decimal?      @db.Decimal(18, 6)
+  film_coated_tablet_weight_upper_allowed_limit Decimal?      @db.Decimal(18, 6)
+  film_coated_tablet_weight_unit                String?       @db.VarChar(20)
+  created_at                                    DateTime      @default(now())
+  updated_at                                    DateTime      @default(now()) @updatedAt
+  deleted_at                                    DateTime?
 
   @@index([product_line_id], map: "production_specifications_product_line_id_fkey")
   @@map("production_specifications")

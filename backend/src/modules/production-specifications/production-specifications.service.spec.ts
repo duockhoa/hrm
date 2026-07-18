@@ -100,6 +100,11 @@ describe('ProductionSpecificationsService', () => {
         spray_dose_upper_allowed_limit: null,
         spray_dose_lower_control_limit: null,
         spray_dose_upper_control_limit: null,
+        film_coated_tablet_weight_lower_control_limit: null,
+        film_coated_tablet_weight_upper_control_limit: null,
+        film_coated_tablet_weight_lower_allowed_limit: null,
+        film_coated_tablet_weight_upper_allowed_limit: null,
+        film_coated_tablet_weight_unit: null,
       },
       include: {
         item: true,
@@ -172,6 +177,42 @@ describe('ProductionSpecificationsService', () => {
           spray_dose_upper_allowed_limit: expect.any(Object),
           spray_dose_lower_control_limit: expect.any(Object),
           spray_dose_upper_control_limit: expect.any(Object),
+        }),
+      }),
+    );
+  });
+
+  it('updates film-coated tablet weight limits', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00004' });
+    prismaService.productionSpecifications.findUnique.mockResolvedValue({
+      item_code: 'TP00004',
+      deleted_at: null,
+    });
+    prismaService.productionSpecifications.update.mockResolvedValue({
+      item_code: 'TP00004',
+      film_coated_tablet_weight_lower_control_limit: '195',
+      film_coated_tablet_weight_upper_control_limit: '205',
+      film_coated_tablet_weight_lower_allowed_limit: '190',
+      film_coated_tablet_weight_upper_allowed_limit: '210',
+      film_coated_tablet_weight_unit: 'mg',
+    });
+
+    await service.update('TP00004', {
+      film_coated_tablet_weight_lower_control_limit: 195,
+      film_coated_tablet_weight_upper_control_limit: '205',
+      film_coated_tablet_weight_lower_allowed_limit: '190.5',
+      film_coated_tablet_weight_upper_allowed_limit: '210.5',
+      film_coated_tablet_weight_unit: ' mg ',
+    });
+
+    expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          film_coated_tablet_weight_lower_control_limit: expect.any(Object),
+          film_coated_tablet_weight_upper_control_limit: expect.any(Object),
+          film_coated_tablet_weight_lower_allowed_limit: expect.any(Object),
+          film_coated_tablet_weight_upper_allowed_limit: expect.any(Object),
+          film_coated_tablet_weight_unit: 'mg',
         }),
       }),
     );

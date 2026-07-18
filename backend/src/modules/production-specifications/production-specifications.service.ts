@@ -237,6 +237,30 @@ export class ProductionSpecificationsService {
         dto.spray_dose_upper_control_limit,
         'spray_dose_upper_control_limit',
       ),
+      film_coated_tablet_weight_lower_control_limit:
+        this.normalizeOptionalDecimal(
+          dto.film_coated_tablet_weight_lower_control_limit,
+          'film_coated_tablet_weight_lower_control_limit',
+        ),
+      film_coated_tablet_weight_upper_control_limit:
+        this.normalizeOptionalDecimal(
+          dto.film_coated_tablet_weight_upper_control_limit,
+          'film_coated_tablet_weight_upper_control_limit',
+        ),
+      film_coated_tablet_weight_lower_allowed_limit:
+        this.normalizeOptionalDecimal(
+          dto.film_coated_tablet_weight_lower_allowed_limit,
+          'film_coated_tablet_weight_lower_allowed_limit',
+        ),
+      film_coated_tablet_weight_upper_allowed_limit:
+        this.normalizeOptionalDecimal(
+          dto.film_coated_tablet_weight_upper_allowed_limit,
+          'film_coated_tablet_weight_upper_allowed_limit',
+        ),
+      film_coated_tablet_weight_unit: this.normalizeOptionalString(
+        dto.film_coated_tablet_weight_unit,
+        'film_coated_tablet_weight_unit',
+      ),
     };
   }
 
@@ -311,6 +335,45 @@ export class ProductionSpecificationsService {
       data.spray_dose_upper_control_limit = this.normalizeOptionalDecimal(
         dto.spray_dose_upper_control_limit,
         'spray_dose_upper_control_limit',
+      );
+    }
+
+    if (dto.film_coated_tablet_weight_lower_control_limit !== undefined) {
+      data.film_coated_tablet_weight_lower_control_limit =
+        this.normalizeOptionalDecimal(
+          dto.film_coated_tablet_weight_lower_control_limit,
+          'film_coated_tablet_weight_lower_control_limit',
+        );
+    }
+
+    if (dto.film_coated_tablet_weight_upper_control_limit !== undefined) {
+      data.film_coated_tablet_weight_upper_control_limit =
+        this.normalizeOptionalDecimal(
+          dto.film_coated_tablet_weight_upper_control_limit,
+          'film_coated_tablet_weight_upper_control_limit',
+        );
+    }
+
+    if (dto.film_coated_tablet_weight_lower_allowed_limit !== undefined) {
+      data.film_coated_tablet_weight_lower_allowed_limit =
+        this.normalizeOptionalDecimal(
+          dto.film_coated_tablet_weight_lower_allowed_limit,
+          'film_coated_tablet_weight_lower_allowed_limit',
+        );
+    }
+
+    if (dto.film_coated_tablet_weight_upper_allowed_limit !== undefined) {
+      data.film_coated_tablet_weight_upper_allowed_limit =
+        this.normalizeOptionalDecimal(
+          dto.film_coated_tablet_weight_upper_allowed_limit,
+          'film_coated_tablet_weight_upper_allowed_limit',
+        );
+    }
+
+    if (dto.film_coated_tablet_weight_unit !== undefined) {
+      data.film_coated_tablet_weight_unit = this.normalizeOptionalString(
+        dto.film_coated_tablet_weight_unit,
+        'film_coated_tablet_weight_unit',
       );
     }
 
