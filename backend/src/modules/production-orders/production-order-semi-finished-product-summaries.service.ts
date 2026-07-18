@@ -16,7 +16,8 @@ type AuthenticatedUser = {
 const QUANTITY_DECIMAL_PATTERN = /^\d+(?:\.\d{1,3})?$/;
 const QUANTITY_INTEGER_DIGITS = 9;
 const MAX_STAGE_LENGTH = 100;
-const SUMMARY_UNIT = 'kg';
+const DEFAULT_SUMMARY_UNIT = 'kg';
+const MAX_UNIT_LENGTH = 20;
 
 const QUANTITY_FIELDS = [
   'input_quantity',
@@ -133,22 +134,25 @@ export class ProductionOrderSemiFinishedProductSummariesService {
         dto?.input_quantity,
         'input_quantity',
       ),
-      input_unit: SUMMARY_UNIT,
+      input_unit: this.normalizeCreateUnit(dto?.input_unit, 'input_unit'),
       packed_quantity: this.normalizeOptionalQuantity(
         dto?.packed_quantity,
         'packed_quantity',
       ),
-      packed_unit: SUMMARY_UNIT,
+      packed_unit: this.normalizeCreateUnit(dto?.packed_unit, 'packed_unit'),
       leftover_quantity: this.normalizeOptionalQuantity(
         dto?.leftover_quantity,
         'leftover_quantity',
       ),
-      leftover_unit: SUMMARY_UNIT,
+      leftover_unit: this.normalizeCreateUnit(
+        dto?.leftover_unit,
+        'leftover_unit',
+      ),
       waste_quantity: this.normalizeOptionalQuantity(
         dto?.waste_quantity,
         'waste_quantity',
       ),
-      waste_unit: SUMMARY_UNIT,
+      waste_unit: this.normalizeCreateUnit(dto?.waste_unit, 'waste_unit'),
     };
   }
 
@@ -175,7 +179,7 @@ export class ProductionOrderSemiFinishedProductSummariesService {
 
     for (const field of UNIT_FIELDS) {
       if (field in updateDto) {
-        data[field] = SUMMARY_UNIT;
+        data[field] = this.normalizeUnit(updateDto[field], field);
       }
     }
 
@@ -235,6 +239,34 @@ export class ProductionOrderSemiFinishedProductSummariesService {
     }
 
     return new Prisma.Decimal(normalizedValue);
+  }
+
+  private normalizeCreateUnit(value: unknown, fieldName: string) {
+    if (this.isEmptyValue(value)) {
+      return DEFAULT_SUMMARY_UNIT;
+    }
+
+    return this.normalizeUnit(value, fieldName);
+  }
+
+  private normalizeUnit(value: unknown, fieldName: string) {
+    if (this.isEmptyValue(value)) {
+      throw new BadRequestException(`${fieldName} is required`);
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be a string`);
+    }
+
+    const unit = value.trim();
+
+    if (unit.length > MAX_UNIT_LENGTH) {
+      throw new BadRequestException(
+        `${fieldName} must be at most ${MAX_UNIT_LENGTH} characters`,
+      );
+    }
+
+    return unit;
   }
 
   private isEmptyValue(value: unknown) {

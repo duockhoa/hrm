@@ -3280,9 +3280,13 @@ Body:
 {
   "stage": "Đóng gói",
   "input_quantity": "100.5",
+  "input_unit": "kg",
   "packed_quantity": "95",
+  "packed_unit": "thùng",
   "leftover_quantity": "3",
-  "waste_quantity": "2.5"
+  "leftover_unit": "kg",
+  "waste_quantity": "2.5",
+  "waste_unit": "g"
 }
 ```
 
@@ -3292,7 +3296,8 @@ Quy tắc:
 - `input_quantity`, `packed_quantity`, `leftover_quantity`, `waste_quantity` đều không bắt buộc.
 - Khi có giá trị, các lượng lưu dạng `DECIMAL(12, 3)` và tối đa 3 chữ số sau dấu phẩy.
 - Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `100.5`, `"100.5"` hoặc `"100,5"`.
-- `input_unit`, `packed_unit`, `leftover_unit`, `waste_unit` luôn được backend lưu là `kg`; frontend không cần gửi các field này.
+- `input_unit`, `packed_unit`, `leftover_unit`, `waste_unit` được lưu theo giá trị frontend gửi, sau khi trim khoảng trắng.
+- Các field đơn vị tối đa 20 ký tự. Nếu không gửi khi tạo mới, backend mặc định `kg`.
 - `production_order_id` lấy từ `:id`.
 - `created_by_id` lấy từ user đăng nhập.
 
@@ -3320,11 +3325,13 @@ Body chỉ cần gửi các field muốn cập nhật:
 {
   "stage": "Hoàn tất đóng gói",
   "leftover_quantity": null,
-  "waste_quantity": "2.25"
+  "leftover_unit": "g",
+  "waste_quantity": "2.25",
+  "waste_unit": "kg"
 }
 ```
 
-Các field lượng không bắt buộc có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. Các field đơn vị luôn là `kg`.
+Các field lượng không bắt buộc có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. Các field đơn vị nếu gửi sẽ được backend lưu theo giá trị frontend gửi; không thể gửi `null` hoặc chuỗi rỗng để xóa đơn vị.
 
 Lỗi thường gặp:
 
