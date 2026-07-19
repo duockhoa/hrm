@@ -490,24 +490,28 @@ model ProductionSpecifications {
 }
 
 model ProductionOrderDeviations {
-  id                     Int                              @id @default(autoincrement())
-  production_order_id    Int
-  productionOrder        ProductionOrders                 @relation(fields: [production_order_id], references: [id], onDelete: Cascade)
-  deviation_content      String                           @db.Text
-  handling_plan          String                           @db.Text
-  handling_result        String?                          @db.Text
-  cause                  String?                          @db.Text
-  cause_classification   String?
-  affected_quantity      Decimal?                         @db.Decimal(12, 3)
-  affected_quantity_unit String?                          @db.VarChar(50)
-  approver_id            Int?
-  approver               Users?                           @relation("ProductionOrderDeviationApprover", fields: [approver_id], references: [id])
-  reporter_id            Int
-  reporter               Users                            @relation("ProductionOrderDeviationReporter", fields: [reporter_id], references: [id])
-  images                 ProductionOrderDeviationImages[]
-  created_at             DateTime                         @default(now())
-  updated_at             DateTime                         @default(now()) @updatedAt
-  deleted_at             DateTime?
+  id                      Int                              @id @default(autoincrement())
+  production_order_id     Int
+  productionOrder         ProductionOrders                 @relation(fields: [production_order_id], references: [id], onDelete: Cascade)
+  deviation_content       String                           @db.Text
+  handling_plan           String                           @db.Text
+  handling_result         String?                          @db.Text
+  cause                   String?                          @db.Text
+  cause_classification    String?
+  affected_quantity       Decimal?                         @db.Decimal(12, 3)
+  affected_quantity_unit  String?                          @db.VarChar(50)
+  handled_quantity        Decimal?                         @db.Decimal(12, 3)
+  handled_quantity_unit   String?                          @db.VarChar(50)
+  destroyed_quantity      Decimal?                         @db.Decimal(12, 3)
+  destroyed_quantity_unit String?                          @db.VarChar(50)
+  approver_id             Int?
+  approver                Users?                           @relation("ProductionOrderDeviationApprover", fields: [approver_id], references: [id])
+  reporter_id             Int
+  reporter                Users                            @relation("ProductionOrderDeviationReporter", fields: [reporter_id], references: [id])
+  images                  ProductionOrderDeviationImages[]
+  created_at              DateTime                         @default(now())
+  updated_at              DateTime                         @default(now()) @updatedAt
+  deleted_at              DateTime?
 
   @@index([production_order_id], map: "production_order_deviations_production_order_id_fkey")
   @@index([approver_id], map: "production_order_deviations_approver_id_fkey")

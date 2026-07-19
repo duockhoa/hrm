@@ -4854,6 +4854,10 @@ Cách 1: JSON body với đường dẫn ảnh có sẵn:
   "cause_classification": "Phan loai nguyen nhan",
   "affected_quantity": 12.5,
   "affected_quantity_unit": "kg",
+  "handled_quantity": 8,
+  "handled_quantity_unit": "kg",
+  "destroyed_quantity": 4.5,
+  "destroyed_quantity_unit": "kg",
   "approver_id": 2,
   "reporter_id": 7,
   "deviation_images": ["/production-order-deviations/images/example.jpg"]
@@ -4871,6 +4875,10 @@ cause=Nguyen nhan
 cause_classification=Phan loai nguyen nhan
 affected_quantity=12.5
 affected_quantity_unit=kg
+handled_quantity=8
+handled_quantity_unit=kg
+destroyed_quantity=4.5
+destroyed_quantity_unit=kg
 approver_id=2
 reporter_id=7
 deviation_images=<file>
@@ -4883,8 +4891,8 @@ Ghi chú upload:
 - Tối đa 10 ảnh.
 - File hợp lệ: JPG, PNG, WEBP, GIF.
 - Dung lượng tối đa mỗi file: 5 MB.
-- `handling_result`, `cause`, `cause_classification`, `affected_quantity`, `affected_quantity_unit` không bắt buộc.
-- `affected_quantity` nhận số hoặc chuỗi số, hỗ trợ dấu phẩy thập phân, tối đa 3 chữ số sau dấu thập phân.
+- `handling_result`, `cause`, `cause_classification`, `affected_quantity`, `affected_quantity_unit`, `handled_quantity`, `handled_quantity_unit`, `destroyed_quantity`, `destroyed_quantity_unit` không bắt buộc.
+- `affected_quantity`, `handled_quantity`, `destroyed_quantity` nhận số hoặc chuỗi số, hỗ trợ dấu phẩy thập phân, tối đa 3 chữ số sau dấu thập phân.
 
 ### Cập nhật sai lệch
 
@@ -4903,6 +4911,10 @@ Body: JSON hoặc `multipart/form-data`, gửi các field cần đổi.
   "cause_classification": "Phan loai moi",
   "affected_quantity": 10,
   "affected_quantity_unit": "hop",
+  "handled_quantity": 7,
+  "handled_quantity_unit": "hop",
+  "destroyed_quantity": 3,
+  "destroyed_quantity_unit": "hop",
   "approver_id": 2
 }
 ```

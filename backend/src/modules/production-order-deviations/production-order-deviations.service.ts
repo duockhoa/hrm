@@ -47,8 +47,8 @@ const productionOrderDeviationInclude = {
   },
 } satisfies Prisma.ProductionOrderDeviationsInclude;
 
-const AFFECTED_QUANTITY_DECIMAL_PATTERN = /^\d+(?:\.\d{1,3})?$/;
-const AFFECTED_QUANTITY_INTEGER_DIGITS = 9;
+const DEVIATION_QUANTITY_DECIMAL_PATTERN = /^\d+(?:\.\d{1,3})?$/;
+const DEVIATION_QUANTITY_INTEGER_DIGITS = 9;
 
 @Injectable()
 export class ProductionOrderDeviationsService {
@@ -344,13 +344,29 @@ export class ProductionOrderDeviationsService {
           dto.cause_classification,
           'cause_classification',
         ),
-        affected_quantity: this.normalizeOptionalAffectedQuantity(
+        affected_quantity: this.normalizeOptionalDeviationQuantity(
           dto.affected_quantity,
           'affected_quantity',
         ),
         affected_quantity_unit: this.normalizeOptionalString(
           dto.affected_quantity_unit,
           'affected_quantity_unit',
+        ),
+        handled_quantity: this.normalizeOptionalDeviationQuantity(
+          dto.handled_quantity,
+          'handled_quantity',
+        ),
+        handled_quantity_unit: this.normalizeOptionalString(
+          dto.handled_quantity_unit,
+          'handled_quantity_unit',
+        ),
+        destroyed_quantity: this.normalizeOptionalDeviationQuantity(
+          dto.destroyed_quantity,
+          'destroyed_quantity',
+        ),
+        destroyed_quantity_unit: this.normalizeOptionalString(
+          dto.destroyed_quantity_unit,
+          'destroyed_quantity_unit',
         ),
         approver_id: this.normalizeOptionalInt(dto.approver_id, 'approver_id'),
         reporter_id: this.normalizeRequiredInt(dto.reporter_id, 'reporter_id'),
@@ -415,7 +431,7 @@ export class ProductionOrderDeviationsService {
     }
 
     if (dto.affected_quantity !== undefined) {
-      data.affected_quantity = this.normalizeOptionalAffectedQuantity(
+      data.affected_quantity = this.normalizeOptionalDeviationQuantity(
         dto.affected_quantity,
         'affected_quantity',
       );
@@ -425,6 +441,34 @@ export class ProductionOrderDeviationsService {
       data.affected_quantity_unit = this.normalizeOptionalString(
         dto.affected_quantity_unit,
         'affected_quantity_unit',
+      );
+    }
+
+    if (dto.handled_quantity !== undefined) {
+      data.handled_quantity = this.normalizeOptionalDeviationQuantity(
+        dto.handled_quantity,
+        'handled_quantity',
+      );
+    }
+
+    if (dto.handled_quantity_unit !== undefined) {
+      data.handled_quantity_unit = this.normalizeOptionalString(
+        dto.handled_quantity_unit,
+        'handled_quantity_unit',
+      );
+    }
+
+    if (dto.destroyed_quantity !== undefined) {
+      data.destroyed_quantity = this.normalizeOptionalDeviationQuantity(
+        dto.destroyed_quantity,
+        'destroyed_quantity',
+      );
+    }
+
+    if (dto.destroyed_quantity_unit !== undefined) {
+      data.destroyed_quantity_unit = this.normalizeOptionalString(
+        dto.destroyed_quantity_unit,
+        'destroyed_quantity_unit',
       );
     }
 
@@ -474,7 +518,7 @@ export class ProductionOrderDeviationsService {
     return normalizedValue === '' ? null : normalizedValue;
   }
 
-  private normalizeOptionalAffectedQuantity(value: unknown, fieldName: string) {
+  private normalizeOptionalDeviationQuantity(value: unknown, fieldName: string) {
     if (
       value === null ||
       value === undefined ||
@@ -490,7 +534,7 @@ export class ProductionOrderDeviationsService {
           ? value.trim().replace(',', '.')
           : '';
 
-    if (!AFFECTED_QUANTITY_DECIMAL_PATTERN.test(normalizedValue)) {
+    if (!DEVIATION_QUANTITY_DECIMAL_PATTERN.test(normalizedValue)) {
       throw new BadRequestException(
         `${fieldName} must fit DECIMAL(12, 3) with up to 3 decimal places`,
       );
@@ -498,7 +542,7 @@ export class ProductionOrderDeviationsService {
 
     const [integerPart] = normalizedValue.split('.');
 
-    if (integerPart.length > AFFECTED_QUANTITY_INTEGER_DIGITS) {
+    if (integerPart.length > DEVIATION_QUANTITY_INTEGER_DIGITS) {
       throw new BadRequestException(`${fieldName} must fit DECIMAL(12, 3)`);
     }
 
