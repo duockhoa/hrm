@@ -23,6 +23,7 @@ import { ProductionOrderDeviationsModule } from './modules/production-order-devi
 import { FeaturesModule } from './modules/features/features.module';
 import { ProductLinesModule } from './modules/product-lines/product-lines.module';
 import { ProductionWorkshopsModule } from './modules/production-workshops/production-workshops.module';
+import { EquipmentModule } from './modules/equipment/equipment.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ProductionWorkshopsModule } from './modules/production-workshops/produc
     FeaturesModule,
     ProductLinesModule,
     ProductionWorkshopsModule,
+    EquipmentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

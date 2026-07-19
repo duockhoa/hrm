@@ -60,6 +60,8 @@ model Users {
   createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                 @relation("ProductionOrderTenUnitSensoryCheckCreator")
   checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]        @relation("ProductionOrderPostPreparationSolutionCheckChecker")
   approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                @relation("ProductionOrderFactoryReleaseReviewApprover")
+  createdEquipment                                      Equipment[]                                           @relation("EquipmentCreator")
+  createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -287,6 +289,40 @@ model ProductLines {
   productionSpecifications ProductionSpecifications[]
 
   @@map("product_lines")
+}
+
+model Equipment {
+  id            Int                   @id @default(autoincrement())
+  code          String                @unique(map: "equipment_code_key") @db.VarChar(100)
+  name          String                @db.VarChar(255)
+  created_by_id Int
+  createdBy     Users                 @relation("EquipmentCreator", fields: [created_by_id], references: [id], map: "equipment_created_by_id_fkey")
+  parameters    EquipmentParameters[]
+  created_at    DateTime              @default(now())
+  updated_at    DateTime              @default(now()) @updatedAt
+
+  @@index([name], map: "equipment_name_idx")
+  @@index([created_by_id], map: "equipment_created_by_id_idx")
+  @@map("equipment")
+}
+
+model EquipmentParameters {
+  id            Int       @id @default(autoincrement())
+  equipment_id  Int
+  equipment     Equipment @relation(fields: [equipment_id], references: [id], onDelete: Cascade, map: "equipment_parameters_equipment_id_fkey")
+  name          String    @db.VarChar(255)
+  data_type     String    @db.VarChar(50)
+  unit          String?   @db.VarChar(50)
+  is_required   Boolean   @default(true)
+  created_by_id Int
+  createdBy     Users     @relation("EquipmentParameterCreator", fields: [created_by_id], references: [id], map: "equipment_parameters_created_by_id_fkey")
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now()) @updatedAt
+
+  @@unique([equipment_id, name], map: "equipment_parameters_equipment_name_key")
+  @@index([equipment_id], map: "equipment_parameters_equipment_id_idx")
+  @@index([created_by_id], map: "equipment_parameters_created_by_id_idx")
+  @@map("equipment_parameters")
 }
 
 model ProductionWorkshops {

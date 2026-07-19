@@ -652,6 +652,251 @@ GET /items/TP00001
 
 Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`.
 
+## Equipment
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu danh sách thiết bị. Backend lấy `created_by_id` từ user đăng nhập; body không cần gửi thông tin người tạo.
+
+### Lấy danh sách thiết bị
+
+```http
+GET /equipment
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "code": "TB-001",
+    "name": "Cân phân tích",
+    "created_by_id": 7,
+    "created_at": "2026-07-19T00:00:00.000Z",
+    "updated_at": "2026-07-19T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy thiết bị theo ID
+
+```http
+GET /equipment/:id
+```
+
+Lỗi thường gặp:
+
+- `404 Equipment not found`
+
+### Tạo thiết bị
+
+```http
+POST /equipment
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "code": "TB-001",
+  "name": "Cân phân tích"
+}
+```
+
+Quy tắc:
+
+- `code` bắt buộc, tối đa 100 ký tự và không được trùng.
+- `name` bắt buộc, tối đa 255 ký tự.
+- `created_by_id` lấy từ user đăng nhập.
+
+Lỗi thường gặp:
+
+- `400 code is required`
+- `400 code must be at most 100 characters`
+- `400 name is required`
+- `400 name must be at most 255 characters`
+- `401 Authenticated user not found`
+- `409 Equipment code already exists`
+
+### Cập nhật thiết bị
+
+```http
+PATCH /equipment/:id
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "name": "Máy trộn"
+}
+```
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra `code` và `name` giống API tạo.
+- `404 Equipment not found`
+- `409 Equipment code already exists`
+
+### Xóa thiết bị
+
+```http
+DELETE /equipment/:id
+```
+
+API trả về thiết bị vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Equipment not found`
+
+## Equipment Parameters
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu danh sách thông số cần nhập cho từng thiết bị. Một thiết bị có thể có nhiều thông số; tên thông số không được trùng trong cùng một thiết bị. Backend lấy `created_by_id` từ user đăng nhập.
+
+`data_type` hỗ trợ các giá trị:
+
+- `text`: chuỗi.
+- `number`: số.
+- `boolean`: đúng/sai.
+- `date`: ngày.
+- `datetime`: ngày giờ.
+- `select`: lựa chọn.
+
+### Lấy danh sách thông số theo thiết bị
+
+```http
+GET /equipment/:id/parameters
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "equipment_id": 1,
+    "name": "Sai số cho phép",
+    "data_type": "number",
+    "unit": "g",
+    "is_required": true,
+    "created_by_id": 7,
+    "created_at": "2026-07-19T00:00:00.000Z",
+    "updated_at": "2026-07-19T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Equipment not found`
+
+### Lấy một thông số theo ID
+
+```http
+GET /equipment/parameters/:parameterId
+```
+
+Lỗi thường gặp:
+
+- `404 Equipment parameter not found`
+
+### Tạo thông số cho thiết bị
+
+```http
+POST /equipment/:id/parameters
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "name": "Sai số cho phép",
+  "data_type": "number",
+  "unit": "g",
+  "is_required": true
+}
+```
+
+Quy tắc:
+
+- `name` bắt buộc, tối đa 255 ký tự và không được trùng trong cùng thiết bị.
+- `data_type` bắt buộc, chỉ nhận `text`, `number`, `boolean`, `date`, `datetime`, `select`.
+- `unit` không bắt buộc, tối đa 50 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `is_required` không bắt buộc, mặc định `true`.
+- `created_by_id` lấy từ user đăng nhập.
+
+Lỗi thường gặp:
+
+- `404 Equipment not found`
+- `400 name is required`
+- `400 name must be at most 255 characters`
+- `400 data_type is required`
+- `400 data_type must be one of: text, number, boolean, date, datetime, select`
+- `400 unit must be a string`
+- `400 unit must be at most 50 characters`
+- `400 is_required must be a boolean`
+- `401 Authenticated user not found`
+- `409 Equipment parameter name already exists`
+
+### Cập nhật thông số
+
+```http
+PATCH /equipment/parameters/:parameterId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi field muốn cập nhật:
+
+```json
+{
+  "unit": "mg",
+  "is_required": false
+}
+```
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra `name`, `data_type`, `unit`, `is_required` giống API tạo.
+- `404 Equipment parameter not found`
+- `409 Equipment parameter name already exists`
+
+### Xóa thông số
+
+```http
+DELETE /equipment/parameters/:parameterId
+```
+
+API trả về thông số vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Equipment parameter not found`
+
 ## Features
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
