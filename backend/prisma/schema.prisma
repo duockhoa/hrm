@@ -64,6 +64,7 @@ model Users {
   approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                @relation("ProductionOrderFactoryReleaseReviewApprover")
   createdEquipment                                      Equipment[]                                           @relation("EquipmentCreator")
   createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
+  createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
 
   @@index([department], map: "users_department_fkey")
@@ -297,15 +298,16 @@ model ProductLines {
 }
 
 model Equipment {
-  id            Int                   @id @default(autoincrement())
-  code          String                @unique(map: "equipment_code_key") @db.VarChar(100)
-  name          String                @db.VarChar(255)
-  created_by_id Int
-  createdBy     Users                 @relation("EquipmentCreator", fields: [created_by_id], references: [id], map: "equipment_created_by_id_fkey")
-  parameters    EquipmentParameters[]
-  itemEquipment ItemEquipment[]
-  created_at    DateTime              @default(now())
-  updated_at    DateTime              @default(now()) @updatedAt
+  id                Int                          @id @default(autoincrement())
+  code              String                       @unique(map: "equipment_code_key") @db.VarChar(100)
+  name              String                       @db.VarChar(255)
+  created_by_id     Int
+  createdBy         Users                        @relation("EquipmentCreator", fields: [created_by_id], references: [id], map: "equipment_created_by_id_fkey")
+  parameters        EquipmentParameters[]
+  monitoringRecords EquipmentMonitoringRecords[]
+  itemEquipment     ItemEquipment[]
+  created_at        DateTime                     @default(now())
+  updated_at        DateTime                     @default(now()) @updatedAt
 
   @@index([name], map: "equipment_name_idx")
   @@index([created_by_id], map: "equipment_created_by_id_idx")
@@ -313,22 +315,61 @@ model Equipment {
 }
 
 model EquipmentParameters {
-  id            Int       @id @default(autoincrement())
-  equipment_id  Int
-  equipment     Equipment @relation(fields: [equipment_id], references: [id], onDelete: Cascade, map: "equipment_parameters_equipment_id_fkey")
-  name          String    @db.VarChar(255)
-  data_type     String    @db.VarChar(50)
-  unit          String?   @db.VarChar(50)
-  is_required   Boolean   @default(true)
-  created_by_id Int
-  createdBy     Users     @relation("EquipmentParameterCreator", fields: [created_by_id], references: [id], map: "equipment_parameters_created_by_id_fkey")
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @default(now()) @updatedAt
+  id               Int                         @id @default(autoincrement())
+  equipment_id     Int
+  equipment        Equipment                   @relation(fields: [equipment_id], references: [id], onDelete: Cascade, map: "equipment_parameters_equipment_id_fkey")
+  name             String                      @db.VarChar(255)
+  data_type        String                      @db.VarChar(50)
+  unit             String?                     @db.VarChar(50)
+  is_required      Boolean                     @default(true)
+  created_by_id    Int
+  createdBy        Users                       @relation("EquipmentParameterCreator", fields: [created_by_id], references: [id], map: "equipment_parameters_created_by_id_fkey")
+  monitoringValues EquipmentMonitoringValues[]
+  created_at       DateTime                    @default(now())
+  updated_at       DateTime                    @default(now()) @updatedAt
 
   @@unique([equipment_id, name], map: "equipment_parameters_equipment_name_key")
   @@index([equipment_id], map: "equipment_parameters_equipment_id_idx")
   @@index([created_by_id], map: "equipment_parameters_created_by_id_idx")
   @@map("equipment_parameters")
+}
+
+model EquipmentMonitoringRecords {
+  id                  Int                         @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders            @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "equipment_monitoring_records_po_id_fkey")
+  equipment_id        Int
+  equipment           Equipment                   @relation(fields: [equipment_id], references: [id], onDelete: Cascade, map: "equipment_monitoring_records_equipment_id_fkey")
+  recorded_at         DateTime                    @default(now())
+  note                String?                     @db.Text
+  created_by_id       Int
+  createdBy           Users                       @relation("EquipmentMonitoringRecordCreator", fields: [created_by_id], references: [id], map: "equipment_monitoring_records_created_by_id_fkey")
+  values              EquipmentMonitoringValues[]
+  created_at          DateTime                    @default(now())
+  updated_at          DateTime                    @default(now()) @updatedAt
+  deleted_at          DateTime?
+
+  @@index([production_order_id], map: "equipment_monitoring_records_po_id_idx")
+  @@index([equipment_id], map: "equipment_monitoring_records_equipment_id_idx")
+  @@index([production_order_id, equipment_id, recorded_at], map: "equipment_monitoring_records_po_equipment_recorded_idx")
+  @@index([created_by_id], map: "equipment_monitoring_records_created_by_id_idx")
+  @@map("equipment_monitoring_records")
+}
+
+model EquipmentMonitoringValues {
+  id           Int                        @id @default(autoincrement())
+  record_id    Int
+  record       EquipmentMonitoringRecords @relation(fields: [record_id], references: [id], onDelete: Cascade, map: "equipment_monitoring_values_record_id_fkey")
+  parameter_id Int
+  parameter    EquipmentParameters        @relation(fields: [parameter_id], references: [id], onDelete: Restrict, map: "equipment_monitoring_values_parameter_id_fkey")
+  value        String?                    @db.Text
+  note         String?                    @db.Text
+  created_at   DateTime                   @default(now())
+  updated_at   DateTime                   @default(now()) @updatedAt
+
+  @@unique([record_id, parameter_id], map: "equipment_monitoring_values_record_parameter_key")
+  @@index([parameter_id], map: "equipment_monitoring_values_parameter_id_idx")
+  @@map("equipment_monitoring_values")
 }
 
 model ItemEquipment {
@@ -430,6 +471,7 @@ model ProductionOrders {
   steamSterilizationChecks             ProductionOrderSteamSterilizationChecks[]
   postPreparationSolutionChecks        ProductionOrderPostPreparationSolutionChecks[]
   factoryReleaseReviews                ProductionOrderFactoryReleaseReviews[]
+  equipmentMonitoringRecords           EquipmentMonitoringRecords[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")

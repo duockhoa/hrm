@@ -1009,6 +1009,128 @@ Lỗi thường gặp:
 
 - `404 Equipment parameter not found`
 
+### Lấy danh sách lần theo dõi thông số thiết bị
+
+```http
+GET /equipment/monitoring-records
+```
+
+Query không bắt buộc:
+
+```http
+GET /equipment/monitoring-records?production_order_id=1001&equipment_id=1
+```
+
+Response gồm lệnh sản xuất, thiết bị, người tạo và danh sách giá trị theo từng thông số.
+
+### Lấy một lần theo dõi thông số thiết bị
+
+```http
+GET /equipment/monitoring-records/:recordId
+```
+
+Lỗi thường gặp:
+
+- `404 Equipment monitoring record not found`
+
+### Tạo lần theo dõi thông số thiết bị
+
+```http
+POST /equipment/monitoring-records
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "production_order_id": 1001,
+  "equipment_id": 1,
+  "recorded_at": "2026-07-19T08:00:00.000Z",
+  "note": "Kiểm tra đầu ca",
+  "values": [
+    {
+      "parameter_id": 1,
+      "value": "25.5",
+      "note": "Ổn định"
+    },
+    {
+      "parameter_id": 2,
+      "value": "Đạt"
+    }
+  ]
+}
+```
+
+Quy tắc:
+
+- `production_order_id` bắt buộc và phải tồn tại.
+- `equipment_id` bắt buộc và phải tồn tại.
+- `recorded_at` không bắt buộc; nếu không gửi backend dùng thời điểm hiện tại.
+- `values` bắt buộc, phải là mảng và có ít nhất một item.
+- Mỗi `parameter_id` chỉ được gửi một lần trong cùng record.
+- `parameter_id` phải thuộc đúng `equipment_id`.
+- Các thông số có `is_required = true` bắt buộc phải có value.
+- Dù DB chỉ lưu `value` dạng text, backend vẫn validate theo `data_type` của thông số: `number`, `boolean`, `date`, `datetime`.
+
+Lỗi thường gặp:
+
+- `400 production_order_id must be a positive integer`
+- `400 equipment_id must be a positive integer`
+- `400 values must be an array`
+- `400 values must contain at least one item`
+- `400 values[x].parameter_id does not belong to equipment`
+- `400 <Tên thông số> is required`
+- `401 Authenticated user not found`
+- `404 Production order not found`
+- `404 Equipment not found`
+
+### Cập nhật lần theo dõi thông số thiết bị
+
+```http
+PATCH /equipment/monitoring-records/:recordId
+Content-Type: application/json
+```
+
+Body gửi field cần đổi:
+
+```json
+{
+  "recorded_at": "2026-07-19T09:00:00.000Z",
+  "note": "Cập nhật sau kiểm tra lại",
+  "values": [
+    {
+      "parameter_id": 1,
+      "value": "26"
+    },
+    {
+      "parameter_id": 2,
+      "value": "Đạt"
+    }
+  ]
+}
+```
+
+Lưu ý: nếu gửi `values`, backend sẽ thay thế toàn bộ danh sách value cũ của record bằng danh sách mới.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi validate `values` giống API tạo.
+- `404 Equipment monitoring record not found`
+
+### Xóa lần theo dõi thông số thiết bị
+
+```http
+DELETE /equipment/monitoring-records/:recordId
+```
+
+API xóa mềm bằng `deleted_at`.
+
+Lỗi thường gặp:
+
+- `404 Equipment monitoring record not found`
+
 ## Features
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

@@ -7,14 +7,18 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { CreateEquipmentMonitoringRecordDto } from './dto/create-equipment-monitoring-record.dto';
 import { CreateEquipmentParameterDto } from './dto/create-equipment-parameter.dto';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
+import { UpdateEquipmentMonitoringRecordDto } from './dto/update-equipment-monitoring-record.dto';
 import { UpdateEquipmentParameterDto } from './dto/update-equipment-parameter.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
+import { EquipmentMonitoringRecordsService } from './equipment-monitoring-records.service';
 import { EquipmentParametersService } from './equipment-parameters.service';
 import { EquipmentService } from './equipment.service';
 
@@ -24,11 +28,53 @@ export class EquipmentController {
   constructor(
     private readonly equipmentService: EquipmentService,
     private readonly equipmentParametersService: EquipmentParametersService,
+    private readonly equipmentMonitoringRecordsService: EquipmentMonitoringRecordsService,
   ) {}
 
   @Get()
   async findAll() {
     return this.equipmentService.findAll();
+  }
+
+  @Get('monitoring-records')
+  async findMonitoringRecords(
+    @Query()
+    query: {
+      production_order_id?: string;
+      equipment_id?: string;
+    },
+  ) {
+    return this.equipmentMonitoringRecordsService.findAll(query);
+  }
+
+  @Get('monitoring-records/:recordId')
+  async findMonitoringRecordById(
+    @Param('recordId', ParseIntPipe) recordId: number,
+  ) {
+    return this.equipmentMonitoringRecordsService.findById(recordId);
+  }
+
+  @Post('monitoring-records')
+  async createMonitoringRecord(
+    @Body() createDto: CreateEquipmentMonitoringRecordDto,
+    @Request() req: any,
+  ) {
+    return this.equipmentMonitoringRecordsService.create(createDto, req.user);
+  }
+
+  @Patch('monitoring-records/:recordId')
+  async updateMonitoringRecord(
+    @Param('recordId', ParseIntPipe) recordId: number,
+    @Body() updateDto: UpdateEquipmentMonitoringRecordDto,
+  ) {
+    return this.equipmentMonitoringRecordsService.update(recordId, updateDto);
+  }
+
+  @Delete('monitoring-records/:recordId')
+  async deleteMonitoringRecord(
+    @Param('recordId', ParseIntPipe) recordId: number,
+  ) {
+    return this.equipmentMonitoringRecordsService.delete(recordId);
   }
 
   @Get('parameters/:parameterId')
