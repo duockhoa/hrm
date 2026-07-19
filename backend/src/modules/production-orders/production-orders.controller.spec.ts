@@ -26,6 +26,8 @@ import { ProductionOrderDateChecksService } from './production-order-date-checks
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
+import { ProductionOrderSemiFinishedProductSummariesService } from './production-order-semi-finished-product-summaries.service';
+import { ProductionOrderMaterialSummariesService } from './production-order-material-summaries.service';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 
@@ -195,6 +197,20 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderSemiFinishedNetWeightChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderSemiFinishedProductSummariesService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderMaterialSummariesService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -387,6 +403,20 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderSemiFinishedProductSummariesService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
+    productionOrderMaterialSummariesService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
     productionOrderLeakTightnessChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -500,6 +530,14 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSemiFinishedNetWeightChecksService,
           useValue: productionOrderSemiFinishedNetWeightChecksService,
+        },
+        {
+          provide: ProductionOrderSemiFinishedProductSummariesService,
+          useValue: productionOrderSemiFinishedProductSummariesService,
+        },
+        {
+          provide: ProductionOrderMaterialSummariesService,
+          useValue: productionOrderMaterialSummariesService,
         },
         {
           provide: ProductionOrderLeakTightnessChecksService,

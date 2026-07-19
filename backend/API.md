@@ -3715,6 +3715,168 @@ Lỗi thường gặp:
 
 - `404 Semi-finished product summary not found`
 
+## Production Order Material Summaries
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu bảng tổng kết nguyên vật liệu theo từng lệnh sản xuất. Một lệnh sản xuất có thể có nhiều dòng tổng kết nguyên vật liệu. `material_code` phụ thuộc bảng `items`; khi tạo hoặc đổi `material_code`, backend tự lấy snapshot `material_name` và `unit` từ item tại thời điểm lưu.
+
+### Lấy danh sách theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/material-summaries
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "material_code": "NL00001",
+    "material_name": "Nguyên liệu A",
+    "lot_no": "LOT-001",
+    "unit": "kg",
+    "received_quantity": "100.500",
+    "used_quantity": "90.000",
+    "supplier_waste_quantity": "1.250",
+    "production_waste_quantity": "2.000",
+    "remaining_quantity": "6.000",
+    "sample_quantity": "1.250",
+    "summarized_by_id": 7,
+    "created_by_id": 7,
+    "created_at": "2026-07-19T00:00:00.000Z",
+    "updated_at": "2026-07-19T00:00:00.000Z",
+    "material": {
+      "item_code": "NL00001",
+      "item_name": "Nguyên liệu A",
+      "unit": "kg"
+    },
+    "summarizedBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    },
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi theo ID
+
+```http
+GET /production-orders/material-summaries/:summaryId
+```
+
+Lỗi thường gặp:
+
+- `404 Material summary not found`
+
+### Tạo bản ghi
+
+```http
+POST /production-orders/:id/material-summaries
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "material_code": "NL00001",
+  "lot_no": "LOT-001",
+  "received_quantity": "100.5",
+  "used_quantity": "90",
+  "supplier_waste_quantity": "1.25",
+  "production_waste_quantity": "2",
+  "remaining_quantity": "6",
+  "sample_quantity": "1.25",
+  "summarized_by_id": 7
+}
+```
+
+Quy tắc:
+
+- `material_code` bắt buộc và phải tồn tại trong bảng `items`.
+- `material_name` và `unit` không nhận từ body; backend snapshot từ item theo `material_code`.
+- `lot_no` không bắt buộc, tối đa 100 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- Các field số lượng không bắt buộc: `received_quantity`, `used_quantity`, `supplier_waste_quantity`, `production_waste_quantity`, `remaining_quantity`, `sample_quantity`.
+- Khi có giá trị, các lượng lưu dạng `DECIMAL(12, 3)` và tối đa 3 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `100.5`, `"100.5"` hoặc `"100,5"`.
+- `summarized_by_id` không bắt buộc. Nếu không gửi, backend mặc định là user đăng nhập. Có thể gửi `null` hoặc chuỗi rỗng để lưu `null` khi cập nhật.
+- `production_order_id` lấy từ `:id`.
+- `created_by_id` lấy từ user đăng nhập.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `404 Material item not found`
+- `404 Summarized user not found`
+- `400 material_code is required`
+- `400 lot_no must be a string`
+- `400 lot_no must be at most 100 characters`
+- `400 summarized_by_id must be a positive integer`
+- `400 received_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 used_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 supplier_waste_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 production_waste_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 remaining_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 sample_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi
+
+```http
+PATCH /production-orders/material-summaries/:summaryId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi các field muốn cập nhật:
+
+```json
+{
+  "material_code": "NL00002",
+  "lot_no": "LOT-002",
+  "used_quantity": "88.5",
+  "summarized_by_id": null
+}
+```
+
+Nếu cập nhật `material_code`, backend snapshot lại `material_name` và `unit` theo item mới. Các field số lượng, `lot_no`, `summarized_by_id` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra `material_code`, `lot_no`, số lượng và `summarized_by_id` giống API tạo.
+- `404 Material summary not found`
+
+### Xóa bản ghi
+
+```http
+DELETE /production-orders/material-summaries/:summaryId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Material summary not found`
+
 ## Production Order Leak Tightness Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

@@ -91,6 +91,9 @@ import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-
 import { CreateProductionOrderSemiFinishedProductSummaryDto } from './dto/create-production-order-semi-finished-product-summary.dto';
 import { UpdateProductionOrderSemiFinishedProductSummaryDto } from './dto/update-production-order-semi-finished-product-summary.dto';
 import { ProductionOrderSemiFinishedProductSummariesService } from './production-order-semi-finished-product-summaries.service';
+import { CreateProductionOrderMaterialSummaryDto } from './dto/create-production-order-material-summary.dto';
+import { UpdateProductionOrderMaterialSummaryDto } from './dto/update-production-order-material-summary.dto';
+import { ProductionOrderMaterialSummariesService } from './production-order-material-summaries.service';
 import { CreateProductionOrderLeakTightnessCheckDto } from './dto/create-production-order-leak-tightness-check.dto';
 import { UpdateProductionOrderLeakTightnessCheckDto } from './dto/update-production-order-leak-tightness-check.dto';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
@@ -272,6 +275,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSemiFinishedGrossWeightChecksService: ProductionOrderSemiFinishedGrossWeightChecksService,
     private readonly productionOrderSemiFinishedNetWeightChecksService: ProductionOrderSemiFinishedNetWeightChecksService,
     private readonly productionOrderSemiFinishedProductSummariesService: ProductionOrderSemiFinishedProductSummariesService,
+    private readonly productionOrderMaterialSummariesService: ProductionOrderMaterialSummariesService,
     private readonly productionOrderLeakTightnessChecksService: ProductionOrderLeakTightnessChecksService,
     private readonly productionOrderFactoryReleaseReviewsService: ProductionOrderFactoryReleaseReviewsService,
   ) {}
@@ -725,6 +729,31 @@ export class ProductionOrdersController {
     return this.productionOrderSemiFinishedProductSummariesService.delete(
       summaryId,
     );
+  }
+
+  @Get('material-summaries/:summaryId')
+  async findMaterialSummaryById(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderMaterialSummariesService.findById(summaryId);
+  }
+
+  @Patch('material-summaries/:summaryId')
+  async updateMaterialSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Body() updateDto: UpdateProductionOrderMaterialSummaryDto,
+  ) {
+    return this.productionOrderMaterialSummariesService.update(
+      summaryId,
+      updateDto,
+    );
+  }
+
+  @Delete('material-summaries/:summaryId')
+  async deleteMaterialSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderMaterialSummariesService.delete(summaryId);
   }
 
   @Patch('semi-finished-net-weight-checks/:checkId')
@@ -1564,6 +1593,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderSemiFinishedProductSummariesService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/material-summaries')
+  async findMaterialSummaries(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderMaterialSummariesService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/material-summaries')
+  async createMaterialSummary(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderMaterialSummaryDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderMaterialSummariesService.create(
       id,
       createDto,
       req.user,
