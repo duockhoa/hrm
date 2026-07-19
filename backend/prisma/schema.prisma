@@ -468,9 +468,13 @@ model ProductionSpecifications {
   productLine                                   ProductLines? @relation(fields: [product_line_id], references: [id], onDelete: SetNull)
   dosage_form                                   String?
   lower_control_limit                           Decimal?      @db.Decimal(18, 6)
+  lower_control_limit_operator                  String?       @db.VarChar(2)
   upper_control_limit                           Decimal?      @db.Decimal(18, 6)
+  upper_control_limit_operator                  String?       @db.VarChar(2)
   lower_allowed_limit                           Decimal?      @db.Decimal(18, 6)
+  lower_allowed_limit_operator                  String?       @db.VarChar(2)
   upper_allowed_limit                           Decimal?      @db.Decimal(18, 6)
+  upper_allowed_limit_operator                  String?       @db.VarChar(2)
   unit                                          String?
   spray_dose_lower_allowed_limit                Decimal?      @db.Decimal(18, 6)
   spray_dose_upper_allowed_limit                Decimal?      @db.Decimal(18, 6)

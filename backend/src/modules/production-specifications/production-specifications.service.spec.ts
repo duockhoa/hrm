@@ -92,9 +92,13 @@ describe('ProductionSpecificationsService', () => {
         product_line_id: 2,
         dosage_form: null,
         lower_control_limit: null,
+        lower_control_limit_operator: null,
         upper_control_limit: null,
+        upper_control_limit_operator: null,
         lower_allowed_limit: null,
+        lower_allowed_limit_operator: null,
         upper_allowed_limit: null,
+        upper_allowed_limit_operator: null,
         unit: null,
         spray_dose_lower_allowed_limit: null,
         spray_dose_upper_allowed_limit: null,
@@ -215,6 +219,55 @@ describe('ProductionSpecificationsService', () => {
           film_coated_tablet_weight_unit: 'mg',
         }),
       }),
+    );
+  });
+
+  it('updates specification limit operators', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00005' });
+    prismaService.productionSpecifications.findUnique.mockResolvedValue({
+      item_code: 'TP00005',
+      deleted_at: null,
+    });
+    prismaService.productionSpecifications.update.mockResolvedValue({
+      item_code: 'TP00005',
+      lower_control_limit_operator: '>=',
+      upper_control_limit_operator: '<=',
+      lower_allowed_limit_operator: '>',
+      upper_allowed_limit_operator: '<',
+    });
+
+    await service.update('TP00005', {
+      lower_control_limit_operator: ' >= ',
+      upper_control_limit_operator: '<=',
+      lower_allowed_limit_operator: '>',
+      upper_allowed_limit_operator: '<',
+    });
+
+    expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          lower_control_limit_operator: '>=',
+          upper_control_limit_operator: '<=',
+          lower_allowed_limit_operator: '>',
+          upper_allowed_limit_operator: '<',
+        }),
+      }),
+    );
+  });
+
+  it('rejects invalid specification limit operators', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00006' });
+    prismaService.productionSpecifications.findUnique.mockResolvedValue({
+      item_code: 'TP00006',
+      deleted_at: null,
+    });
+
+    await expect(
+      service.update('TP00006', {
+        lower_control_limit_operator: '!=',
+      }),
+    ).rejects.toThrow(
+      'lower_control_limit_operator must be one of <, <=, >, >=',
     );
   });
 });

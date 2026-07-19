@@ -11,6 +11,7 @@ import { UpdateProductionSpecificationDto } from './dto/update-production-specif
 
 const DECIMAL_PATTERN = /^-?\d+(?:\.\d{1,6})?$/;
 const DECIMAL_INTEGER_DIGITS = 12;
+const LIMIT_COMPARISON_OPERATORS = new Set(['<', '<=', '>', '>=']);
 
 @Injectable()
 export class ProductionSpecificationsService {
@@ -208,17 +209,33 @@ export class ProductionSpecificationsService {
         dto.lower_control_limit,
         'lower_control_limit',
       ),
+      lower_control_limit_operator: this.normalizeOptionalLimitOperator(
+        dto.lower_control_limit_operator,
+        'lower_control_limit_operator',
+      ),
       upper_control_limit: this.normalizeOptionalDecimal(
         dto.upper_control_limit,
         'upper_control_limit',
+      ),
+      upper_control_limit_operator: this.normalizeOptionalLimitOperator(
+        dto.upper_control_limit_operator,
+        'upper_control_limit_operator',
       ),
       lower_allowed_limit: this.normalizeOptionalDecimal(
         dto.lower_allowed_limit,
         'lower_allowed_limit',
       ),
+      lower_allowed_limit_operator: this.normalizeOptionalLimitOperator(
+        dto.lower_allowed_limit_operator,
+        'lower_allowed_limit_operator',
+      ),
       upper_allowed_limit: this.normalizeOptionalDecimal(
         dto.upper_allowed_limit,
         'upper_allowed_limit',
+      ),
+      upper_allowed_limit_operator: this.normalizeOptionalLimitOperator(
+        dto.upper_allowed_limit_operator,
+        'upper_allowed_limit_operator',
       ),
       unit: this.normalizeOptionalString(dto.unit, 'unit'),
       spray_dose_lower_allowed_limit: this.normalizeOptionalDecimal(
@@ -285,10 +302,24 @@ export class ProductionSpecificationsService {
       );
     }
 
+    if (dto.lower_control_limit_operator !== undefined) {
+      data.lower_control_limit_operator = this.normalizeOptionalLimitOperator(
+        dto.lower_control_limit_operator,
+        'lower_control_limit_operator',
+      );
+    }
+
     if (dto.upper_control_limit !== undefined) {
       data.upper_control_limit = this.normalizeOptionalDecimal(
         dto.upper_control_limit,
         'upper_control_limit',
+      );
+    }
+
+    if (dto.upper_control_limit_operator !== undefined) {
+      data.upper_control_limit_operator = this.normalizeOptionalLimitOperator(
+        dto.upper_control_limit_operator,
+        'upper_control_limit_operator',
       );
     }
 
@@ -299,10 +330,24 @@ export class ProductionSpecificationsService {
       );
     }
 
+    if (dto.lower_allowed_limit_operator !== undefined) {
+      data.lower_allowed_limit_operator = this.normalizeOptionalLimitOperator(
+        dto.lower_allowed_limit_operator,
+        'lower_allowed_limit_operator',
+      );
+    }
+
     if (dto.upper_allowed_limit !== undefined) {
       data.upper_allowed_limit = this.normalizeOptionalDecimal(
         dto.upper_allowed_limit,
         'upper_allowed_limit',
+      );
+    }
+
+    if (dto.upper_allowed_limit_operator !== undefined) {
+      data.upper_allowed_limit_operator = this.normalizeOptionalLimitOperator(
+        dto.upper_allowed_limit_operator,
+        'upper_allowed_limit_operator',
       );
     }
 
@@ -541,5 +586,27 @@ export class ProductionSpecificationsService {
     }
 
     return new Prisma.Decimal(normalizedValue);
+  }
+
+  private normalizeOptionalLimitOperator(value: unknown, fieldName: string) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be a string`);
+    }
+
+    const normalizedValue = value.trim();
+
+    if (normalizedValue === '') {
+      return null;
+    }
+
+    if (!LIMIT_COMPARISON_OPERATORS.has(normalizedValue)) {
+      throw new BadRequestException(`${fieldName} must be one of <, <=, >, >=`);
+    }
+
+    return normalizedValue;
   }
 }

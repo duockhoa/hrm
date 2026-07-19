@@ -4,9 +4,13 @@ export class UpdateProductionSpecificationDto {
   product_line?: string | null;
   dosage_form?: string | null;
   lower_control_limit?: string | number | null;
+  lower_control_limit_operator?: string | null;
   upper_control_limit?: string | number | null;
+  upper_control_limit_operator?: string | null;
   lower_allowed_limit?: string | number | null;
+  lower_allowed_limit_operator?: string | null;
   upper_allowed_limit?: string | number | null;
+  upper_allowed_limit_operator?: string | null;
   unit?: string | null;
   spray_dose_lower_allowed_limit?: string | number | null;
   spray_dose_upper_allowed_limit?: string | number | null;
