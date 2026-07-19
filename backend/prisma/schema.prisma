@@ -62,6 +62,7 @@ model Users {
   approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                @relation("ProductionOrderFactoryReleaseReviewApprover")
   createdEquipment                                      Equipment[]                                           @relation("EquipmentCreator")
   createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
+  createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -241,6 +242,7 @@ model Items {
   registration_id         Int?
   registration            RegistrationNumbers?      @relation(fields: [registration_id], references: [id])
   itemFeatures            ItemFeatures[]
+  itemEquipment           ItemEquipment[]
   productionOrders        ProductionOrders[]
   productionSpecification ProductionSpecifications?
   created_at              DateTime                  @default(now())
@@ -298,6 +300,7 @@ model Equipment {
   created_by_id Int
   createdBy     Users                 @relation("EquipmentCreator", fields: [created_by_id], references: [id], map: "equipment_created_by_id_fkey")
   parameters    EquipmentParameters[]
+  itemEquipment ItemEquipment[]
   created_at    DateTime              @default(now())
   updated_at    DateTime              @default(now()) @updatedAt
 
@@ -323,6 +326,24 @@ model EquipmentParameters {
   @@index([equipment_id], map: "equipment_parameters_equipment_id_idx")
   @@index([created_by_id], map: "equipment_parameters_created_by_id_idx")
   @@map("equipment_parameters")
+}
+
+model ItemEquipment {
+  id            Int       @id @default(autoincrement())
+  item_code     String
+  item          Items     @relation(fields: [item_code], references: [item_code], onDelete: Cascade, map: "item_equipment_item_code_fkey")
+  equipment_id  Int
+  equipment     Equipment @relation(fields: [equipment_id], references: [id], onDelete: Cascade, map: "item_equipment_equipment_id_fkey")
+  created_by_id Int
+  createdBy     Users     @relation("ItemEquipmentCreator", fields: [created_by_id], references: [id], map: "item_equipment_created_by_id_fkey")
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now()) @updatedAt
+
+  @@unique([item_code, equipment_id], map: "item_equipment_item_equipment_key")
+  @@index([item_code], map: "item_equipment_item_code_idx")
+  @@index([equipment_id], map: "item_equipment_equipment_id_idx")
+  @@index([created_by_id], map: "item_equipment_created_by_id_idx")
+  @@map("item_equipment")
 }
 
 model ProductionWorkshops {

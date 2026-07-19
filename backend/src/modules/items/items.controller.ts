@@ -1,4 +1,16 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
+import { ItemEquipmentService } from './item-equipment.service';
 import { ItemsService } from './items.service';
 
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -6,7 +18,11 @@ import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 @UseGuards(jwtAuthGuard)
 @Controller('items')
 export class ItemsController {
-  constructor(private readonly itemsService: ItemsService) {}
+  constructor(
+    private readonly itemsService: ItemsService,
+    private readonly itemEquipmentService: ItemEquipmentService,
+  ) {}
+
   @Get()
   async findAll() {
     return this.itemsService.findAll();
@@ -25,6 +41,34 @@ export class ItemsController {
   @Get('raw-materials')
   async findRawMaterials() {
     return this.itemsService.findRawMaterials();
+  }
+
+  @Get('equipment/:itemEquipmentId')
+  async findItemEquipmentById(
+    @Param('itemEquipmentId', ParseIntPipe) itemEquipmentId: number,
+  ) {
+    return this.itemEquipmentService.findById(itemEquipmentId);
+  }
+
+  @Delete('equipment/:itemEquipmentId')
+  async deleteItemEquipment(
+    @Param('itemEquipmentId', ParseIntPipe) itemEquipmentId: number,
+  ) {
+    return this.itemEquipmentService.delete(itemEquipmentId);
+  }
+
+  @Get(':item_code/equipment')
+  async findItemEquipment(@Param('item_code') itemCode: string) {
+    return this.itemEquipmentService.findAllByItem(itemCode);
+  }
+
+  @Post(':item_code/equipment')
+  async createItemEquipment(
+    @Param('item_code') itemCode: string,
+    @Body() createDto: CreateItemEquipmentDto,
+    @Request() req: any,
+  ) {
+    return this.itemEquipmentService.create(itemCode, createDto, req.user);
   }
 
   @Get(':item_code')

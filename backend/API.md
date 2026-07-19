@@ -652,6 +652,118 @@ GET /items/TP00001
 
 Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`.
 
+## Item Equipment
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu danh sách thiết bị được dùng cho từng item. Một item có thể dùng nhiều thiết bị; một thiết bị có thể dùng cho nhiều item. Backend lấy `created_by_id` từ user đăng nhập. Không lưu `note`.
+
+### Lấy danh sách thiết bị của item
+
+```http
+GET /items/:item_code/equipment
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "item_code": "TP00001",
+    "equipment_id": 2,
+    "created_by_id": 7,
+    "created_at": "2026-07-19T00:00:00.000Z",
+    "updated_at": "2026-07-19T00:00:00.000Z",
+    "equipment": {
+      "id": 2,
+      "code": "TB-001",
+      "name": "Cân phân tích",
+      "created_by_id": 7,
+      "created_at": "2026-07-19T00:00:00.000Z",
+      "updated_at": "2026-07-19T00:00:00.000Z",
+      "parameters": [
+        {
+          "id": 1,
+          "equipment_id": 2,
+          "name": "Sai số cho phép",
+          "data_type": "number",
+          "unit": "g",
+          "is_required": true,
+          "created_by_id": 7,
+          "created_at": "2026-07-19T00:00:00.000Z",
+          "updated_at": "2026-07-19T00:00:00.000Z"
+        }
+      ]
+    },
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Item not found`
+
+### Lấy một liên kết item-thiết bị theo ID
+
+```http
+GET /items/equipment/:itemEquipmentId
+```
+
+Lỗi thường gặp:
+
+- `404 Item equipment not found`
+
+### Thêm thiết bị cho item
+
+```http
+POST /items/:item_code/equipment
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "equipment_id": 2
+}
+```
+
+Quy tắc:
+
+- `equipment_id` bắt buộc và phải là thiết bị đang tồn tại.
+- Một item không được thêm trùng cùng một thiết bị.
+- `created_by_id` lấy từ user đăng nhập.
+
+Lỗi thường gặp:
+
+- `400 item_code is required`
+- `400 equipment_id is required`
+- `401 Authenticated user not found`
+- `404 Item not found`
+- `404 Equipment not found`
+- `409 Item equipment already exists`
+
+### Xóa liên kết item-thiết bị
+
+```http
+DELETE /items/equipment/:itemEquipmentId
+```
+
+API trả về liên kết item-thiết bị vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Item equipment not found`
+
 ## Equipment
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
