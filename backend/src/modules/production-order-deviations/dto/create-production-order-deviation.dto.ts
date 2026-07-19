@@ -4,6 +4,11 @@ export class CreateProductionOrderDeviationDto {
   deviation_images?: string | string[] | null;
   deviation_image?: string | null;
   handling_plan!: string;
+  handling_result?: string | null;
+  cause?: string | null;
+  cause_classification?: string | null;
+  affected_quantity?: number | string | null;
+  affected_quantity_unit?: string | null;
   approver_id?: number | string | null;
   reporter_id!: number | string;
 }

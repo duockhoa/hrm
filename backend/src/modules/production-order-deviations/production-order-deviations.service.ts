@@ -47,6 +47,9 @@ const productionOrderDeviationInclude = {
   },
 } satisfies Prisma.ProductionOrderDeviationsInclude;
 
+const AFFECTED_QUANTITY_DECIMAL_PATTERN = /^\d+(?:\.\d{1,3})?$/;
+const AFFECTED_QUANTITY_INTEGER_DIGITS = 9;
+
 @Injectable()
 export class ProductionOrderDeviationsService {
   constructor(private readonly prismaService: PrismaService) {}
@@ -332,6 +335,23 @@ export class ProductionOrderDeviationsService {
           dto.handling_plan,
           'handling_plan',
         ),
+        handling_result: this.normalizeOptionalString(
+          dto.handling_result,
+          'handling_result',
+        ),
+        cause: this.normalizeOptionalString(dto.cause, 'cause'),
+        cause_classification: this.normalizeOptionalString(
+          dto.cause_classification,
+          'cause_classification',
+        ),
+        affected_quantity: this.normalizeOptionalAffectedQuantity(
+          dto.affected_quantity,
+          'affected_quantity',
+        ),
+        affected_quantity_unit: this.normalizeOptionalString(
+          dto.affected_quantity_unit,
+          'affected_quantity_unit',
+        ),
         approver_id: this.normalizeOptionalInt(dto.approver_id, 'approver_id'),
         reporter_id: this.normalizeRequiredInt(dto.reporter_id, 'reporter_id'),
       },
@@ -373,6 +393,38 @@ export class ProductionOrderDeviationsService {
       data.handling_plan = this.normalizeRequiredString(
         dto.handling_plan,
         'handling_plan',
+      );
+    }
+
+    if (dto.handling_result !== undefined) {
+      data.handling_result = this.normalizeOptionalString(
+        dto.handling_result,
+        'handling_result',
+      );
+    }
+
+    if (dto.cause !== undefined) {
+      data.cause = this.normalizeOptionalString(dto.cause, 'cause');
+    }
+
+    if (dto.cause_classification !== undefined) {
+      data.cause_classification = this.normalizeOptionalString(
+        dto.cause_classification,
+        'cause_classification',
+      );
+    }
+
+    if (dto.affected_quantity !== undefined) {
+      data.affected_quantity = this.normalizeOptionalAffectedQuantity(
+        dto.affected_quantity,
+        'affected_quantity',
+      );
+    }
+
+    if (dto.affected_quantity_unit !== undefined) {
+      data.affected_quantity_unit = this.normalizeOptionalString(
+        dto.affected_quantity_unit,
+        'affected_quantity_unit',
       );
     }
 
@@ -420,6 +472,37 @@ export class ProductionOrderDeviationsService {
     const normalizedValue = value.trim();
 
     return normalizedValue === '' ? null : normalizedValue;
+  }
+
+  private normalizeOptionalAffectedQuantity(value: unknown, fieldName: string) {
+    if (
+      value === null ||
+      value === undefined ||
+      (typeof value === 'string' && value.trim() === '')
+    ) {
+      return null;
+    }
+
+    const normalizedValue =
+      typeof value === 'number'
+        ? String(value)
+        : typeof value === 'string'
+          ? value.trim().replace(',', '.')
+          : '';
+
+    if (!AFFECTED_QUANTITY_DECIMAL_PATTERN.test(normalizedValue)) {
+      throw new BadRequestException(
+        `${fieldName} must fit DECIMAL(12, 3) with up to 3 decimal places`,
+      );
+    }
+
+    const [integerPart] = normalizedValue.split('.');
+
+    if (integerPart.length > AFFECTED_QUANTITY_INTEGER_DIGITS) {
+      throw new BadRequestException(`${fieldName} must fit DECIMAL(12, 3)`);
+    }
+
+    return new Prisma.Decimal(normalizedValue);
   }
 
   private normalizeDeviationImages(value: unknown) {

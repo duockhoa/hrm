@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ProductionOrderDeviationsService } from './production-order-deviations.service';
 
@@ -77,6 +78,11 @@ describe('ProductionOrderDeviationsService', () => {
         },
       ],
       handling_plan: 'Kiem tra lai cong doan',
+      handling_result: 'Da cach ly lo anh huong',
+      cause: 'Sai thong so may',
+      cause_classification: 'Thiet bi',
+      affected_quantity: new Prisma.Decimal('12.5'),
+      affected_quantity_unit: 'kg',
       approver_id: null,
       reporter_id: 7,
     };
@@ -100,6 +106,11 @@ describe('ProductionOrderDeviationsService', () => {
           '/production-order-deviations/images/image-2.jpg',
         ],
         handling_plan: '  Kiem tra lai cong doan  ',
+        handling_result: '  Da cach ly lo anh huong  ',
+        cause: '  Sai thong so may  ',
+        cause_classification: '  Thiet bi  ',
+        affected_quantity: '12,5',
+        affected_quantity_unit: '  kg  ',
         reporter_id: '7',
       }),
     ).resolves.toEqual({
@@ -117,6 +128,11 @@ describe('ProductionOrderDeviationsService', () => {
           production_order_id: 2031,
           deviation_content: 'Sai lech khoi luong',
           handling_plan: 'Kiem tra lai cong doan',
+          handling_result: 'Da cach ly lo anh huong',
+          cause: 'Sai thong so may',
+          cause_classification: 'Thiet bi',
+          affected_quantity: new Prisma.Decimal('12.5'),
+          affected_quantity_unit: 'kg',
           approver_id: null,
           reporter_id: 7,
         },
