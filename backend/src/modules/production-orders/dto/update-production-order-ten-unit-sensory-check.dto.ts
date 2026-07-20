@@ -1,5 +1,6 @@
 export class UpdateProductionOrderTenUnitSensoryCheckDto {
   requirement?: string | null;
+  dosage_form_stage?: string | null;
   unit_1_result?: boolean | number | string | null;
   unit_2_result?: boolean | number | string | null;
   unit_3_result?: boolean | number | string | null;

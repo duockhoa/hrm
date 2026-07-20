@@ -26,6 +26,8 @@ const OPTIONAL_RESULT_FIELDS = [
   'unit_10_result',
 ] as const;
 
+const MAX_DOSAGE_FORM_STAGE_LENGTH = 50;
+
 const PASS_RESULT_TRUE_VALUES = new Set([
   'true',
   '1',
@@ -99,6 +101,9 @@ export class ProductionOrderTenUnitSensoryChecksService {
         requirement: this.normalizeOptionalText(
           dto?.requirement,
           'requirement',
+        ),
+        dosage_form_stage: this.normalizeOptionalDosageFormStage(
+          dto?.dosage_form_stage,
         ),
         unit_1_result: this.normalizeRequiredResult(
           dto?.unit_1_result,
@@ -181,6 +186,12 @@ export class ProductionOrderTenUnitSensoryChecksService {
       );
     }
 
+    if ('dosage_form_stage' in updateDto) {
+      data.dosage_form_stage = this.normalizeOptionalDosageFormStage(
+        updateDto.dosage_form_stage,
+      );
+    }
+
     for (const field of REQUIRED_RESULT_FIELDS) {
       if (field in updateDto) {
         data[field] = this.normalizeRequiredResult(updateDto[field], field);
@@ -210,6 +221,30 @@ export class ProductionOrderTenUnitSensoryChecksService {
     }
 
     return value.trim() || null;
+  }
+
+  private normalizeOptionalDosageFormStage(value: unknown) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('dosage_form_stage must be a string');
+    }
+
+    const dosageFormStage = value.trim();
+
+    if (!dosageFormStage) {
+      return null;
+    }
+
+    if (dosageFormStage.length > MAX_DOSAGE_FORM_STAGE_LENGTH) {
+      throw new BadRequestException(
+        `dosage_form_stage must be at most ${MAX_DOSAGE_FORM_STAGE_LENGTH} characters`,
+      );
+    }
+
+    return dosageFormStage;
   }
 
   private normalizeRequiredResult(value: unknown, fieldName: string) {

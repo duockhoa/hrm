@@ -4385,10 +4385,11 @@ Response mẫu:
 ```json
 [
   {
-    "id": 1,
-    "production_order_id": 2031,
-    "requirement": "Đạt yêu cầu cảm quan",
-    "unit_1_result": true,
+	    "id": 1,
+	    "production_order_id": 2031,
+	    "requirement": "Đạt yêu cầu cảm quan",
+	    "dosage_form_stage": "film_coated_tablet",
+	    "unit_1_result": true,
     "unit_2_result": true,
     "unit_3_result": false,
     "unit_4_result": null,
@@ -4427,6 +4428,7 @@ Body:
 ```json
 {
   "requirement": "Đạt yêu cầu cảm quan",
+  "dosage_form_stage": "film_coated_tablet",
   "unit_1_result": "Đạt",
   "unit_2_result": "Đạt",
   "unit_3_result": "Không đạt"
@@ -4436,6 +4438,7 @@ Body:
 Quy tắc:
 
 - `requirement` không bắt buộc. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`.
+- `dosage_form_stage` không bắt buộc, tối đa 50 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`. Giá trị gợi ý: `tablet`, `capsule`, `film_coated_tablet`.
 - `unit_1_result` bắt buộc.
 - `unit_2_result` đến `unit_10_result` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
 - Các field `unit_*_result` khi có giá trị có thể gửi boolean, `1`/`0`, hoặc chuỗi như `Đạt`, `Không đạt`, `dat`, `khong dat`, `pass`, `fail`.
@@ -4445,6 +4448,8 @@ Quy tắc:
 Lỗi thường gặp:
 
 - `404 Production order not found`
+- `400 dosage_form_stage must be a string`
+- `400 dosage_form_stage must be at most 50 characters`
 - `400 unit_1_result is required`
 - `400 unit_3_result must be a boolean or pass/fail value`
 - `401 Authenticated user not found`
@@ -4460,19 +4465,22 @@ Body chỉ cần gửi field muốn cập nhật:
 
 ```json
 {
+  "dosage_form_stage": "tablet",
   "unit_2_result": null
 }
 ```
 
 Quy tắc:
 
-- Có thể cập nhật `requirement` và `unit_1_result` đến `unit_10_result`.
-- `unit_2_result` đến `unit_10_result` và `requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- Có thể cập nhật `requirement`, `dosage_form_stage` và `unit_1_result` đến `unit_10_result`.
+- `unit_2_result` đến `unit_10_result`, `requirement` và `dosage_form_stage` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 - `unit_1_result` không được xóa vì là giá trị bắt buộc.
 
 Lỗi thường gặp:
 
 - `400 At least one field is required`
+- `400 dosage_form_stage must be a string`
+- `400 dosage_form_stage must be at most 50 characters`
 - `400 unit_1_result is required`
 - `400 unit_3_result must be a boolean or pass/fail value`
 - `404 Ten-unit sensory check not found`
