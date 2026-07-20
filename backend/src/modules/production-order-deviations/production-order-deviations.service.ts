@@ -331,7 +331,7 @@ export class ProductionOrderDeviationsService {
           dto.deviation_content,
           'deviation_content',
         ),
-        handling_plan: this.normalizeRequiredString(
+        handling_plan: this.normalizeOptionalString(
           dto.handling_plan,
           'handling_plan',
         ),
@@ -406,7 +406,7 @@ export class ProductionOrderDeviationsService {
     }
 
     if (dto.handling_plan !== undefined) {
-      data.handling_plan = this.normalizeRequiredString(
+      data.handling_plan = this.normalizeOptionalString(
         dto.handling_plan,
         'handling_plan',
       );

@@ -3,7 +3,7 @@ export class CreateProductionOrderDeviationDto {
   deviation_content!: string;
   deviation_images?: string | string[] | null;
   deviation_image?: string | null;
-  handling_plan!: string;
+  handling_plan?: string | null;
   handling_result?: string | null;
   cause?: string | null;
   cause_classification?: string | null;

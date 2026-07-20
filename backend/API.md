@@ -5013,7 +5013,7 @@ Ghi chú upload:
 - Tối đa 10 ảnh.
 - File hợp lệ: JPG, PNG, WEBP, GIF.
 - Dung lượng tối đa mỗi file: 5 MB.
-- `handling_result`, `cause`, `cause_classification`, `affected_quantity`, `affected_quantity_unit`, `handled_quantity`, `handled_quantity_unit`, `destroyed_quantity`, `destroyed_quantity_unit` không bắt buộc.
+- `handling_plan`, `handling_result`, `cause`, `cause_classification`, `affected_quantity`, `affected_quantity_unit`, `handled_quantity`, `handled_quantity_unit`, `destroyed_quantity`, `destroyed_quantity_unit` không bắt buộc.
 - `affected_quantity`, `handled_quantity`, `destroyed_quantity` nhận số hoặc chuỗi số, hỗ trợ dấu phẩy thập phân, tối đa 3 chữ số sau dấu thập phân.
 
 ### Cập nhật sai lệch

@@ -166,6 +166,47 @@ describe('ProductionOrderDeviationsService', () => {
     });
   });
 
+  it('creates a production order deviation without handling plan', async () => {
+    const createdDeviation = {
+      id: 1,
+      production_order_id: 2031,
+      deviation_content: 'Sai lech khoi luong',
+      handling_plan: null,
+      reporter_id: 7,
+      images: [],
+    };
+
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.users.findFirst.mockResolvedValue({ id: 7 });
+    prismaService.productionOrderDeviations.create.mockResolvedValue({
+      id: 1,
+      production_order_id: 2031,
+    });
+    prismaService.productionOrderDeviations.findFirst.mockResolvedValue(
+      createdDeviation,
+    );
+
+    await expect(
+      service.create({
+        production_order_id: 2031,
+        deviation_content: 'Sai lech khoi luong',
+        reporter_id: 7,
+      }),
+    ).resolves.toEqual({
+      ...createdDeviation,
+      deviation_images: [],
+      deviation_image: null,
+    });
+
+    expect(prismaService.productionOrderDeviations.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          handling_plan: null,
+        }),
+      }),
+    );
+  });
+
   it('rejects empty updates', async () => {
     prismaService.productionOrderDeviations.findFirst.mockResolvedValue({
       id: 1,

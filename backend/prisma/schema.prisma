@@ -540,7 +540,7 @@ model ProductionOrderDeviations {
   production_order_id     Int
   productionOrder         ProductionOrders                 @relation(fields: [production_order_id], references: [id], onDelete: Cascade)
   deviation_content       String                           @db.Text
-  handling_plan           String                           @db.Text
+  handling_plan           String?                          @db.Text
   handling_result         String?                          @db.Text
   cause                   String?                          @db.Text
   cause_classification    String?
