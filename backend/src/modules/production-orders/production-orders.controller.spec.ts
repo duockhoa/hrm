@@ -137,11 +137,14 @@ describe('ProductionOrdersController', () => {
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderTenShellWeightChecksService: {
     findById: jest.Mock;
     findByProductionOrder: jest.Mock;
     upsert: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderVialInspectionChecksService: {
     findById: jest.Mock;
@@ -339,11 +342,14 @@ describe('ProductionOrdersController', () => {
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderTenShellWeightChecksService = {
       findById: jest.fn(),
       findByProductionOrder: jest.fn(),
       upsert: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderVialInspectionChecksService = {
       findById: jest.fn(),
@@ -1488,6 +1494,16 @@ describe('ProductionOrdersController', () => {
     );
   });
 
+  it('deletes a shell weight check', async () => {
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderShellWeightChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteShellWeightCheck(1)).resolves.toBe(result);
+    expect(productionOrderShellWeightChecksService.delete).toHaveBeenCalledWith(
+      1,
+    );
+  });
+
   it('gets a ten-shell weight check for a production order', async () => {
     const check = { id: 1, production_order_id: 2031 };
     productionOrderTenShellWeightChecksService.findByProductionOrder.mockResolvedValue(
@@ -1528,6 +1544,31 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderTenShellWeightChecksService.upsert,
     ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a ten-shell weight check', async () => {
+    const updateDto = {
+      ten_shells_weight: 510.25,
+    };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderTenShellWeightChecksService.update.mockResolvedValue(result);
+
+    await expect(
+      controller.updateTenShellWeightCheck(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderTenShellWeightChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a ten-shell weight check', async () => {
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderTenShellWeightChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteTenShellWeightCheck(1)).resolves.toBe(result);
+    expect(
+      productionOrderTenShellWeightChecksService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets semi-finished gross weight checks for a production order', async () => {

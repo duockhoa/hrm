@@ -17,6 +17,7 @@ describe('ProductionOrderShellWeightChecksService', () => {
       findMany: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+      delete: jest.Mock;
     };
   };
 
@@ -41,6 +42,7 @@ describe('ProductionOrderShellWeightChecksService', () => {
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -211,5 +213,34 @@ describe('ProductionOrderShellWeightChecksService', () => {
     await expect(
       service.update(1, { shell_1_weight: 50 }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deletes an existing shell weight check', async () => {
+    const deletedCheck = { id: 1 };
+    prismaService.productionOrderShellWeightChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+      },
+    );
+    prismaService.productionOrderShellWeightChecks.delete.mockResolvedValue(
+      deletedCheck,
+    );
+
+    await expect(service.delete(1)).resolves.toBe(deletedCheck);
+    expect(
+      prismaService.productionOrderShellWeightChecks.delete,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+      }),
+    );
+  });
+
+  it('throws NotFoundException when deleting a missing shell weight check', async () => {
+    prismaService.productionOrderShellWeightChecks.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(service.delete(1)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

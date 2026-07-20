@@ -127,6 +127,15 @@ export class ProductionOrderShellWeightChecksService {
     });
   }
 
+  async delete(checkId: number) {
+    await this.findById(checkId);
+
+    return this.prismaService.productionOrderShellWeightChecks.delete({
+      where: { id: checkId },
+      include: shellWeightCheckInclude,
+    });
+  }
+
   private normalizeUpdateData(dto: UpdateProductionOrderShellWeightCheckDto) {
     const updateDto = dto ?? {};
     const data: Prisma.ProductionOrderShellWeightChecksUpdateInput = {};

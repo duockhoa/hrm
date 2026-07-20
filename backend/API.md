@@ -3376,6 +3376,19 @@ Lỗi thường gặp:
 - `400 shell_1_weight must be greater than 0`
 - `404 Shell weight check not found`
 
+### Xoá kiểm tra khối lượng 10 vỏ
+
+```http
+DELETE /production-orders/shell-weight-checks/:checkId
+Authorization: Bearer <access_token>
+```
+
+Response trả về bản ghi vừa xoá.
+
+Lỗi thường gặp:
+
+- `404 Shell weight check not found`
+
 ## Production Order Ten-Shell Weight Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
@@ -3454,6 +3467,50 @@ Lỗi thường gặp:
 - `400 ten_shells_weight must fit DECIMAL(10, 2) with up to 2 decimal places`
 - `400 ten_shells_weight must be greater than 0`
 - `401 Authenticated user not found`
+
+### Cập nhật khối lượng chung 10 vỏ nang theo ID
+
+```http
+PATCH /production-orders/ten-shell-weight-checks/:checkId
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "ten_shells_weight": 510.25
+}
+```
+
+Quy tắc:
+
+- `ten_shells_weight` bắt buộc khi cập nhật và phải lớn hơn `0`.
+- `ten_shells_weight` lưu dạng `DECIMAL(10, 2)`, tối đa 2 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `510.25`, `"510.25"` hoặc `"510,25"`.
+- `unit` luôn là `mg`, do backend tự lưu; frontend không gửi field này.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 ten_shells_weight is required`
+- `400 ten_shells_weight must fit DECIMAL(10, 2) with up to 2 decimal places`
+- `400 ten_shells_weight must be greater than 0`
+- `404 Ten-shell weight check not found`
+
+### Xoá khối lượng chung 10 vỏ nang
+
+```http
+DELETE /production-orders/ten-shell-weight-checks/:checkId
+Authorization: Bearer <access_token>
+```
+
+Response trả về bản ghi vừa xoá.
+
+Lỗi thường gặp:
+
+- `404 Ten-shell weight check not found`
 
 ## Production Order Semi-Finished Gross Weight Checks
 

@@ -63,6 +63,7 @@ import { CreateProductionOrderShellWeightCheckDto } from './dto/create-productio
 import { UpdateProductionOrderShellWeightCheckDto } from './dto/update-production-order-shell-weight-check.dto';
 import { ProductionOrderShellWeightChecksService } from './production-order-shell-weight-checks.service';
 import { CreateProductionOrderTenShellWeightCheckDto } from './dto/create-production-order-ten-shell-weight-check.dto';
+import { UpdateProductionOrderTenShellWeightCheckDto } from './dto/update-production-order-ten-shell-weight-check.dto';
 import { ProductionOrderTenShellWeightChecksService } from './production-order-ten-shell-weight-checks.service';
 import { CreateProductionOrderVialInspectionCheckDto } from './dto/create-production-order-vial-inspection-check.dto';
 import { UpdateProductionOrderVialInspectionCheckDto } from './dto/update-production-order-vial-inspection-check.dto';
@@ -676,11 +677,36 @@ export class ProductionOrdersController {
     );
   }
 
+  @Delete('shell-weight-checks/:checkId')
+  async deleteShellWeightCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderShellWeightChecksService.delete(checkId);
+  }
+
   @Get('ten-shell-weight-checks/:checkId')
   async findTenShellWeightCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderTenShellWeightChecksService.findById(checkId);
+  }
+
+  @Patch('ten-shell-weight-checks/:checkId')
+  async updateTenShellWeightCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderTenShellWeightCheckDto,
+  ) {
+    return this.productionOrderTenShellWeightChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('ten-shell-weight-checks/:checkId')
+  async deleteTenShellWeightCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderTenShellWeightChecksService.delete(checkId);
   }
 
   @Get('semi-finished-gross-weight-checks/:checkId')

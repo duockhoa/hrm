@@ -15,6 +15,8 @@ describe('ProductionOrderTenShellWeightChecksService', () => {
     productionOrderTenShellWeightChecks: {
       findUnique: jest.Mock;
       upsert: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
     };
   };
 
@@ -28,6 +30,8 @@ describe('ProductionOrderTenShellWeightChecksService', () => {
       productionOrderTenShellWeightChecks: {
         findUnique: jest.fn(),
         upsert: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -148,5 +152,83 @@ describe('ProductionOrderTenShellWeightChecksService', () => {
     await expect(service.upsert(2031, validDto)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+  });
+
+  it('updates a ten-shell weight check', async () => {
+    const updatedCheck = { id: 1, ten_shells_weight: '510.25' };
+    prismaService.productionOrderTenShellWeightChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+      },
+    );
+    prismaService.productionOrderTenShellWeightChecks.update.mockResolvedValue(
+      updatedCheck,
+    );
+
+    await expect(
+      service.update(1, { ten_shells_weight: '510,25' }),
+    ).resolves.toBe(updatedCheck);
+    expect(
+      prismaService.productionOrderTenShellWeightChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: {
+          ten_shells_weight: new Prisma.Decimal('510.25'),
+          unit: 'mg',
+        },
+      }),
+    );
+  });
+
+  it('rejects an empty ten-shell weight update', async () => {
+    prismaService.productionOrderTenShellWeightChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+      },
+    );
+
+    await expect(service.update(1, {})).rejects.toThrow(
+      'At least one field is required',
+    );
+  });
+
+  it('throws NotFoundException when updating a missing ten-shell weight check', async () => {
+    prismaService.productionOrderTenShellWeightChecks.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(
+      service.update(1, { ten_shells_weight: 510.25 }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deletes an existing ten-shell weight check', async () => {
+    const deletedCheck = { id: 1 };
+    prismaService.productionOrderTenShellWeightChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+      },
+    );
+    prismaService.productionOrderTenShellWeightChecks.delete.mockResolvedValue(
+      deletedCheck,
+    );
+
+    await expect(service.delete(1)).resolves.toBe(deletedCheck);
+    expect(
+      prismaService.productionOrderTenShellWeightChecks.delete,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+      }),
+    );
+  });
+
+  it('throws NotFoundException when deleting a missing ten-shell weight check', async () => {
+    prismaService.productionOrderTenShellWeightChecks.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(service.delete(1)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

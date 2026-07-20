@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderTenShellWeightCheckDto } from './dto/create-production-order-ten-shell-weight-check.dto';
+import { UpdateProductionOrderTenShellWeightCheckDto } from './dto/update-production-order-ten-shell-weight-check.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -88,6 +89,44 @@ export class ProductionOrderTenShellWeightChecksService {
       },
       include: tenShellWeightCheckInclude,
     });
+  }
+
+  async update(
+    checkId: number,
+    dto: UpdateProductionOrderTenShellWeightCheckDto,
+  ) {
+    await this.findById(checkId);
+
+    return this.prismaService.productionOrderTenShellWeightChecks.update({
+      where: { id: checkId },
+      data: this.normalizeUpdateData(dto),
+      include: tenShellWeightCheckInclude,
+    });
+  }
+
+  async delete(checkId: number) {
+    await this.findById(checkId);
+
+    return this.prismaService.productionOrderTenShellWeightChecks.delete({
+      where: { id: checkId },
+      include: tenShellWeightCheckInclude,
+    });
+  }
+
+  private normalizeUpdateData(dto: UpdateProductionOrderTenShellWeightCheckDto) {
+    const updateDto = dto ?? {};
+
+    if (!('ten_shells_weight' in updateDto)) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    return {
+      ten_shells_weight: this.normalizeRequiredWeight(
+        updateDto.ten_shells_weight,
+        'ten_shells_weight',
+      ),
+      unit: WEIGHT_UNIT,
+    } satisfies Prisma.ProductionOrderTenShellWeightChecksUpdateInput;
   }
 
   private async ensureProductionOrderExists(productionOrderId: number) {
