@@ -17,6 +17,8 @@ describe('ProductionOrderEnvironmentChecksService', () => {
       findUnique: jest.Mock;
       findMany: jest.Mock;
       create: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
     };
   };
 
@@ -29,6 +31,8 @@ describe('ProductionOrderEnvironmentChecksService', () => {
         findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -150,6 +154,94 @@ describe('ProductionOrderEnvironmentChecksService', () => {
         { id: 7 },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('updates an environment check with normalized input', async () => {
+    const updatedEnvironmentCheck = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrderEnvironmentChecks.findUnique.mockResolvedValue({
+      id: 1,
+      production_order_id: 2031,
+    });
+    prismaService.productionOrderEnvironmentChecks.update.mockResolvedValue(
+      updatedEnvironmentCheck,
+    );
+
+    await expect(
+      service.update(1, {
+        room: ' Phong dong goi 1 ',
+        temperature_c: '26,25',
+        humidity_percent: '58.5',
+        checked_at: '2026-06-12T08:00:00.000Z',
+      }),
+    ).resolves.toBe(updatedEnvironmentCheck);
+
+    const updateArg =
+      prismaService.productionOrderEnvironmentChecks.update.mock.calls[0][0];
+    expect(updateArg.where).toEqual({ id: 1 });
+    expect(updateArg.data).toEqual(
+      expect.objectContaining({
+        room: 'Phong dong goi 1',
+        checked_at: new Date('2026-06-12T08:00:00.000Z'),
+      }),
+    );
+    expect(updateArg.data.temperature_c.toString()).toBe('26.25');
+    expect(updateArg.data.humidity_percent.toString()).toBe('58.5');
+  });
+
+  it('rejects an environment check update without any supported fields', async () => {
+    prismaService.productionOrderEnvironmentChecks.findUnique.mockResolvedValue({
+      id: 1,
+      production_order_id: 2031,
+    });
+
+    await expect(service.update(1, {})).rejects.toThrow(
+      'At least one field is required',
+    );
+  });
+
+  it('throws BadRequestException when updated humidity is greater than 100', async () => {
+    prismaService.productionOrderEnvironmentChecks.findUnique.mockResolvedValue({
+      id: 1,
+      production_order_id: 2031,
+    });
+
+    await expect(
+      service.update(1, {
+        humidity_percent: 101,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('throws NotFoundException when updating a missing environment check', async () => {
+    prismaService.productionOrderEnvironmentChecks.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(
+      service.update(1, {
+        humidity_percent: 58.5,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('deletes an existing environment check', async () => {
+    const deletedEnvironmentCheck = { id: 1 };
+    prismaService.productionOrderEnvironmentChecks.findUnique.mockResolvedValue({
+      id: 1,
+      production_order_id: 2031,
+    });
+    prismaService.productionOrderEnvironmentChecks.delete.mockResolvedValue(
+      deletedEnvironmentCheck,
+    );
+
+    await expect(service.delete(1)).resolves.toBe(deletedEnvironmentCheck);
+    expect(
+      prismaService.productionOrderEnvironmentChecks.delete,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+      }),
+    );
   });
 
   it('throws UnauthorizedException when the authenticated user is missing', async () => {

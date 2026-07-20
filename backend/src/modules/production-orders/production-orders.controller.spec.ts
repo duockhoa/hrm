@@ -66,6 +66,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderFinishedProductSummariesService: {
     findById: jest.Mock;
@@ -266,6 +268,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderFinishedProductSummariesService = {
       findById: jest.fn(),
@@ -869,6 +873,33 @@ describe('ProductionOrdersController', () => {
       2031,
       createDto,
       user,
+    );
+  });
+
+  it('updates an environment check', async () => {
+    const updateDto = {
+      room: 'Phong dong goi 1',
+      humidity_percent: 58.5,
+    };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderEnvironmentChecksService.update.mockResolvedValue(result);
+
+    await expect(controller.updateEnvironmentCheck(1, updateDto)).resolves.toBe(
+      result,
+    );
+    expect(productionOrderEnvironmentChecksService.update).toHaveBeenCalledWith(
+      1,
+      updateDto,
+    );
+  });
+
+  it('deletes an environment check', async () => {
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderEnvironmentChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteEnvironmentCheck(1)).resolves.toBe(result);
+    expect(productionOrderEnvironmentChecksService.delete).toHaveBeenCalledWith(
+      1,
     );
   });
 

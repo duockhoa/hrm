@@ -1952,6 +1952,50 @@ Lỗi thường gặp:
 - `400 humidity_percent must be less than or equal to 100`
 - `401 Authenticated user not found`
 
+### Sửa dữ liệu nhiệt độ/độ ẩm
+
+```http
+PATCH /production-orders/environment-checks/:checkId
+```
+
+Body hỗ trợ sửa từng phần:
+
+```json
+{
+  "room": "Phong dong goi 1",
+  "temperature_c": 26.25,
+  "humidity_percent": 58.5,
+  "checked_at": "2026-06-12T08:00:00.000Z"
+}
+```
+
+Quy tắc:
+
+- Cần gửi ít nhất một field trong các field `room`, `temperature_c`, `humidity_percent`, `checked_at`.
+- Nếu gửi `room` thì không được rỗng.
+- Nếu gửi `temperature_c` thì lưu dạng `DECIMAL(5, 2)`.
+- Nếu gửi `humidity_percent` thì lưu dạng `DECIMAL(5, 2)`, giá trị từ `0` đến `100`.
+- Có thể gửi số dạng chuỗi, ví dụ `"26.25"` hoặc `"26,25"`.
+
+Lỗi thường gặp:
+
+- `404 Environment check not found`
+- `400 At least one field is required`
+- `400 room is required`
+- `400 humidity_percent must be less than or equal to 100`
+
+### Xoá dữ liệu nhiệt độ/độ ẩm
+
+```http
+DELETE /production-orders/environment-checks/:checkId
+```
+
+Response trả về bản ghi vừa xoá.
+
+Lỗi thường gặp:
+
+- `404 Environment check not found`
+
 ## Production Order Density Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

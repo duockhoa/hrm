@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderEnvironmentCheckDto } from './dto/create-production-order-environment-check.dto';
+import { UpdateProductionOrderEnvironmentCheckDto } from './dto/update-production-order-environment-check.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -96,6 +97,68 @@ export class ProductionOrderEnvironmentChecksService {
       },
       include: environmentCheckInclude,
     });
+  }
+
+  async update(
+    checkId: number,
+    dto: UpdateProductionOrderEnvironmentCheckDto,
+  ) {
+    await this.findById(checkId);
+
+    return this.prismaService.productionOrderEnvironmentChecks.update({
+      where: { id: checkId },
+      data: this.normalizeUpdateData(dto),
+      include: environmentCheckInclude,
+    });
+  }
+
+  async delete(checkId: number) {
+    await this.findById(checkId);
+
+    return this.prismaService.productionOrderEnvironmentChecks.delete({
+      where: { id: checkId },
+      include: environmentCheckInclude,
+    });
+  }
+
+  private normalizeUpdateData(dto: UpdateProductionOrderEnvironmentCheckDto) {
+    const updateDto = dto ?? {};
+    const data: Prisma.ProductionOrderEnvironmentChecksUpdateInput = {};
+
+    if ('room' in updateDto) {
+      data.room = this.normalizeRequiredString(updateDto.room, 'room');
+    }
+
+    if ('temperature_c' in updateDto) {
+      data.temperature_c = this.normalizeRequiredDecimal(
+        updateDto.temperature_c,
+        'temperature_c',
+      );
+    }
+
+    if ('humidity_percent' in updateDto) {
+      data.humidity_percent = this.normalizeRequiredDecimal(
+        updateDto.humidity_percent,
+        'humidity_percent',
+        {
+          min: 0,
+          max: 100,
+        },
+      );
+    }
+
+    if ('checked_at' in updateDto) {
+      data.checked_at = this.normalizeRequiredDate(
+        updateDto.checked_at,
+        'checked_at',
+      );
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    return data;
   }
 
   private async ensureProductionOrderExists(productionOrderId: number) {

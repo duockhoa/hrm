@@ -31,6 +31,7 @@ import { CreateProductionOrderDisinfectantPreparationDto } from './dto/create-pr
 import { UpdateProductionOrderDisinfectantPreparationDto } from './dto/update-production-order-disinfectant-preparation.dto';
 import { ProductionOrderDisinfectantPreparationsService } from './production-order-disinfectant-preparations.service';
 import { CreateProductionOrderEnvironmentCheckDto } from './dto/create-production-order-environment-check.dto';
+import { UpdateProductionOrderEnvironmentCheckDto } from './dto/update-production-order-environment-check.dto';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
@@ -309,6 +310,24 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderEnvironmentChecksService.findById(checkId);
+  }
+
+  @Patch('environment-checks/:checkId')
+  async updateEnvironmentCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderEnvironmentCheckDto,
+  ) {
+    return this.productionOrderEnvironmentChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('environment-checks/:checkId')
+  async deleteEnvironmentCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderEnvironmentChecksService.delete(checkId);
   }
 
   @Get('factory-release-reviews/:reviewId')
