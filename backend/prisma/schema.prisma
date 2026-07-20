@@ -900,6 +900,7 @@ model ProductionOrderSemiFinishedProductGrossWeightChecks {
   production_order_id  Int
   productionOrder      ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_semi_finished_gross_weight_po_fkey")
   requirement          String?          @db.Text
+  dosage_form_stage    String?          @db.VarChar(50)
   unit_1_gross_weight  Decimal          @db.Decimal(10, 3)
   unit_2_gross_weight  Decimal?         @db.Decimal(10, 3)
   unit_3_gross_weight  Decimal?         @db.Decimal(10, 3)

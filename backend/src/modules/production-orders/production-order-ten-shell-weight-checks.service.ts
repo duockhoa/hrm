@@ -115,18 +115,21 @@ export class ProductionOrderTenShellWeightChecksService {
 
   private normalizeUpdateData(dto: UpdateProductionOrderTenShellWeightCheckDto) {
     const updateDto = dto ?? {};
+    const data: Prisma.ProductionOrderTenShellWeightChecksUpdateInput = {};
 
-    if (!('ten_shells_weight' in updateDto)) {
+    if ('ten_shells_weight' in updateDto) {
+      data.ten_shells_weight = this.normalizeRequiredWeight(
+        updateDto.ten_shells_weight,
+        'ten_shells_weight',
+      );
+      data.unit = WEIGHT_UNIT;
+    }
+
+    if (Object.keys(data).length === 0) {
       throw new BadRequestException('At least one field is required');
     }
 
-    return {
-      ten_shells_weight: this.normalizeRequiredWeight(
-        updateDto.ten_shells_weight,
-        'ten_shells_weight',
-      ),
-      unit: WEIGHT_UNIT,
-    } satisfies Prisma.ProductionOrderTenShellWeightChecksUpdateInput;
+    return data;
   }
 
   private async ensureProductionOrderExists(productionOrderId: number) {

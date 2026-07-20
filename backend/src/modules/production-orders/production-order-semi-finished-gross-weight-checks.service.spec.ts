@@ -23,6 +23,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
 
   const validDto = {
     requirement: 'Khối lượng cả vỏ từ 0.480 g đến 0.520 g',
+    dosage_form_stage: 'film_coated_tablet',
     unit: 'mg',
     unit_1_gross_weight: 0.501,
     unit_2_gross_weight: '0,498',
@@ -105,6 +106,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
         data: {
           production_order_id: 2031,
           requirement: validDto.requirement,
+          dosage_form_stage: 'film_coated_tablet',
           unit_1_gross_weight: new Prisma.Decimal('0.501'),
           unit_2_gross_weight: new Prisma.Decimal('0.498'),
           unit_3_gross_weight: new Prisma.Decimal('0.503'),
@@ -144,6 +146,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           requirement: null,
+          dosage_form_stage: null,
           unit: 'g',
           unit_1_gross_weight: new Prisma.Decimal('0.501'),
           unit_2_gross_weight: null,
@@ -172,6 +175,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
     await expect(
       service.update(1, {
         requirement: 'Yêu cầu mới',
+        dosage_form_stage: ' tablet ',
         unit: ' mg ',
         unit_10_gross_weight: '0,515',
       }),
@@ -183,6 +187,7 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
         where: { id: 1 },
         data: {
           requirement: 'Yêu cầu mới',
+          dosage_form_stage: 'tablet',
           unit: 'mg',
           unit_10_gross_weight: new Prisma.Decimal('0.515'),
         },
@@ -238,6 +243,30 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
     );
   });
 
+  it('clears dosage form stage on update', async () => {
+    const updatedCheck = { id: 1, dosage_form_stage: null };
+    prismaService.productionOrderSemiFinishedProductGrossWeightChecks.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderSemiFinishedProductGrossWeightChecks.update.mockResolvedValue(
+      updatedCheck,
+    );
+
+    await expect(
+      service.update(1, { dosage_form_stage: '  ' }),
+    ).resolves.toBe(updatedCheck);
+    expect(
+      prismaService.productionOrderSemiFinishedProductGrossWeightChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: {
+          dosage_form_stage: null,
+        },
+      }),
+    );
+  });
+
   it('deletes a check', async () => {
     const deletedCheck = { id: 1 };
     prismaService.productionOrderSemiFinishedProductGrossWeightChecks.findUnique.mockResolvedValue(
@@ -260,6 +289,30 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
         { id: 7 },
       ),
     ).rejects.toThrow('requirement must be a string');
+  });
+
+  it('rejects a non-string dosage form stage', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        { ...validDto, dosage_form_stage: 123 as unknown as string },
+        { id: 7 },
+      ),
+    ).rejects.toThrow('dosage_form_stage must be a string');
+  });
+
+  it('rejects a dosage form stage longer than 50 characters', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        { ...validDto, dosage_form_stage: 'a'.repeat(51) },
+        { id: 7 },
+      ),
+    ).rejects.toThrow('dosage_form_stage must be at most 50 characters');
   });
 
   it('rejects a non-string unit', async () => {
