@@ -109,6 +109,11 @@ describe('ProductionSpecificationsService', () => {
         film_coated_tablet_weight_lower_allowed_limit: null,
         film_coated_tablet_weight_upper_allowed_limit: null,
         film_coated_tablet_weight_unit: null,
+        hardness_lower_control_limit: null,
+        hardness_upper_control_limit: null,
+        hardness_lower_allowed_limit: null,
+        hardness_upper_allowed_limit: null,
+        hardness_unit: 'N',
       },
       include: {
         item: true,
@@ -217,6 +222,66 @@ describe('ProductionSpecificationsService', () => {
           film_coated_tablet_weight_lower_allowed_limit: expect.any(Object),
           film_coated_tablet_weight_upper_allowed_limit: expect.any(Object),
           film_coated_tablet_weight_unit: 'mg',
+        }),
+      }),
+    );
+  });
+
+  it('updates hardness limits and unit', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00007' });
+    prismaService.productionSpecifications.findUnique.mockResolvedValue({
+      item_code: 'TP00007',
+      deleted_at: null,
+    });
+    prismaService.productionSpecifications.update.mockResolvedValue({
+      item_code: 'TP00007',
+      hardness_lower_control_limit: '75',
+      hardness_upper_control_limit: '85',
+      hardness_lower_allowed_limit: '70',
+      hardness_upper_allowed_limit: '90',
+      hardness_unit: 'N',
+    });
+
+    await service.update('TP00007', {
+      hardness_lower_control_limit: 75,
+      hardness_upper_control_limit: '85',
+      hardness_lower_allowed_limit: '70.5',
+      hardness_upper_allowed_limit: '90.5',
+      hardness_unit: ' N ',
+    });
+
+    expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          hardness_lower_control_limit: expect.any(Object),
+          hardness_upper_control_limit: expect.any(Object),
+          hardness_lower_allowed_limit: expect.any(Object),
+          hardness_upper_allowed_limit: expect.any(Object),
+          hardness_unit: 'N',
+        }),
+      }),
+    );
+  });
+
+  it('defaults hardness unit to N when updated with empty text', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00008' });
+    prismaService.productionSpecifications.findUnique.mockResolvedValue({
+      item_code: 'TP00008',
+      deleted_at: null,
+    });
+    prismaService.productionSpecifications.update.mockResolvedValue({
+      item_code: 'TP00008',
+      hardness_unit: 'N',
+    });
+
+    await service.update('TP00008', {
+      hardness_unit: '  ',
+    });
+
+    expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          hardness_unit: 'N',
         }),
       }),
     );

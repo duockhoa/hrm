@@ -29,6 +29,7 @@ import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-
 import { ProductionOrderSemiFinishedProductSummariesService } from './production-order-semi-finished-product-summaries.service';
 import { ProductionOrderMaterialSummariesService } from './production-order-material-summaries.service';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
+import { ProductionOrderHardnessChecksService } from './production-order-hardness-checks.service';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 
 describe('ProductionOrdersController', () => {
@@ -223,6 +224,13 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderLeakTightnessChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderHardnessChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -434,6 +442,13 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderHardnessChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
     productionOrderFactoryReleaseReviewsService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -552,6 +567,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderLeakTightnessChecksService,
           useValue: productionOrderLeakTightnessChecksService,
+        },
+        {
+          provide: ProductionOrderHardnessChecksService,
+          useValue: productionOrderHardnessChecksService,
         },
         {
           provide: ProductionOrderFactoryReleaseReviewsService,
@@ -1799,6 +1818,71 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderLeakTightnessChecksService.delete,
     ).toHaveBeenCalledWith(1);
+  });
+
+  it('gets hardness checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderHardnessChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findHardnessChecks(2031)).resolves.toBe(checks);
+    expect(
+      productionOrderHardnessChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a hardness check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderHardnessChecksService.findById.mockResolvedValue(check);
+
+    await expect(controller.findHardnessCheckById(1)).resolves.toBe(check);
+    expect(productionOrderHardnessChecksService.findById).toHaveBeenCalledWith(
+      1,
+    );
+  });
+
+  it('creates a hardness check using the authenticated user', async () => {
+    const createDto = {
+      requirement: 'Độ cứng từ 70 N đến 90 N',
+      dosage_form_stage: 'tablet',
+      unit_1_hardness: 80,
+      unit_2_hardness: 81,
+    };
+    const user = { id: 7 };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderHardnessChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createHardnessCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderHardnessChecksService.create).toHaveBeenCalledWith(
+      2031,
+      createDto,
+      user,
+    );
+  });
+
+  it('updates a hardness check', async () => {
+    const updateDto = { unit_2_hardness: 82, unit: 'N' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderHardnessChecksService.update.mockResolvedValue(result);
+
+    await expect(controller.updateHardnessCheck(1, updateDto)).resolves.toBe(
+      result,
+    );
+    expect(productionOrderHardnessChecksService.update).toHaveBeenCalledWith(
+      1,
+      updateDto,
+    );
+  });
+
+  it('deletes a hardness check', async () => {
+    const result = { id: 1 };
+    productionOrderHardnessChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteHardnessCheck(1)).resolves.toBe(result);
+    expect(productionOrderHardnessChecksService.delete).toHaveBeenCalledWith(1);
   });
 
   it('gets factory release reviews for a production order', async () => {

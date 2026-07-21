@@ -99,6 +99,9 @@ import { ProductionOrderMaterialSummariesService } from './production-order-mate
 import { CreateProductionOrderLeakTightnessCheckDto } from './dto/create-production-order-leak-tightness-check.dto';
 import { UpdateProductionOrderLeakTightnessCheckDto } from './dto/update-production-order-leak-tightness-check.dto';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
+import { CreateProductionOrderHardnessCheckDto } from './dto/create-production-order-hardness-check.dto';
+import { UpdateProductionOrderHardnessCheckDto } from './dto/update-production-order-hardness-check.dto';
+import { ProductionOrderHardnessChecksService } from './production-order-hardness-checks.service';
 import { CreateProductionOrderFactoryReleaseReviewDto } from './dto/create-production-order-factory-release-review.dto';
 import { UpdateProductionOrderFactoryReleaseReviewDto } from './dto/update-production-order-factory-release-review.dto';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
@@ -279,6 +282,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSemiFinishedProductSummariesService: ProductionOrderSemiFinishedProductSummariesService,
     private readonly productionOrderMaterialSummariesService: ProductionOrderMaterialSummariesService,
     private readonly productionOrderLeakTightnessChecksService: ProductionOrderLeakTightnessChecksService,
+    private readonly productionOrderHardnessChecksService: ProductionOrderHardnessChecksService,
     private readonly productionOrderFactoryReleaseReviewsService: ProductionOrderFactoryReleaseReviewsService,
   ) {}
 
@@ -844,6 +848,31 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderLeakTightnessChecksService.delete(checkId);
+  }
+
+  @Get('hardness-checks/:checkId')
+  async findHardnessCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderHardnessChecksService.findById(checkId);
+  }
+
+  @Patch('hardness-checks/:checkId')
+  async updateHardnessCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderHardnessCheckDto,
+  ) {
+    return this.productionOrderHardnessChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('hardness-checks/:checkId')
+  async deleteHardnessCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderHardnessChecksService.delete(checkId);
   }
 
   @Get('vial-inspection-checks/:checkId')
@@ -1678,6 +1707,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderLeakTightnessChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/hardness-checks')
+  async findHardnessChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderHardnessChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/hardness-checks')
+  async createHardnessCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderHardnessCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderHardnessChecksService.create(
       id,
       createDto,
       req.user,

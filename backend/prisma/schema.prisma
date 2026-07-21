@@ -59,6 +59,7 @@ model Users {
   summarizedProductionOrderMaterialSummaries            ProductionOrderMaterialSummaries[]                    @relation("ProductionOrderMaterialSummarySummarizer")
   createdProductionOrderMaterialSummaries               ProductionOrderMaterialSummaries[]                    @relation("ProductionOrderMaterialSummaryCreator")
   createdProductionOrderLeakTightnessChecks             ProductionOrderLeakTightnessChecks[]                  @relation("ProductionOrderLeakTightnessCheckCreator")
+  createdProductionOrderHardnessChecks                  ProductionOrderHardnessChecks[]                       @relation("ProductionOrderHardnessCheckCreator")
   createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                 @relation("ProductionOrderTenUnitSensoryCheckCreator")
   checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]        @relation("ProductionOrderPostPreparationSolutionCheckChecker")
   approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                @relation("ProductionOrderFactoryReleaseReviewApprover")
@@ -462,6 +463,7 @@ model ProductionOrders {
   semiFinishedProductSummaries         ProductionOrderSemiFinishedProductSummaries[]
   materialSummaries                    ProductionOrderMaterialSummaries[]
   leakTightnessChecks                  ProductionOrderLeakTightnessChecks[]
+  hardnessChecks                       ProductionOrderHardnessChecks[]
   tenUnitSensoryChecks                 ProductionOrderTenUnitSensoryChecks[]
   vialInspectionChecks                 ProductionOrderVialInspectionChecks[]
   cylinderCalibration                  ProductionOrderCylinderCalibrations?
@@ -527,6 +529,11 @@ model ProductionSpecifications {
   film_coated_tablet_weight_lower_allowed_limit Decimal?      @db.Decimal(18, 6)
   film_coated_tablet_weight_upper_allowed_limit Decimal?      @db.Decimal(18, 6)
   film_coated_tablet_weight_unit                String?       @db.VarChar(20)
+  hardness_lower_control_limit                  Decimal?      @db.Decimal(18, 6)
+  hardness_upper_control_limit                  Decimal?      @db.Decimal(18, 6)
+  hardness_lower_allowed_limit                  Decimal?      @db.Decimal(18, 6)
+  hardness_upper_allowed_limit                  Decimal?      @db.Decimal(18, 6)
+  hardness_unit                                 String        @default("N") @db.VarChar(20)
   created_at                                    DateTime      @default(now())
   updated_at                                    DateTime      @default(now()) @updatedAt
   deleted_at                                    DateTime?
@@ -1021,6 +1028,33 @@ model ProductionOrderLeakTightnessChecks {
   @@index([production_order_id], map: "po_leak_tightness_po_idx")
   @@index([created_by_id], map: "po_leak_tightness_user_idx")
   @@map("production_order_leak_tightness_checks")
+}
+
+model ProductionOrderHardnessChecks {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_hardness_checks_po_fkey")
+  requirement         String?          @db.Text
+  dosage_form_stage   String?          @db.VarChar(50)
+  unit_1_hardness     Decimal          @db.Decimal(10, 3)
+  unit_2_hardness     Decimal?         @db.Decimal(10, 3)
+  unit_3_hardness     Decimal?         @db.Decimal(10, 3)
+  unit_4_hardness     Decimal?         @db.Decimal(10, 3)
+  unit_5_hardness     Decimal?         @db.Decimal(10, 3)
+  unit_6_hardness     Decimal?         @db.Decimal(10, 3)
+  unit_7_hardness     Decimal?         @db.Decimal(10, 3)
+  unit_8_hardness     Decimal?         @db.Decimal(10, 3)
+  unit_9_hardness     Decimal?         @db.Decimal(10, 3)
+  unit_10_hardness    Decimal?         @db.Decimal(10, 3)
+  unit                String           @default("N") @db.VarChar(10)
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderHardnessCheckCreator", fields: [created_by_id], references: [id], map: "po_hardness_checks_user_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_hardness_checks_po_idx")
+  @@index([created_by_id], map: "po_hardness_checks_user_idx")
+  @@map("production_order_hardness_checks")
 }
 
 model ProductionOrderTenUnitSensoryChecks {

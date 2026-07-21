@@ -22,4 +22,9 @@ export class CreateProductionSpecificationDto {
   film_coated_tablet_weight_lower_allowed_limit?: string | number | null;
   film_coated_tablet_weight_upper_allowed_limit?: string | number | null;
   film_coated_tablet_weight_unit?: string | null;
+  hardness_lower_control_limit?: string | number | null;
+  hardness_upper_control_limit?: string | number | null;
+  hardness_lower_allowed_limit?: string | number | null;
+  hardness_upper_allowed_limit?: string | number | null;
+  hardness_unit?: string | null;
 }

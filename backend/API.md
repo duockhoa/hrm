@@ -4251,6 +4251,154 @@ Lỗi thường gặp:
 
 - `404 Leak tightness check not found`
 
+## Production Order Hardness Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu yêu cầu tại thời điểm nhập, dạng bào chế/dạng kiểm tra và kết quả đo độ cứng của tối đa 10 đơn vị sản phẩm. Một lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị mặc định là `N`, nhưng frontend có thể gửi hoặc sửa `unit` khi cần; chỉ đơn vị 1 là bắt buộc.
+`dosage_form_stage` là thông tin dạng bào chế/dạng kiểm tra, ví dụ `tablet`, `capsule`, `film_coated_tablet`.
+
+### Lấy danh sách theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/hardness-checks
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "requirement": "Độ cứng từ 70 N đến 90 N",
+    "dosage_form_stage": "tablet",
+    "unit_1_hardness": "80.100",
+    "unit_2_hardness": "79.800",
+    "unit_3_hardness": null,
+    "unit_4_hardness": null,
+    "unit_5_hardness": null,
+    "unit_6_hardness": null,
+    "unit_7_hardness": null,
+    "unit_8_hardness": null,
+    "unit_9_hardness": null,
+    "unit_10_hardness": null,
+    "unit": "N",
+    "created_by_id": 7,
+    "created_at": "2026-07-21T00:00:00.000Z",
+    "updated_at": "2026-07-21T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi theo ID
+
+```http
+GET /production-orders/hardness-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Hardness check not found`
+
+### Tạo bản ghi
+
+```http
+POST /production-orders/:id/hardness-checks
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "requirement": "Độ cứng từ 70 N đến 90 N",
+  "dosage_form_stage": "tablet",
+  "unit_1_hardness": 80.1,
+  "unit_2_hardness": "79,8",
+  "unit_10_hardness": 82.5,
+  "unit": "N"
+}
+```
+
+Quy tắc:
+
+- `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `dosage_form_stage` không bắt buộc, tối đa 50 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`. Giá trị gợi ý: `tablet`, `capsule`, `film_coated_tablet`.
+- `unit_1_hardness` bắt buộc và phải lớn hơn `0`.
+- `unit_2_hardness` đến `unit_10_hardness` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- Khi có giá trị, độ cứng phải lớn hơn `0`, lưu dạng `DECIMAL(10, 3)` và tối đa 3 chữ số sau dấu phẩy.
+- Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `80.1`, `"80.1"` hoặc `"80,1"`.
+- `unit` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `N`; nếu gửi thì phải là chuỗi không rỗng và tối đa 10 ký tự.
+- `production_order_id` lấy từ `:id`.
+- `created_by_id` lấy từ user đăng nhập.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 requirement must be a string`
+- `400 dosage_form_stage must be a string`
+- `400 dosage_form_stage must be at most 50 characters`
+- `400 unit_1_hardness is required`
+- `400 unit_1_hardness must fit DECIMAL(10, 3) with up to 3 decimal places`
+- `400 unit_1_hardness must be greater than 0`
+- `400 unit must be a string`
+- `400 unit must be at most 10 characters`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi
+
+```http
+PATCH /production-orders/hardness-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ cần gửi các field muốn cập nhật:
+
+```json
+{
+  "requirement": "Yêu cầu mới tại thời điểm cập nhật",
+  "dosage_form_stage": "film_coated_tablet",
+  "unit_3_hardness": null,
+  "unit_10_hardness": 83.2,
+  "unit": "N"
+}
+```
+
+`unit_2_hardness` đến `unit_10_hardness` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị. `unit_1_hardness` không được xóa vì là giá trị bắt buộc. `unit` có thể sửa, nhưng không được gửi `null` hoặc chuỗi rỗng trong API cập nhật.
+`requirement` và `dosage_form_stage` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra `requirement`, `dosage_form_stage`, độ cứng và `unit` giống API tạo.
+- `400 unit is required`
+- `404 Hardness check not found`
+
+### Xóa bản ghi
+
+```http
+DELETE /production-orders/hardness-checks/:checkId
+```
+
+API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Hardness check not found`
+
 ## Production Order Cylinder Calibrations
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
@@ -5216,7 +5364,12 @@ Body:
   "film_coated_tablet_weight_upper_control_limit": 205,
   "film_coated_tablet_weight_lower_allowed_limit": 190,
   "film_coated_tablet_weight_upper_allowed_limit": 210,
-  "film_coated_tablet_weight_unit": "mg"
+  "film_coated_tablet_weight_unit": "mg",
+  "hardness_lower_control_limit": 75,
+  "hardness_upper_control_limit": 85,
+  "hardness_lower_allowed_limit": 70,
+  "hardness_upper_allowed_limit": 90,
+  "hardness_unit": "N"
 }
 ```
 
@@ -5225,9 +5378,10 @@ Quy tắc:
 - `item_code` phải tồn tại trong bảng `items`.
 - `product_line_id` là tùy chọn và phải tồn tại trong bảng `product_lines`.
 - Backend vẫn nhận `product_line` dạng text để tương thích request cũ; nếu gửi text, hệ thống sẽ tìm hoặc tạo `product_lines` tương ứng.
-- Các field giới hạn, bao gồm giới hạn số liều xịt và khối lượng viên nén bao phim, là số thập phân, tối đa 6 chữ số sau dấu phẩy.
+- Các field giới hạn, bao gồm giới hạn số liều xịt, khối lượng viên nén bao phim và độ cứng, là số thập phân, tối đa 6 chữ số sau dấu phẩy.
 - Các field operator của giới hạn nhận một trong các giá trị `<`, `<=`, `>`, `>=`.
 - `film_coated_tablet_weight_unit` là đơn vị khối lượng viên nén bao phim, ví dụ `mg` hoặc `g`.
+- `hardness_unit` là đơn vị độ cứng. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `N`.
 - Nếu specification đã bị soft delete, API create/update có thể restore bản ghi.
 
 Response include thêm `productLine`.
@@ -5255,7 +5409,12 @@ Body: gửi các field cần đổi.
   "film_coated_tablet_weight_upper_control_limit": 205,
   "film_coated_tablet_weight_lower_allowed_limit": 190,
   "film_coated_tablet_weight_upper_allowed_limit": 210,
-  "film_coated_tablet_weight_unit": "mg"
+  "film_coated_tablet_weight_unit": "mg",
+  "hardness_lower_control_limit": 75,
+  "hardness_upper_control_limit": 85,
+  "hardness_lower_allowed_limit": 70,
+  "hardness_upper_allowed_limit": 90,
+  "hardness_unit": "N"
 }
 ```
 

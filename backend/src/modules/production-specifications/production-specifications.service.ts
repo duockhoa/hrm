@@ -12,6 +12,7 @@ import { UpdateProductionSpecificationDto } from './dto/update-production-specif
 const DECIMAL_PATTERN = /^-?\d+(?:\.\d{1,6})?$/;
 const DECIMAL_INTEGER_DIGITS = 12;
 const LIMIT_COMPARISON_OPERATORS = new Set(['<', '<=', '>', '>=']);
+const DEFAULT_HARDNESS_UNIT = 'N';
 
 @Injectable()
 export class ProductionSpecificationsService {
@@ -278,6 +279,27 @@ export class ProductionSpecificationsService {
         dto.film_coated_tablet_weight_unit,
         'film_coated_tablet_weight_unit',
       ),
+      hardness_lower_control_limit: this.normalizeOptionalDecimal(
+        dto.hardness_lower_control_limit,
+        'hardness_lower_control_limit',
+      ),
+      hardness_upper_control_limit: this.normalizeOptionalDecimal(
+        dto.hardness_upper_control_limit,
+        'hardness_upper_control_limit',
+      ),
+      hardness_lower_allowed_limit: this.normalizeOptionalDecimal(
+        dto.hardness_lower_allowed_limit,
+        'hardness_lower_allowed_limit',
+      ),
+      hardness_upper_allowed_limit: this.normalizeOptionalDecimal(
+        dto.hardness_upper_allowed_limit,
+        'hardness_upper_allowed_limit',
+      ),
+      hardness_unit: this.normalizeOptionalStringWithDefault(
+        dto.hardness_unit,
+        'hardness_unit',
+        DEFAULT_HARDNESS_UNIT,
+      ),
     };
   }
 
@@ -422,6 +444,42 @@ export class ProductionSpecificationsService {
       );
     }
 
+    if (dto.hardness_lower_control_limit !== undefined) {
+      data.hardness_lower_control_limit = this.normalizeOptionalDecimal(
+        dto.hardness_lower_control_limit,
+        'hardness_lower_control_limit',
+      );
+    }
+
+    if (dto.hardness_upper_control_limit !== undefined) {
+      data.hardness_upper_control_limit = this.normalizeOptionalDecimal(
+        dto.hardness_upper_control_limit,
+        'hardness_upper_control_limit',
+      );
+    }
+
+    if (dto.hardness_lower_allowed_limit !== undefined) {
+      data.hardness_lower_allowed_limit = this.normalizeOptionalDecimal(
+        dto.hardness_lower_allowed_limit,
+        'hardness_lower_allowed_limit',
+      );
+    }
+
+    if (dto.hardness_upper_allowed_limit !== undefined) {
+      data.hardness_upper_allowed_limit = this.normalizeOptionalDecimal(
+        dto.hardness_upper_allowed_limit,
+        'hardness_upper_allowed_limit',
+      );
+    }
+
+    if (dto.hardness_unit !== undefined) {
+      data.hardness_unit = this.normalizeOptionalStringWithDefault(
+        dto.hardness_unit,
+        'hardness_unit',
+        DEFAULT_HARDNESS_UNIT,
+      );
+    }
+
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('No update data provided');
     }
@@ -541,6 +599,24 @@ export class ProductionSpecificationsService {
     const normalizedValue = value.trim();
 
     return normalizedValue === '' ? null : normalizedValue;
+  }
+
+  private normalizeOptionalStringWithDefault(
+    value: unknown,
+    fieldName: string,
+    defaultValue: string,
+  ) {
+    if (value === null || value === undefined) {
+      return defaultValue;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be a string`);
+    }
+
+    const normalizedValue = value.trim();
+
+    return normalizedValue === '' ? defaultValue : normalizedValue;
   }
 
   private normalizeOptionalInt(value: unknown, fieldName: string) {
