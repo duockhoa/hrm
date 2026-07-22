@@ -3104,6 +3104,7 @@ Response mẫu:
     "production_order_id": 2031,
     "package_type": null,
     "requirement": "Thể tích đạt theo tiêu chuẩn",
+    "dosage_form_stage": "oral_solution",
     "unit_1_volume": "10.01",
     "unit_2_volume": null,
     "unit_3_volume": null,
@@ -3148,6 +3149,7 @@ Body:
 ```json
 {
   "requirement": "Thể tích đạt theo tiêu chuẩn",
+  "dosage_form_stage": "oral_solution",
   "unit_1_volume": 10.01,
   "unit_2_volume": 10.02
 }
@@ -3157,6 +3159,7 @@ Quy tắc:
 
 - `package_type` không bắt buộc, ví dụ: `goi`, `lo`. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`.
 - `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`.
+- `dosage_form_stage` không bắt buộc, tối đa 50 ký tự. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`. Giá trị gợi ý: `tablet`, `capsule`, `film_coated_tablet`, `oral_solution`.
 - `unit_1_volume` bắt buộc.
 - `unit_2_volume` đến `unit_6_volume` không bắt buộc. Các field còn thiếu, gửi `null`, hoặc chuỗi rỗng sẽ lưu `null`.
 - Mỗi giá trị thể tích phải lớn hơn `0`.
@@ -3172,6 +3175,8 @@ Lỗi thường gặp:
 - `400 package_type must be a string`
 - `400 package_type must be at most 50 characters`
 - `400 requirement must be a string`
+- `400 dosage_form_stage must be a string`
+- `400 dosage_form_stage must be at most 50 characters`
 - `400 unit_1_volume is required`
 - `400 unit_1_volume must fit DECIMAL(10, 2) with up to 2 decimal places`
 - `400 unit_1_volume must be greater than 0`
@@ -3190,15 +3195,17 @@ Body chỉ cần gửi field muốn cập nhật:
 {
   "package_type": null,
   "requirement": null,
+  "dosage_form_stage": "oral_solution",
   "unit_2_volume": null
 }
 ```
 
 Quy tắc:
 
-- Có thể cập nhật `package_type`, `requirement`, `unit_1_volume` đến `unit_6_volume`.
+- Có thể cập nhật `package_type`, `requirement`, `dosage_form_stage`, `unit_1_volume` đến `unit_6_volume`.
 - `package_type` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 - `requirement` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- `dosage_form_stage` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 - `unit_2_volume` đến `unit_6_volume` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 - `unit_1_volume` không được xóa vì là giá trị bắt buộc.
 - Giá trị thể tích validate giống API tạo.
@@ -3209,6 +3216,8 @@ Lỗi thường gặp:
 - `400 package_type must be a string`
 - `400 package_type must be at most 50 characters`
 - `400 requirement must be a string`
+- `400 dosage_form_stage must be a string`
+- `400 dosage_form_stage must be at most 50 characters`
 - `400 unit_1_volume is required`
 - `400 unit_1_volume must fit DECIMAL(10, 2) with up to 2 decimal places`
 - `400 unit_1_volume must be greater than 0`

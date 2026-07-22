@@ -877,6 +877,7 @@ model ProductionOrderVolumeChecks {
   productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_volume_checks_po_id_fkey")
   package_type        String?          @db.VarChar(50)
   requirement         String?          @db.Text
+  dosage_form_stage   String?          @db.VarChar(50)
   unit_1_volume       Decimal          @db.Decimal(10, 2)
   unit_2_volume       Decimal?         @db.Decimal(10, 2)
   unit_3_volume       Decimal?         @db.Decimal(10, 2)

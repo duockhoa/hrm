@@ -17,6 +17,7 @@ const VOLUME_DECIMAL_PATTERN = /^\d+(?:\.\d{1,2})?$/;
 const VOLUME_INTEGER_DIGITS = 8;
 const VOLUME_UNIT = 'ml';
 const MAX_PACKAGE_TYPE_LENGTH = 50;
+const MAX_DOSAGE_FORM_STAGE_LENGTH = 50;
 
 const volumeCheckCreatorSelect = {
   id: true,
@@ -113,6 +114,9 @@ export class ProductionOrderVolumeChecksService {
           dto?.requirement,
           'requirement',
         ),
+        dosage_form_stage: this.normalizeOptionalDosageFormStage(
+          dto?.dosage_form_stage,
+        ),
         ...volumes,
         unit: VOLUME_UNIT,
         created_by_id: this.normalizeUserId(user),
@@ -163,6 +167,7 @@ export class ProductionOrderVolumeChecksService {
     const updateDto = dto ?? {};
     const hasPackageType = 'package_type' in updateDto;
     const hasRequirement = 'requirement' in updateDto;
+    const hasDosageFormStage = 'dosage_form_stage' in updateDto;
     const hasUnit1Volume = 'unit_1_volume' in updateDto;
     const hasUnit2Volume = 'unit_2_volume' in updateDto;
     const hasUnit3Volume = 'unit_3_volume' in updateDto;
@@ -173,6 +178,7 @@ export class ProductionOrderVolumeChecksService {
     if (
       !hasPackageType &&
       !hasRequirement &&
+      !hasDosageFormStage &&
       !hasUnit1Volume &&
       !hasUnit2Volume &&
       !hasUnit3Volume &&
@@ -195,6 +201,12 @@ export class ProductionOrderVolumeChecksService {
       data.requirement = this.normalizeOptionalLongText(
         updateDto.requirement,
         'requirement',
+      );
+    }
+
+    if (hasDosageFormStage) {
+      data.dosage_form_stage = this.normalizeOptionalDosageFormStage(
+        updateDto.dosage_form_stage,
       );
     }
 
@@ -317,6 +329,30 @@ export class ProductionOrderVolumeChecksService {
     }
 
     return packageType;
+  }
+
+  private normalizeOptionalDosageFormStage(value: unknown) {
+    if (
+      value === null ||
+      value === undefined ||
+      (typeof value === 'string' && value.trim() === '')
+    ) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('dosage_form_stage must be a string');
+    }
+
+    const dosageFormStage = value.trim();
+
+    if (dosageFormStage.length > MAX_DOSAGE_FORM_STAGE_LENGTH) {
+      throw new BadRequestException(
+        `dosage_form_stage must be at most ${MAX_DOSAGE_FORM_STAGE_LENGTH} characters`,
+      );
+    }
+
+    return dosageFormStage;
   }
 
   private normalizeRequiredVolume(value: unknown, fieldName: string) {
