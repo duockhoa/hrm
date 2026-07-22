@@ -63,6 +63,10 @@ model Users {
   createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                 @relation("ProductionOrderTenUnitSensoryCheckCreator")
   checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]        @relation("ProductionOrderPostPreparationSolutionCheckChecker")
   approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                @relation("ProductionOrderFactoryReleaseReviewApprover")
+  issuedProductionOrderBatchRecordControls              ProductionOrderDocumentControls[]                     @relation("ProductionOrderBatchRecordIssuer")
+  receivedProductionOrderBatchRecordControls            ProductionOrderDocumentControls[]                     @relation("ProductionOrderBatchRecordReceiver")
+  receivedProductionOrderTestCertificateControls        ProductionOrderDocumentControls[]                     @relation("ProductionOrderTestCertificateReceiver")
+  receivedProductionOrderWarehouseReleaseControls       ProductionOrderDocumentControls[]                     @relation("ProductionOrderWarehouseReleaseReceiver")
   createdEquipment                                      Equipment[]                                           @relation("EquipmentCreator")
   createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
@@ -474,9 +478,37 @@ model ProductionOrders {
   postPreparationSolutionChecks        ProductionOrderPostPreparationSolutionChecks[]
   factoryReleaseReviews                ProductionOrderFactoryReleaseReviews[]
   equipmentMonitoringRecords           EquipmentMonitoringRecords[]
+  documentControl                      ProductionOrderDocumentControls?
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
+}
+
+model ProductionOrderDocumentControls {
+  id                               Int              @id @default(autoincrement())
+  production_order_id              Int              @unique(map: "po_document_controls_po_id_key")
+  productionOrder                  ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_document_controls_po_id_fkey")
+  batch_record_issued_by_id        Int?
+  batchRecordIssuedBy              Users?           @relation("ProductionOrderBatchRecordIssuer", fields: [batch_record_issued_by_id], references: [id], map: "po_document_controls_batch_record_issued_by_fkey")
+  batch_record_issued_at           DateTime?
+  batch_record_received_by_id      Int?
+  batchRecordReceivedBy            Users?           @relation("ProductionOrderBatchRecordReceiver", fields: [batch_record_received_by_id], references: [id], map: "po_document_controls_batch_record_received_by_fkey")
+  batch_record_received_at         DateTime?
+  test_certificate_received_by_id  Int?
+  testCertificateReceivedBy        Users?           @relation("ProductionOrderTestCertificateReceiver", fields: [test_certificate_received_by_id], references: [id], map: "po_document_controls_test_certificate_received_by_fkey")
+  test_certificate_received_at     DateTime?
+  warehouse_release_received_by_id Int?
+  warehouseReleaseReceivedBy       Users?           @relation("ProductionOrderWarehouseReleaseReceiver", fields: [warehouse_release_received_by_id], references: [id], map: "po_document_controls_warehouse_release_received_by_fkey")
+  warehouse_release_received_at    DateTime?
+  created_at                       DateTime         @default(now())
+  updated_at                       DateTime         @default(now()) @updatedAt
+  deleted_at                       DateTime?
+
+  @@index([batch_record_issued_by_id], map: "po_document_controls_batch_record_issued_by_idx")
+  @@index([batch_record_received_by_id], map: "po_document_controls_batch_record_received_by_idx")
+  @@index([test_certificate_received_by_id], map: "po_document_controls_test_certificate_received_by_idx")
+  @@index([warehouse_release_received_by_id], map: "po_document_controls_warehouse_release_received_by_idx")
+  @@map("production_order_document_controls")
 }
 
 model ProductionOrderFactoryReleaseReviews {

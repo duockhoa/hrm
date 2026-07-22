@@ -37,6 +37,7 @@ import { ProductionOrderHardnessChecksService } from './production-order-hardnes
 import { ProductionOrderTenUnitSensoryChecksService } from './production-order-ten-unit-sensory-checks.service';
 import { ProductionOrderPostPreparationSolutionChecksService } from './production-order-post-preparation-solution-checks.service';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
+import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
 
 @Module({
   imports: [FeaturesModule],
@@ -71,6 +72,7 @@ import { ProductionOrderFactoryReleaseReviewsService } from './production-order-
     ProductionOrderTenUnitSensoryChecksService,
     ProductionOrderPostPreparationSolutionChecksService,
     ProductionOrderFactoryReleaseReviewsService,
+    ProductionOrderDocumentControlsService,
     WarehouseReleaseExportService,
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,

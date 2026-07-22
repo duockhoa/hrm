@@ -105,6 +105,7 @@ import { ProductionOrderHardnessChecksService } from './production-order-hardnes
 import { CreateProductionOrderFactoryReleaseReviewDto } from './dto/create-production-order-factory-release-review.dto';
 import { UpdateProductionOrderFactoryReleaseReviewDto } from './dto/update-production-order-factory-release-review.dto';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
+import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
 import {
   getDateCheckImagePaths,
   getDateCheckRequestFilePath,
@@ -284,6 +285,7 @@ export class ProductionOrdersController {
     private readonly productionOrderLeakTightnessChecksService: ProductionOrderLeakTightnessChecksService,
     private readonly productionOrderHardnessChecksService: ProductionOrderHardnessChecksService,
     private readonly productionOrderFactoryReleaseReviewsService: ProductionOrderFactoryReleaseReviewsService,
+    private readonly productionOrderDocumentControlsService: ProductionOrderDocumentControlsService,
   ) {}
 
   @Get()
@@ -851,9 +853,7 @@ export class ProductionOrdersController {
   }
 
   @Get('hardness-checks/:checkId')
-  async findHardnessCheckById(
-    @Param('checkId', ParseIntPipe) checkId: number,
-  ) {
+  async findHardnessCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderHardnessChecksService.findById(checkId);
   }
 
@@ -862,16 +862,11 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
     @Body() updateDto: UpdateProductionOrderHardnessCheckDto,
   ) {
-    return this.productionOrderHardnessChecksService.update(
-      checkId,
-      updateDto,
-    );
+    return this.productionOrderHardnessChecksService.update(checkId, updateDto);
   }
 
   @Delete('hardness-checks/:checkId')
-  async deleteHardnessCheck(
-    @Param('checkId', ParseIntPipe) checkId: number,
-  ) {
+  async deleteHardnessCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderHardnessChecksService.delete(checkId);
   }
 
@@ -1270,6 +1265,57 @@ export class ProductionOrdersController {
   @Get(':id/production-order-lines')
   async findProductionOrderLines(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderLines(id);
+  }
+
+  @Get(':id/document-control')
+  async findDocumentControl(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderDocumentControlsService.findByProductionOrder(
+      id,
+    );
+  }
+
+  @Patch(':id/document-control/issue-batch-record')
+  async issueBatchRecord(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+  ) {
+    return this.productionOrderDocumentControlsService.issueBatchRecord(
+      id,
+      req.user,
+    );
+  }
+
+  @Patch(':id/document-control/receive-batch-record')
+  async receiveBatchRecord(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+  ) {
+    return this.productionOrderDocumentControlsService.receiveBatchRecord(
+      id,
+      req.user,
+    );
+  }
+
+  @Patch(':id/document-control/receive-test-certificate')
+  async receiveTestCertificate(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+  ) {
+    return this.productionOrderDocumentControlsService.receiveTestCertificate(
+      id,
+      req.user,
+    );
+  }
+
+  @Patch(':id/document-control/receive-warehouse-release')
+  async receiveWarehouseRelease(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+  ) {
+    return this.productionOrderDocumentControlsService.receiveWarehouseRelease(
+      id,
+      req.user,
+    );
   }
 
   @Get(':id/sampling-requests')

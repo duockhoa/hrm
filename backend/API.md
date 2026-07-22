@@ -1343,6 +1343,136 @@ Ví dụ `featureConfig`:
 GET /production-orders/:id/production-order-lines
 ```
 
+## Production Order Document Controls
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu trạng thái chứng từ theo quan hệ 1-1 với lệnh sản xuất. Mỗi `production_order_id` chỉ có tối đa một dòng trong bảng `production_order_document_controls`.
+
+Các API `GET /production-orders`, `GET /production-orders/finished-products`, `GET /production-orders/semi-finished-products` và `GET /production-orders/:id` có include thêm field `documentControl`.
+
+Ví dụ `documentControl`:
+
+```json
+{
+  "id": 1,
+  "production_order_id": 1001,
+  "batch_record_issued_by_id": 5,
+  "batch_record_issued_at": "2026-07-22T08:00:00.000Z",
+  "batch_record_received_by_id": 8,
+  "batch_record_received_at": "2026-07-22T09:00:00.000Z",
+  "test_certificate_received_by_id": 9,
+  "test_certificate_received_at": "2026-07-22T10:00:00.000Z",
+  "warehouse_release_received_by_id": 10,
+  "warehouse_release_received_at": "2026-07-22T11:00:00.000Z",
+  "created_at": "2026-07-22T08:00:00.000Z",
+  "updated_at": "2026-07-22T11:00:00.000Z",
+  "deleted_at": null,
+  "batchRecordIssuedBy": {
+    "id": 5,
+    "username": "qa01",
+    "name": "Nguyen Van A",
+    "email": "qa01@example.com",
+    "department": "QA",
+    "position": "Staff"
+  },
+  "batchRecordReceivedBy": {
+    "id": 8,
+    "username": "sx01",
+    "name": "Tran Van B",
+    "email": "sx01@example.com",
+    "department": "Production",
+    "position": "Staff"
+  },
+  "testCertificateReceivedBy": {
+    "id": 9,
+    "username": "sx02",
+    "name": "Le Van C",
+    "email": "sx02@example.com",
+    "department": "Production",
+    "position": "Staff"
+  },
+  "warehouseReleaseReceivedBy": {
+    "id": 10,
+    "username": "sx03",
+    "name": "Pham Van D",
+    "email": "sx03@example.com",
+    "department": "Production",
+    "position": "Staff"
+  }
+}
+```
+
+Nếu chưa có dòng document control cho lệnh sản xuất, `documentControl` trả về `null`.
+
+### Lấy trạng thái chứng từ của lệnh sản xuất
+
+```http
+GET /production-orders/:id/document-control
+```
+
+Response: object `documentControl` như ví dụ trên, hoặc `null` nếu chưa phát sinh thao tác chứng từ.
+
+### Cấp hồ sơ lô giấy
+
+```http
+PATCH /production-orders/:id/document-control/issue-batch-record
+```
+
+Body: không cần gửi.
+
+Backend tự ghi:
+
+- `batch_record_issued_by_id`: user đang đăng nhập.
+- `batch_record_issued_at`: thời điểm hiện tại.
+
+Response: object `documentControl` sau khi cập nhật.
+
+### Nhận hồ sơ lô giấy
+
+```http
+PATCH /production-orders/:id/document-control/receive-batch-record
+```
+
+Body: không cần gửi.
+
+Backend tự ghi:
+
+- `batch_record_received_by_id`: user đang đăng nhập.
+- `batch_record_received_at`: thời điểm hiện tại.
+
+Response: object `documentControl` sau khi cập nhật.
+
+### Nhận phiếu kiểm nghiệm
+
+```http
+PATCH /production-orders/:id/document-control/receive-test-certificate
+```
+
+Body: không cần gửi.
+
+Backend tự ghi:
+
+- `test_certificate_received_by_id`: user đang đăng nhập.
+- `test_certificate_received_at`: thời điểm hiện tại.
+
+Response: object `documentControl` sau khi cập nhật.
+
+### Nhận phiếu xuất kho
+
+```http
+PATCH /production-orders/:id/document-control/receive-warehouse-release
+```
+
+Body: không cần gửi.
+
+Backend tự ghi:
+
+- `warehouse_release_received_by_id`: user đang đăng nhập.
+- `warehouse_release_received_at`: thời điểm hiện tại.
+
+Response: object `documentControl` sau khi cập nhật.
+
 ### Export lệnh sản xuất
 
 ```http

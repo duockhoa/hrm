@@ -14,6 +14,7 @@ import type {
   ProductionOrderStageIdFilter,
 } from './dto/export-production-order-lines.dto';
 import { FeaturesService } from '../features/features.service';
+import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
 
 export type SapProductionOrderLine = {
   StageID?: number | null;
@@ -165,6 +166,9 @@ export class ProductionOrdersService {
         include: {
           item: true,
           samplingRequests: productionOrderSamplingRequestWithSenderInclude,
+          documentControl: {
+            include: productionOrderDocumentControlInclude,
+          },
         },
         orderBy: {
           id: 'desc',
@@ -186,6 +190,9 @@ export class ProductionOrdersService {
         include: {
           item: true,
           samplingRequests: productionOrderSamplingRequestWithSenderInclude,
+          documentControl: {
+            include: productionOrderDocumentControlInclude,
+          },
         },
         orderBy: {
           id: 'desc',
@@ -209,6 +216,9 @@ export class ProductionOrdersService {
         include: {
           item: true,
           samplingRequests: productionOrderSamplingRequestWithSenderInclude,
+          documentControl: {
+            include: productionOrderDocumentControlInclude,
+          },
         },
         orderBy: {
           id: 'desc',
@@ -228,6 +238,9 @@ export class ProductionOrdersService {
         include: {
           item: true,
           samplingRequests: productionOrderSamplingRequestWithSenderInclude,
+          documentControl: {
+            include: productionOrderDocumentControlInclude,
+          },
         },
       });
 
