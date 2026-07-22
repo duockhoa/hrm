@@ -25,6 +25,8 @@ describe('ProductionOrderSemiFinishedProductSummariesService', () => {
     stage: 'Đóng gói',
     input_quantity: '100,5',
     input_unit: 'kg',
+    load_quantity: '10',
+    load_unit: 'tải',
     packed_quantity: '95',
     packed_unit: 'thùng',
     leftover_quantity: 3,
@@ -105,6 +107,8 @@ describe('ProductionOrderSemiFinishedProductSummariesService', () => {
           stage: 'Đóng gói',
           input_quantity: new Prisma.Decimal('100.5'),
           input_unit: 'kg',
+          load_quantity: new Prisma.Decimal('10'),
+          load_unit: 'tải',
           packed_quantity: new Prisma.Decimal('95'),
           packed_unit: 'thùng',
           leftover_quantity: new Prisma.Decimal('3'),
@@ -129,6 +133,7 @@ describe('ProductionOrderSemiFinishedProductSummariesService', () => {
         2031,
         {
           input_quantity: 1,
+          load_quantity: 10,
           packed_quantity: 2,
           leftover_quantity: 3,
           waste_quantity: 4,
@@ -142,6 +147,7 @@ describe('ProductionOrderSemiFinishedProductSummariesService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           input_unit: 'kg',
+          load_unit: 'kg',
           packed_unit: 'kg',
           leftover_unit: 'kg',
           waste_unit: 'kg',
@@ -161,6 +167,7 @@ describe('ProductionOrderSemiFinishedProductSummariesService', () => {
 
     await expect(
       service.update(1, {
+        load_unit: ' tải ',
         input_unit: ' g ',
         waste_quantity: '1,25',
       }),
@@ -172,6 +179,7 @@ describe('ProductionOrderSemiFinishedProductSummariesService', () => {
         where: { id: 1 },
         data: {
           waste_quantity: new Prisma.Decimal('1.25'),
+          load_unit: 'tải',
           input_unit: 'g',
         },
       }),

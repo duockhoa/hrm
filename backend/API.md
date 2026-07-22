@@ -3825,6 +3825,8 @@ Response mẫu:
     "stage": "Đóng gói",
     "input_quantity": "100.500",
     "input_unit": "kg",
+    "load_quantity": "10.000",
+    "load_unit": "tải",
     "packed_quantity": "95.000",
     "packed_unit": "kg",
     "leftover_quantity": "3.000",
@@ -3874,6 +3876,8 @@ Body:
   "stage": "Đóng gói",
   "input_quantity": "100.5",
   "input_unit": "kg",
+  "load_quantity": "10",
+  "load_unit": "tải",
   "packed_quantity": "95",
   "packed_unit": "thùng",
   "leftover_quantity": "3",
@@ -3886,10 +3890,10 @@ Body:
 Quy tắc:
 
 - `stage` không bắt buộc, tối đa 100 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
-- `input_quantity`, `packed_quantity`, `leftover_quantity`, `waste_quantity` đều không bắt buộc.
+- `input_quantity`, `load_quantity`, `packed_quantity`, `leftover_quantity`, `waste_quantity` đều không bắt buộc.
 - Khi có giá trị, các lượng lưu dạng `DECIMAL(12, 3)` và tối đa 3 chữ số sau dấu phẩy.
 - Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `100.5`, `"100.5"` hoặc `"100,5"`.
-- `input_unit`, `packed_unit`, `leftover_unit`, `waste_unit` được lưu theo giá trị frontend gửi, sau khi trim khoảng trắng.
+- `input_unit`, `load_unit`, `packed_unit`, `leftover_unit`, `waste_unit` được lưu theo giá trị frontend gửi, sau khi trim khoảng trắng.
 - Các field đơn vị tối đa 20 ký tự. Nếu không gửi khi tạo mới, backend mặc định `kg`.
 - `production_order_id` lấy từ `:id`.
 - `created_by_id` lấy từ user đăng nhập.
@@ -3900,6 +3904,7 @@ Lỗi thường gặp:
 - `400 stage must be a string`
 - `400 stage must be at most 100 characters`
 - `400 input_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 load_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
 - `400 packed_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
 - `400 leftover_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
 - `400 waste_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
@@ -3917,6 +3922,8 @@ Body chỉ cần gửi các field muốn cập nhật:
 ```json
 {
   "stage": "Hoàn tất đóng gói",
+  "load_quantity": "11",
+  "load_unit": "tải",
   "leftover_quantity": null,
   "leftover_unit": "g",
   "waste_quantity": "2.25",

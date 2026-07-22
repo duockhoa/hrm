@@ -959,6 +959,8 @@ model ProductionOrderSemiFinishedProductSummaries {
   stage               String?          @db.VarChar(100)
   input_quantity      Decimal?         @db.Decimal(12, 3)
   input_unit          String           @default("kg") @db.VarChar(20)
+  load_quantity       Decimal?         @db.Decimal(12, 3)
+  load_unit           String           @default("kg") @db.VarChar(20)
   packed_quantity     Decimal?         @db.Decimal(12, 3)
   packed_unit         String           @default("kg") @db.VarChar(20)
   leftover_quantity   Decimal?         @db.Decimal(12, 3)

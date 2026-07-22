@@ -21,6 +21,7 @@ const MAX_UNIT_LENGTH = 20;
 
 const QUANTITY_FIELDS = [
   'input_quantity',
+  'load_quantity',
   'packed_quantity',
   'leftover_quantity',
   'waste_quantity',
@@ -28,6 +29,7 @@ const QUANTITY_FIELDS = [
 
 const UNIT_FIELDS = [
   'input_unit',
+  'load_unit',
   'packed_unit',
   'leftover_unit',
   'waste_unit',
@@ -135,6 +137,11 @@ export class ProductionOrderSemiFinishedProductSummariesService {
         'input_quantity',
       ),
       input_unit: this.normalizeCreateUnit(dto?.input_unit, 'input_unit'),
+      load_quantity: this.normalizeOptionalQuantity(
+        dto?.load_quantity,
+        'load_quantity',
+      ),
+      load_unit: this.normalizeCreateUnit(dto?.load_unit, 'load_unit'),
       packed_quantity: this.normalizeOptionalQuantity(
         dto?.packed_quantity,
         'packed_quantity',
