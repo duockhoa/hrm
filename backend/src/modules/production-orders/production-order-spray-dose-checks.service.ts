@@ -273,7 +273,9 @@ export class ProductionOrderSprayDoseChecksService {
 
     const normalizedValue = value.trim();
 
-    return normalizedValue === '' ? null : normalizedValue;
+    return normalizedValue === ''
+      ? null
+      : normalizedValue.replace(/\bdose\b/gi, 'liều');
   }
 
   private normalizeUserId(user?: AuthenticatedUser) {

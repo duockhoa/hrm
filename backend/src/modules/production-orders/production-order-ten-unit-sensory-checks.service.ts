@@ -27,6 +27,8 @@ const OPTIONAL_RESULT_FIELDS = [
 ] as const;
 
 const MAX_DOSAGE_FORM_STAGE_LENGTH = 50;
+const DEFAULT_TEN_UNIT_SENSORY_REQUIREMENT =
+  'Tần suất 30 phút/lần, đạt yêu cầu cảm quan.';
 
 const PASS_RESULT_TRUE_VALUES = new Set([
   'true',
@@ -98,10 +100,7 @@ export class ProductionOrderTenUnitSensoryChecksService {
     return this.prismaService.productionOrderTenUnitSensoryChecks.create({
       data: {
         production_order_id: productionOrderId,
-        requirement: this.normalizeOptionalText(
-          dto?.requirement,
-          'requirement',
-        ),
+        requirement: this.normalizeCreateRequirement(dto?.requirement),
         dosage_form_stage: this.normalizeOptionalDosageFormStage(
           dto?.dosage_form_stage,
         ),
@@ -221,6 +220,13 @@ export class ProductionOrderTenUnitSensoryChecksService {
     }
 
     return value.trim() || null;
+  }
+
+  private normalizeCreateRequirement(value: unknown) {
+    return (
+      this.normalizeOptionalText(value, 'requirement') ??
+      DEFAULT_TEN_UNIT_SENSORY_REQUIREMENT
+    );
   }
 
   private normalizeOptionalDosageFormStage(value: unknown) {

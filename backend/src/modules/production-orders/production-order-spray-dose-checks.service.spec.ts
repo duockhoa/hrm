@@ -126,7 +126,7 @@ describe('ProductionOrderSprayDoseChecksService', () => {
       expect.objectContaining({
         data: {
           production_order_id: 2031,
-          requirement: '90 - 110 dose',
+          requirement: '90 - 110 liều',
           bottle_1_spray_dose_count: 120,
           bottle_2_spray_dose_count: 121,
           bottle_3_spray_dose_count: 122,
@@ -199,7 +199,7 @@ describe('ProductionOrderSprayDoseChecksService', () => {
   });
 
   it('updates a spray dose check', async () => {
-    const updatedSprayDoseCheck = { id: 1, requirement: '95 - 105 dose' };
+    const updatedSprayDoseCheck = { id: 1, requirement: '95 - 105 liều' };
     prismaService.productionOrderSprayDoseChecks.findUnique.mockResolvedValue({
       id: 1,
     });
@@ -221,7 +221,7 @@ describe('ProductionOrderSprayDoseChecksService', () => {
       expect.objectContaining({
         where: { id: 1 },
         data: {
-          requirement: '95 - 105 dose',
+          requirement: '95 - 105 liều',
           bottle_2_spray_dose_count: null,
           bottle_6_spray_dose_count: 126,
         },

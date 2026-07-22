@@ -2395,7 +2395,7 @@ Response mẫu:
   {
     "id": 1,
     "production_order_id": 2031,
-    "requirement": "90 - 110 dose",
+    "requirement": "90 - 110 liều",
     "bottle_1_spray_dose_count": 120,
     "bottle_2_spray_dose_count": 121,
     "bottle_3_spray_dose_count": 122,
@@ -2442,7 +2442,7 @@ Body:
 
 ```json
 {
-  "requirement": "90 - 110 dose",
+  "requirement": "90 - 110 liều",
   "bottle_1_spray_dose_count": 120,
   "bottle_2_spray_dose_count": 121,
   "bottle_3_spray_dose_count": 122,
@@ -2455,6 +2455,7 @@ Body:
 Quy tắc:
 
 - `requirement` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
+- Nếu `requirement` có chữ `dose`, backend tự chuẩn hóa thành `liều`, ví dụ `90 - 110 dose` lưu thành `90 - 110 liều`.
 - `bottle_1_spray_dose_count` là bắt buộc, lưu dạng `INTEGER`.
 - `bottle_2_spray_dose_count` đến `bottle_6_spray_dose_count` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
 - Có thể gửi số dạng chuỗi, ví dụ `"120"`.
@@ -2481,7 +2482,7 @@ Body: gửi các field cần đổi.
 
 ```json
 {
-  "requirement": "95 - 105 dose",
+  "requirement": "95 - 105 liều",
   "bottle_2_spray_dose_count": null,
   "bottle_6_spray_dose_count": 126
 }
@@ -4278,7 +4279,7 @@ Response mẫu:
   {
     "id": 1,
     "production_order_id": 2031,
-    "requirement": "Không được rò rỉ",
+    "requirement": "Tần suất 30 phút/lần, cảm quan lọ kín, để ngang lọ và đập nhẹ vào tay không thấy dịch rỉ ra ngoài.",
     "dosage_form_stage": "film_coated_tablet",
     "unit_1_result": true,
     "unit_2_result": true,
@@ -4330,7 +4331,7 @@ Body:
 
 ```json
 {
-  "requirement": "Không được rò rỉ",
+  "requirement": "Tần suất 30 phút/lần, cảm quan lọ kín, để ngang lọ và đập nhẹ vào tay không thấy dịch rỉ ra ngoài.",
   "dosage_form_stage": "film_coated_tablet",
   "unit_1_result": true,
   "unit_2_result": "đạt",
@@ -4340,7 +4341,7 @@ Body:
 
 Quy tắc:
 
-- `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
+- `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null` hoặc chuỗi rỗng khi tạo mới thì backend dùng mặc định: `Tần suất 30 phút/lần, cảm quan lọ kín, để ngang lọ và đập nhẹ vào tay không thấy dịch rỉ ra ngoài.`
 - `dosage_form_stage` không bắt buộc, tối đa 50 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`. Giá trị gợi ý: `tablet`, `capsule`, `film_coated_tablet`.
 - `unit_1_result` bắt buộc.
 - `unit_2_result` đến `unit_10_result` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`.
@@ -4681,7 +4682,7 @@ Response mẫu:
   {
 	    "id": 1,
 	    "production_order_id": 2031,
-	    "requirement": "Đạt yêu cầu cảm quan",
+	    "requirement": "Tần suất 30 phút/lần, đạt yêu cầu cảm quan.",
 	    "dosage_form_stage": "film_coated_tablet",
 	    "unit_1_result": true,
     "unit_2_result": true,
@@ -4721,7 +4722,7 @@ Body:
 
 ```json
 {
-  "requirement": "Đạt yêu cầu cảm quan",
+  "requirement": "Tần suất 30 phút/lần, đạt yêu cầu cảm quan.",
   "dosage_form_stage": "film_coated_tablet",
   "unit_1_result": "Đạt",
   "unit_2_result": "Đạt",
@@ -4731,7 +4732,7 @@ Body:
 
 Quy tắc:
 
-- `requirement` không bắt buộc. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng thì backend lưu `null`.
+- `requirement` không bắt buộc. Nếu không gửi, gửi `null`, hoặc chuỗi rỗng khi tạo mới thì backend dùng mặc định: `Tần suất 30 phút/lần, đạt yêu cầu cảm quan.`
 - `dosage_form_stage` không bắt buộc, tối đa 50 ký tự. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu `null`. Giá trị gợi ý: `tablet`, `capsule`, `film_coated_tablet`.
 - `unit_1_result` bắt buộc.
 - `unit_2_result` đến `unit_10_result` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.

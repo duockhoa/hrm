@@ -27,6 +27,8 @@ const OPTIONAL_RESULT_FIELDS = [
 ] as const;
 
 const MAX_DOSAGE_FORM_STAGE_LENGTH = 50;
+const DEFAULT_LEAK_TIGHTNESS_REQUIREMENT =
+  'Tần suất 30 phút/lần, cảm quan lọ kín, để ngang lọ và đập nhẹ vào tay không thấy dịch rỉ ra ngoài.';
 
 const PASS_RESULT_TRUE_VALUES = new Set([
   'true',
@@ -98,7 +100,7 @@ export class ProductionOrderLeakTightnessChecksService {
     return this.prismaService.productionOrderLeakTightnessChecks.create({
       data: {
         production_order_id: productionOrderId,
-        requirement: this.normalizeOptionalRequirement(dto?.requirement),
+        requirement: this.normalizeCreateRequirement(dto?.requirement),
         dosage_form_stage: this.normalizeOptionalDosageFormStage(
           dto?.dosage_form_stage,
         ),
@@ -215,6 +217,13 @@ export class ProductionOrderLeakTightnessChecksService {
     }
 
     return value.trim() || null;
+  }
+
+  private normalizeCreateRequirement(value: unknown) {
+    return (
+      this.normalizeOptionalRequirement(value) ??
+      DEFAULT_LEAK_TIGHTNESS_REQUIREMENT
+    );
   }
 
   private normalizeOptionalDosageFormStage(value: unknown) {
