@@ -32,6 +32,7 @@ model Users {
   reportedProductionOrderDeviations                     ProductionOrderDeviations[]                           @relation("ProductionOrderDeviationReporter")
   productionOrderSamplingRequests                       ProductionOrderSamplingRequests[]
   createdProductionOrderEnvironmentChecks               ProductionOrderEnvironmentChecks[]                    @relation("ProductionOrderEnvironmentCheckCreator")
+  createdProductionOrderHygieneChecks                   ProductionOrderHygieneChecks[]                        @relation("ProductionOrderHygieneCheckCreator")
   createdProductionOrderFinishedProductSummaries        ProductionOrderFinishedProductSummaries[]             @relation("ProductionOrderFinishedProductSummaryCreator")
   createdProductionOrderDensityChecks                   ProductionOrderDensityChecks[]                        @relation("ProductionOrderDensityCheckCreator")
   createdProductionOrderSamplingRecords                 ProductionOrderSamplingRecords[]                      @relation("ProductionOrderSamplingRecordCreator")
@@ -451,6 +452,7 @@ model ProductionOrders {
   deviations                           ProductionOrderDeviations[]
   samplingRequests                     ProductionOrderSamplingRequests[]
   environmentChecks                    ProductionOrderEnvironmentChecks[]
+  hygieneChecks                        ProductionOrderHygieneChecks[]
   finishedProductSummaries             ProductionOrderFinishedProductSummaries[]
   densityChecks                        ProductionOrderDensityChecks[]
   samplingRecords                      ProductionOrderSamplingRecords[]
@@ -651,6 +653,24 @@ model ProductionOrderEnvironmentChecks {
   @@index([production_order_id], map: "production_order_environment_checks_production_order_id_fkey")
   @@index([created_by_id], map: "production_order_environment_checks_created_by_id_fkey")
   @@map("production_order_environment_checks")
+}
+
+model ProductionOrderHygieneChecks {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_hygiene_checks_po_id_fkey")
+  room_or_equipment   String           @db.VarChar(255)
+  cleaning_type       String           @db.VarChar(100)
+  result              String           @db.VarChar(100)
+  note                String?          @db.Text
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderHygieneCheckCreator", fields: [created_by_id], references: [id], map: "po_hygiene_checks_created_by_id_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_hygiene_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_hygiene_checks_created_by_id_fkey")
+  @@map("production_order_hygiene_checks")
 }
 
 model ProductionOrderFinishedProductSummaries {

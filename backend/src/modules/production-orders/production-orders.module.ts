@@ -12,6 +12,7 @@ import { ProductionOrderExportService } from './exports/production-order-export.
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
 import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
+import { ProductionOrderHygieneChecksService } from './production-order-hygiene-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { FeaturesModule } from '../features/features.module';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
@@ -48,6 +49,7 @@ import { ProductionOrderDocumentControlsService } from './production-order-docum
     ProductionOrderSamplingRecordsService,
     ProductionOrderDisinfectantPreparationsService,
     ProductionOrderEnvironmentChecksService,
+    ProductionOrderHygieneChecksService,
     ProductionOrderFinishedProductSummariesService,
     ProductionOrderDensityChecksService,
     ProductionOrderFriabilityChecksService,

@@ -33,6 +33,9 @@ import { ProductionOrderDisinfectantPreparationsService } from './production-ord
 import { CreateProductionOrderEnvironmentCheckDto } from './dto/create-production-order-environment-check.dto';
 import { UpdateProductionOrderEnvironmentCheckDto } from './dto/update-production-order-environment-check.dto';
 import { ProductionOrderEnvironmentChecksService } from './production-order-environment-checks.service';
+import { CreateProductionOrderHygieneCheckDto } from './dto/create-production-order-hygiene-check.dto';
+import { UpdateProductionOrderHygieneCheckDto } from './dto/update-production-order-hygiene-check.dto';
+import { ProductionOrderHygieneChecksService } from './production-order-hygiene-checks.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
@@ -261,6 +264,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSamplingRecordsService: ProductionOrderSamplingRecordsService,
     private readonly productionOrderDisinfectantPreparationsService: ProductionOrderDisinfectantPreparationsService,
     private readonly productionOrderEnvironmentChecksService: ProductionOrderEnvironmentChecksService,
+    private readonly productionOrderHygieneChecksService: ProductionOrderHygieneChecksService,
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
     private readonly productionOrderFriabilityChecksService: ProductionOrderFriabilityChecksService,
@@ -335,6 +339,24 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderEnvironmentChecksService.delete(checkId);
+  }
+
+  @Get('hygiene-checks/:checkId')
+  async findHygieneCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderHygieneChecksService.findById(checkId);
+  }
+
+  @Patch('hygiene-checks/:checkId')
+  async updateHygieneCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderHygieneCheckDto,
+  ) {
+    return this.productionOrderHygieneChecksService.update(checkId, updateDto);
+  }
+
+  @Delete('hygiene-checks/:checkId')
+  async deleteHygieneCheck(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderHygieneChecksService.delete(checkId);
   }
 
   @Get('factory-release-reviews/:reviewId')
@@ -1392,6 +1414,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderEnvironmentChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/hygiene-checks')
+  async findHygieneChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderHygieneChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/hygiene-checks')
+  async createHygieneCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderHygieneCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderHygieneChecksService.create(
       id,
       createDto,
       req.user,

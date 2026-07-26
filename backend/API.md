@@ -2126,6 +2126,120 @@ Lỗi thường gặp:
 
 - `404 Environment check not found`
 
+## Production Order Hygiene Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu bảng kiểm tra vệ sinh phụ thuộc lệnh sản xuất. Một lệnh sản xuất có thể có nhiều bản ghi kiểm tra vệ sinh.
+
+### Lấy danh sách kiểm tra vệ sinh của lệnh sản xuất
+
+```http
+GET /production-orders/:id/hygiene-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "room_or_equipment": "Phong pha che 1",
+    "cleaning_type": "Ve sinh dinh ky",
+    "result": "Dat",
+    "note": null,
+    "created_by_id": 7,
+    "created_at": "2026-07-26T08:10:00.000Z",
+    "updated_at": "2026-07-26T08:10:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+### Lấy một bản ghi kiểm tra vệ sinh theo ID
+
+```http
+GET /production-orders/hygiene-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Hygiene check not found`
+
+### Thêm dữ liệu kiểm tra vệ sinh
+
+```http
+POST /production-orders/:id/hygiene-checks
+```
+
+Body:
+
+```json
+{
+  "room_or_equipment": "Phong pha che 1",
+  "cleaning_type": "Ve sinh dinh ky",
+  "result": "Dat",
+  "note": "Khong"
+}
+```
+
+Quy tắc:
+
+- `room_or_equipment` bắt buộc, tối đa 255 ký tự.
+- `cleaning_type` bắt buộc, tối đa 100 ký tự.
+- `result` bắt buộc, tối đa 100 ký tự.
+- `note` tùy chọn; gửi rỗng sẽ lưu `null`.
+- `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 room_or_equipment is required`
+- `400 At least one field is required`
+- `401 Authenticated user not found`
+
+### Cập nhật dữ liệu kiểm tra vệ sinh
+
+```http
+PATCH /production-orders/hygiene-checks/:checkId
+```
+
+Body: gửi một hoặc nhiều field cần đổi.
+
+```json
+{
+  "result": "Khong dat",
+  "note": "Can ve sinh lai"
+}
+```
+
+Lỗi thường gặp:
+
+- `404 Hygiene check not found`
+- `400 At least one field is required`
+
+### Xóa dữ liệu kiểm tra vệ sinh
+
+```http
+DELETE /production-orders/hygiene-checks/:checkId
+```
+
+Response trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Hygiene check not found`
+
 ## Production Order Density Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
@@ -3669,11 +3783,11 @@ Response mẫu:
 ```json
 [
   {
-	    "id": 1,
-	    "production_order_id": 2031,
-	    "requirement": "Khối lượng cả vỏ từ 0.480 g đến 0.520 g",
-	    "dosage_form_stage": "film_coated_tablet",
-	    "unit_1_gross_weight": "0.501",
+    "id": 1,
+    "production_order_id": 2031,
+    "requirement": "Khối lượng cả vỏ từ 0.480 g đến 0.520 g",
+    "dosage_form_stage": "film_coated_tablet",
+    "unit_1_gross_weight": "0.501",
     "unit_2_gross_weight": "0.498",
     "unit_3_gross_weight": "0.503",
     "unit_4_gross_weight": null,
@@ -4680,11 +4794,11 @@ Response mẫu:
 ```json
 [
   {
-	    "id": 1,
-	    "production_order_id": 2031,
-	    "requirement": "Tần suất 30 phút/lần, đạt yêu cầu cảm quan.",
-	    "dosage_form_stage": "film_coated_tablet",
-	    "unit_1_result": true,
+    "id": 1,
+    "production_order_id": 2031,
+    "requirement": "Tần suất 30 phút/lần, đạt yêu cầu cảm quan.",
+    "dosage_form_stage": "film_coated_tablet",
+    "unit_1_result": true,
     "unit_2_result": true,
     "unit_3_result": false,
     "unit_4_result": null,
