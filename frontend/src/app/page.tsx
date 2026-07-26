@@ -2,13 +2,23 @@
 
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Building2, ClipboardCheck, Clock3, UserCog, Package } from "lucide-react";
+import {
+  Building2,
+  ClipboardCheck,
+  Clock3,
+  Package,
+  UserCog,
+} from "lucide-react";
+import useSWR from "swr";
 import HeaderApps from "@/components/header-apps/header-apps";
 import ItemApp from "@/components/item-app/item-app";
+import { API_ROUTES } from "@/lib/api-routes";
+import { userService, usersService } from "@/services/index.service";
 import useUserStore from "@/store/user.store";
 import useMobile from "@/hooks/use-mobile";
 
 type AppLauncherItem = {
+  key: string;
   name: string;
   link: string;
   icon: LucideIcon;
@@ -16,8 +26,20 @@ type AppLauncherItem = {
   external?: boolean;
 };
 
+type Application = {
+  key?: string | null;
+};
+
+type CurrentUser = {
+  id?: number | string;
+  name?: string | null;
+};
+
+const ACCESS_CONTROLLED_APP_KEYS = new Set(["hsl", "hrm"]);
+
 const APPS: AppLauncherItem[] = [
   {
+    key: "request",
     name: "DK REQUEST",
     link: process.env.NEXT_PUBLIC_APP_REQUEST_URL || "#",
     icon: Clock3,
@@ -27,6 +49,7 @@ const APPS: AppLauncherItem[] = [
   },
 
   {
+    key: "hsl",
     name: "HSL ONLINE",
     link: process.env.NEXT_PUBLIC_APP_EBR_URL || "",
     icon: ClipboardCheck,
@@ -34,6 +57,7 @@ const APPS: AppLauncherItem[] = [
       "bg-[linear-gradient(180deg,#64D45F_0%,#42AF4F_56%,#2D8A3A_100%)]",
   },
   {
+    key: "wms",
     name: "KHO DƯỢC KHOA",
     link: process.env.NEXT_PUBLIC_APP_WMS_URL || "",
     icon: Building2,
@@ -41,6 +65,7 @@ const APPS: AppLauncherItem[] = [
       "bg-[linear-gradient(180deg,#FFB11D_0%,#F08D00_55%,#D66A00_100%)]",
   },
   {
+    key: "hrm",
     name: "DK HRM",
     link: "/home",
     icon: UserCog,
@@ -48,14 +73,15 @@ const APPS: AppLauncherItem[] = [
       "bg-[linear-gradient(180deg,#267BFF_0%,#1B59CC_60%,#1243A5_100%)]",
   },
 
-{
+  {
+    key: "scb",
     name: "SCB",
     link: process.env.NEXT_PUBLIC_APP_SCB_URL || "#", // Dùng biến môi trường
     icon: Package,
-    tileClassName: "bg-[linear-gradient(180deg,#FF6B6B_0%,#E63946_50%,#D90429_100%)]",
+    tileClassName:
+      "bg-[linear-gradient(180deg,#FF6B6B_0%,#E63946_50%,#D90429_100%)]",
     external: true,
   },
-  
 ];
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("vi-VN", {
@@ -80,11 +106,22 @@ export default function Home() {
   const [now, setNow] = useState(new Date());
   const { user } = useUserStore();
   const isMobile = useMobile();
-  const userDepartment =
-    typeof user?.department === "string"
-      ? user.department
-      : user?.department?.name;
-  const canAccessHrm = userDepartment?.trim() === "Tổ chức";
+  const { data: currentUser } = useSWR<CurrentUser>(
+    API_ROUTES.users.me,
+    userService.fetcherMe,
+  );
+  const currentUserId = currentUser?.id ? Number(currentUser.id) : null;
+  const { data: userApplications = [] } = useSWR<Application[]>(
+    currentUserId
+      ? `${API_ROUTES.users.base}/${currentUserId}/applications`
+      : null,
+    () => usersService.fetcherUserApplications(Number(currentUserId)),
+  );
+  const allowedApplicationKeys = new Set(
+    userApplications
+      .map((application) => application.key?.trim().toLowerCase())
+      .filter(Boolean),
+  );
 
   useEffect(() => {
     document.title = "DKPHARMA APP";
@@ -106,7 +143,10 @@ export default function Home() {
 
   const normalizedSearch = search.trim().toLowerCase();
   const filteredApps = APPS.filter((app) => {
-    if (app.name === "DK HRM" && !canAccessHrm) {
+    if (
+      ACCESS_CONTROLLED_APP_KEYS.has(app.key) &&
+      !allowedApplicationKeys.has(app.key)
+    ) {
       return false;
     }
 
@@ -153,7 +193,7 @@ export default function Home() {
 
                 return (
                   <ItemApp
-                    key={app.name}
+                    key={app.key}
                     link={app.link}
                     name={app.name}
                     external={app.external}
@@ -179,7 +219,7 @@ export default function Home() {
                     Dashboard
                   </p>
                   <h2 className="mt-4 text-3xl font-bold md:text-4xl">
-                    Xin chào {user?.name ?? "bạn"}!
+                    Xin chào {currentUser?.name ?? user?.name ?? "bạn"}!
                   </h2>
                   <div className="mt-6 h-px bg-gradient-to-r from-sky-300/40 via-white/12 to-transparent" />
 
