@@ -22,6 +22,7 @@ import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from 'src/cloudinary.service';
 import { AddUserRolesDto, SyncUserRolesDto } from './dto/update-user-roles.dto';
+import { SyncUserApplicationsDto } from './dto/update-user-applications.dto';
 
 @UseGuards(jwtAuthGuard)
 @Controller('users')
@@ -52,6 +53,11 @@ export class UsersController {
     return user;
   }
 
+  @Get('/me/applications')
+  async findMyApplications(@Request() req: any) {
+    return this.usersService.findApplicationsByUserId(req.user.id);
+  }
+
   @Get(':id/roles')
   async findRolesByUserId(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findRolesByUserId(id);
@@ -79,6 +85,19 @@ export class UsersController {
     @Param('roleId', ParseIntPipe) roleId: number,
   ) {
     return this.usersService.removeRoleFromUser(id, roleId);
+  }
+
+  @Get(':id/applications')
+  async findApplicationsByUserId(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.findApplicationsByUserId(id);
+  }
+
+  @Put(':id/applications')
+  async syncApplications(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: SyncUserApplicationsDto,
+  ) {
+    return this.usersService.syncApplications(id, body.applicationIds);
   }
 
   @Get(':id')

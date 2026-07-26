@@ -24,6 +24,7 @@ import { FeaturesModule } from './modules/features/features.module';
 import { ProductLinesModule } from './modules/product-lines/product-lines.module';
 import { ProductionWorkshopsModule } from './modules/production-workshops/production-workshops.module';
 import { EquipmentModule } from './modules/equipment/equipment.module';
+import { ApplicationsModule } from './modules/applications/applications.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { EquipmentModule } from './modules/equipment/equipment.module';
     ProductLinesModule,
     ProductionWorkshopsModule,
     EquipmentModule,
+    ApplicationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

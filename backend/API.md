@@ -197,6 +197,33 @@ GET /users/with-deleted
 GET /users/me
 ```
 
+### Lấy ứng dụng user đang đăng nhập được vào
+
+```http
+GET /users/me/applications
+```
+
+Response chỉ gồm các ứng dụng đang active, sắp xếp theo `default_order`, `name`, `id`.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "key": "hrm",
+    "name": "HRM",
+    "description": "Quan ly nhan su",
+    "route": "/home",
+    "icon": "home",
+    "default_order": 1,
+    "is_active": true,
+    "created_at": "2026-07-26T08:00:00.000Z",
+    "updated_at": "2026-07-26T08:00:00.000Z"
+  }
+]
+```
+
 ### Lấy user theo ID
 
 ```http
@@ -254,6 +281,37 @@ Gửi mảng rỗng `[]` để gỡ toàn bộ role của user.
 ```http
 DELETE /users/:id/roles/:roleId
 ```
+
+### Lấy ứng dụng của user
+
+```http
+GET /users/:id/applications
+```
+
+Response giống `GET /users/me/applications`.
+
+### Đồng bộ ứng dụng của user
+
+```http
+PUT /users/:id/applications
+```
+
+Body:
+
+```json
+{
+  "applicationIds": [1, 2, 3]
+}
+```
+
+Gửi mảng rỗng `[]` để gỡ toàn bộ ứng dụng của user. Backend chỉ lưu quan hệ user-app; người dùng vẫn cần đăng nhập hợp lệ.
+
+Lỗi thường gặp:
+
+- `404 User not found`
+- `404 Applications not found: 1, 2`
+- `400 applicationIds must be an array`
+- `400 applicationIds must contain positive integers`
 
 ### Tạo user
 
@@ -430,6 +488,77 @@ Body:
 ```http
 DELETE /departments/:name
 ```
+
+## Applications
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này quản trị danh sách ứng dụng để gán trực tiếp cho user qua `user_applications`.
+
+### Lấy danh sách ứng dụng
+
+```http
+GET /applications
+GET /applications?includeInactive=false
+```
+
+Mặc định trả cả ứng dụng inactive. Dùng `includeInactive=false` để chỉ lấy ứng dụng đang active.
+
+### Lấy ứng dụng theo ID
+
+```http
+GET /applications/:id
+```
+
+### Tạo ứng dụng
+
+```http
+POST /applications
+```
+
+Body:
+
+```json
+{
+  "key": "hrm",
+  "name": "HRM",
+  "description": "Quan ly nhan su",
+  "route": "/home",
+  "icon": "home",
+  "default_order": 1,
+  "is_active": true
+}
+```
+
+Quy tắc:
+
+- `key` bắt buộc, duy nhất, tối đa 100 ký tự.
+- `name` bắt buộc, tối đa 255 ký tự.
+- `description`, `route`, `icon` tùy chọn.
+- `default_order` mặc định `0`.
+- `is_active` mặc định `true`.
+
+### Cập nhật ứng dụng
+
+```http
+PATCH /applications/:id
+```
+
+Body: gửi một hoặc nhiều field cần đổi.
+
+### Xóa ứng dụng
+
+```http
+DELETE /applications/:id
+```
+
+Khi xóa ứng dụng, các dòng gán trong `user_applications` cũng bị xóa theo.
+
+Lỗi thường gặp:
+
+- `404 Application not found`
+- `409 Application key already exists`
+- `400 No update data provided`
 
 ## Permissions
 

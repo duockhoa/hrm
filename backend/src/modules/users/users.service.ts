@@ -23,6 +23,12 @@ const USER_ROLE_INCLUDE = {
   },
 } satisfies Prisma.UserRolesInclude;
 
+const APPLICATION_ORDER_BY = [
+  { default_order: 'asc' },
+  { name: 'asc' },
+  { id: 'asc' },
+] satisfies Prisma.ApplicationsOrderByWithRelationInput[];
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -207,6 +213,51 @@ export class UsersService {
     return this.findRolesByUserId(userId);
   }
 
+  async findApplicationsByUserId(userId: number) {
+    await this.ensureUserExists(userId);
+
+    return this.prisma.applications.findMany({
+      where: {
+        is_active: true,
+        userApplications: {
+          some: {
+            user_id: userId,
+          },
+        },
+      },
+      orderBy: APPLICATION_ORDER_BY,
+    });
+  }
+
+  async syncApplications(userId: number, applicationIds: number[]) {
+    await this.ensureUserExists(userId);
+    const normalizedApplicationIds = this.normalizeIds(
+      applicationIds,
+      'applicationIds',
+      true,
+    );
+    await this.ensureApplicationsExist(normalizedApplicationIds);
+
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.userApplications.deleteMany({
+        where: { user_id: userId },
+      });
+
+      if (normalizedApplicationIds.length === 0) {
+        return;
+      }
+
+      await prisma.userApplications.createMany({
+        data: normalizedApplicationIds.map((applicationId) => ({
+          user_id: userId,
+          application_id: applicationId,
+        })),
+      });
+    });
+
+    return this.findApplicationsByUserId(userId);
+  }
+
   findByUsername(username: string) {
     const user = this.prisma.users.findUnique({ where: { username } });
     if (!user) {
@@ -262,6 +313,29 @@ export class UsersService {
     if (missingRoleIds.length > 0) {
       throw new NotFoundException(
         `Roles not found: ${missingRoleIds.join(', ')}`,
+      );
+    }
+  }
+
+  private async ensureApplicationsExist(applicationIds: number[]) {
+    if (applicationIds.length === 0) {
+      return;
+    }
+
+    const applications = await this.prisma.applications.findMany({
+      where: { id: { in: applicationIds } },
+      select: { id: true },
+    });
+    const existingApplicationIds = new Set(
+      applications.map((application) => application.id),
+    );
+    const missingApplicationIds = applicationIds.filter(
+      (applicationId) => !existingApplicationIds.has(applicationId),
+    );
+
+    if (missingApplicationIds.length > 0) {
+      throw new NotFoundException(
+        `Applications not found: ${missingApplicationIds.join(', ')}`,
       );
     }
   }

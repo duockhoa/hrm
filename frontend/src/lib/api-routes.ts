@@ -35,6 +35,10 @@ const PERMISSIONS = {
   base: "/permissions",
 };
 
+const APPLICATIONS = {
+  base: "/applications",
+};
+
 export const API_ROUTES = {
   auth: AUTH,
   users: USERS,
@@ -43,4 +47,5 @@ export const API_ROUTES = {
   companies: COMPANY,
   roles: ROLES,
   permissions: PERMISSIONS,
+  applications: APPLICATIONS,
 };

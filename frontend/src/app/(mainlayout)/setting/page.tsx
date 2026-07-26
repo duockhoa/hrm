@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import {
+  AppWindow,
   ListChecks,
   Loader2,
   PlusIcon,
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { API_ROUTES } from "@/lib/api-routes";
 import {
+  applicationsService,
   permissionsService,
   rolesService,
   usersService,
@@ -58,7 +60,27 @@ type UserRole = {
   roles?: Role;
 };
 
-type SettingTab = "roles" | "permissions" | "users";
+type Application = {
+  id: number;
+  key: string;
+  name: string;
+  description?: string | null;
+  route?: string | null;
+  icon?: string | null;
+  default_order: number;
+  is_active: boolean;
+};
+
+type ApplicationFormState = {
+  key: string;
+  name: string;
+  description: string;
+  route: string;
+  icon: string;
+  default_order: string;
+};
+
+type SettingTab = "roles" | "permissions" | "applications" | "users";
 
 const tabs: Array<{
   id: SettingTab;
@@ -79,9 +101,15 @@ const tabs: Array<{
     icon: ListChecks,
   },
   {
+    id: "applications",
+    title: "Ứng dụng",
+    description: "Tạo ứng dụng và bật tắt trạng thái truy cập.",
+    icon: AppWindow,
+  },
+  {
     id: "users",
     title: "Phân quyền người dùng",
-    description: "Gán vai trò cho từng nhân sự.",
+    description: "Gán vai trò và ứng dụng cho từng nhân sự.",
     icon: UserRoundCog,
   },
 ];
@@ -97,6 +125,9 @@ const getUserRoleIds = (userRoles?: UserRole[]) =>
   userRoles
     ?.map((userRole) => userRole.roles?.id)
     .filter((id): id is number => typeof id === "number") ?? [];
+
+const getApplicationIds = (applications?: Application[]) =>
+  applications?.map((application) => application.id) ?? [];
 
 const matchesKeyword = (values: Array<unknown>, keyword: string) => {
   const normalizedKeyword = keyword.trim().toLowerCase();
@@ -115,6 +146,7 @@ export default function SettingPage() {
   const { users } = useUsersStore();
   const [activeTab, setActiveTab] = useState<SettingTab>("roles");
   const [permissionSearch, setPermissionSearch] = useState("");
+  const [applicationSearch, setApplicationSearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>(
@@ -122,11 +154,24 @@ export default function SettingPage() {
   );
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUserRoleIds, setSelectedUserRoleIds] = useState<number[]>([]);
+  const [selectedUserApplicationIds, setSelectedUserApplicationIds] = useState<
+    number[]
+  >([]);
+  const [applicationForm, setApplicationForm] = useState<ApplicationFormState>({
+    key: "",
+    name: "",
+    description: "",
+    route: "",
+    icon: "",
+    default_order: "0",
+  });
   const [isAddRoleOpen, setIsAddRoleOpen] = useState(false);
   const [isAddPermissionOpen, setIsAddPermissionOpen] = useState(false);
-  const [isSavingRolePermissions, setIsSavingRolePermissions] =
-    useState(false);
+  const [isSavingRolePermissions, setIsSavingRolePermissions] = useState(false);
   const [isSavingUserRoles, setIsSavingUserRoles] = useState(false);
+  const [isSavingUserApplications, setIsSavingUserApplications] =
+    useState(false);
+  const [isCreatingApplication, setIsCreatingApplication] = useState(false);
 
   const { data: roles = [], isLoading: rolesLoading } = useSWR<Role[]>(
     API_ROUTES.roles.base,
@@ -135,13 +180,28 @@ export default function SettingPage() {
   const { data: permissions = [], isLoading: permissionsLoading } = useSWR<
     Permission[]
   >(API_ROUTES.permissions.base, permissionsService.fetcherPermissions);
+  const { data: applications = [], isLoading: applicationsLoading } = useSWR<
+    Application[]
+  >(API_ROUTES.applications.base, () =>
+    applicationsService.fetcherApplications(true),
+  );
   const { data: userRoles = [], isLoading: userRolesLoading } = useSWR<
     UserRole[]
   >(
-    selectedUserId
-      ? `${API_ROUTES.users.base}/${selectedUserId}/roles`
-      : null,
+    selectedUserId ? `${API_ROUTES.users.base}/${selectedUserId}/roles` : null,
     () => usersService.fetcherUserRoles(Number(selectedUserId)),
+  );
+  const { data: userApplications = [], isLoading: userApplicationsLoading } =
+    useSWR<Application[]>(
+      selectedUserId
+        ? `${API_ROUTES.users.base}/${selectedUserId}/applications`
+        : null,
+      () => usersService.fetcherUserApplications(Number(selectedUserId)),
+    );
+
+  const activeApplications = useMemo(
+    () => applications.filter((application) => application.is_active),
+    [applications],
   );
 
   const selectedRole = useMemo(
@@ -176,6 +236,24 @@ export default function SettingPage() {
     [userSearch, users],
   );
 
+  const filteredApplications = useMemo(
+    () =>
+      applications.filter((application) =>
+        matchesKeyword(
+          [
+            application.id,
+            application.key,
+            application.name,
+            application.description,
+            application.route,
+            application.icon,
+          ],
+          applicationSearch,
+        ),
+      ),
+    [applicationSearch, applications],
+  );
+
   useEffect(() => {
     if (!selectedRoleId && roles.length > 0) {
       setSelectedRoleId(roles[0].id);
@@ -195,6 +273,10 @@ export default function SettingPage() {
   useEffect(() => {
     setSelectedUserRoleIds(getUserRoleIds(userRoles));
   }, [userRoles]);
+
+  useEffect(() => {
+    setSelectedUserApplicationIds(getApplicationIds(userApplications));
+  }, [userApplications]);
 
   const refreshAuthorizationData = async () => {
     await Promise.all([
@@ -217,6 +299,24 @@ export default function SettingPage() {
         ? current.filter((id) => id !== roleId)
         : [...current, roleId],
     );
+  };
+
+  const toggleUserApplication = (applicationId: number) => {
+    setSelectedUserApplicationIds((current) =>
+      current.includes(applicationId)
+        ? current.filter((id) => id !== applicationId)
+        : [...current, applicationId],
+    );
+  };
+
+  const updateApplicationForm = (
+    field: keyof ApplicationFormState,
+    value: string,
+  ) => {
+    setApplicationForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
   };
 
   const handleCreateRole = async (data: {
@@ -295,6 +395,83 @@ export default function SettingPage() {
     }
   };
 
+  const handleCreateApplication = async () => {
+    const key = applicationForm.key.trim();
+    const name = applicationForm.name.trim();
+    const defaultOrder = Number(applicationForm.default_order || 0);
+
+    if (!key || !name) {
+      toast.error("Vui lòng nhập key và tên ứng dụng.");
+      return;
+    }
+
+    if (!Number.isInteger(defaultOrder)) {
+      toast.error("Thứ tự phải là số nguyên.");
+      return;
+    }
+
+    setIsCreatingApplication(true);
+    try {
+      await applicationsService.createApplication({
+        key,
+        name,
+        description: applicationForm.description.trim(),
+        route: applicationForm.route.trim(),
+        icon: applicationForm.icon.trim(),
+        default_order: defaultOrder,
+        is_active: true,
+      });
+      setApplicationForm({
+        key: "",
+        name: "",
+        description: "",
+        route: "",
+        icon: "",
+        default_order: "0",
+      });
+      await mutate(API_ROUTES.applications.base);
+      toast.success("Đã tạo ứng dụng.");
+    } catch {
+      toast.error("Không thể tạo ứng dụng.");
+    } finally {
+      setIsCreatingApplication(false);
+    }
+  };
+
+  const handleToggleApplicationActive = async (application: Application) => {
+    try {
+      await applicationsService.updateApplication(application.id, {
+        is_active: !application.is_active,
+      });
+      await mutate(API_ROUTES.applications.base);
+      if (selectedUserId) {
+        await mutate(`${API_ROUTES.users.base}/${selectedUserId}/applications`);
+      }
+      toast.success(
+        application.is_active ? "Đã tắt ứng dụng." : "Đã bật ứng dụng.",
+      );
+    } catch {
+      toast.error("Không thể cập nhật trạng thái ứng dụng.");
+    }
+  };
+
+  const handleDeleteApplication = async (applicationId: number) => {
+    if (!window.confirm("Xóa ứng dụng này?")) {
+      return;
+    }
+
+    try {
+      await applicationsService.deleteApplication(applicationId);
+      await mutate(API_ROUTES.applications.base);
+      if (selectedUserId) {
+        await mutate(`${API_ROUTES.users.base}/${selectedUserId}/applications`);
+      }
+      toast.success("Đã xóa ứng dụng.");
+    } catch {
+      toast.error("Không thể xóa ứng dụng.");
+    }
+  };
+
   const handleSaveRolePermissions = async () => {
     if (!selectedRoleId) {
       return;
@@ -329,6 +506,26 @@ export default function SettingPage() {
       toast.error("Không thể cập nhật vai trò cho nhân sự.");
     } finally {
       setIsSavingUserRoles(false);
+    }
+  };
+
+  const handleSaveUserApplications = async () => {
+    if (!selectedUserId) {
+      return;
+    }
+
+    setIsSavingUserApplications(true);
+    try {
+      await usersService.syncUserApplications(
+        selectedUserId,
+        selectedUserApplicationIds,
+      );
+      await mutate(`${API_ROUTES.users.base}/${selectedUserId}/applications`);
+      toast.success("Đã cập nhật ứng dụng cho nhân sự.");
+    } catch {
+      toast.error("Không thể cập nhật ứng dụng cho nhân sự.");
+    } finally {
+      setIsSavingUserApplications(false);
     }
   };
 
@@ -601,6 +798,180 @@ export default function SettingPage() {
     </div>
   );
 
+  const renderApplicationsTab = () => (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex flex-col gap-3 border-b border-gray-200 p-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Ứng dụng</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Quản lý danh sách ứng dụng để gán trực tiếp cho từng nhân sự.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-h-0 flex-col border-r border-gray-200">
+          <div className="relative border-b border-gray-200 p-4">
+            <Search className="pointer-events-none absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              value={applicationSearch}
+              onChange={(event) => setApplicationSearch(event.target.value)}
+              placeholder="Tìm theo ID, key, tên, route hoặc icon"
+              className="pl-9"
+            />
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-20">ID</TableHead>
+                  <TableHead>Ứng dụng</TableHead>
+                  <TableHead>Route</TableHead>
+                  <TableHead className="w-28">Trạng thái</TableHead>
+                  <TableHead className="w-24 text-right">Thao tác</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {applicationsLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-gray-500">
+                      Đang tải ứng dụng...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredApplications.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-gray-500">
+                      Chưa có ứng dụng phù hợp.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredApplications.map((application) => (
+                    <TableRow key={application.id}>
+                      <TableCell className="text-gray-500">
+                        {application.id}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium text-gray-900">
+                          {application.name}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {application.key}
+                          {application.icon ? ` · ${application.icon}` : ""}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[280px] truncate text-gray-600">
+                        {application.route || "-"}
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleToggleApplicationActive(application)
+                          }
+                        >
+                          <Badge
+                            variant={
+                              application.is_active ? "default" : "secondary"
+                            }
+                          >
+                            {application.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <button
+                          type="button"
+                          className="inline-flex text-red-500 hover:text-red-700"
+                          onClick={() =>
+                            handleDeleteApplication(application.id)
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-col">
+          <div className="border-b border-gray-200 p-4">
+            <h3 className="text-base font-semibold text-gray-900">
+              Thêm ứng dụng
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Ứng dụng mới mặc định đang hoạt động.
+            </p>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-auto p-4">
+            <div className="space-y-3">
+              <Input
+                value={applicationForm.key}
+                onChange={(event) =>
+                  updateApplicationForm("key", event.target.value)
+                }
+                placeholder="Key, ví dụ hrm"
+              />
+              <Input
+                value={applicationForm.name}
+                onChange={(event) =>
+                  updateApplicationForm("name", event.target.value)
+                }
+                placeholder="Tên ứng dụng"
+              />
+              <Input
+                value={applicationForm.route}
+                onChange={(event) =>
+                  updateApplicationForm("route", event.target.value)
+                }
+                placeholder="Route, ví dụ /home"
+              />
+              <Input
+                value={applicationForm.icon}
+                onChange={(event) =>
+                  updateApplicationForm("icon", event.target.value)
+                }
+                placeholder="Icon key"
+              />
+              <Input
+                value={applicationForm.default_order}
+                onChange={(event) =>
+                  updateApplicationForm("default_order", event.target.value)
+                }
+                placeholder="Thứ tự"
+                inputMode="numeric"
+              />
+              <Input
+                value={applicationForm.description}
+                onChange={(event) =>
+                  updateApplicationForm("description", event.target.value)
+                }
+                placeholder="Mô tả"
+              />
+              <Button
+                className="w-full"
+                onClick={handleCreateApplication}
+                disabled={isCreatingApplication}
+              >
+                {isCreatingApplication ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <PlusIcon />
+                )}
+                Thêm ứng dụng
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderUsersTab = () => (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-col gap-3 border-b border-gray-200 p-4 lg:flex-row lg:items-start lg:justify-between">
@@ -609,19 +980,36 @@ export default function SettingPage() {
             Phân quyền người dùng
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Chọn nhân sự ở danh sách bên trái và gán vai trò ở bên phải.
+            Chọn nhân sự ở danh sách bên trái, sau đó gán vai trò và ứng dụng.
           </p>
         </div>
-        <Button
-          onClick={handleSaveUserRoles}
-          disabled={!selectedUserId || isSavingUserRoles}
-        >
-          {isSavingUserRoles ? <Loader2 className="animate-spin" /> : <Save />}
-          Lưu phân quyền
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            onClick={handleSaveUserRoles}
+            disabled={!selectedUserId || isSavingUserRoles}
+          >
+            {isSavingUserRoles ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Save />
+            )}
+            Lưu vai trò
+          </Button>
+          <Button
+            onClick={handleSaveUserApplications}
+            disabled={!selectedUserId || isSavingUserApplications}
+          >
+            {isSavingUserApplications ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Save />
+            )}
+            Lưu ứng dụng
+          </Button>
+        </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_520px]">
         <div className="flex min-h-0 flex-col border-r border-gray-200">
           <div className="relative border-b border-gray-200 p-4">
             <Search className="pointer-events-none absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -688,52 +1076,114 @@ export default function SettingPage() {
               {selectedUser?.name || "Chưa chọn nhân sự"}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              {selectedUserRoleIds.length} vai trò đang được gán.
+              {selectedUserRoleIds.length} vai trò,{" "}
+              {selectedUserApplicationIds.length} ứng dụng đang được gán.
             </p>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto p-4">
-            {userRolesLoading ? (
-              <p className="text-sm text-gray-500">
-                Đang tải vai trò của nhân sự...
-              </p>
-            ) : roles.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Chưa có vai trò nào để gán.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {roles.map((role) => {
-                  const checked = selectedUserRoleIds.includes(role.id);
-
-                  return (
-                    <label
-                      key={role.id}
-                      className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 ${
-                        checked
-                          ? "border-blue-300 bg-blue-50"
-                          : "border-gray-200 hover:bg-gray-50"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleUserRole(role.id)}
-                        className="mt-1 h-4 w-4"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-gray-900">
-                          {role.name}
-                        </span>
-                        <span className="mt-1 block text-xs text-gray-500">
-                          {role.description || "Không có mô tả"}
-                        </span>
-                      </span>
-                    </label>
-                  );
-                })}
+          <div className="grid min-h-0 flex-1 grid-rows-2">
+            <div className="min-h-0 overflow-auto border-b border-gray-200 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h4 className="text-sm font-semibold text-gray-900">Vai trò</h4>
+                <Badge variant="secondary">{selectedUserRoleIds.length}</Badge>
               </div>
-            )}
+              {userRolesLoading ? (
+                <p className="text-sm text-gray-500">
+                  Đang tải vai trò của nhân sự...
+                </p>
+              ) : roles.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  Chưa có vai trò nào để gán.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {roles.map((role) => {
+                    const checked = selectedUserRoleIds.includes(role.id);
+
+                    return (
+                      <label
+                        key={role.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 ${
+                          checked
+                            ? "border-blue-300 bg-blue-50"
+                            : "border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleUserRole(role.id)}
+                          className="mt-1 h-4 w-4"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-gray-900">
+                            {role.name}
+                          </span>
+                          <span className="mt-1 block text-xs text-gray-500">
+                            {role.description || "Không có mô tả"}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="min-h-0 overflow-auto p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h4 className="text-sm font-semibold text-gray-900">
+                  Ứng dụng được truy cập
+                </h4>
+                <Badge variant="secondary">
+                  {selectedUserApplicationIds.length}
+                </Badge>
+              </div>
+              {userApplicationsLoading || applicationsLoading ? (
+                <p className="text-sm text-gray-500">
+                  Đang tải ứng dụng của nhân sự...
+                </p>
+              ) : activeApplications.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  Chưa có ứng dụng active để gán.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {activeApplications.map((application) => {
+                    const checked = selectedUserApplicationIds.includes(
+                      application.id,
+                    );
+
+                    return (
+                      <label
+                        key={application.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 ${
+                          checked
+                            ? "border-blue-300 bg-blue-50"
+                            : "border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleUserApplication(application.id)}
+                          className="mt-1 h-4 w-4"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-gray-900">
+                            {application.name}
+                          </span>
+                          <span className="mt-1 block break-words text-xs text-gray-500">
+                            {application.key}
+                            {application.route ? ` · ${application.route}` : ""}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -789,6 +1239,7 @@ export default function SettingPage() {
         <main className="min-h-0 overflow-hidden">
           {activeTab === "roles" && renderRolesTab()}
           {activeTab === "permissions" && renderPermissionsTab()}
+          {activeTab === "applications" && renderApplicationsTab()}
           {activeTab === "users" && renderUsersTab()}
         </main>
       </div>

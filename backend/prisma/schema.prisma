@@ -72,6 +72,7 @@ model Users {
   createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
+  userApplications                                      UserApplications[]
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -273,6 +274,38 @@ model Features {
   itemFeatures  ItemFeatures[]
 
   @@map("features")
+}
+
+model Applications {
+  id               Int                @id @default(autoincrement())
+  key              String             @unique @db.VarChar(100)
+  name             String             @db.VarChar(255)
+  description      String?            @db.Text
+  route            String?            @db.VarChar(255)
+  icon             String?            @db.VarChar(100)
+  default_order    Int                @default(0)
+  is_active        Boolean            @default(true)
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @default(now()) @updatedAt
+  userApplications UserApplications[]
+
+  @@index([is_active, default_order], map: "applications_active_order_idx")
+  @@map("applications")
+}
+
+model UserApplications {
+  id             Int          @id @default(autoincrement())
+  user_id        Int
+  application_id Int
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @default(now()) @updatedAt
+  user           Users        @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "user_applications_user_id_fkey")
+  application    Applications @relation(fields: [application_id], references: [id], onDelete: Cascade, map: "user_applications_application_id_fkey")
+
+  @@unique([user_id, application_id], map: "user_applications_user_application_key")
+  @@index([user_id], map: "user_applications_user_id_idx")
+  @@index([application_id], map: "user_applications_application_id_idx")
+  @@map("user_applications")
 }
 
 model ItemFeatures {
