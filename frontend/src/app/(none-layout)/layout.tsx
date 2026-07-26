@@ -14,8 +14,21 @@ import {
   companiesService,
 } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
+import ApplicationAccessGuard from "@/components/application-access-guard/application-access-guard";
 
 export default function MainLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <ApplicationAccessGuard>
+      <NoneLayoutContent>{children}</NoneLayoutContent>
+    </ApplicationAccessGuard>
+  );
+}
+
+function NoneLayoutContent({
   children,
 }: Readonly<{
   children: React.ReactNode;

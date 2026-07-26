@@ -20,6 +20,7 @@ import {
   companiesService,
 } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
+import ApplicationAccessGuard from "@/components/application-access-guard/application-access-guard";
 const data = [
   {
     id: "1",
@@ -54,6 +55,18 @@ const data = [
 ];
 
 export default function MainLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <ApplicationAccessGuard>
+      <MainLayoutContent>{children}</MainLayoutContent>
+    </ApplicationAccessGuard>
+  );
+}
+
+function MainLayoutContent({
   children,
 }: Readonly<{
   children: React.ReactNode;
