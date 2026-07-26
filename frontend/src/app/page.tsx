@@ -35,7 +35,7 @@ type CurrentUser = {
   name?: string | null;
 };
 
-const ACCESS_CONTROLLED_APP_KEYS = new Set(["hsl", "hrm"]);
+const ACCESS_CONTROLLED_APP_KEYS = new Set(["hsl", "hrm", "wms"]);
 
 const APPS: AppLauncherItem[] = [
   {

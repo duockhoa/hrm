@@ -1,46 +1,23 @@
 "use client";
-import { useSidebarStore } from "@/store/sidebar-store";
-import useMobile from "@/hooks/use-mobile";
 import { useEffect } from "react";
 
 import useUsersStore from "@/store/users.store";
 import useDepartmentStore from "@/store/department.store";
 import useCompanyStore from "@/store/companies.store";
 import useSWR from "swr";
-import HeaderApps from "@/components/header-apps/header-apps";
+import Header from "@/components/header/header";
 import {
   departmentsService,
   usersService,
   companiesService,
 } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
-import ApplicationAccessGuard from "@/components/application-access-guard/application-access-guard";
 
 export default function MainLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <ApplicationAccessGuard>
-      <NoneLayoutContent>{children}</NoneLayoutContent>
-    </ApplicationAccessGuard>
-  );
-}
-
-function NoneLayoutContent({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const { isOpen, toggleSidebar } = useSidebarStore();
-  const isMobile = useMobile();
-  useEffect(() => {
-    if (isMobile) {
-      toggleSidebar();
-    }
-  }, [isMobile]);
-
   const { setUsers, setIsLoading } = useUsersStore();
   const {
     data: users,
@@ -83,7 +60,7 @@ function NoneLayoutContent({
 
   return (
     <div className="flex h-screen flex-col">
-      <HeaderApps />
+      <Header />
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 overflow-auto p-2 bg-blue-50">{children}</div>
       </div>
