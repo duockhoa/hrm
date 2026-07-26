@@ -65,8 +65,6 @@ describe('ApplicationsService', () => {
         key: ' hrm ',
         name: ' HRM ',
         description: ' ',
-        route: ' /home ',
-        icon: ' home ',
         default_order: 1,
       }),
     ).resolves.toBe(application);
@@ -75,8 +73,6 @@ describe('ApplicationsService', () => {
         key: 'hrm',
         name: 'HRM',
         description: null,
-        route: '/home',
-        icon: 'home',
         default_order: 1,
         is_active: true,
       },

@@ -5,8 +5,6 @@ type ApplicationPayload = {
   key: string;
   name: string;
   description?: string;
-  route?: string;
-  icon?: string;
   default_order?: number;
   is_active?: boolean;
 };

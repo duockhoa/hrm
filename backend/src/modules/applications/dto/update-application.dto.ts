@@ -22,16 +22,6 @@ export class UpdateApplicationDto {
   description?: string | null;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  route?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  icon?: string | null;
-
-  @IsOptional()
   @IsInt()
   default_order?: number;
 

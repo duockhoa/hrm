@@ -66,8 +66,6 @@ export class ApplicationsService {
       key: this.normalizeRequiredString(dto.key, 'key', 100),
       name: this.normalizeRequiredString(dto.name, 'name', 255),
       description: this.normalizeOptionalString(dto.description, 'description'),
-      route: this.normalizeOptionalString(dto.route, 'route', 255),
-      icon: this.normalizeOptionalString(dto.icon, 'icon', 100),
       default_order: this.normalizeInteger(dto.default_order, 'default_order'),
       is_active: dto.is_active ?? true,
     };
@@ -94,14 +92,6 @@ export class ApplicationsService {
         dto.description,
         'description',
       );
-    }
-
-    if (dto.route !== undefined) {
-      data.route = this.normalizeOptionalString(dto.route, 'route', 255);
-    }
-
-    if (dto.icon !== undefined) {
-      data.icon = this.normalizeOptionalString(dto.icon, 'icon', 100);
     }
 
     if (dto.default_order !== undefined) {

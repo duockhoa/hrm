@@ -214,8 +214,6 @@ Response mẫu:
     "key": "hrm",
     "name": "HRM",
     "description": "Quan ly nhan su",
-    "route": "/home",
-    "icon": "home",
     "default_order": 1,
     "is_active": true,
     "created_at": "2026-07-26T08:00:00.000Z",
@@ -523,8 +521,6 @@ Body:
   "key": "hrm",
   "name": "HRM",
   "description": "Quan ly nhan su",
-  "route": "/home",
-  "icon": "home",
   "default_order": 1,
   "is_active": true
 }
@@ -534,7 +530,7 @@ Quy tắc:
 
 - `key` bắt buộc, duy nhất, tối đa 100 ký tự.
 - `name` bắt buộc, tối đa 255 ký tự.
-- `description`, `route`, `icon` tùy chọn.
+- `description` tùy chọn.
 - `default_order` mặc định `0`.
 - `is_active` mặc định `true`.
 

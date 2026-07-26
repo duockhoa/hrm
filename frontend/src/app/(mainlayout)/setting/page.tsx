@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import AddApplicationForm from "@/components/form-add-application/form-add-application";
 import AddPermissionForm from "@/components/form-add-permission/form-add-permission";
 import AddRoleForm from "@/components/form-add-role/form-add-role";
 import {
@@ -65,19 +66,8 @@ type Application = {
   key: string;
   name: string;
   description?: string | null;
-  route?: string | null;
-  icon?: string | null;
   default_order: number;
   is_active: boolean;
-};
-
-type ApplicationFormState = {
-  key: string;
-  name: string;
-  description: string;
-  route: string;
-  icon: string;
-  default_order: string;
 };
 
 type SettingTab = "roles" | "permissions" | "applications" | "users";
@@ -157,21 +147,13 @@ export default function SettingPage() {
   const [selectedUserApplicationIds, setSelectedUserApplicationIds] = useState<
     number[]
   >([]);
-  const [applicationForm, setApplicationForm] = useState<ApplicationFormState>({
-    key: "",
-    name: "",
-    description: "",
-    route: "",
-    icon: "",
-    default_order: "0",
-  });
   const [isAddRoleOpen, setIsAddRoleOpen] = useState(false);
   const [isAddPermissionOpen, setIsAddPermissionOpen] = useState(false);
+  const [isAddApplicationOpen, setIsAddApplicationOpen] = useState(false);
   const [isSavingRolePermissions, setIsSavingRolePermissions] = useState(false);
   const [isSavingUserRoles, setIsSavingUserRoles] = useState(false);
   const [isSavingUserApplications, setIsSavingUserApplications] =
     useState(false);
-  const [isCreatingApplication, setIsCreatingApplication] = useState(false);
 
   const { data: roles = [], isLoading: rolesLoading } = useSWR<Role[]>(
     API_ROUTES.roles.base,
@@ -245,8 +227,6 @@ export default function SettingPage() {
             application.key,
             application.name,
             application.description,
-            application.route,
-            application.icon,
           ],
           applicationSearch,
         ),
@@ -307,16 +287,6 @@ export default function SettingPage() {
         ? current.filter((id) => id !== applicationId)
         : [...current, applicationId],
     );
-  };
-
-  const updateApplicationForm = (
-    field: keyof ApplicationFormState,
-    value: string,
-  ) => {
-    setApplicationForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
   };
 
   const handleCreateRole = async (data: {
@@ -395,10 +365,15 @@ export default function SettingPage() {
     }
   };
 
-  const handleCreateApplication = async () => {
-    const key = applicationForm.key.trim();
-    const name = applicationForm.name.trim();
-    const defaultOrder = Number(applicationForm.default_order || 0);
+  const handleCreateApplication = async (data: {
+    key: string;
+    name: string;
+    description: string;
+    default_order: string;
+  }) => {
+    const key = data.key.trim();
+    const name = data.name.trim();
+    const defaultOrder = Number(data.default_order || 0);
 
     if (!key || !name) {
       toast.error("Vui lòng nhập key và tên ứng dụng.");
@@ -410,31 +385,18 @@ export default function SettingPage() {
       return;
     }
 
-    setIsCreatingApplication(true);
     try {
       await applicationsService.createApplication({
         key,
         name,
-        description: applicationForm.description.trim(),
-        route: applicationForm.route.trim(),
-        icon: applicationForm.icon.trim(),
+        description: data.description.trim(),
         default_order: defaultOrder,
         is_active: true,
-      });
-      setApplicationForm({
-        key: "",
-        name: "",
-        description: "",
-        route: "",
-        icon: "",
-        default_order: "0",
       });
       await mutate(API_ROUTES.applications.base);
       toast.success("Đã tạo ứng dụng.");
     } catch {
       toast.error("Không thể tạo ứng dụng.");
-    } finally {
-      setIsCreatingApplication(false);
     }
   };
 
@@ -809,165 +771,103 @@ export default function SettingPage() {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-h-0 flex-col border-r border-gray-200">
-          <div className="relative border-b border-gray-200 p-4">
-            <Search className="pointer-events-none absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              value={applicationSearch}
-              onChange={(event) => setApplicationSearch(event.target.value)}
-              placeholder="Tìm theo ID, key, tên, route hoặc icon"
-              className="pl-9"
-            />
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-20">ID</TableHead>
-                  <TableHead>Ứng dụng</TableHead>
-                  <TableHead>Route</TableHead>
-                  <TableHead className="w-28">Trạng thái</TableHead>
-                  <TableHead className="w-24 text-right">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {applicationsLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-gray-500">
-                      Đang tải ứng dụng...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredApplications.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-gray-500">
-                      Chưa có ứng dụng phù hợp.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredApplications.map((application) => (
-                    <TableRow key={application.id}>
-                      <TableCell className="text-gray-500">
-                        {application.id}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium text-gray-900">
-                          {application.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {application.key}
-                          {application.icon ? ` · ${application.icon}` : ""}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[280px] truncate text-gray-600">
-                        {application.route || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleToggleApplicationActive(application)
-                          }
-                        >
-                          <Badge
-                            variant={
-                              application.is_active ? "default" : "secondary"
-                            }
-                          >
-                            {application.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <button
-                          type="button"
-                          className="inline-flex text-red-500 hover:text-red-700"
-                          onClick={() =>
-                            handleDeleteApplication(application.id)
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+      <div className="flex flex-col gap-3 border-b border-gray-200 p-4 xl:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            value={applicationSearch}
+            onChange={(event) => setApplicationSearch(event.target.value)}
+            placeholder="Tìm theo ID, key, tên hoặc mô tả"
+            className="pl-9"
+          />
         </div>
-
-        <div className="flex min-h-0 flex-col">
-          <div className="border-b border-gray-200 p-4">
-            <h3 className="text-base font-semibold text-gray-900">
+        <Dialog
+          open={isAddApplicationOpen}
+          onOpenChange={setIsAddApplicationOpen}
+        >
+          <DialogTrigger asChild>
+            <Button className="cursor-pointer">
+              <PlusIcon />
               Thêm ứng dụng
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Ứng dụng mới mặc định đang hoạt động.
-            </p>
-          </div>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogTitle className="mb-4 text-center text-lg font-semibold">
+              THÊM ỨNG DỤNG MỚI
+            </DialogTitle>
+            <AddApplicationForm
+              onSubmit={handleCreateApplication}
+              onClose={() => setIsAddApplicationOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
 
-          <div className="min-h-0 flex-1 overflow-auto p-4">
-            <div className="space-y-3">
-              <Input
-                value={applicationForm.key}
-                onChange={(event) =>
-                  updateApplicationForm("key", event.target.value)
-                }
-                placeholder="Key, ví dụ hrm"
-              />
-              <Input
-                value={applicationForm.name}
-                onChange={(event) =>
-                  updateApplicationForm("name", event.target.value)
-                }
-                placeholder="Tên ứng dụng"
-              />
-              <Input
-                value={applicationForm.route}
-                onChange={(event) =>
-                  updateApplicationForm("route", event.target.value)
-                }
-                placeholder="Route, ví dụ /home"
-              />
-              <Input
-                value={applicationForm.icon}
-                onChange={(event) =>
-                  updateApplicationForm("icon", event.target.value)
-                }
-                placeholder="Icon key"
-              />
-              <Input
-                value={applicationForm.default_order}
-                onChange={(event) =>
-                  updateApplicationForm("default_order", event.target.value)
-                }
-                placeholder="Thứ tự"
-                inputMode="numeric"
-              />
-              <Input
-                value={applicationForm.description}
-                onChange={(event) =>
-                  updateApplicationForm("description", event.target.value)
-                }
-                placeholder="Mô tả"
-              />
-              <Button
-                className="w-full"
-                onClick={handleCreateApplication}
-                disabled={isCreatingApplication}
-              >
-                {isCreatingApplication ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <PlusIcon />
-                )}
-                Thêm ứng dụng
-              </Button>
-            </div>
-          </div>
-        </div>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-20">ID</TableHead>
+              <TableHead>Ứng dụng</TableHead>
+              <TableHead className="w-28">Trạng thái</TableHead>
+              <TableHead className="w-24 text-right">Thao tác</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {applicationsLoading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-gray-500">
+                  Đang tải ứng dụng...
+                </TableCell>
+              </TableRow>
+            ) : filteredApplications.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-gray-500">
+                  Chưa có ứng dụng phù hợp.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredApplications.map((application) => (
+                <TableRow key={application.id}>
+                  <TableCell className="text-gray-500">
+                    {application.id}
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-gray-900">
+                      {application.name}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {application.key}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleApplicationActive(application)}
+                    >
+                      <Badge
+                        variant={
+                          application.is_active ? "default" : "secondary"
+                        }
+                      >
+                        {application.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <button
+                      type="button"
+                      className="inline-flex text-red-500 hover:text-red-700"
+                      onClick={() => handleDeleteApplication(application.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
@@ -1175,7 +1075,6 @@ export default function SettingPage() {
                           </span>
                           <span className="mt-1 block break-words text-xs text-gray-500">
                             {application.key}
-                            {application.route ? ` · ${application.route}` : ""}
                           </span>
                         </span>
                       </label>

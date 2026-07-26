@@ -281,8 +281,6 @@ model Applications {
   key              String             @unique @db.VarChar(100)
   name             String             @db.VarChar(255)
   description      String?            @db.Text
-  route            String?            @db.VarChar(255)
-  icon             String?            @db.VarChar(100)
   default_order    Int                @default(0)
   is_active        Boolean            @default(true)
   created_at       DateTime           @default(now())
