@@ -743,7 +743,7 @@ Tất cả API trong nhóm này cần `Auth: Bearer`.
 GET /items
 ```
 
-Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`.
+Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`. Nếu specification có `updated_by_id`, response include thêm `productionSpecification.updatedBy`.
 
 ### Lấy thành phẩm
 
@@ -775,7 +775,7 @@ Ví dụ:
 GET /items/TP00001
 ```
 
-Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`.
+Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`. Nếu specification có `updated_by_id`, response include thêm `productionSpecification.updatedBy`.
 
 ## Item Equipment
 
@@ -5714,10 +5714,138 @@ Tất cả API trong nhóm này cần `Auth: Bearer`.
 GET /production-specifications
 ```
 
+Response là mảng specification. Mỗi phần tử trả đầy đủ thông tin specification, item, product line và người cập nhật:
+
+```json
+[
+  {
+    "item_code": "TP00001",
+    "product_line_id": 1,
+    "dosage_form": "Liquid",
+    "lower_control_limit": "95.000000",
+    "lower_control_limit_operator": ">=",
+    "upper_control_limit": "105.000000",
+    "upper_control_limit_operator": "<=",
+    "lower_allowed_limit": "90.000000",
+    "lower_allowed_limit_operator": ">=",
+    "upper_allowed_limit": "110.000000",
+    "upper_allowed_limit_operator": "<=",
+    "unit": "%",
+    "spray_dose_lower_allowed_limit": "90.000000",
+    "spray_dose_upper_allowed_limit": "110.000000",
+    "spray_dose_lower_control_limit": "95.000000",
+    "spray_dose_upper_control_limit": "105.000000",
+    "film_coated_tablet_weight_lower_control_limit": "195.000000",
+    "film_coated_tablet_weight_upper_control_limit": "205.000000",
+    "film_coated_tablet_weight_lower_allowed_limit": "190.000000",
+    "film_coated_tablet_weight_upper_allowed_limit": "210.000000",
+    "film_coated_tablet_weight_unit": "mg",
+    "hardness_lower_control_limit": "75.000000",
+    "hardness_upper_control_limit": "85.000000",
+    "hardness_lower_allowed_limit": "70.000000",
+    "hardness_upper_allowed_limit": "90.000000",
+    "hardness_unit": "N",
+    "updated_by_id": 7,
+    "created_at": "2026-07-28T08:00:00.000Z",
+    "updated_at": "2026-07-28T09:00:00.000Z",
+    "deleted_at": null,
+    "item": {
+      "item_code": "TP00001",
+      "item_name": "Thanh pham A",
+      "unit": "Hop",
+      "dk_code": "DK001",
+      "registration_id": 1,
+      "created_at": "2026-07-28T08:00:00.000Z",
+      "update_at": "2026-07-28T08:00:00.000Z",
+      "deleted_at": null
+    },
+    "productLine": {
+      "id": 1,
+      "code": "LINE_A",
+      "name": "Line A",
+      "created_at": "2026-07-28T08:00:00.000Z",
+      "updated_at": "2026-07-28T08:00:00.000Z"
+    },
+    "updatedBy": {
+      "id": 7,
+      "username": "user01",
+      "name": "Nguyen Van A",
+      "email": "user01@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Các field decimal có thể trả về dạng chuỗi. Các field optional có thể là `null`, bao gồm `product_line_id`, `productLine`, `updated_by_id`, `updatedBy` và các field giới hạn chưa cấu hình.
+
 ### Lấy specification theo mã item
 
 ```http
 GET /production-specifications/:item_code
+```
+
+Response là một object cùng cấu trúc với từng phần tử của API lấy danh sách:
+
+```json
+{
+  "item_code": "TP00001",
+  "product_line_id": 1,
+  "dosage_form": "Liquid",
+  "lower_control_limit": "95.000000",
+  "lower_control_limit_operator": ">=",
+  "upper_control_limit": "105.000000",
+  "upper_control_limit_operator": "<=",
+  "lower_allowed_limit": "90.000000",
+  "lower_allowed_limit_operator": ">=",
+  "upper_allowed_limit": "110.000000",
+  "upper_allowed_limit_operator": "<=",
+  "unit": "%",
+  "spray_dose_lower_allowed_limit": "90.000000",
+  "spray_dose_upper_allowed_limit": "110.000000",
+  "spray_dose_lower_control_limit": "95.000000",
+  "spray_dose_upper_control_limit": "105.000000",
+  "film_coated_tablet_weight_lower_control_limit": "195.000000",
+  "film_coated_tablet_weight_upper_control_limit": "205.000000",
+  "film_coated_tablet_weight_lower_allowed_limit": "190.000000",
+  "film_coated_tablet_weight_upper_allowed_limit": "210.000000",
+  "film_coated_tablet_weight_unit": "mg",
+  "hardness_lower_control_limit": "75.000000",
+  "hardness_upper_control_limit": "85.000000",
+  "hardness_lower_allowed_limit": "70.000000",
+  "hardness_upper_allowed_limit": "90.000000",
+  "hardness_unit": "N",
+  "updated_by_id": 7,
+  "created_at": "2026-07-28T08:00:00.000Z",
+  "updated_at": "2026-07-28T09:00:00.000Z",
+  "deleted_at": null,
+  "item": {
+    "item_code": "TP00001",
+    "item_name": "Thanh pham A",
+    "unit": "Hop",
+    "dk_code": "DK001",
+    "registration_id": 1,
+    "created_at": "2026-07-28T08:00:00.000Z",
+    "update_at": "2026-07-28T08:00:00.000Z",
+    "deleted_at": null
+  },
+  "productLine": {
+    "id": 1,
+    "code": "LINE_A",
+    "name": "Line A",
+    "created_at": "2026-07-28T08:00:00.000Z",
+    "updated_at": "2026-07-28T08:00:00.000Z"
+  },
+  "updatedBy": {
+    "id": 7,
+    "username": "user01",
+    "name": "Nguyen Van A",
+    "email": "user01@example.com",
+    "department": "QA",
+    "position": "Staff"
+  }
+}
 ```
 
 ### Tạo specification
@@ -5770,7 +5898,7 @@ Quy tắc:
 - `hardness_unit` là đơn vị độ cứng. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `N`.
 - Nếu specification đã bị soft delete, API create/update có thể restore bản ghi.
 
-Response include thêm `productLine`.
+Response include thêm `productLine`, `updated_by_id` và `updatedBy`.
 
 ### Cập nhật specification
 

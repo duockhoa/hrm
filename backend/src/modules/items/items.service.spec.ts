@@ -59,6 +59,16 @@ describe('ItemsService', () => {
         productionSpecification: {
           include: {
             productLine: true,
+            updatedBy: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                email: true,
+                department: true,
+                position: true,
+              },
+            },
           },
         },
       },
@@ -90,6 +100,16 @@ describe('ItemsService', () => {
         productionSpecification: {
           include: {
             productLine: true,
+            updatedBy: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                email: true,
+                department: true,
+                position: true,
+              },
+            },
           },
         },
       },

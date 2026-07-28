@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -33,9 +34,11 @@ export class ProductionSpecificationsController {
   @Post()
   async create(
     @Body() createProductionSpecificationDto: CreateProductionSpecificationDto,
+    @Request() req: any,
   ) {
     return this.productionSpecificationsService.create(
       createProductionSpecificationDto,
+      req.user,
     );
   }
 
@@ -43,15 +46,17 @@ export class ProductionSpecificationsController {
   async update(
     @Param('item_code') item_code: string,
     @Body() updateProductionSpecificationDto: UpdateProductionSpecificationDto,
+    @Request() req: any,
   ) {
     return this.productionSpecificationsService.update(
       item_code,
       updateProductionSpecificationDto,
+      req.user,
     );
   }
 
   @Delete(':item_code')
-  async delete(@Param('item_code') item_code: string) {
-    return this.productionSpecificationsService.delete(item_code);
+  async delete(@Param('item_code') item_code: string, @Request() req: any) {
+    return this.productionSpecificationsService.delete(item_code, req.user);
   }
 }

@@ -4,6 +4,7 @@ import { ProductionSpecificationsService } from './production-specifications.ser
 
 describe('ProductionSpecificationsService', () => {
   let service: ProductionSpecificationsService;
+  const authenticatedUser = { id: 7 };
   let prismaService: {
     productionSpecifications: {
       findUnique: jest.Mock;
@@ -77,10 +78,13 @@ describe('ProductionSpecificationsService', () => {
     );
 
     await expect(
-      service.create({
-        item_code: 'TP00001',
-        product_line_id: '2',
-      }),
+      service.create(
+        {
+          item_code: 'TP00001',
+          product_line_id: '2',
+        },
+        authenticatedUser,
+      ),
     ).resolves.toBe(createdSpecification);
 
     expect(prismaService.productLines.findUnique).toHaveBeenCalledWith({
@@ -114,10 +118,21 @@ describe('ProductionSpecificationsService', () => {
         hardness_lower_allowed_limit: null,
         hardness_upper_allowed_limit: null,
         hardness_unit: 'N',
+        updated_by_id: 7,
       },
       include: {
         item: true,
         productLine: true,
+        updatedBy: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            email: true,
+            department: true,
+            position: true,
+          },
+        },
       },
     });
   });
@@ -138,10 +153,13 @@ describe('ProductionSpecificationsService', () => {
       product_line_id: 3,
     });
 
-    await service.create({
-      item_code: 'TP00002',
-      product_line: 'Line B',
-    });
+    await service.create(
+      {
+        item_code: 'TP00002',
+        product_line: 'Line B',
+      },
+      authenticatedUser,
+    );
 
     expect(prismaService.productLines.create).toHaveBeenCalledWith({
       data: {
@@ -153,6 +171,7 @@ describe('ProductionSpecificationsService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           product_line_id: 3,
+          updated_by_id: 7,
         }),
       }),
     );
@@ -172,12 +191,16 @@ describe('ProductionSpecificationsService', () => {
       spray_dose_upper_control_limit: '105.5',
     });
 
-    await service.update('TP00003', {
-      spray_dose_lower_allowed_limit: 90,
-      spray_dose_upper_allowed_limit: '110',
-      spray_dose_lower_control_limit: '95.5',
-      spray_dose_upper_control_limit: '105.5',
-    });
+    await service.update(
+      'TP00003',
+      {
+        spray_dose_lower_allowed_limit: 90,
+        spray_dose_upper_allowed_limit: '110',
+        spray_dose_lower_control_limit: '95.5',
+        spray_dose_upper_control_limit: '105.5',
+      },
+      authenticatedUser,
+    );
 
     expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -186,6 +209,7 @@ describe('ProductionSpecificationsService', () => {
           spray_dose_upper_allowed_limit: expect.any(Object),
           spray_dose_lower_control_limit: expect.any(Object),
           spray_dose_upper_control_limit: expect.any(Object),
+          updated_by_id: 7,
         }),
       }),
     );
@@ -206,13 +230,17 @@ describe('ProductionSpecificationsService', () => {
       film_coated_tablet_weight_unit: 'mg',
     });
 
-    await service.update('TP00004', {
-      film_coated_tablet_weight_lower_control_limit: 195,
-      film_coated_tablet_weight_upper_control_limit: '205',
-      film_coated_tablet_weight_lower_allowed_limit: '190.5',
-      film_coated_tablet_weight_upper_allowed_limit: '210.5',
-      film_coated_tablet_weight_unit: ' mg ',
-    });
+    await service.update(
+      'TP00004',
+      {
+        film_coated_tablet_weight_lower_control_limit: 195,
+        film_coated_tablet_weight_upper_control_limit: '205',
+        film_coated_tablet_weight_lower_allowed_limit: '190.5',
+        film_coated_tablet_weight_upper_allowed_limit: '210.5',
+        film_coated_tablet_weight_unit: ' mg ',
+      },
+      authenticatedUser,
+    );
 
     expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -222,6 +250,7 @@ describe('ProductionSpecificationsService', () => {
           film_coated_tablet_weight_lower_allowed_limit: expect.any(Object),
           film_coated_tablet_weight_upper_allowed_limit: expect.any(Object),
           film_coated_tablet_weight_unit: 'mg',
+          updated_by_id: 7,
         }),
       }),
     );
@@ -242,13 +271,17 @@ describe('ProductionSpecificationsService', () => {
       hardness_unit: 'N',
     });
 
-    await service.update('TP00007', {
-      hardness_lower_control_limit: 75,
-      hardness_upper_control_limit: '85',
-      hardness_lower_allowed_limit: '70.5',
-      hardness_upper_allowed_limit: '90.5',
-      hardness_unit: ' N ',
-    });
+    await service.update(
+      'TP00007',
+      {
+        hardness_lower_control_limit: 75,
+        hardness_upper_control_limit: '85',
+        hardness_lower_allowed_limit: '70.5',
+        hardness_upper_allowed_limit: '90.5',
+        hardness_unit: ' N ',
+      },
+      authenticatedUser,
+    );
 
     expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -258,6 +291,7 @@ describe('ProductionSpecificationsService', () => {
           hardness_lower_allowed_limit: expect.any(Object),
           hardness_upper_allowed_limit: expect.any(Object),
           hardness_unit: 'N',
+          updated_by_id: 7,
         }),
       }),
     );
@@ -274,14 +308,19 @@ describe('ProductionSpecificationsService', () => {
       hardness_unit: 'N',
     });
 
-    await service.update('TP00008', {
-      hardness_unit: '  ',
-    });
+    await service.update(
+      'TP00008',
+      {
+        hardness_unit: '  ',
+      },
+      authenticatedUser,
+    );
 
     expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           hardness_unit: 'N',
+          updated_by_id: 7,
         }),
       }),
     );
@@ -301,12 +340,16 @@ describe('ProductionSpecificationsService', () => {
       upper_allowed_limit_operator: '<',
     });
 
-    await service.update('TP00005', {
-      lower_control_limit_operator: ' >= ',
-      upper_control_limit_operator: '<=',
-      lower_allowed_limit_operator: '>',
-      upper_allowed_limit_operator: '<',
-    });
+    await service.update(
+      'TP00005',
+      {
+        lower_control_limit_operator: ' >= ',
+        upper_control_limit_operator: '<=',
+        lower_allowed_limit_operator: '>',
+        upper_allowed_limit_operator: '<',
+      },
+      authenticatedUser,
+    );
 
     expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -315,6 +358,7 @@ describe('ProductionSpecificationsService', () => {
           upper_control_limit_operator: '<=',
           lower_allowed_limit_operator: '>',
           upper_allowed_limit_operator: '<',
+          updated_by_id: 7,
         }),
       }),
     );
@@ -328,9 +372,13 @@ describe('ProductionSpecificationsService', () => {
     });
 
     await expect(
-      service.update('TP00006', {
-        lower_control_limit_operator: '!=',
-      }),
+      service.update(
+        'TP00006',
+        {
+          lower_control_limit_operator: '!=',
+        },
+        authenticatedUser,
+      ),
     ).rejects.toThrow(
       'lower_control_limit_operator must be one of <, <=, >, >=',
     );

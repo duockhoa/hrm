@@ -68,6 +68,7 @@ model Users {
   receivedProductionOrderBatchRecordControls            ProductionOrderDocumentControls[]                     @relation("ProductionOrderBatchRecordReceiver")
   receivedProductionOrderTestCertificateControls        ProductionOrderDocumentControls[]                     @relation("ProductionOrderTestCertificateReceiver")
   receivedProductionOrderWarehouseReleaseControls       ProductionOrderDocumentControls[]                     @relation("ProductionOrderWarehouseReleaseReceiver")
+  updatedProductionSpecifications                       ProductionSpecifications[]                            @relation("ProductionSpecificationUpdater")
   createdEquipment                                      Equipment[]                                           @relation("EquipmentCreator")
   createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
@@ -599,11 +600,14 @@ model ProductionSpecifications {
   hardness_lower_allowed_limit                  Decimal?      @db.Decimal(18, 6)
   hardness_upper_allowed_limit                  Decimal?      @db.Decimal(18, 6)
   hardness_unit                                 String        @default("N") @db.VarChar(20)
+  updated_by_id                                 Int?
+  updatedBy                                     Users?        @relation("ProductionSpecificationUpdater", fields: [updated_by_id], references: [id], onDelete: SetNull)
   created_at                                    DateTime      @default(now())
   updated_at                                    DateTime      @default(now()) @updatedAt
   deleted_at                                    DateTime?
 
   @@index([product_line_id], map: "production_specifications_product_line_id_fkey")
+  @@index([updated_by_id], map: "production_specifications_updated_by_id_idx")
   @@map("production_specifications")
 }
 

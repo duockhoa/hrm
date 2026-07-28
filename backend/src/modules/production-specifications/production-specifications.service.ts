@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
@@ -14,6 +15,27 @@ const DECIMAL_INTEGER_DIGITS = 12;
 const LIMIT_COMPARISON_OPERATORS = new Set(['<', '<=', '>', '>=']);
 const DEFAULT_HARDNESS_UNIT = 'N';
 
+type AuthenticatedUser = {
+  id?: number | string | null;
+};
+
+const productionSpecificationUserSelect = {
+  id: true,
+  username: true,
+  name: true,
+  email: true,
+  department: true,
+  position: true,
+};
+
+const productionSpecificationInclude = {
+  item: true,
+  productLine: true,
+  updatedBy: {
+    select: productionSpecificationUserSelect,
+  },
+} satisfies Prisma.ProductionSpecificationsInclude;
+
 @Injectable()
 export class ProductionSpecificationsService {
   constructor(private readonly prismaService: PrismaService) {}
@@ -23,10 +45,7 @@ export class ProductionSpecificationsService {
       where: {
         deleted_at: null,
       },
-      include: {
-        item: true,
-        productLine: true,
-      },
+      include: productionSpecificationInclude,
       orderBy: {
         item_code: 'asc',
       },
@@ -44,10 +63,7 @@ export class ProductionSpecificationsService {
           item_code: normalizedItemCode,
           deleted_at: null,
         },
-        include: {
-          item: true,
-          productLine: true,
-        },
+        include: productionSpecificationInclude,
       });
 
     if (!specification) {
@@ -57,8 +73,13 @@ export class ProductionSpecificationsService {
     return specification;
   }
 
-  async create(createDto: CreateProductionSpecificationDto) {
+  async create(
+    createDto: CreateProductionSpecificationDto,
+    user?: AuthenticatedUser,
+  ) {
+    const userId = this.normalizeUserId(user);
     const data = await this.buildCreateData(createDto);
+    data.updated_by_id = userId;
 
     await this.ensureItemExists(data.item_code);
 
@@ -86,23 +107,22 @@ export class ProductionSpecificationsService {
           ...restoreData,
           deleted_at: null,
         },
-        include: {
-          item: true,
-          productLine: true,
-        },
+        include: productionSpecificationInclude,
       });
     }
 
     return this.prismaService.productionSpecifications.create({
       data,
-      include: {
-        item: true,
-        productLine: true,
-      },
+      include: productionSpecificationInclude,
     });
   }
 
-  async update(item_code: string, updateDto: UpdateProductionSpecificationDto) {
+  async update(
+    item_code: string,
+    updateDto: UpdateProductionSpecificationDto,
+    user?: AuthenticatedUser,
+  ) {
+    const userId = this.normalizeUserId(user);
     const normalizedItemCode = this.normalizeRequiredString(
       item_code,
       'item_code',
@@ -122,6 +142,7 @@ export class ProductionSpecificationsService {
         ...updateDto,
         item_code: normalizedItemCode,
       } as CreateProductionSpecificationDto);
+      createData.updated_by_id = userId;
 
       if (existing) {
         const { item_code, ...restoreData } = createData;
@@ -134,37 +155,30 @@ export class ProductionSpecificationsService {
             ...restoreData,
             deleted_at: null,
           },
-          include: {
-            item: true,
-            productLine: true,
-          },
+          include: productionSpecificationInclude,
         });
       }
 
       return this.prismaService.productionSpecifications.create({
         data: createData,
-        include: {
-          item: true,
-          productLine: true,
-        },
+        include: productionSpecificationInclude,
       });
     }
 
     const data = await this.buildUpdateData(updateDto);
+    data.updated_by_id = userId;
 
     return this.prismaService.productionSpecifications.update({
       where: {
         item_code: normalizedItemCode,
       },
       data,
-      include: {
-        item: true,
-        productLine: true,
-      },
+      include: productionSpecificationInclude,
     });
   }
 
-  async delete(item_code: string) {
+  async delete(item_code: string, user?: AuthenticatedUser) {
+    const userId = this.normalizeUserId(user);
     const normalizedItemCode = this.normalizeRequiredString(
       item_code,
       'item_code',
@@ -178,11 +192,9 @@ export class ProductionSpecificationsService {
       },
       data: {
         deleted_at: new Date(),
+        updated_by_id: userId,
       },
-      include: {
-        item: true,
-        productLine: true,
-      },
+      include: productionSpecificationInclude,
     });
   }
 
@@ -684,5 +696,15 @@ export class ProductionSpecificationsService {
     }
 
     return normalizedValue;
+  }
+
+  private normalizeUserId(user?: AuthenticatedUser) {
+    const userId = Number(user?.id);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      throw new UnauthorizedException('Authenticated user not found');
+    }
+
+    return userId;
   }
 }
