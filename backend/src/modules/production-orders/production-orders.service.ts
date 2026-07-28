@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import axios from 'axios';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
@@ -90,6 +91,40 @@ const productionOrderSamplingRequestWithSenderInclude = {
   },
 };
 
+const productionOrderSamplingRecordCreatorSelect = {
+  id: true,
+  username: true,
+  name: true,
+  email: true,
+  department: true,
+  position: true,
+};
+
+const productionOrderSamplingRecordsInclude = {
+  include: {
+    createdBy: {
+      select: productionOrderSamplingRecordCreatorSelect,
+    },
+  },
+  orderBy: [
+    {
+      created_at: 'desc' as const,
+    },
+    {
+      id: 'desc' as const,
+    },
+  ],
+};
+
+const productionOrderFindInclude = {
+  item: true,
+  samplingRequests: productionOrderSamplingRequestWithSenderInclude,
+  samplingRecords: productionOrderSamplingRecordsInclude,
+  documentControl: {
+    include: productionOrderDocumentControlInclude,
+  },
+} satisfies Prisma.ProductionOrdersInclude;
+
 const getStageIdFilterInput = (
   options?: ExportProductionOrderLinesDto,
 ): ProductionOrderStageIdFilter | number | string | undefined => {
@@ -163,13 +198,7 @@ export class ProductionOrdersService {
   async findAll() {
     const productionOrders = await this.prismaService.productionOrders.findMany(
       {
-        include: {
-          item: true,
-          samplingRequests: productionOrderSamplingRequestWithSenderInclude,
-          documentControl: {
-            include: productionOrderDocumentControlInclude,
-          },
-        },
+        include: productionOrderFindInclude,
         orderBy: {
           id: 'desc',
         },
@@ -187,13 +216,7 @@ export class ProductionOrdersService {
             startsWith: 'TP',
           },
         },
-        include: {
-          item: true,
-          samplingRequests: productionOrderSamplingRequestWithSenderInclude,
-          documentControl: {
-            include: productionOrderDocumentControlInclude,
-          },
-        },
+        include: productionOrderFindInclude,
         orderBy: {
           id: 'desc',
         },
@@ -213,13 +236,7 @@ export class ProductionOrdersService {
             },
           },
         },
-        include: {
-          item: true,
-          samplingRequests: productionOrderSamplingRequestWithSenderInclude,
-          documentControl: {
-            include: productionOrderDocumentControlInclude,
-          },
-        },
+        include: productionOrderFindInclude,
         orderBy: {
           id: 'desc',
         },
@@ -235,13 +252,7 @@ export class ProductionOrdersService {
         where: {
           id,
         },
-        include: {
-          item: true,
-          samplingRequests: productionOrderSamplingRequestWithSenderInclude,
-          documentControl: {
-            include: productionOrderDocumentControlInclude,
-          },
-        },
+        include: productionOrderFindInclude,
       });
 
     if (!productionOrder) {

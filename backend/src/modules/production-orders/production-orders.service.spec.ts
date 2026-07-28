@@ -9,10 +9,53 @@ import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import PizZip from 'pizzip';
 import { FeaturesService } from '../features/features.service';
+import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
 
 jest.mock('axios');
 
 const mockedAxiosGet = axios.get as jest.MockedFunction<typeof axios.get>;
+
+const expectedProductionOrderUserSelect = {
+  id: true,
+  username: true,
+  name: true,
+  email: true,
+  department: true,
+  position: true,
+};
+
+const expectedProductionOrderFindInclude = {
+  item: true,
+  samplingRequests: {
+    orderBy: {
+      sent_at: 'desc',
+    },
+    take: 1,
+    include: {
+      sender: {
+        select: expectedProductionOrderUserSelect,
+      },
+    },
+  },
+  samplingRecords: {
+    include: {
+      createdBy: {
+        select: expectedProductionOrderUserSelect,
+      },
+    },
+    orderBy: [
+      {
+        created_at: 'desc',
+      },
+      {
+        id: 'desc',
+      },
+    ],
+  },
+  documentControl: {
+    include: productionOrderDocumentControlInclude,
+  },
+};
 
 describe('ProductionOrdersService', () => {
   let service: ProductionOrdersService;
@@ -139,27 +182,7 @@ describe('ProductionOrdersService', () => {
       },
     ]);
     expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith({
-      include: {
-        item: true,
-        samplingRequests: {
-          orderBy: {
-            sent_at: 'desc',
-          },
-          take: 1,
-          include: {
-            sender: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                email: true,
-                department: true,
-                position: true,
-              },
-            },
-          },
-        },
-      },
+      include: expectedProductionOrderFindInclude,
       orderBy: {
         id: 'desc',
       },
@@ -192,27 +215,7 @@ describe('ProductionOrdersService', () => {
           startsWith: 'TP',
         },
       },
-      include: {
-        item: true,
-        samplingRequests: {
-          orderBy: {
-            sent_at: 'desc',
-          },
-          take: 1,
-          include: {
-            sender: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                email: true,
-                department: true,
-                position: true,
-              },
-            },
-          },
-        },
-      },
+      include: expectedProductionOrderFindInclude,
       orderBy: {
         id: 'desc',
       },
@@ -260,27 +263,7 @@ describe('ProductionOrdersService', () => {
           },
         },
       },
-      include: {
-        item: true,
-        samplingRequests: {
-          orderBy: {
-            sent_at: 'desc',
-          },
-          take: 1,
-          include: {
-            sender: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                email: true,
-                department: true,
-                position: true,
-              },
-            },
-          },
-        },
-      },
+      include: expectedProductionOrderFindInclude,
       orderBy: {
         id: 'desc',
       },
@@ -359,27 +342,7 @@ describe('ProductionOrdersService', () => {
       where: {
         id: 2031,
       },
-      include: {
-        item: true,
-        samplingRequests: {
-          orderBy: {
-            sent_at: 'desc',
-          },
-          take: 1,
-          include: {
-            sender: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                email: true,
-                department: true,
-                position: true,
-              },
-            },
-          },
-        },
-      },
+      include: expectedProductionOrderFindInclude,
     });
     expect(featuresService.findConfigByItemCode).toHaveBeenCalledWith(
       'TP00001',

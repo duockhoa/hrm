@@ -1427,7 +1427,7 @@ Tất cả API trong nhóm này cần `Auth: Bearer`.
 GET /production-orders
 ```
 
-Response có thêm field `pyclm` dựa trên sampling request mới nhất.
+Response có thêm field `pyclm` dựa trên sampling request mới nhất, `samplingRecords` chứa dữ liệu lấy mẫu và `documentControl` chứa thông tin cấp/nhận hồ sơ, phiếu xuất kho, phiếu kiểm nghiệm.
 
 ### Lấy lệnh sản xuất thành phẩm
 
@@ -1435,11 +1435,15 @@ Response có thêm field `pyclm` dựa trên sampling request mới nhất.
 GET /production-orders/finished-products
 ```
 
+Response giống `GET /production-orders`, có thêm `pyclm`, `samplingRecords` và `documentControl`.
+
 ### Lấy lệnh sản xuất bán thành phẩm
 
 ```http
 GET /production-orders/semi-finished-products
 ```
+
+Response giống `GET /production-orders`, có thêm `pyclm`, `samplingRecords` và `documentControl`.
 
 ### Lấy chi tiết lệnh sản xuất
 
@@ -1447,7 +1451,110 @@ GET /production-orders/semi-finished-products
 GET /production-orders/:id
 ```
 
-Response có thêm field `pyclm` dựa trên sampling request mới nhất và `featureConfig` dựa trên cấu hình action/view của `item_code`.
+Response có thêm field `pyclm` dựa trên sampling request mới nhất, `samplingRecords` chứa dữ liệu lấy mẫu, `documentControl` chứa thông tin cấp/nhận hồ sơ và `featureConfig` dựa trên cấu hình action/view của `item_code`.
+
+Ví dụ phần dữ liệu lấy mẫu trong response:
+
+```json
+{
+  "id": 2031,
+  "item_code": "TP00001",
+  "pyclm": {
+    "isSent": true,
+    "status": "sent",
+    "googleDocUrl": "https://docs.google.com/document/d/test",
+    "sentAt": "2026-07-05T08:00:00.000Z",
+    "location": "Kiem nghiem",
+    "sender": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    },
+    "latestSamplingRequest": {
+      "id": 1,
+      "production_order_id": 2031,
+      "sender_id": 7,
+      "location": "Kiem nghiem",
+      "google_doc_url": "https://docs.google.com/document/d/test",
+      "status": "sent",
+      "sent_at": "2026-07-05T08:00:00.000Z"
+    }
+  },
+  "samplingRecords": [
+    {
+      "id": 1,
+      "production_order_id": 2031,
+      "sampling_type": "Dinh ky",
+      "quantity": "12.50",
+      "unit": "mau",
+      "created_by_id": 7,
+      "created_at": "2026-07-05T08:10:00.000Z",
+      "updated_at": "2026-07-05T08:10:00.000Z",
+      "createdBy": {
+        "id": 7,
+        "username": "binh",
+        "name": "Binh",
+        "email": "binh@example.com",
+        "department": "QA",
+        "position": "Staff"
+      }
+    }
+  ],
+  "documentControl": {
+    "id": 1,
+    "production_order_id": 2031,
+    "batch_record_issued_by_id": 5,
+    "batch_record_issued_at": "2026-07-22T08:00:00.000Z",
+    "batch_record_received_by_id": 8,
+    "batch_record_received_at": "2026-07-22T09:00:00.000Z",
+    "test_certificate_received_by_id": 9,
+    "test_certificate_received_at": "2026-07-22T10:00:00.000Z",
+    "warehouse_release_received_by_id": 10,
+    "warehouse_release_received_at": "2026-07-22T11:00:00.000Z",
+    "created_at": "2026-07-22T08:00:00.000Z",
+    "updated_at": "2026-07-22T11:00:00.000Z",
+    "deleted_at": null,
+    "batchRecordIssuedBy": {
+      "id": 5,
+      "username": "qa01",
+      "name": "Nguyen Van A",
+      "email": "qa01@example.com",
+      "department": "QA",
+      "position": "Staff"
+    },
+    "batchRecordReceivedBy": {
+      "id": 8,
+      "username": "sx01",
+      "name": "Tran Van B",
+      "email": "sx01@example.com",
+      "department": "Production",
+      "position": "Staff"
+    },
+    "testCertificateReceivedBy": {
+      "id": 9,
+      "username": "sx02",
+      "name": "Le Van C",
+      "email": "sx02@example.com",
+      "department": "Production",
+      "position": "Staff"
+    },
+    "warehouseReleaseReceivedBy": {
+      "id": 10,
+      "username": "sx03",
+      "name": "Pham Van D",
+      "email": "sx03@example.com",
+      "department": "Production",
+      "position": "Staff"
+    }
+  }
+}
+```
+
+`samplingRecords` được sắp xếp theo `created_at` mới nhất trước, sau đó `id` giảm dần. Nếu chưa có dữ liệu lấy mẫu, `samplingRecords` là mảng rỗng `[]`.
+Nếu chưa có thông tin cấp/nhận chứng từ, `documentControl` là `null`.
 
 Ví dụ `featureConfig`:
 
