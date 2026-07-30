@@ -733,6 +733,7 @@ model ProductionOrderDensityChecks {
   solution_pycnometer_mass_g Decimal          @db.Decimal(12, 4)
   water_pycnometer_mass_g    Decimal          @db.Decimal(12, 4)
   density                    Decimal          @db.Decimal(12, 6)
+  apparent_density           Decimal?         @db.Decimal(12, 6)
   created_by_id              Int
   createdBy                  Users            @relation("ProductionOrderDensityCheckCreator", fields: [created_by_id], references: [id], map: "po_density_checks_created_by_id_fkey")
   created_at                 DateTime         @default(now())

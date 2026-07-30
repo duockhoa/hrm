@@ -2495,6 +2495,7 @@ Response mẫu:
     "solution_pycnometer_mass_g": "75.0000",
     "water_pycnometer_mass_g": "75.5000",
     "density": "0.990099",
+    "apparent_density": "0.650000",
     "created_by_id": 7,
     "created_at": "2026-06-11T08:10:00.000Z",
     "updated_at": "2026-06-11T08:10:00.000Z",
@@ -2532,7 +2533,8 @@ Body:
 {
   "empty_pycnometer_mass_g": 25,
   "solution_pycnometer_mass_g": 75,
-  "water_pycnometer_mass_g": 75.5
+  "water_pycnometer_mass_g": 75.5,
+  "apparent_density": 0.65
 }
 ```
 
@@ -2544,6 +2546,7 @@ Quy tắc:
 - `water_pycnometer_mass_g` phải lớn hơn `empty_pycnometer_mass_g`.
 - Backend tự tính và lưu `density`; frontend không gửi field này.
 - Công thức: `(solution_pycnometer_mass_g - empty_pycnometer_mass_g) / (water_pycnometer_mass_g - empty_pycnometer_mass_g)`.
+- `apparent_density` là tỉ trọng biểu kiến, frontend có thể gửi hoặc bỏ trống. Nếu gửi thì phải lớn hơn `0`, lưu dạng `DECIMAL(12, 6)`, tối đa 6 chữ số sau dấu phẩy.
 - Thời điểm kiểm tra là `created_at`, lấy theo thời điểm tạo bản ghi.
 - `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
 
@@ -2552,6 +2555,8 @@ Lỗi thường gặp:
 - `404 Production order not found`
 - `400 empty_pycnometer_mass_g is required`
 - `400 water_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
+- `400 apparent_density must fit DECIMAL(12, 6) with up to 6 decimal places`
+- `400 apparent_density must be greater than 0`
 - `401 Authenticated user not found`
 
 ### Cập nhật dữ liệu tỉ trọng
@@ -2565,16 +2570,18 @@ Body chỉ cần gửi field muốn cập nhật:
 
 ```json
 {
-  "solution_pycnometer_mass_g": 76
+  "solution_pycnometer_mass_g": 76,
+  "apparent_density": 0.7
 }
 ```
 
 Quy tắc:
 
-- Có thể sửa `empty_pycnometer_mass_g`, `solution_pycnometer_mass_g`, `water_pycnometer_mass_g`, hoặc kết hợp các field này.
+- Có thể sửa `empty_pycnometer_mass_g`, `solution_pycnometer_mass_g`, `water_pycnometer_mass_g`, `apparent_density`, hoặc kết hợp các field này.
 - Giá trị gửi lên validate giống API tạo.
 - Backend tự tính lại và lưu `density` sau khi cập nhật; frontend không gửi field này.
 - Nếu chỉ sửa một khối lượng, backend dùng các khối lượng còn lại đang có trong DB để tính lại `density`.
+- Nếu chỉ sửa `apparent_density`, backend không tính lại `density`. Gửi `null` hoặc chuỗi rỗng để xoá giá trị tỉ trọng biểu kiến.
 
 Lỗi thường gặp:
 
@@ -2582,6 +2589,8 @@ Lỗi thường gặp:
 - `400 empty_pycnometer_mass_g is required`
 - `400 solution_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
 - `400 water_pycnometer_mass_g must be greater than empty_pycnometer_mass_g`
+- `400 apparent_density must fit DECIMAL(12, 6) with up to 6 decimal places`
+- `400 apparent_density must be greater than 0`
 - `404 Density check not found`
 
 ### Xóa dữ liệu tỉ trọng

@@ -112,6 +112,7 @@ describe('ProductionOrderDensityChecksService', () => {
         empty_pycnometer_mass_g: '25,0000',
         solution_pycnometer_mass_g: '75.0000',
         water_pycnometer_mass_g: '75.5000',
+        apparent_density: '0,650000',
       },
       { id: 7 },
     );
@@ -129,6 +130,31 @@ describe('ProductionOrderDensityChecksService', () => {
     expect(createArg.data.solution_pycnometer_mass_g.toString()).toBe('75');
     expect(createArg.data.water_pycnometer_mass_g.toString()).toBe('75.5');
     expect(createArg.data.density.toString()).toBe('0.990099');
+    expect(createArg.data.apparent_density.toString()).toBe('0.65');
+  });
+
+  it('creates a density check without apparent density', async () => {
+    const createdDensityCheck = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrderDensityChecks.create.mockResolvedValue(
+      createdDensityCheck,
+    );
+
+    await expect(
+      service.create(
+        2031,
+        {
+          empty_pycnometer_mass_g: 25,
+          solution_pycnometer_mass_g: 75,
+          water_pycnometer_mass_g: 75.5,
+        },
+        { id: 7 },
+      ),
+    ).resolves.toBe(createdDensityCheck);
+
+    const createArg =
+      prismaService.productionOrderDensityChecks.create.mock.calls[0][0];
+    expect(createArg.data.apparent_density).toBeNull();
   });
 
   it('throws NotFoundException when the production order does not exist', async () => {
@@ -164,6 +190,90 @@ describe('ProductionOrderDensityChecksService', () => {
     expect(updateArg.data.solution_pycnometer_mass_g.toString()).toBe('76');
     expect(updateArg.data.water_pycnometer_mass_g).toBeUndefined();
     expect(updateArg.data.density.toString()).toBe('1.009901');
+  });
+
+  it('updates apparent density without recalculating density', async () => {
+    const updatedDensityCheck = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrderDensityChecks.findUnique.mockResolvedValue({
+      id: 1,
+      empty_pycnometer_mass_g: new Prisma.Decimal(25),
+      solution_pycnometer_mass_g: new Prisma.Decimal(75),
+      water_pycnometer_mass_g: new Prisma.Decimal(75.5),
+    });
+    prismaService.productionOrderDensityChecks.update.mockResolvedValue(
+      updatedDensityCheck,
+    );
+
+    await expect(
+      service.update(1, {
+        apparent_density: '0,700000',
+      }),
+    ).resolves.toBe(updatedDensityCheck);
+
+    const updateArg =
+      prismaService.productionOrderDensityChecks.update.mock.calls[0][0];
+    expect(updateArg.where).toEqual({ id: 1 });
+    expect(updateArg.data.density).toBeUndefined();
+    expect(updateArg.data.apparent_density.toString()).toBe('0.7');
+  });
+
+  it('clears apparent density on update', async () => {
+    const updatedDensityCheck = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrderDensityChecks.findUnique.mockResolvedValue({
+      id: 1,
+      empty_pycnometer_mass_g: new Prisma.Decimal(25),
+      solution_pycnometer_mass_g: new Prisma.Decimal(75),
+      water_pycnometer_mass_g: new Prisma.Decimal(75.5),
+    });
+    prismaService.productionOrderDensityChecks.update.mockResolvedValue(
+      updatedDensityCheck,
+    );
+
+    await expect(
+      service.update(1, {
+        apparent_density: null,
+      }),
+    ).resolves.toBe(updatedDensityCheck);
+
+    const updateArg =
+      prismaService.productionOrderDensityChecks.update.mock.calls[0][0];
+    expect(updateArg.data.apparent_density).toBeNull();
+  });
+
+  it('rejects apparent density with more than six decimal places', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        {
+          empty_pycnometer_mass_g: 25,
+          solution_pycnometer_mass_g: 75,
+          water_pycnometer_mass_g: 75.5,
+          apparent_density: '0.1234567',
+        },
+        { id: 7 },
+      ),
+    ).rejects.toThrow(
+      'apparent_density must fit DECIMAL(12, 6) with up to 6 decimal places',
+    );
+  });
+
+  it('rejects apparent density that is not greater than zero', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        {
+          empty_pycnometer_mass_g: 25,
+          solution_pycnometer_mass_g: 75,
+          water_pycnometer_mass_g: 75.5,
+          apparent_density: 0,
+        },
+        { id: 7 },
+      ),
+    ).rejects.toThrow('apparent_density must be greater than 0');
   });
 
   it('rejects a density update without any supported fields', async () => {

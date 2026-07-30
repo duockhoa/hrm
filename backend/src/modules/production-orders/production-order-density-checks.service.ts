@@ -15,6 +15,8 @@ type AuthenticatedUser = {
 
 const MASS_DECIMAL_PATTERN = /^\d+(?:\.\d{1,4})?$/;
 const MASS_INTEGER_DIGITS = 8;
+const DENSITY_DECIMAL_PATTERN = /^\d+(?:\.\d{1,6})?$/;
+const DENSITY_INTEGER_DIGITS = 6;
 
 const densityCheckCreatorSelect = {
   id: true,
@@ -113,6 +115,10 @@ export class ProductionOrderDensityChecksService {
         solution_pycnometer_mass_g: solutionPycnometerMass,
         water_pycnometer_mass_g: waterPycnometerMass,
         density,
+        apparent_density: this.normalizeOptionalDensity(
+          dto?.apparent_density,
+          'apparent_density',
+        ),
         created_by_id: this.normalizeUserId(user),
       },
       include: densityCheckInclude,
@@ -146,8 +152,14 @@ export class ProductionOrderDensityChecksService {
     const hasEmptyMass = 'empty_pycnometer_mass_g' in updateDto;
     const hasSolutionMass = 'solution_pycnometer_mass_g' in updateDto;
     const hasWaterMass = 'water_pycnometer_mass_g' in updateDto;
+    const hasApparentDensity = 'apparent_density' in updateDto;
 
-    if (!hasEmptyMass && !hasSolutionMass && !hasWaterMass) {
+    if (
+      !hasEmptyMass &&
+      !hasSolutionMass &&
+      !hasWaterMass &&
+      !hasApparentDensity
+    ) {
       throw new BadRequestException('At least one field is required');
     }
 
@@ -169,13 +181,15 @@ export class ProductionOrderDensityChecksService {
           'water_pycnometer_mass_g',
         )
       : existingCheck.water_pycnometer_mass_g;
-    const data: Prisma.ProductionOrderDensityChecksUpdateInput = {
-      density: this.calculateDensity(
+    const data: Prisma.ProductionOrderDensityChecksUpdateInput = {};
+
+    if (hasEmptyMass || hasSolutionMass || hasWaterMass) {
+      data.density = this.calculateDensity(
         emptyPycnometerMass,
         solutionPycnometerMass,
         waterPycnometerMass,
-      ),
-    };
+      );
+    }
 
     if (hasEmptyMass) {
       data.empty_pycnometer_mass_g = emptyPycnometerMass;
@@ -187,6 +201,13 @@ export class ProductionOrderDensityChecksService {
 
     if (hasWaterMass) {
       data.water_pycnometer_mass_g = waterPycnometerMass;
+    }
+
+    if (hasApparentDensity) {
+      data.apparent_density = this.normalizeOptionalDensity(
+        updateDto.apparent_density,
+        'apparent_density',
+      );
     }
 
     return data;
@@ -269,6 +290,41 @@ export class ProductionOrderDensityChecksService {
 
     if (integerPart.length > MASS_INTEGER_DIGITS) {
       throw new BadRequestException(`${fieldName} must fit DECIMAL(12, 4)`);
+    }
+
+    const decimalValue = new Prisma.Decimal(normalizedValue);
+
+    if (decimalValue.lte(0)) {
+      throw new BadRequestException(`${fieldName} must be greater than 0`);
+    }
+
+    return decimalValue;
+  }
+
+  private normalizeOptionalDensity(value: unknown, fieldName: string) {
+    if (
+      value === null ||
+      value === undefined ||
+      (typeof value === 'string' && value.trim() === '')
+    ) {
+      return null;
+    }
+
+    const normalizedValue =
+      typeof value === 'number'
+        ? String(value)
+        : String(value).trim().replace(',', '.');
+
+    if (!DENSITY_DECIMAL_PATTERN.test(normalizedValue)) {
+      throw new BadRequestException(
+        `${fieldName} must fit DECIMAL(12, 6) with up to 6 decimal places`,
+      );
+    }
+
+    const [integerPart] = normalizedValue.split('.');
+
+    if (integerPart.length > DENSITY_INTEGER_DIGITS) {
+      throw new BadRequestException(`${fieldName} must fit DECIMAL(12, 6)`);
     }
 
     const decimalValue = new Prisma.Decimal(normalizedValue);

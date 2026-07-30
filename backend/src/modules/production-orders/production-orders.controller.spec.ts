@@ -31,6 +31,8 @@ import { ProductionOrderMaterialSummariesService } from './production-order-mate
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 import { ProductionOrderHardnessChecksService } from './production-order-hardness-checks.service';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
+import { ProductionOrderHygieneChecksService } from './production-order-hygiene-checks.service';
+import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -64,6 +66,13 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderEnvironmentChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderHygieneChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -244,6 +253,13 @@ describe('ProductionOrdersController', () => {
     update: jest.Mock;
     delete: jest.Mock;
   };
+  let productionOrderDocumentControlsService: {
+    findByProductionOrder: jest.Mock;
+    issueBatchRecord: jest.Mock;
+    receiveBatchRecord: jest.Mock;
+    receiveTestCertificate: jest.Mock;
+    receiveWarehouseRelease: jest.Mock;
+  };
 
   beforeEach(async () => {
     productionOrdersService = {
@@ -276,6 +292,13 @@ describe('ProductionOrdersController', () => {
       delete: jest.fn(),
     };
     productionOrderEnvironmentChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
+    productionOrderHygieneChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
@@ -456,6 +479,13 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderDocumentControlsService = {
+      findByProductionOrder: jest.fn(),
+      issueBatchRecord: jest.fn(),
+      receiveBatchRecord: jest.fn(),
+      receiveTestCertificate: jest.fn(),
+      receiveWarehouseRelease: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -479,6 +509,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderEnvironmentChecksService,
           useValue: productionOrderEnvironmentChecksService,
+        },
+        {
+          provide: ProductionOrderHygieneChecksService,
+          useValue: productionOrderHygieneChecksService,
         },
         {
           provide: ProductionOrderFinishedProductSummariesService,
@@ -575,6 +609,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderFactoryReleaseReviewsService,
           useValue: productionOrderFactoryReleaseReviewsService,
+        },
+        {
+          provide: ProductionOrderDocumentControlsService,
+          useValue: productionOrderDocumentControlsService,
         },
       ],
     }).compile();
@@ -961,6 +999,7 @@ describe('ProductionOrdersController', () => {
       empty_pycnometer_mass_g: 25,
       solution_pycnometer_mass_g: 75,
       water_pycnometer_mass_g: 75.5,
+      apparent_density: 0.65,
     };
     const user = { id: 7, name: 'Binh' };
     const result = { id: 1, production_order_id: 2031 };
@@ -979,6 +1018,7 @@ describe('ProductionOrdersController', () => {
   it('updates a density check', async () => {
     const updateDto = {
       solution_pycnometer_mass_g: 76,
+      apparent_density: 0.7,
     };
     const result = { id: 1, solution_pycnometer_mass_g: 76 };
     productionOrderDensityChecksService.update.mockResolvedValue(result);
