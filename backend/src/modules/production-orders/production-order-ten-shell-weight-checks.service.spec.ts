@@ -22,6 +22,7 @@ describe('ProductionOrderTenShellWeightChecksService', () => {
 
   const validDto = {
     ten_shells_weight: '500,04',
+    unit: 'g',
   };
 
   beforeEach(async () => {
@@ -83,7 +84,7 @@ describe('ProductionOrderTenShellWeightChecksService', () => {
     await expect(service.findById(1)).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('upserts a check with total ten-shell weight and fixed mg unit', async () => {
+  it('upserts a check with total ten-shell weight and frontend unit', async () => {
     const createdCheck = { id: 1, production_order_id: 2031 };
     prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
     prismaService.productionOrderTenShellWeightChecks.upsert.mockResolvedValue(
@@ -103,12 +104,37 @@ describe('ProductionOrderTenShellWeightChecksService', () => {
         create: {
           production_order_id: 2031,
           ten_shells_weight: new Prisma.Decimal('500.04'),
-          unit: 'mg',
+          unit: 'g',
           created_by_id: 7,
         },
         update: {
           ten_shells_weight: new Prisma.Decimal('500.04'),
+          unit: 'g',
+        },
+      }),
+    );
+  });
+
+  it('defaults a missing create unit to mg without resetting existing unit', async () => {
+    const createdCheck = { id: 1, production_order_id: 2031 };
+    const dtoWithoutUnit = { ten_shells_weight: validDto.ten_shells_weight };
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrderTenShellWeightChecks.upsert.mockResolvedValue(
+      createdCheck,
+    );
+
+    await expect(service.upsert(2031, dtoWithoutUnit, { id: 7 })).resolves.toBe(
+      createdCheck,
+    );
+    expect(
+      prismaService.productionOrderTenShellWeightChecks.upsert,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
           unit: 'mg',
+        }),
+        update: {
+          ten_shells_weight: new Prisma.Decimal('500.04'),
         },
       }),
     );
@@ -175,10 +201,55 @@ describe('ProductionOrderTenShellWeightChecksService', () => {
         where: { id: 1 },
         data: {
           ten_shells_weight: new Prisma.Decimal('510.25'),
+        },
+      }),
+    );
+  });
+
+  it('updates a ten-shell weight unit from frontend', async () => {
+    const updatedCheck = { id: 1, unit: 'mg' };
+    prismaService.productionOrderTenShellWeightChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+      },
+    );
+    prismaService.productionOrderTenShellWeightChecks.update.mockResolvedValue(
+      updatedCheck,
+    );
+
+    await expect(service.update(1, { unit: ' mg ' })).resolves.toBe(
+      updatedCheck,
+    );
+    expect(
+      prismaService.productionOrderTenShellWeightChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: {
           unit: 'mg',
         },
       }),
     );
+  });
+
+  it('rejects clearing a ten-shell weight unit', async () => {
+    prismaService.productionOrderTenShellWeightChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+      },
+    );
+
+    await expect(service.update(1, { unit: '  ' })).rejects.toThrow(
+      'unit is required',
+    );
+  });
+
+  it('rejects a ten-shell weight unit longer than ten characters', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.upsert(2031, { ...validDto, unit: '12345678901' }, { id: 7 }),
+    ).rejects.toThrow('unit must be at most 10 characters');
   });
 
   it('rejects an empty ten-shell weight update', async () => {

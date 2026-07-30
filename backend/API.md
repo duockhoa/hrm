@@ -3737,7 +3737,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu các lần kiểm tra khối lượng của 10 vỏ thuộc một lệnh sản xuất. Mỗi bản ghi bắt buộc có đủ 10 khối lượng và có đơn vị cố định là `mg`.
+Nhóm API này lưu các lần kiểm tra khối lượng của 10 vỏ thuộc một lệnh sản xuất. Mỗi bản ghi bắt buộc có đủ 10 khối lượng và nhận đơn vị từ frontend.
 
 ### Lấy danh sách kiểm tra khối lượng 10 vỏ
 
@@ -3764,7 +3764,7 @@ Response mẫu:
     "shell_8_weight": "49.97",
     "shell_9_weight": "50.05",
     "shell_10_weight": "49.96",
-    "unit": "mg",
+    "unit": "g",
     "created_by_id": 7,
     "created_at": "2026-06-21T12:00:00.000Z",
     "updated_at": "2026-06-21T12:00:00.000Z",
@@ -3809,7 +3809,8 @@ Body:
   "shell_7_weight": 50.04,
   "shell_8_weight": 49.97,
   "shell_9_weight": 50.05,
-  "shell_10_weight": 49.96
+  "shell_10_weight": 49.96,
+  "unit": "g"
 }
 ```
 
@@ -3818,7 +3819,7 @@ Quy tắc:
 - Cả 10 field `shell_1_weight` đến `shell_10_weight` đều bắt buộc và phải lớn hơn `0`.
 - Mỗi giá trị lưu dạng `DECIMAL(10, 2)`, tối đa 2 chữ số sau dấu phẩy.
 - Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `50.02`, `"50.02"` hoặc `"50,02"`.
-- `unit` luôn là `mg`, do backend tự lưu; frontend không gửi field này.
+- `unit` nhận từ frontend, phải là chuỗi không rỗng, tối đa 10 ký tự. Nếu tạo mới mà không gửi `unit`, backend mặc định là `mg`.
 - `production_order_id` lấy từ `:id`.
 - Người kiểm tra là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
 - `created_at` là thời điểm kiểm tra.
@@ -3829,6 +3830,9 @@ Lỗi thường gặp:
 - `400 shell_1_weight is required`
 - `400 shell_1_weight must fit DECIMAL(10, 2) with up to 2 decimal places`
 - `400 shell_1_weight must be greater than 0`
+- `400 unit is required`
+- `400 unit must be a string`
+- `400 unit must be at most 10 characters`
 - `401 Authenticated user not found`
 
 ### Cập nhật khối lượng từng vỏ
@@ -3844,14 +3848,16 @@ Body chỉ cần gửi các khối lượng muốn cập nhật:
 ```json
 {
   "shell_2_weight": 51.25,
-  "shell_7_weight": 50.15
+  "shell_7_weight": 50.15,
+  "unit": "mg"
 }
 ```
 
 Quy tắc:
 
-- Có thể cập nhật một hoặc nhiều field từ `shell_1_weight` đến `shell_10_weight`.
-- Mỗi giá trị được gửi phải lớn hơn `0`, lưu dạng `DECIMAL(10, 2)` và có đơn vị cố định là `mg`.
+- Có thể cập nhật một hoặc nhiều field từ `shell_1_weight` đến `shell_10_weight`, hoặc cập nhật `unit`.
+- Mỗi giá trị khối lượng được gửi phải lớn hơn `0` và lưu dạng `DECIMAL(10, 2)`.
+- Nếu gửi `unit`, giá trị phải là chuỗi không rỗng, tối đa 10 ký tự. Nếu không gửi `unit`, backend giữ nguyên đơn vị hiện có.
 - API trả về bản ghi sau khi cập nhật, kèm thông tin `createdBy`.
 
 Lỗi thường gặp:
@@ -3860,6 +3866,9 @@ Lỗi thường gặp:
 - `400 shell_1_weight is required`
 - `400 shell_1_weight must fit DECIMAL(10, 2) with up to 2 decimal places`
 - `400 shell_1_weight must be greater than 0`
+- `400 unit is required`
+- `400 unit must be a string`
+- `400 unit must be at most 10 characters`
 - `404 Shell weight check not found`
 
 ### Xoá kiểm tra khối lượng 10 vỏ
@@ -3879,7 +3888,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu khối lượng chung của 10 vỏ nang thuộc một lệnh sản xuất. Đây là tính năng riêng với nhóm `Production Order Shell Weight Checks` phía trên. Mỗi lệnh sản xuất chỉ có 1 bản ghi khối lượng chung 10 vỏ nang và có đơn vị cố định là `mg`.
+Nhóm API này lưu khối lượng chung của 10 vỏ nang thuộc một lệnh sản xuất. Đây là tính năng riêng với nhóm `Production Order Shell Weight Checks` phía trên. Mỗi lệnh sản xuất chỉ có 1 bản ghi khối lượng chung 10 vỏ nang và nhận đơn vị từ frontend.
 
 ### Lấy khối lượng chung 10 vỏ nang
 
@@ -3896,7 +3905,7 @@ Response mẫu:
   "id": 1,
   "production_order_id": 2031,
   "ten_shells_weight": "500.04",
-  "unit": "mg",
+  "unit": "g",
   "created_by_id": 7,
   "created_at": "2026-06-25T00:00:00.000Z",
   "updated_at": "2026-06-25T00:00:00.000Z",
@@ -3931,7 +3940,8 @@ Body:
 
 ```json
 {
-  "ten_shells_weight": 500.04
+  "ten_shells_weight": 500.04,
+  "unit": "g"
 }
 ```
 
@@ -3942,7 +3952,7 @@ Quy tắc:
 - `ten_shells_weight` bắt buộc và phải lớn hơn `0`.
 - `ten_shells_weight` lưu dạng `DECIMAL(10, 2)`, tối đa 2 chữ số sau dấu phẩy.
 - Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `500.04`, `"500.04"` hoặc `"500,04"`.
-- `unit` luôn là `mg`, do backend tự lưu; frontend không gửi field này.
+- `unit` nhận từ frontend, phải là chuỗi không rỗng, tối đa 10 ký tự. Nếu tạo mới mà không gửi `unit`, backend mặc định là `mg`. Nếu bản ghi đã tồn tại và không gửi `unit`, backend giữ nguyên đơn vị hiện có.
 - `production_order_id` lấy từ `:id`.
 - Người tạo dữ liệu là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
 
@@ -3952,6 +3962,9 @@ Lỗi thường gặp:
 - `400 ten_shells_weight is required`
 - `400 ten_shells_weight must fit DECIMAL(10, 2) with up to 2 decimal places`
 - `400 ten_shells_weight must be greater than 0`
+- `400 unit is required`
+- `400 unit must be a string`
+- `400 unit must be at most 10 characters`
 - `401 Authenticated user not found`
 
 ### Cập nhật khối lượng chung 10 vỏ nang theo ID
@@ -3966,16 +3979,17 @@ Body:
 
 ```json
 {
-  "ten_shells_weight": 510.25
+  "ten_shells_weight": 510.25,
+  "unit": "mg"
 }
 ```
 
 Quy tắc:
 
-- `ten_shells_weight` bắt buộc khi cập nhật và phải lớn hơn `0`.
-- `ten_shells_weight` lưu dạng `DECIMAL(10, 2)`, tối đa 2 chữ số sau dấu phẩy.
+- Có thể cập nhật `ten_shells_weight`, `unit`, hoặc cả hai.
+- Nếu gửi `ten_shells_weight`, giá trị phải lớn hơn `0`, lưu dạng `DECIMAL(10, 2)`, tối đa 2 chữ số sau dấu phẩy.
 - Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `510.25`, `"510.25"` hoặc `"510,25"`.
-- `unit` luôn là `mg`, do backend tự lưu; frontend không gửi field này.
+- Nếu gửi `unit`, giá trị phải là chuỗi không rỗng, tối đa 10 ký tự. Nếu không gửi `unit`, backend giữ nguyên đơn vị hiện có.
 
 Lỗi thường gặp:
 
@@ -3983,6 +3997,9 @@ Lỗi thường gặp:
 - `400 ten_shells_weight is required`
 - `400 ten_shells_weight must fit DECIMAL(10, 2) with up to 2 decimal places`
 - `400 ten_shells_weight must be greater than 0`
+- `400 unit is required`
+- `400 unit must be a string`
+- `400 unit must be at most 10 characters`
 - `404 Ten-shell weight check not found`
 
 ### Xoá khối lượng chung 10 vỏ nang

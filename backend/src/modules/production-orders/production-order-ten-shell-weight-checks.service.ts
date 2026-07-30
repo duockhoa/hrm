@@ -15,7 +15,8 @@ type AuthenticatedUser = {
 
 const WEIGHT_DECIMAL_PATTERN = /^\d+(?:\.\d{1,2})?$/;
 const WEIGHT_INTEGER_DIGITS = 8;
-const WEIGHT_UNIT = 'mg';
+const DEFAULT_WEIGHT_UNIT = 'mg';
+const MAX_UNIT_LENGTH = 10;
 
 const tenShellWeightCheckCreatorSelect = {
   id: true,
@@ -72,21 +73,27 @@ export class ProductionOrderTenShellWeightChecksService {
       dto?.ten_shells_weight,
       'ten_shells_weight',
     );
+    const updateDto = dto ?? {};
+    const createData = {
+      production_order_id: productionOrderId,
+      ten_shells_weight: tenShellsWeight,
+      unit: this.normalizeCreateUnit(dto?.unit, 'unit'),
+      created_by_id: this.normalizeUserId(user),
+    };
+    const updateData: Prisma.ProductionOrderTenShellWeightChecksUpdateInput = {
+      ten_shells_weight: tenShellsWeight,
+    };
+
+    if ('unit' in updateDto) {
+      updateData.unit = this.normalizeUnit(dto.unit, 'unit');
+    }
 
     return this.prismaService.productionOrderTenShellWeightChecks.upsert({
       where: {
         production_order_id: productionOrderId,
       },
-      create: {
-        production_order_id: productionOrderId,
-        ten_shells_weight: tenShellsWeight,
-        unit: WEIGHT_UNIT,
-        created_by_id: this.normalizeUserId(user),
-      },
-      update: {
-        ten_shells_weight: tenShellsWeight,
-        unit: WEIGHT_UNIT,
-      },
+      create: createData,
+      update: updateData,
       include: tenShellWeightCheckInclude,
     });
   }
@@ -122,7 +129,10 @@ export class ProductionOrderTenShellWeightChecksService {
         updateDto.ten_shells_weight,
         'ten_shells_weight',
       );
-      data.unit = WEIGHT_UNIT;
+    }
+
+    if ('unit' in updateDto) {
+      data.unit = this.normalizeUnit(updateDto.unit, 'unit');
     }
 
     if (Object.keys(data).length === 0) {
@@ -188,6 +198,42 @@ export class ProductionOrderTenShellWeightChecksService {
     }
 
     return decimalValue;
+  }
+
+  private normalizeCreateUnit(value: unknown, fieldName: string) {
+    if (this.isEmptyValue(value)) {
+      return DEFAULT_WEIGHT_UNIT;
+    }
+
+    return this.normalizeUnit(value, fieldName);
+  }
+
+  private normalizeUnit(value: unknown, fieldName: string) {
+    if (this.isEmptyValue(value)) {
+      throw new BadRequestException(`${fieldName} is required`);
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be a string`);
+    }
+
+    const unit = value.trim();
+
+    if (unit.length > MAX_UNIT_LENGTH) {
+      throw new BadRequestException(
+        `${fieldName} must be at most ${MAX_UNIT_LENGTH} characters`,
+      );
+    }
+
+    return unit;
+  }
+
+  private isEmptyValue(value: unknown) {
+    return (
+      value === null ||
+      value === undefined ||
+      (typeof value === 'string' && value.trim() === '')
+    );
   }
 
   private normalizeUserId(user?: AuthenticatedUser) {

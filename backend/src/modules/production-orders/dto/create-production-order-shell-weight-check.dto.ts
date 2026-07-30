@@ -9,4 +9,5 @@ export class CreateProductionOrderShellWeightCheckDto {
   shell_8_weight?: number | string | null;
   shell_9_weight?: number | string | null;
   shell_10_weight?: number | string | null;
+  unit?: string | null;
 }
