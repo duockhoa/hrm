@@ -235,13 +235,14 @@ model PasswordResetOTPs {
 }
 
 model RegistrationNumbers {
-  id                  Int       @id @default(autoincrement())
-  registration_number String    @unique
-  product_name        String?   @db.Text
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @default(now()) @updatedAt
-  deleted_at          DateTime?
-  items               Items[]
+  id                                 Int                                  @id @default(autoincrement())
+  registration_number                String                               @unique
+  product_name                       String?                              @db.Text
+  created_at                         DateTime                             @default(now())
+  updated_at                         DateTime                             @default(now()) @updatedAt
+  deleted_at                         DateTime?
+  items                              Items[]
+  productionOrderRegistrationNumbers ProductionOrderRegistrationNumbers[]
 
   @@map("registration_numbers")
 }
@@ -514,9 +515,24 @@ model ProductionOrders {
   factoryReleaseReviews                ProductionOrderFactoryReleaseReviews[]
   equipmentMonitoringRecords           EquipmentMonitoringRecords[]
   documentControl                      ProductionOrderDocumentControls?
+  registrationNumber                   ProductionOrderRegistrationNumbers?
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
+}
+
+model ProductionOrderRegistrationNumbers {
+  id                  Int                  @id @default(autoincrement())
+  production_order_id Int                  @unique(map: "po_registration_numbers_po_id_key")
+  productionOrder     ProductionOrders     @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_registration_numbers_po_id_fkey")
+  registration_id     Int?
+  registration        RegistrationNumbers? @relation(fields: [registration_id], references: [id], onDelete: SetNull, map: "po_registration_numbers_registration_id_fkey")
+  registration_number String
+  created_at          DateTime             @default(now())
+  updated_at          DateTime             @default(now()) @updatedAt
+
+  @@index([registration_id], map: "po_registration_numbers_registration_id_idx")
+  @@map("production_order_registration_numbers")
 }
 
 model ProductionOrderDocumentControls {

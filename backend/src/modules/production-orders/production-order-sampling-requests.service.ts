@@ -125,7 +125,11 @@ const samplingRequestSenderSelect = {
 const samplingRequestInclude = {
   productionOrder: {
     include: {
-      item: true,
+      item: {
+        include: {
+          registration: true,
+        },
+      },
     },
   },
   sender: {
@@ -162,7 +166,11 @@ export class ProductionOrderSamplingRequestsService {
           id: productionOrderId,
         },
         include: {
-          item: true,
+          item: {
+            include: {
+              registration: true,
+            },
+          },
         },
       });
 
@@ -191,6 +199,11 @@ export class ProductionOrderSamplingRequestsService {
 
     const payload = this.buildPyclmPayload(productionOrder, dto, user);
     const providerResponse = await this.sendPyclmRequest(payload);
+
+    await this.saveProductionOrderRegistrationNumber(
+      productionOrderId,
+      productionOrder,
+    );
 
     const samplingRequest =
       await this.prismaService.productionOrderSamplingRequests.create({
@@ -229,14 +242,18 @@ export class ProductionOrderSamplingRequestsService {
 
   private buildPyclmPayload(
     productionOrder: Prisma.ProductionOrdersGetPayload<{
-      include: { item: true };
+      include: { item: { include: { registration: true } } };
     }>,
     dto: CreateProductionOrderSamplingRequestDto,
     user?: AuthenticatedUser,
   ) {
+    const registrationNumber =
+      this.getProductionOrderRegistrationNumber(productionOrder);
+
     return {
       itemCode: productionOrder.item_code,
       itemName: productionOrder.item?.item_name ?? productionOrder.description,
+      registrationNum: registrationNumber,
       quantity: this.formatQuantity(
         productionOrder.planned_quatity,
         productionOrder.unit,
@@ -255,6 +272,7 @@ export class ProductionOrderSamplingRequestsService {
   private async sendPyclmRequest(payload: {
     itemCode: string;
     itemName: string;
+    registrationNum: string;
     quantity: string;
     batchNumber: string;
     expiryDate: string;
@@ -295,6 +313,47 @@ export class ProductionOrderSamplingRequestsService {
     } catch (error) {
       this.handlePyclmApiError(error);
     }
+  }
+
+  private async saveProductionOrderRegistrationNumber(
+    productionOrderId: number,
+    productionOrder: Prisma.ProductionOrdersGetPayload<{
+      include: { item: { include: { registration: true } } };
+    }>,
+  ) {
+    const registrationNumber =
+      this.getProductionOrderRegistrationNumber(productionOrder);
+
+    if (!registrationNumber) {
+      return;
+    }
+
+    await this.prismaService.productionOrderRegistrationNumbers.upsert({
+      where: {
+        production_order_id: productionOrderId,
+      },
+      create: {
+        production_order_id: productionOrderId,
+        registration_id: productionOrder.item?.registration?.id ?? null,
+        registration_number: registrationNumber,
+      },
+      update: {
+        registration_id: productionOrder.item?.registration?.id ?? null,
+        registration_number: registrationNumber,
+      },
+    });
+  }
+
+  private getProductionOrderRegistrationNumber(
+    productionOrder: Prisma.ProductionOrdersGetPayload<{
+      include: { item: { include: { registration: true } } };
+    }>,
+  ) {
+    return (
+      this.normalizeOptionalString(
+        productionOrder.item?.registration?.registration_number,
+      ) ?? ''
+    );
   }
 
   private formatQuantity(quantity: number, unit?: string | null) {

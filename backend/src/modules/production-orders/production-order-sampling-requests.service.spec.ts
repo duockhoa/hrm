@@ -18,6 +18,9 @@ describe('ProductionOrderSamplingRequestsService', () => {
       findFirst: jest.Mock;
       create: jest.Mock;
     };
+    productionOrderRegistrationNumbers: {
+      upsert: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
@@ -34,6 +37,9 @@ describe('ProductionOrderSamplingRequestsService', () => {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         create: jest.fn(),
+      },
+      productionOrderRegistrationNumbers: {
+        upsert: jest.fn(),
       },
     };
 
@@ -63,6 +69,10 @@ describe('ProductionOrderSamplingRequestsService', () => {
       item_code: 'TP00063',
       item: {
         item_name: 'Thanh pham test',
+        registration: {
+          id: 583,
+          registration_number: ' VD-12345-26 ',
+        },
       },
       planned_quatity: 1000,
       unit: 'kg',
@@ -105,6 +115,7 @@ describe('ProductionOrderSamplingRequestsService', () => {
       {
         itemCode: 'TP00063',
         itemName: 'Thanh pham test',
+        registrationNum: 'VD-12345-26',
         quantity: '1000 kg',
         batchNumber: '010126',
         expiryDate: '030528',
@@ -133,35 +144,75 @@ describe('ProductionOrderSamplingRequestsService', () => {
         },
       }),
     );
+    expect(
+      prismaService.productionOrderRegistrationNumbers.upsert,
+    ).toHaveBeenCalledWith({
+      where: {
+        production_order_id: 2031,
+      },
+      create: {
+        production_order_id: 2031,
+        registration_id: 583,
+        registration_number: 'VD-12345-26',
+      },
+      update: {
+        registration_id: 583,
+        registration_number: 'VD-12345-26',
+      },
+    });
     expect(result).toEqual({
       status: 'success',
       samplingRequest: createdSamplingRequest,
     });
   });
 
-  it('returns the existing sent sampling request unless resend is requested', async () => {
-    const existingSamplingRequest = {
+  it('creates a new sampling request when an existing sent request is present', async () => {
+    const createdSamplingRequest = {
       id: 1,
       production_order_id: 2031,
       status: 'sent',
+      google_doc_url: 'https://docs.google.com/document/d/test',
     };
 
     prismaService.productionOrders.findUnique.mockResolvedValue({
       id: 2031,
+      item_code: 'TP00063',
+      item: {
+        item_name: 'Thanh pham test',
+        registration: null,
+      },
+      planned_quatity: 1000,
+      unit: 'kg',
+      description: 'Fallback name',
+      lot_no: '010126',
+      expire_date: '2028-05-03',
+      warehouse: 'K-KHKV',
     });
     prismaService.productionOrderSamplingRequests.findFirst.mockResolvedValue(
-      existingSamplingRequest,
+      createdSamplingRequest,
+    );
+    mockedAxiosPost.mockResolvedValue({
+      data: {
+        status: 'success',
+        url: 'https://docs.google.com/document/d/test',
+      },
+    });
+    prismaService.productionOrderSamplingRequests.create.mockResolvedValue(
+      createdSamplingRequest,
     );
 
     const result = await service.create(2031, {}, { id: 7, name: 'Binh' });
 
-    expect(mockedAxiosPost).not.toHaveBeenCalled();
+    expect(mockedAxiosPost).toHaveBeenCalled();
     expect(
       prismaService.productionOrderSamplingRequests.create,
+    ).toHaveBeenCalled();
+    expect(
+      prismaService.productionOrderRegistrationNumbers.upsert,
     ).not.toHaveBeenCalled();
     expect(result).toEqual({
-      status: 'already_sent',
-      samplingRequest: existingSamplingRequest,
+      status: 'success',
+      samplingRequest: createdSamplingRequest,
     });
   });
 });
