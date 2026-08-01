@@ -1637,6 +1637,87 @@ Ví dụ `featureConfig`:
 GET /production-orders/:id/production-order-lines
 ```
 
+## SAP B1 Connector
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm route này proxy trực tiếp từ backend sang SAP B1 Service Layer bằng cấu hình môi trường `SAP_SERVICE_LAYER_URL`, `SAP_COMPANY_DB`, `SAP_USERNAME`, `SAP_PASSWORD`. Các API này trả dữ liệu SAP thô và không tự ghi vào database local, trừ các cron sync riêng của backend.
+
+### Lấy danh sách item từ SAP
+
+```http
+GET /sap-b1-connector/items
+```
+
+Response: mảng item SAP lấy từ endpoint `Items`.
+
+### Lấy danh sách lệnh sản xuất từ SAP
+
+```http
+GET /sap-b1-connector/production-orders
+```
+
+Response: mảng production order SAP lấy từ endpoint `ProductionOrders`.
+
+Lưu ý: backend hiện đang gọi SAP với `$skip=1300` cho danh sách production orders.
+
+### Lấy chi tiết một lệnh sản xuất từ SAP
+
+```http
+GET /sap-b1-connector/production-orders/:id
+```
+
+Ví dụ:
+
+```http
+GET /sap-b1-connector/production-orders/100
+```
+
+Response: object SAP từ endpoint `ProductionOrders(100)`, có thể bao gồm `ProductionOrderLines` và `ProductionOrdersStages`.
+
+### Cập nhật một lệnh sản xuất trên SAP
+
+```http
+PATCH /sap-b1-connector/production-orders/:id
+```
+
+Body gửi các field SAP cần cập nhật.
+
+Ví dụ cập nhật `Remarks`:
+
+```json
+{
+  "Remarks": "SCB: 31/26/CBMP-BN. HT BTP lô 1180726"
+}
+```
+
+Response:
+
+```json
+{
+  "message": "Production order updated successfully",
+  "productionOrder": {
+    "id": 100,
+    "item_code": "TP00666",
+    "status": "boposReleased",
+    "type": "bopotStandard",
+    "planned_quatity": 10000,
+    "remarks": "SCB: 31/26/CBMP-BN. HT BTP lô 1180726",
+    "internal_notes": "..."
+  }
+}
+```
+
+Lưu ý: API này gọi trực tiếp SAP `PATCH ProductionOrders(:id)`. Sau khi SAP cập nhật thành công, backend gọi lại SAP `GET ProductionOrders(:id)` và upsert đúng lệnh sản xuất đó vào bảng `production_orders` local.
+
+### Lấy danh sách đơn vị tính từ SAP
+
+```http
+GET /sap-b1-connector/unit-of-measurements
+```
+
+Response: mảng unit of measurement SAP lấy từ endpoint `UnitOfMeasurements`.
+
 ## Production Order Document Controls
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

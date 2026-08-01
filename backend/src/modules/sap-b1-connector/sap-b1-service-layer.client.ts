@@ -59,6 +59,17 @@ export class SapB1ServiceLayerClient {
     return this.get<T>(`ProductionOrders(${id})`);
   }
 
+  async patchProductionOrderById(
+    id: number | string,
+    body: Record<string, unknown>,
+  ) {
+    await this.patch(`ProductionOrders(${id})`, body);
+
+    return {
+      message: 'Production order updated successfully',
+    };
+  }
+
   async getUnitOfMeasurements<T = any>() {
     return this.fetchAllPages<T>(
       'UnitOfMeasurements?$select=Code,Name,AbsEntry',
@@ -102,6 +113,31 @@ export class SapB1ServiceLayerClient {
       ) {
         this.clearSession();
         return this.get<T>(endpoint, false);
+      }
+
+      throw error;
+    }
+  }
+
+  private async patch(
+    endpoint: string,
+    body: Record<string, unknown>,
+    retryOnUnauthorized = true,
+  ): Promise<void> {
+    const token = await this.getValidToken();
+
+    try {
+      await this.sapApi.patch(endpoint, body, {
+        headers: this.buildSessionHeaders(token),
+      });
+    } catch (error) {
+      if (
+        retryOnUnauthorized &&
+        axios.isAxiosError(error) &&
+        error.response?.status === 401
+      ) {
+        this.clearSession();
+        return this.patch(endpoint, body, false);
       }
 
       throw error;

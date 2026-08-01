@@ -8,6 +8,8 @@ describe('SapB1ConnectorService', () => {
   let sapB1Client: {
     getItems: jest.Mock;
     getProductionOrders: jest.Mock;
+    getProductionOrderById: jest.Mock;
+    patchProductionOrderById: jest.Mock;
   };
   let prismaService: {
     items: {
@@ -24,6 +26,8 @@ describe('SapB1ConnectorService', () => {
     sapB1Client = {
       getItems: jest.fn(),
       getProductionOrders: jest.fn(),
+      getProductionOrderById: jest.fn(),
+      patchProductionOrderById: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -135,5 +139,75 @@ describe('SapB1ConnectorService', () => {
     expect(prismaService.items.findUnique).not.toHaveBeenCalled();
     expect(prismaService.items.create).not.toHaveBeenCalled();
     expect(prismaService.items.update).not.toHaveBeenCalled();
+  });
+
+  it('patches a SAP production order then syncs only that production order to the database', async () => {
+    const patchBody = {
+      Remarks: 'SCB: 31/26/CBMP-BN. HT BTP lô 1180726',
+    };
+    const syncedProductionOrder = {
+      id: 2652,
+      remarks: patchBody.Remarks,
+    };
+
+    sapB1Client.patchProductionOrderById.mockResolvedValue({
+      message: 'Production order updated successfully',
+    });
+    sapB1Client.getProductionOrderById.mockResolvedValue({
+      DocumentNumber: 2652,
+      ItemNo: 'TP00666',
+      PlannedQuantity: 10000,
+      ProductionOrderStatus: 'boposReleased',
+      ProductionOrderType: 'bopotStandard',
+      CreationDate: '2026-08-01',
+      ProductionOrderOrigin: 'bopooManual',
+      Warehouse: 'K-TP',
+      InventoryUOM: 'Hộp',
+      StartDate: '2026-08-06',
+      ProductDescription: 'MP Xịt răng miệng Midkid hương táo 20ml',
+      U_NSX: '2026-08-05',
+      U_HSD: '2029-08-05',
+      U_SL: '1050826',
+      U_QCHH: '20ml/lọ/hộp x 66 hộp/kiện',
+      U_MLSX: 'TP00666-1050826-2652',
+      U_GC: 'Xuất BBC2 cho HT MP Xịt răng miệng Midkid hương táo 20ml TP00666-1050826-2652',
+      Remarks: patchBody.Remarks,
+    });
+    prismaService.items.findUnique.mockResolvedValue({
+      item_code: 'TP00666',
+    });
+    prismaService.productionOrders.upsert.mockResolvedValue(
+      syncedProductionOrder,
+    );
+
+    await expect(
+      service.patchProductionOrderById(2652, patchBody),
+    ).resolves.toEqual({
+      message: 'Production order updated successfully',
+      productionOrder: syncedProductionOrder,
+    });
+
+    expect(sapB1Client.patchProductionOrderById).toHaveBeenCalledWith(
+      2652,
+      patchBody,
+    );
+    expect(sapB1Client.getProductionOrderById).toHaveBeenCalledWith(2652);
+    expect(sapB1Client.getProductionOrders).not.toHaveBeenCalled();
+    expect(prismaService.productionOrders.upsert).toHaveBeenCalledWith({
+      where: {
+        id: 2652,
+      },
+      update: expect.objectContaining({
+        remarks: patchBody.Remarks,
+        internal_notes:
+          'Xuất BBC2 cho HT MP Xịt răng miệng Midkid hương táo 20ml TP00666-1050826-2652',
+      }),
+      create: expect.objectContaining({
+        id: 2652,
+        remarks: patchBody.Remarks,
+        internal_notes:
+          'Xuất BBC2 cho HT MP Xịt răng miệng Midkid hương táo 20ml TP00666-1050826-2652',
+      }),
+    });
   });
 });

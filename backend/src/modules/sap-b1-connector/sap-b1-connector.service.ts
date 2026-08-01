@@ -5,6 +5,10 @@ import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
 
 const SAP_ITEM_CODE_MAX_LENGTH = 191;
 
+type SyncProductionOrderOptions = {
+  throwOnSkip?: boolean;
+};
+
 @Injectable()
 export class SapB1ConnectorService {
   constructor(
@@ -42,6 +46,23 @@ export class SapB1ConnectorService {
 
   private isMissingSapValue(value: unknown): boolean {
     return value === null || value === undefined || value === '';
+  }
+
+  async patchProductionOrderById(id: number, body: Record<string, unknown>) {
+    await this.sapB1Client.patchProductionOrderById(id, body);
+
+    const productionOrder = await this.sapB1Client.getProductionOrderById(id);
+    const syncedProductionOrder = await this.syncProductionOrder(
+      productionOrder,
+      {
+        throwOnSkip: true,
+      },
+    );
+
+    return {
+      message: 'Production order updated successfully',
+      productionOrder: syncedProductionOrder,
+    };
   }
 
   @Cron('0 */15 * * * *')
@@ -133,71 +154,7 @@ export class SapB1ConnectorService {
       if (Array.isArray(production_orders)) {
         for (const production_order of production_orders) {
           try {
-            const id = Number(production_order.DocumentNumber);
-            const item_code = this.requireSapString(
-              production_order.ItemNo,
-              'ItemNo',
-            );
-            const planned_quatity = Number(production_order.PlannedQuantity);
-
-            if (!Number.isInteger(id) || !Number.isInteger(planned_quatity)) {
-              this.logger.warn(
-                `Skipped production order with invalid number fields: ${production_order.DocumentNumber}`,
-              );
-              continue;
-            }
-
-            const existingItem = await this.prismaService.items.findUnique({
-              where: { item_code },
-            });
-
-            if (!existingItem) {
-              this.logger.warn(
-                `Skipped production order ${id}: item ${item_code} does not exist`,
-              );
-              continue;
-            }
-
-            const productionOrderData = {
-              item_code,
-              status: this.requireSapString(
-                production_order.ProductionOrderStatus,
-                'ProductionOrderStatus',
-              ),
-              type: this.requireSapString(
-                production_order.ProductionOrderType,
-                'ProductionOrderType',
-              ),
-              planned_quatity,
-              creation_date: this.parseSapDate(production_order.CreationDate),
-              origin: production_order.ProductionOrderOrigin ?? null,
-              warehouse: production_order.Warehouse ?? null,
-              unit: this.requireSapString(
-                production_order.InventoryUOM,
-                'InventoryUOM',
-              ),
-              start_date: this.parseSapDate(production_order.StartDate),
-              description: this.requireSapString(
-                production_order.ProductDescription,
-                'ProductDescription',
-              ),
-              date_manufacture: production_order.U_NSX ?? null,
-              expire_date: production_order.U_HSD ?? null,
-              lot_no: this.requireSapString(production_order.U_SL, 'U_SL'),
-              packing_specification: production_order.U_QCHH ?? null,
-              production_order_code: production_order.U_MLSX ?? null,
-              remarks: production_order.Remarks ?? null,
-              internal_notes: production_order.U_GC ?? null,
-            };
-
-            await this.prismaService.productionOrders.upsert({
-              where: { id },
-              update: productionOrderData,
-              create: {
-                id,
-                ...productionOrderData,
-              },
-            });
+            await this.syncProductionOrder(production_order);
           } catch (productionOrderError) {
             this.logger.warn(
               `Failed to sync production order: ${
@@ -215,5 +172,81 @@ export class SapB1ConnectorService {
         error instanceof Error ? error.message : error,
       );
     }
+  }
+
+  private async syncProductionOrder(
+    production_order: any,
+    options: SyncProductionOrderOptions = {},
+  ) {
+    const id = Number(production_order.DocumentNumber);
+    const item_code = this.requireSapString(production_order.ItemNo, 'ItemNo');
+    const planned_quatity = Number(production_order.PlannedQuantity);
+
+    if (!Number.isInteger(id) || !Number.isInteger(planned_quatity)) {
+      const message = `Skipped production order with invalid number fields: ${production_order.DocumentNumber}`;
+
+      if (options.throwOnSkip) {
+        throw new Error(message);
+      }
+
+      this.logger.warn(message);
+      return null;
+    }
+
+    const existingItem = await this.prismaService.items.findUnique({
+      where: { item_code },
+    });
+
+    if (!existingItem) {
+      const message = `Skipped production order ${id}: item ${item_code} does not exist`;
+
+      if (options.throwOnSkip) {
+        throw new Error(message);
+      }
+
+      this.logger.warn(message);
+      return null;
+    }
+
+    const productionOrderData = {
+      item_code,
+      status: this.requireSapString(
+        production_order.ProductionOrderStatus,
+        'ProductionOrderStatus',
+      ),
+      type: this.requireSapString(
+        production_order.ProductionOrderType,
+        'ProductionOrderType',
+      ),
+      planned_quatity,
+      creation_date: this.parseSapDate(production_order.CreationDate),
+      origin: production_order.ProductionOrderOrigin ?? null,
+      warehouse: production_order.Warehouse ?? null,
+      unit: this.requireSapString(
+        production_order.InventoryUOM,
+        'InventoryUOM',
+      ),
+      start_date: this.parseSapDate(production_order.StartDate),
+      description: this.requireSapString(
+        production_order.ProductDescription,
+        'ProductDescription',
+      ),
+      date_manufacture: production_order.U_NSX ?? null,
+      expire_date: production_order.U_HSD ?? null,
+      lot_no: this.requireSapString(production_order.U_SL, 'U_SL'),
+      packing_specification: production_order.U_QCHH ?? null,
+      production_order_code: production_order.U_MLSX ?? null,
+      remarks: production_order.Remarks ?? null,
+      internal_notes: production_order.U_GC ?? null,
+    };
+
+    return this.prismaService.productionOrders.upsert({
+      where: { id },
+      update: productionOrderData,
+      create: {
+        id,
+        ...productionOrderData,
+      },
+    });
   }
 }
