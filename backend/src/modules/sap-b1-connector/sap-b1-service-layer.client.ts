@@ -51,7 +51,7 @@ export class SapB1ServiceLayerClient {
 
   async getProductionOrders() {
     return this.fetchAllPages(
-      'ProductionOrders?$select=DocumentNumber,ItemNo,ProductionOrderStatus,ProductionOrderType,PlannedQuantity,PostingDate,DueDate,ProductionOrderOrigin,Warehouse,InventoryUOM,JournalRemarks,CreationDate,StartDate,ProductDescription,U_YCDL,U_HSD,U_NSX,U_SL,U_MDK,U_QCHH,U_MCT,U_GC,U_LSXTP,U_MLSX,U_LLSX,U_NPC,U_NHT,U_CL,Remarks',
+      'ProductionOrders?$select=DocumentNumber,ItemNo,ProductionOrderStatus,ProductionOrderType,PlannedQuantity,PostingDate,DueDate,ProductionOrderOrigin,Warehouse,InventoryUOM,JournalRemarks,CreationDate,StartDate,ProductDescription,U_YCDL,U_HSD,U_NSX,U_SL,U_MDK,U_QCHH,U_MCT,U_GC,U_LSXTP,U_MLSX,U_LLSX,U_NPC,U_NHT,U_CL,Remarks&$skip=1300',
     );
   }
 
