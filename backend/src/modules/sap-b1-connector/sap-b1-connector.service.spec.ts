@@ -12,6 +12,8 @@ describe('SapB1ConnectorService', () => {
   let prismaService: {
     items: {
       findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
     };
     productionOrders: {
       upsert: jest.Mock;
@@ -36,6 +38,8 @@ describe('SapB1ConnectorService', () => {
           useValue: {
             items: {
               findUnique: jest.fn(),
+              create: jest.fn(),
+              update: jest.fn(),
             },
             productionOrders: {
               upsert: jest.fn(),
@@ -97,5 +101,39 @@ describe('SapB1ConnectorService', () => {
         internal_notes: 'Ghi chu noi bo',
       }),
     });
+  });
+
+  it('skips SAP items without item name', async () => {
+    sapB1Client.getItems.mockResolvedValue([
+      {
+        ItemCode: 'BTP00606',
+        ItemName: null,
+        SalesUnit: 'Gói',
+        U_MDK: null,
+      },
+    ]);
+
+    await service.handleCronSyncItems();
+
+    expect(prismaService.items.findUnique).not.toHaveBeenCalled();
+    expect(prismaService.items.create).not.toHaveBeenCalled();
+    expect(prismaService.items.update).not.toHaveBeenCalled();
+  });
+
+  it('skips SAP items with item code longer than the database column', async () => {
+    sapB1Client.getItems.mockResolvedValue([
+      {
+        ItemCode: 'A'.repeat(192),
+        ItemName: 'Item name',
+        SalesUnit: 'Hộp',
+        U_MDK: null,
+      },
+    ]);
+
+    await service.handleCronSyncItems();
+
+    expect(prismaService.items.findUnique).not.toHaveBeenCalled();
+    expect(prismaService.items.create).not.toHaveBeenCalled();
+    expect(prismaService.items.update).not.toHaveBeenCalled();
   });
 });

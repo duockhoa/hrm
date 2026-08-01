@@ -2,6 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma.service';
 import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
+
+const SAP_ITEM_CODE_MAX_LENGTH = 191;
+
 @Injectable()
 export class SapB1ConnectorService {
   constructor(
@@ -37,6 +40,10 @@ export class SapB1ConnectorService {
     return String(value);
   }
 
+  private isMissingSapValue(value: unknown): boolean {
+    return value === null || value === undefined || value === '';
+  }
+
   @Cron('0 */15 * * * *')
   async handleCronSyncItems() {
     try {
@@ -44,10 +51,31 @@ export class SapB1ConnectorService {
       if (Array.isArray(items)) {
         for (const item of items) {
           try {
-            const item_code = item.ItemCode;
-            const item_name = item.ItemName;
+            const sapItemCode = item.ItemCode;
+            const sapItemName = item.ItemName;
             const unit = item.SalesUnit;
             const dk_code = item.U_MDK;
+
+            if (this.isMissingSapValue(sapItemCode)) {
+              this.logger.warn('Skipped item with missing ItemCode');
+              continue;
+            }
+
+            const item_code = String(sapItemCode);
+
+            if (item_code.length > SAP_ITEM_CODE_MAX_LENGTH) {
+              this.logger.warn(
+                `Skipped item ${item_code}: ItemCode is longer than ${SAP_ITEM_CODE_MAX_LENGTH} characters`,
+              );
+              continue;
+            }
+
+            if (this.isMissingSapValue(sapItemName)) {
+              this.logger.warn(`Skipped item ${item_code}: missing ItemName`);
+              continue;
+            }
+
+            const item_name = String(sapItemName);
 
             const existingItem = await this.prismaService.items.findUnique({
               where: { item_code: item_code },
