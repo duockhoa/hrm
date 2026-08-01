@@ -733,6 +733,44 @@ Route cũ vẫn dùng được:
 DELETE /roles/:roleId/remove-permission/:permissionId
 ```
 
+## Registration Numbers
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Sync số đăng ký dùng tài khoản service để tự lấy token, không cấu hình token trực tiếp:
+
+```env
+SCB_AUTH_LOGIN_URL=https://server.dkpharma.io.vn/auth/login
+SCB_AUTH_USERNAME=0029
+SCB_AUTH_PASSWORD=...
+SCB_REGISTRATION_NUMBERS_API_URL=https://scbserver.dkpharma.io.vn/api/ho-so
+SCB_REGISTRATION_NUMBERS_SYNC_CRON="0 * * * * *"
+SCB_REGISTRATION_NUMBERS_LIMIT=5000
+```
+
+### Lấy danh sách số đăng ký
+
+```http
+GET /registration-numbers
+GET /registration-numbers?search=723
+```
+
+Query:
+
+- `search`: tìm theo `registration_number`, không bắt buộc.
+
+Response:
+
+```json
+[
+  {
+    "id": 583,
+    "registration_number": "723/26/CBMP-PT",
+    "product_name": "Muối kiềm"
+  }
+]
+```
+
 ## Items
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

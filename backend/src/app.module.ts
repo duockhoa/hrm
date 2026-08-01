@@ -25,6 +25,8 @@ import { ProductLinesModule } from './modules/product-lines/product-lines.module
 import { ProductionWorkshopsModule } from './modules/production-workshops/production-workshops.module';
 import { EquipmentModule } from './modules/equipment/equipment.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
+import { RegistrationNumbersSyncModule } from './modules/registration-numbers-sync/registration-numbers-sync.module';
+import { RegistrationNumbersModule } from './modules/registration-numbers/registration-numbers.module';
 
 @Module({
   imports: [
@@ -52,6 +54,8 @@ import { ApplicationsModule } from './modules/applications/applications.module';
     ProductionWorkshopsModule,
     EquipmentModule,
     ApplicationsModule,
+    RegistrationNumbersSyncModule,
+    RegistrationNumbersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

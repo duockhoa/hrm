@@ -237,6 +237,7 @@ model PasswordResetOTPs {
 model RegistrationNumbers {
   id                  Int       @id @default(autoincrement())
   registration_number String    @unique
+  product_name        String?   @db.Text
   created_at          DateTime  @default(now())
   updated_at          DateTime  @default(now()) @updatedAt
   deleted_at          DateTime?
