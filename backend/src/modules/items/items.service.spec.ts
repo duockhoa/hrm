@@ -1,3 +1,4 @@
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma.service';
 import { ItemsService } from './items.service';
@@ -7,6 +8,10 @@ describe('ItemsService', () => {
   let prismaService: {
     items: {
       findMany: jest.Mock;
+      findUnique: jest.Mock;
+      update: jest.Mock;
+    };
+    registrationNumbers: {
       findUnique: jest.Mock;
     };
   };
@@ -20,6 +25,10 @@ describe('ItemsService', () => {
           useValue: {
             items: {
               findMany: jest.fn(),
+              findUnique: jest.fn(),
+              update: jest.fn(),
+            },
+            registrationNumbers: {
               findUnique: jest.fn(),
             },
           },
@@ -56,6 +65,7 @@ describe('ItemsService', () => {
     await expect(service.findAll()).resolves.toEqual(items);
     expect(prismaService.items.findMany).toHaveBeenCalledWith({
       include: {
+        registration: true,
         productionSpecification: {
           include: {
             productLine: true,
@@ -97,6 +107,7 @@ describe('ItemsService', () => {
         item_code: 'TP00001',
       },
       include: {
+        registration: true,
         productionSpecification: {
           include: {
             productLine: true,
@@ -158,5 +169,100 @@ describe('ItemsService', () => {
         productionSpecification: null,
       },
     ]);
+  });
+
+  it('updates item registration_id', async () => {
+    const updatedItem = {
+      item_code: 'TP00001',
+      registration_id: 583,
+      registration: {
+        id: 583,
+        registration_number: '723/26/CBMP-PT',
+      },
+    };
+    prismaService.items.findUnique.mockResolvedValue({ item_code: 'TP00001' });
+    prismaService.registrationNumbers.findUnique.mockResolvedValue({ id: 583 });
+    prismaService.items.update.mockResolvedValue(updatedItem);
+
+    await expect(
+      service.update('TP00001', { registration_id: '583' }),
+    ).resolves.toBe(updatedItem);
+
+    expect(prismaService.items.update).toHaveBeenCalledWith({
+      where: {
+        item_code: 'TP00001',
+      },
+      data: {
+        registration_id: 583,
+      },
+      include: {
+        registration: true,
+        productionSpecification: {
+          include: {
+            productLine: true,
+            updatedBy: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                email: true,
+                department: true,
+                position: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('clears item registration_id', async () => {
+    const updatedItem = {
+      item_code: 'TP00001',
+      registration_id: null,
+    };
+    prismaService.items.findUnique.mockResolvedValue({ item_code: 'TP00001' });
+    prismaService.items.update.mockResolvedValue(updatedItem);
+
+    await expect(
+      service.update('TP00001', { registration_id: null }),
+    ).resolves.toBe(updatedItem);
+
+    expect(prismaService.registrationNumbers.findUnique).not.toHaveBeenCalled();
+    expect(prismaService.items.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          registration_id: null,
+        },
+      }),
+    );
+  });
+
+  it('rejects missing or invalid registration_id update', async () => {
+    prismaService.items.findUnique.mockResolvedValue({ item_code: 'TP00001' });
+
+    await expect(service.update('TP00001', {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(
+      service.update('TP00001', { registration_id: 0 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('throws when item or registration number is missing', async () => {
+    prismaService.items.findUnique.mockResolvedValueOnce(null);
+
+    await expect(
+      service.update('TP00001', { registration_id: 583 }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    prismaService.items.findUnique.mockResolvedValueOnce({
+      item_code: 'TP00001',
+    });
+    prismaService.registrationNumbers.findUnique.mockResolvedValueOnce(null);
+
+    await expect(
+      service.update('TP00001', { registration_id: 583 }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

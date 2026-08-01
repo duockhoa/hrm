@@ -1,7 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
+import { UpdateItemDto } from './dto/update-item.dto';
 
 const ITEM_INCLUDE = {
+  registration: true,
   productionSpecification: {
     include: {
       productLine: true,
@@ -77,6 +83,82 @@ export class ItemsService {
     });
 
     return this.hideDeletedProductionSpecification(item);
+  }
+
+  async update(item_code: string, dto: UpdateItemDto) {
+    await this.ensureItemExists(item_code);
+    const data = await this.buildUpdateData(dto);
+
+    return this.prismaService.items.update({
+      where: {
+        item_code,
+      },
+      data,
+      include: ITEM_INCLUDE,
+    });
+  }
+
+  private async ensureItemExists(item_code: string) {
+    const item = await this.prismaService.items.findUnique({
+      where: {
+        item_code,
+      },
+      select: {
+        item_code: true,
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Item not found');
+    }
+  }
+
+  private async buildUpdateData(dto: UpdateItemDto) {
+    if (!('registration_id' in dto)) {
+      throw new BadRequestException('No update data provided');
+    }
+
+    const registration_id = await this.normalizeRegistrationId(
+      dto.registration_id,
+    );
+
+    return {
+      registration_id,
+    };
+  }
+
+  private async normalizeRegistrationId(value: unknown) {
+    if (value === null || value === '') {
+      return null;
+    }
+
+    if (value === undefined) {
+      throw new BadRequestException('registration_id is required');
+    }
+
+    const registrationId = Number(value);
+
+    if (!Number.isInteger(registrationId) || registrationId <= 0) {
+      throw new BadRequestException(
+        'registration_id must be a positive integer',
+      );
+    }
+
+    const registrationNumber =
+      await this.prismaService.registrationNumbers.findUnique({
+        where: {
+          id: registrationId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!registrationNumber) {
+      throw new NotFoundException('Registration number not found');
+    }
+
+    return registrationId;
   }
 
   private hideDeletedProductionSpecification<

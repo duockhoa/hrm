@@ -11,6 +11,7 @@ describe('ItemsController', () => {
     findSemiFinishedProducts: jest.Mock;
     findRawMaterials: jest.Mock;
     findItemByCode: jest.Mock;
+    update: jest.Mock;
   };
   let itemEquipmentService: {
     findById: jest.Mock;
@@ -26,6 +27,7 @@ describe('ItemsController', () => {
       findSemiFinishedProducts: jest.fn(),
       findRawMaterials: jest.fn(),
       findItemByCode: jest.fn(),
+      update: jest.fn(),
     };
     itemEquipmentService = {
       findById: jest.fn(),
@@ -68,6 +70,18 @@ describe('ItemsController', () => {
 
     await expect(controller.findItemByCode('TP00001')).resolves.toBe(item);
     expect(itemsService.findItemByCode).toHaveBeenCalledWith('TP00001');
+  });
+
+  it('updates item registration_id', async () => {
+    const result = {
+      item_code: 'TP00001',
+      registration_id: 583,
+    };
+    const dto = { registration_id: 583 };
+    itemsService.update.mockResolvedValue(result);
+
+    await expect(controller.updateItem('TP00001', dto)).resolves.toBe(result);
+    expect(itemsService.update).toHaveBeenCalledWith('TP00001', dto);
   });
 
   it('adds equipment to an item using the authenticated user', async () => {

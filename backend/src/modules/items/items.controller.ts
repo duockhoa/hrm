@@ -4,12 +4,14 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   ParseIntPipe,
   Post,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
+import { UpdateItemDto } from './dto/update-item.dto';
 import { ItemEquipmentService } from './item-equipment.service';
 import { ItemsService } from './items.service';
 
@@ -74,5 +76,13 @@ export class ItemsController {
   @Get(':item_code')
   async findItemByCode(@Param('item_code') item_code: string) {
     return this.itemsService.findItemByCode(item_code);
+  }
+
+  @Patch(':item_code')
+  async updateItem(
+    @Param('item_code') item_code: string,
+    @Body() updateItemDto: UpdateItemDto,
+  ) {
+    return this.itemsService.update(item_code, updateItemDto);
   }
 }

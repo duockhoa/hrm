@@ -815,6 +815,30 @@ GET /items/TP00001
 
 Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`. Nếu specification có `updated_by_id`, response include thêm `productionSpecification.updatedBy`.
 
+### Cập nhật item
+
+```http
+PATCH /items/:item_code
+```
+
+Body hiện hỗ trợ cập nhật số đăng ký:
+
+```json
+{
+  "registration_id": 583
+}
+```
+
+Gửi `null` để xóa liên kết số đăng ký:
+
+```json
+{
+  "registration_id": null
+}
+```
+
+Response trả item sau khi cập nhật, include `registration` và `productionSpecification`.
+
 ## Item Equipment
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
