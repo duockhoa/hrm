@@ -39,9 +39,10 @@ import { ProductionOrderTenUnitSensoryChecksService } from './production-order-t
 import { ProductionOrderPostPreparationSolutionChecksService } from './production-order-post-preparation-solution-checks.service';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
+import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.module';
 
 @Module({
-  imports: [FeaturesModule],
+  imports: [FeaturesModule, SapB1ConnectorModule],
   controllers: [ProductionOrdersController],
   providers: [
     ProductionOrdersService,

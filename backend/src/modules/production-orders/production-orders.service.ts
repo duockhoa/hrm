@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
-import axios from 'axios';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
@@ -16,6 +15,7 @@ import type {
 } from './dto/export-production-order-lines.dto';
 import { FeaturesService } from '../features/features.service';
 import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
+import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 
 export type SapProductionOrderLine = {
   StageID?: number | null;
@@ -117,7 +117,11 @@ const productionOrderSamplingRecordsInclude = {
 };
 
 const productionOrderFindInclude = {
-  item: true,
+  item: {
+    include: {
+      registration: true,
+    },
+  },
   samplingRequests: productionOrderSamplingRequestWithSenderInclude,
   samplingRecords: productionOrderSamplingRecordsInclude,
   documentControl: {
@@ -193,6 +197,7 @@ export class ProductionOrdersService {
     private readonly weighingTicketExportService: WeighingTicketExportService,
     private readonly postWeighingMaterialCheckExportService: PostWeighingMaterialCheckExportService,
     private readonly productionOrderExportService: ProductionOrderExportService,
+    private readonly sapB1Client: SapB1ServiceLayerClient,
   ) {}
 
   async findAll() {
@@ -297,22 +302,12 @@ export class ProductionOrdersService {
   }
 
   private async findProductionOrderLineData(id: number) {
-    const [productionOrderResponse, unitOfMeasurementsResponse] =
-      await Promise.all([
-        axios.get<SapProductionOrderResponse>(
-          `https://sap-b1-connector.dkpharma.io.vn/production-orders/${id}`,
-        ),
-        axios.get<SapUnitOfMeasurement[]>(
-          'https://sap-b1-connector.dkpharma.io.vn/unit-of-measurements',
-        ),
-      ]);
-    const productionOrderLines =
-      productionOrderResponse.data.ProductionOrderLines ?? [];
-    const productionOrdersStages =
-      productionOrderResponse.data.ProductionOrdersStages ?? [];
-    const unitOfMeasurements = Array.isArray(unitOfMeasurementsResponse.data)
-      ? unitOfMeasurementsResponse.data
-      : [];
+    const [productionOrder, unitOfMeasurements] = await Promise.all([
+      this.sapB1Client.getProductionOrderById<SapProductionOrderResponse>(id),
+      this.sapB1Client.getUnitOfMeasurements<SapUnitOfMeasurement>(),
+    ]);
+    const productionOrderLines = productionOrder.ProductionOrderLines ?? [];
+    const productionOrdersStages = productionOrder.ProductionOrdersStages ?? [];
     const stagesById = new Map<number, SapProductionOrderStage>();
     const unitOfMeasurementsByAbsEntry = new Map<
       number,
@@ -349,7 +344,7 @@ export class ProductionOrdersService {
     );
 
     return {
-      productionOrder: productionOrderResponse.data,
+      productionOrder,
       lines,
     };
   }

@@ -1,10 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import axios from 'axios';
 import { PrismaService } from 'src/prisma.service';
+import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
 @Injectable()
 export class SapB1ConnectorService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly sapB1Client: SapB1ServiceLayerClient,
+  ) {}
   private readonly logger = new Logger(SapB1ConnectorService.name);
 
   private parseSapDate(value: string | null | undefined): Date {
@@ -37,11 +40,7 @@ export class SapB1ConnectorService {
   @Cron('0 */15 * * * *')
   async handleCronSyncItems() {
     try {
-      const response = await axios.get(
-        'https://sap-b1-connector.dkpharma.io.vn/items',
-      );
-
-      const items = response.data;
+      const items = await this.sapB1Client.getItems();
       if (Array.isArray(items)) {
         for (const item of items) {
           try {
@@ -81,7 +80,13 @@ export class SapB1ConnectorService {
               });
               this.logger.log(`Created new product: ${item_code}`);
             }
-          } catch (itemError) {}
+          } catch (itemError) {
+            this.logger.warn(
+              `Failed to sync item: ${
+                itemError instanceof Error ? itemError.message : itemError
+              }`,
+            );
+          }
         }
       }
     } catch (error) {
@@ -95,10 +100,7 @@ export class SapB1ConnectorService {
   @Cron(process.env.SAP_B1_LOT_LIST_SYNC_CRON || '*/30 * * * * *')
   async handleCronSyncProductionOrders() {
     try {
-      const response = await axios.get(
-        'https://sap-b1-connector.dkpharma.io.vn/production-orders',
-      );
-      const production_orders = response.data;
+      const production_orders = await this.sapB1Client.getProductionOrders();
 
       if (Array.isArray(production_orders)) {
         for (const production_order of production_orders) {

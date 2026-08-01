@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductionOrdersService } from './production-orders.service';
 import { PrismaService } from 'src/prisma.service';
-import axios from 'axios';
 import ExcelJS from 'exceljs';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
@@ -10,10 +9,7 @@ import { ProductionOrderExportService } from './exports/production-order-export.
 import PizZip from 'pizzip';
 import { FeaturesService } from '../features/features.service';
 import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
-
-jest.mock('axios');
-
-const mockedAxiosGet = axios.get as jest.MockedFunction<typeof axios.get>;
+import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 
 const expectedProductionOrderUserSelect = {
   id: true,
@@ -25,7 +21,11 @@ const expectedProductionOrderUserSelect = {
 };
 
 const expectedProductionOrderFindInclude = {
-  item: true,
+  item: {
+    include: {
+      registration: true,
+    },
+  },
   samplingRequests: {
     orderBy: {
       sent_at: 'desc',
@@ -65,6 +65,10 @@ describe('ProductionOrdersService', () => {
   let featuresService: {
     findConfigByItemCode: jest.Mock;
   };
+  let sapB1Client: {
+    getProductionOrderById: jest.Mock;
+    getUnitOfMeasurements: jest.Mock;
+  };
   let prismaService: {
     productionOrders: {
       findMany: jest.Mock;
@@ -73,9 +77,12 @@ describe('ProductionOrdersService', () => {
   };
 
   beforeEach(async () => {
-    mockedAxiosGet.mockReset();
     featuresService = {
       findConfigByItemCode: jest.fn(),
+    };
+    sapB1Client = {
+      getProductionOrderById: jest.fn(),
+      getUnitOfMeasurements: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -88,6 +95,10 @@ describe('ProductionOrdersService', () => {
         {
           provide: FeaturesService,
           useValue: featuresService,
+        },
+        {
+          provide: SapB1ServiceLayerClient,
+          useValue: sapB1Client,
         },
         {
           provide: PrismaService,
@@ -350,54 +361,50 @@ describe('ProductionOrdersService', () => {
   });
 
   it('returns production order lines joined with production order stages', async () => {
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: {
-        ProductionOrderLines: [
-          {
-            LineNumber: 0,
-            ItemNo: 'MMCC5',
-            StageID: 1,
-            UoMEntry: 160,
-          },
-          {
-            LineNumber: 7,
-            ItemNo: 'BB00075',
-            StageID: 2,
-            UoMEntry: 172,
-          },
-          {
-            LineNumber: 99,
-            ItemNo: 'UNKNOWN',
-            StageID: 999,
-            UoMEntry: 999,
-          },
-        ],
-        ProductionOrdersStages: [
-          {
-            StageID: 1,
-            Name: 'Nguồn lực',
-          },
-          {
-            StageID: 2,
-            Name: 'Đóng gói',
-          },
-        ],
-      },
-    });
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: [
+    sapB1Client.getProductionOrderById.mockResolvedValue({
+      ProductionOrderLines: [
         {
-          AbsEntry: 160,
-          Code: 'kg',
-          Name: 'kg',
+          LineNumber: 0,
+          ItemNo: 'MMCC5',
+          StageID: 1,
+          UoMEntry: 160,
         },
         {
-          AbsEntry: 172,
-          Code: 'Cái',
-          Name: 'Cái',
+          LineNumber: 7,
+          ItemNo: 'BB00075',
+          StageID: 2,
+          UoMEntry: 172,
+        },
+        {
+          LineNumber: 99,
+          ItemNo: 'UNKNOWN',
+          StageID: 999,
+          UoMEntry: 999,
+        },
+      ],
+      ProductionOrdersStages: [
+        {
+          StageID: 1,
+          Name: 'Nguồn lực',
+        },
+        {
+          StageID: 2,
+          Name: 'Đóng gói',
         },
       ],
     });
+    sapB1Client.getUnitOfMeasurements.mockResolvedValue([
+      {
+        AbsEntry: 160,
+        Code: 'kg',
+        Name: 'kg',
+      },
+      {
+        AbsEntry: 172,
+        Code: 'Cái',
+        Name: 'Cái',
+      },
+    ]);
 
     await expect(service.findProductionOrderLines(2031)).resolves.toEqual([
       {
@@ -439,14 +446,8 @@ describe('ProductionOrdersService', () => {
         UnitOfMeasurement: null,
       },
     ]);
-    expect(mockedAxiosGet).toHaveBeenNthCalledWith(
-      1,
-      'https://sap-b1-connector.dkpharma.io.vn/production-orders/2031',
-    );
-    expect(mockedAxiosGet).toHaveBeenNthCalledWith(
-      2,
-      'https://sap-b1-connector.dkpharma.io.vn/unit-of-measurements',
-    );
+    expect(sapB1Client.getProductionOrderById).toHaveBeenCalledWith(2031);
+    expect(sapB1Client.getUnitOfMeasurements).toHaveBeenCalled();
   });
 
   it('exports a finished product production order to a docx buffer', async () => {
@@ -579,68 +580,64 @@ describe('ProductionOrdersService', () => {
   });
 
   it('exports production order lines to an xlsx buffer', async () => {
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: {
-        ItemNo: 'TP00063',
-        InventoryUOM: 'Kg',
-        PlannedQuantity: 1000,
-        ProductDescription: 'Thanh pham test',
-        U_SL: '010126',
-        U_MLSX: 'TP00063-1090526-2031',
-        ProductionOrderLines: [
-          {
-            DocumentAbsoluteEntry: 2031,
-            LineNumber: 7,
-            VisualOrder: 7,
-            ItemNo: 'BB00075',
-            ItemName:
-              'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
-            ItemType: 'pit_Item',
-            StageID: 2,
-            UoMEntry: 172,
-            PlannedQuantity: 1.5,
-            Warehouse: 'K-KHKV',
-            StartDate: '2026-05-08',
-            U_SL: '010126',
-            U_HSD: '2028-05-03',
-          },
-          {
-            DocumentAbsoluteEntry: 2031,
-            LineNumber: 8,
-            VisualOrder: 8,
-            ItemNo: 'BB00076',
-            ItemName: 'Mang nhom',
-            ItemType: 'pit_Item',
-            StageID: 3,
-            UoMEntry: 172,
-            PlannedQuantity: 2,
-            Warehouse: 'K-KHKV',
-            StartDate: '2026-05-08',
-            U_SL: '010126-A001',
-            U_HSD: '2028-05-03',
-          },
-        ],
-        ProductionOrdersStages: [
-          {
-            StageID: 2,
-            Name: 'Dong goi',
-          },
-          {
-            StageID: 3,
-            Name: 'Xu ly bao bi',
-          },
-        ],
-      },
-    });
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: [
+    sapB1Client.getProductionOrderById.mockResolvedValue({
+      ItemNo: 'TP00063',
+      InventoryUOM: 'Kg',
+      PlannedQuantity: 1000,
+      ProductDescription: 'Thanh pham test',
+      U_SL: '010126',
+      U_MLSX: 'TP00063-1090526-2031',
+      ProductionOrderLines: [
         {
-          AbsEntry: 172,
-          Code: 'Cai',
-          Name: 'Cai',
+          DocumentAbsoluteEntry: 2031,
+          LineNumber: 7,
+          VisualOrder: 7,
+          ItemNo: 'BB00075',
+          ItemName:
+            'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
+          ItemType: 'pit_Item',
+          StageID: 2,
+          UoMEntry: 172,
+          PlannedQuantity: 1.5,
+          Warehouse: 'K-KHKV',
+          StartDate: '2026-05-08',
+          U_SL: '010126',
+          U_HSD: '2028-05-03',
+        },
+        {
+          DocumentAbsoluteEntry: 2031,
+          LineNumber: 8,
+          VisualOrder: 8,
+          ItemNo: 'BB00076',
+          ItemName: 'Mang nhom',
+          ItemType: 'pit_Item',
+          StageID: 3,
+          UoMEntry: 172,
+          PlannedQuantity: 2,
+          Warehouse: 'K-KHKV',
+          StartDate: '2026-05-08',
+          U_SL: '010126-A001',
+          U_HSD: '2028-05-03',
+        },
+      ],
+      ProductionOrdersStages: [
+        {
+          StageID: 2,
+          Name: 'Dong goi',
+        },
+        {
+          StageID: 3,
+          Name: 'Xu ly bao bi',
         },
       ],
     });
+    sapB1Client.getUnitOfMeasurements.mockResolvedValue([
+      {
+        AbsEntry: 172,
+        Code: 'Cai',
+        Name: 'Cai',
+      },
+    ]);
 
     const exportedFile = await service.exportProductionOrderLines(2031);
 
@@ -723,23 +720,19 @@ describe('ProductionOrdersService', () => {
         },
       ],
     };
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: productionOrder,
-    });
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: [
-        {
-          AbsEntry: 172,
-          Code: 'Cai',
-          Name: 'Cai',
-        },
-        {
-          AbsEntry: 173,
-          Code: 'Hop',
-          Name: 'Hop',
-        },
-      ],
-    });
+    sapB1Client.getProductionOrderById.mockResolvedValue(productionOrder);
+    sapB1Client.getUnitOfMeasurements.mockResolvedValue([
+      {
+        AbsEntry: 172,
+        Code: 'Cai',
+        Name: 'Cai',
+      },
+      {
+        AbsEntry: 173,
+        Code: 'Hop',
+        Name: 'Hop',
+      },
+    ]);
     const exportSpy = jest
       .spyOn(warehouseReleaseExportService, 'export')
       .mockResolvedValue({
@@ -763,77 +756,73 @@ describe('ProductionOrdersService', () => {
   });
 
   it('exports production order lines to a weighing ticket xlsx buffer', async () => {
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: {
-        ItemNo: 'TP00063',
-        InventoryUOM: 'Kg',
-        PlannedQuantity: 1000,
-        ProductDescription: 'Thanh pham test',
-        U_SL: '010126',
-        ProductionOrderLines: [
-          {
-            DocumentAbsoluteEntry: 2031,
-            LineNumber: 7,
-            VisualOrder: 7,
-            ItemNo: 'BB00075',
-            ItemName:
-              'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
-            ItemType: 'pit_Item',
-            StageID: 2,
-            UoMEntry: 172,
-            PlannedQuantity: 1.5,
-            StartDate: '2026-05-08',
-            U_SL: '010126',
-          },
-          {
-            DocumentAbsoluteEntry: 2031,
-            LineNumber: 8,
-            VisualOrder: 8,
-            ItemNo: 'BB00075',
-            ItemName:
-              'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
-            ItemType: 'pit_Item',
-            StageID: 2,
-            UoMEntry: 172,
-            PlannedQuantity: 0.5,
-            StartDate: '2026-05-08',
-            U_SL: '010126-A000',
-          },
-          {
-            DocumentAbsoluteEntry: 2031,
-            LineNumber: 9,
-            VisualOrder: 9,
-            ItemNo: 'BB00076',
-            ItemName: 'Mang nhom',
-            ItemType: 'pit_Item',
-            StageID: 3,
-            UoMEntry: 172,
-            PlannedQuantity: 2,
-            StartDate: '2026-05-08',
-            U_SL: '010126-A001',
-          },
-        ],
-        ProductionOrdersStages: [
-          {
-            StageID: 2,
-            Name: 'Dong goi',
-          },
-          {
-            StageID: 3,
-            Name: 'Xu ly bao bi',
-          },
-        ],
-      },
-    });
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: [
+    sapB1Client.getProductionOrderById.mockResolvedValue({
+      ItemNo: 'TP00063',
+      InventoryUOM: 'Kg',
+      PlannedQuantity: 1000,
+      ProductDescription: 'Thanh pham test',
+      U_SL: '010126',
+      ProductionOrderLines: [
         {
-          AbsEntry: 172,
-          Code: 'Cai',
-          Name: 'Cai',
+          DocumentAbsoluteEntry: 2031,
+          LineNumber: 7,
+          VisualOrder: 7,
+          ItemNo: 'BB00075',
+          ItemName:
+            'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
+          ItemType: 'pit_Item',
+          StageID: 2,
+          UoMEntry: 172,
+          PlannedQuantity: 1.5,
+          StartDate: '2026-05-08',
+          U_SL: '010126',
+        },
+        {
+          DocumentAbsoluteEntry: 2031,
+          LineNumber: 8,
+          VisualOrder: 8,
+          ItemNo: 'BB00075',
+          ItemName:
+            'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
+          ItemType: 'pit_Item',
+          StageID: 2,
+          UoMEntry: 172,
+          PlannedQuantity: 0.5,
+          StartDate: '2026-05-08',
+          U_SL: '010126-A000',
+        },
+        {
+          DocumentAbsoluteEntry: 2031,
+          LineNumber: 9,
+          VisualOrder: 9,
+          ItemNo: 'BB00076',
+          ItemName: 'Mang nhom',
+          ItemType: 'pit_Item',
+          StageID: 3,
+          UoMEntry: 172,
+          PlannedQuantity: 2,
+          StartDate: '2026-05-08',
+          U_SL: '010126-A001',
+        },
+      ],
+      ProductionOrdersStages: [
+        {
+          StageID: 2,
+          Name: 'Dong goi',
+        },
+        {
+          StageID: 3,
+          Name: 'Xu ly bao bi',
         },
       ],
     });
+    sapB1Client.getUnitOfMeasurements.mockResolvedValue([
+      {
+        AbsEntry: 172,
+        Code: 'Cai',
+        Name: 'Cai',
+      },
+    ]);
 
     const exportedFile = await service.exportWeighingTicket(2031);
 
@@ -967,23 +956,19 @@ describe('ProductionOrdersService', () => {
         },
       ],
     };
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: productionOrder,
-    });
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: [
-        {
-          AbsEntry: 172,
-          Code: 'Cai',
-          Name: 'Cai',
-        },
-        {
-          AbsEntry: 173,
-          Code: 'Hop',
-          Name: 'Hop',
-        },
-      ],
-    });
+    sapB1Client.getProductionOrderById.mockResolvedValue(productionOrder);
+    sapB1Client.getUnitOfMeasurements.mockResolvedValue([
+      {
+        AbsEntry: 172,
+        Code: 'Cai',
+        Name: 'Cai',
+      },
+      {
+        AbsEntry: 173,
+        Code: 'Hop',
+        Name: 'Hop',
+      },
+    ]);
     const exportSpy = jest
       .spyOn(weighingTicketExportService, 'export')
       .mockResolvedValue({
@@ -1007,87 +992,83 @@ describe('ProductionOrdersService', () => {
   });
 
   it('exports a post-weighing material check and groups duplicated material codes', async () => {
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: {
-        ItemNo: 'TP00063',
-        InventoryUOM: 'viên',
-        PlannedQuantity: 10000,
-        ProductDescription: 'Thanh pham test',
-        U_SL: '010126',
-        ProductionOrderLines: [
-          {
-            DocumentAbsoluteEntry: 2031,
-            LineNumber: 7,
-            VisualOrder: 7,
-            ItemNo: 'BB00075',
-            ItemName:
-              'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
-            ItemType: 'pit_Item',
-            StageID: 2,
-            UoMEntry: 172,
-            PlannedQuantity: 1.5,
-          },
-          {
-            DocumentAbsoluteEntry: 2031,
-            LineNumber: 8,
-            VisualOrder: 8,
-            ItemNo: 'BB00076',
-            ItemName: 'Mang nhom',
-            ItemType: 'pit_Item',
-            StageID: 2,
-            UoMEntry: 173,
-            PlannedQuantity: 2,
-          },
-          {
-            DocumentAbsoluteEntry: 2031,
-            LineNumber: 9,
-            VisualOrder: 9,
-            ItemNo: 'BB00075',
-            ItemName:
-              'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
-            ItemType: 'pit_Item',
-            StageID: 3,
-            UoMEntry: 172,
-            PlannedQuantity: '2,25',
-          },
-          {
-            DocumentAbsoluteEntry: 2031,
-            LineNumber: 10,
-            VisualOrder: 10,
-            ItemNo: 'NOTE',
-            ItemName: 'Line text note',
-            ItemType: 'pit_Text',
-            StageID: 2,
-            UoMEntry: null,
-            PlannedQuantity: 100,
-          },
-        ],
-        ProductionOrdersStages: [
-          {
-            StageID: 2,
-            Name: 'Dong goi',
-          },
-          {
-            StageID: 3,
-            Name: 'Xu ly bao bi',
-          },
-        ],
-      },
-    });
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: [
+    sapB1Client.getProductionOrderById.mockResolvedValue({
+      ItemNo: 'TP00063',
+      InventoryUOM: 'viên',
+      PlannedQuantity: 10000,
+      ProductDescription: 'Thanh pham test',
+      U_SL: '010126',
+      ProductionOrderLines: [
         {
-          AbsEntry: 172,
-          Code: 'Cai',
-          Name: 'Cai',
+          DocumentAbsoluteEntry: 2031,
+          LineNumber: 7,
+          VisualOrder: 7,
+          ItemNo: 'BB00075',
+          ItemName:
+            'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
+          ItemType: 'pit_Item',
+          StageID: 2,
+          UoMEntry: 172,
+          PlannedQuantity: 1.5,
         },
         {
-          AbsEntry: 173,
-          Code: 'Hop',
-          Name: 'Hop',
+          DocumentAbsoluteEntry: 2031,
+          LineNumber: 8,
+          VisualOrder: 8,
+          ItemNo: 'BB00076',
+          ItemName: 'Mang nhom',
+          ItemType: 'pit_Item',
+          StageID: 2,
+          UoMEntry: 173,
+          PlannedQuantity: 2,
+        },
+        {
+          DocumentAbsoluteEntry: 2031,
+          LineNumber: 9,
+          VisualOrder: 9,
+          ItemNo: 'BB00075',
+          ItemName:
+            'Bang dinh in logo Duoc Khoa loai dai dung cho dong goi thanh pham',
+          ItemType: 'pit_Item',
+          StageID: 3,
+          UoMEntry: 172,
+          PlannedQuantity: '2,25',
+        },
+        {
+          DocumentAbsoluteEntry: 2031,
+          LineNumber: 10,
+          VisualOrder: 10,
+          ItemNo: 'NOTE',
+          ItemName: 'Line text note',
+          ItemType: 'pit_Text',
+          StageID: 2,
+          UoMEntry: null,
+          PlannedQuantity: 100,
+        },
+      ],
+      ProductionOrdersStages: [
+        {
+          StageID: 2,
+          Name: 'Dong goi',
+        },
+        {
+          StageID: 3,
+          Name: 'Xu ly bao bi',
         },
       ],
     });
+    sapB1Client.getUnitOfMeasurements.mockResolvedValue([
+      {
+        AbsEntry: 172,
+        Code: 'Cai',
+        Name: 'Cai',
+      },
+      {
+        AbsEntry: 173,
+        Code: 'Hop',
+        Name: 'Hop',
+      },
+    ]);
 
     const exportedFile = await service.exportPostWeighingMaterialCheck(2031);
 
@@ -1187,23 +1168,19 @@ describe('ProductionOrdersService', () => {
         },
       ],
     };
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: productionOrder,
-    });
-    mockedAxiosGet.mockResolvedValueOnce({
-      data: [
-        {
-          AbsEntry: 172,
-          Code: 'Cai',
-          Name: 'Cai',
-        },
-        {
-          AbsEntry: 173,
-          Code: 'Hop',
-          Name: 'Hop',
-        },
-      ],
-    });
+    sapB1Client.getProductionOrderById.mockResolvedValue(productionOrder);
+    sapB1Client.getUnitOfMeasurements.mockResolvedValue([
+      {
+        AbsEntry: 172,
+        Code: 'Cai',
+        Name: 'Cai',
+      },
+      {
+        AbsEntry: 173,
+        Code: 'Hop',
+        Name: 'Hop',
+      },
+    ]);
     const exportSpy = jest
       .spyOn(postWeighingMaterialCheckExportService, 'export')
       .mockResolvedValue({

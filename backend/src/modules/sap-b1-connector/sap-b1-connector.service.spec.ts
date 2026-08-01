@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import axios from 'axios';
 import { PrismaService } from 'src/prisma.service';
 import { SapB1ConnectorService } from './sap-b1-connector.service';
-
-jest.mock('axios');
-
-const mockedAxiosGet = axios.get as jest.MockedFunction<typeof axios.get>;
+import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
 
 describe('SapB1ConnectorService', () => {
   let service: SapB1ConnectorService;
+  let sapB1Client: {
+    getItems: jest.Mock;
+    getProductionOrders: jest.Mock;
+  };
   let prismaService: {
     items: {
       findUnique: jest.Mock;
@@ -19,11 +19,18 @@ describe('SapB1ConnectorService', () => {
   };
 
   beforeEach(async () => {
-    mockedAxiosGet.mockReset();
+    sapB1Client = {
+      getItems: jest.fn(),
+      getProductionOrders: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SapB1ConnectorService,
+        {
+          provide: SapB1ServiceLayerClient,
+          useValue: sapB1Client,
+        },
         {
           provide: PrismaService,
           useValue: {
@@ -47,30 +54,28 @@ describe('SapB1ConnectorService', () => {
   });
 
   it('syncs production order remarks and internal notes from SAP', async () => {
-    mockedAxiosGet.mockResolvedValue({
-      data: [
-        {
-          DocumentNumber: 2031,
-          ItemNo: 'TP00063',
-          PlannedQuantity: 1000,
-          ProductionOrderStatus: 'Released',
-          ProductionOrderType: 'Standard',
-          CreationDate: '2026-05-08',
-          ProductionOrderOrigin: 'Manual',
-          Warehouse: 'K-KHKV',
-          InventoryUOM: 'Vien',
-          StartDate: '2026-05-08',
-          ProductDescription: 'Thanh pham test',
-          U_NSX: '2026-05-08',
-          U_HSD: '2028-05-03',
-          U_SL: '010126',
-          U_QCHH: 'Hop 10 vi',
-          U_MLSX: 'TP00063-1090526-2031',
-          U_GC: 'Ghi chu noi bo',
-          Remarks: 'Ghi chu san xuat',
-        },
-      ],
-    });
+    sapB1Client.getProductionOrders.mockResolvedValue([
+      {
+        DocumentNumber: 2031,
+        ItemNo: 'TP00063',
+        PlannedQuantity: 1000,
+        ProductionOrderStatus: 'Released',
+        ProductionOrderType: 'Standard',
+        CreationDate: '2026-05-08',
+        ProductionOrderOrigin: 'Manual',
+        Warehouse: 'K-KHKV',
+        InventoryUOM: 'Vien',
+        StartDate: '2026-05-08',
+        ProductDescription: 'Thanh pham test',
+        U_NSX: '2026-05-08',
+        U_HSD: '2028-05-03',
+        U_SL: '010126',
+        U_QCHH: 'Hop 10 vi',
+        U_MLSX: 'TP00063-1090526-2031',
+        U_GC: 'Ghi chu noi bo',
+        Remarks: 'Ghi chu san xuat',
+      },
+    ]);
     prismaService.items.findUnique.mockResolvedValue({
       item_code: 'TP00063',
     });

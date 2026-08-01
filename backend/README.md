@@ -44,6 +44,26 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## SAP B1 Service Layer
+
+Backend calls SAP B1 Service Layer directly through `SapB1ServiceLayerClient`.
+Configure these environment variables before enabling SAP sync/export features:
+
+```bash
+SAP_SERVICE_LAYER_URL=https://your-sap-host:50000/b1s/v1/
+SAP_COMPANY_DB=...
+SAP_USERNAME=...
+SAP_PASSWORD=...
+SAP_SESSION_TIMEOUT_MINUTES=25
+SAP_REQUEST_TIMEOUT_MS=30000
+SAP_B1_PAGE_SIZE=10000
+SAP_REJECT_UNAUTHORIZED=false
+```
+
+`SAP_REJECT_UNAUTHORIZED=false` preserves the previous connector behavior for
+self-signed SAP certificates. Use `true` when the SAP certificate chain is
+trusted by the backend runtime.
+
 ## Run tests
 
 ```bash
