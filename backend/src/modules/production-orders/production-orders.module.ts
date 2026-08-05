@@ -35,6 +35,7 @@ import { ProductionOrderSemiFinishedProductSummariesService } from './production
 import { ProductionOrderMaterialSummariesService } from './production-order-material-summaries.service';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 import { ProductionOrderHardnessChecksService } from './production-order-hardness-checks.service';
+import { ProductionOrderTabletThicknessChecksService } from './production-order-tablet-thickness-checks.service';
 import { ProductionOrderTenUnitSensoryChecksService } from './production-order-ten-unit-sensory-checks.service';
 import { ProductionOrderPostPreparationSolutionChecksService } from './production-order-post-preparation-solution-checks.service';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
@@ -72,6 +73,7 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
     ProductionOrderMaterialSummariesService,
     ProductionOrderLeakTightnessChecksService,
     ProductionOrderHardnessChecksService,
+    ProductionOrderTabletThicknessChecksService,
     ProductionOrderTenUnitSensoryChecksService,
     ProductionOrderPostPreparationSolutionChecksService,
     ProductionOrderFactoryReleaseReviewsService,

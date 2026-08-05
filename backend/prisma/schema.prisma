@@ -61,6 +61,7 @@ model Users {
   createdProductionOrderMaterialSummaries               ProductionOrderMaterialSummaries[]                    @relation("ProductionOrderMaterialSummaryCreator")
   createdProductionOrderLeakTightnessChecks             ProductionOrderLeakTightnessChecks[]                  @relation("ProductionOrderLeakTightnessCheckCreator")
   createdProductionOrderHardnessChecks                  ProductionOrderHardnessChecks[]                       @relation("ProductionOrderHardnessCheckCreator")
+  createdProductionOrderTabletThicknessChecks           ProductionOrderTabletThicknessChecks[]                @relation("ProductionOrderTabletThicknessCheckCreator")
   createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                 @relation("ProductionOrderTenUnitSensoryCheckCreator")
   checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]        @relation("ProductionOrderPostPreparationSolutionCheckChecker")
   approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                @relation("ProductionOrderFactoryReleaseReviewApprover")
@@ -504,6 +505,7 @@ model ProductionOrders {
   materialSummaries                    ProductionOrderMaterialSummaries[]
   leakTightnessChecks                  ProductionOrderLeakTightnessChecks[]
   hardnessChecks                       ProductionOrderHardnessChecks[]
+  tabletThicknessChecks                 ProductionOrderTabletThicknessChecks[]
   tenUnitSensoryChecks                 ProductionOrderTenUnitSensoryChecks[]
   vialInspectionChecks                 ProductionOrderVialInspectionChecks[]
   cylinderCalibration                  ProductionOrderCylinderCalibrations?
@@ -1170,6 +1172,33 @@ model ProductionOrderHardnessChecks {
   @@index([production_order_id], map: "po_hardness_checks_po_idx")
   @@index([created_by_id], map: "po_hardness_checks_user_idx")
   @@map("production_order_hardness_checks")
+}
+
+model ProductionOrderTabletThicknessChecks {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_tablet_thickness_checks_po_fkey")
+  requirement         String?          @db.Text
+  dosage_form_stage   String?          @db.VarChar(50)
+  unit_1_thickness    Decimal          @db.Decimal(10, 3)
+  unit_2_thickness    Decimal?         @db.Decimal(10, 3)
+  unit_3_thickness    Decimal?         @db.Decimal(10, 3)
+  unit_4_thickness    Decimal?         @db.Decimal(10, 3)
+  unit_5_thickness    Decimal?         @db.Decimal(10, 3)
+  unit_6_thickness    Decimal?         @db.Decimal(10, 3)
+  unit_7_thickness    Decimal?         @db.Decimal(10, 3)
+  unit_8_thickness    Decimal?         @db.Decimal(10, 3)
+  unit_9_thickness    Decimal?         @db.Decimal(10, 3)
+  unit_10_thickness   Decimal?         @db.Decimal(10, 3)
+  unit                String           @default("mm") @db.VarChar(10)
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderTabletThicknessCheckCreator", fields: [created_by_id], references: [id], map: "po_tablet_thickness_checks_user_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_tablet_thickness_checks_po_idx")
+  @@index([created_by_id], map: "po_tablet_thickness_checks_user_idx")
+  @@map("production_order_tablet_thickness_checks")
 }
 
 model ProductionOrderTenUnitSensoryChecks {

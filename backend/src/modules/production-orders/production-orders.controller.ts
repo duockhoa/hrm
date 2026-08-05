@@ -105,6 +105,9 @@ import { ProductionOrderLeakTightnessChecksService } from './production-order-le
 import { CreateProductionOrderHardnessCheckDto } from './dto/create-production-order-hardness-check.dto';
 import { UpdateProductionOrderHardnessCheckDto } from './dto/update-production-order-hardness-check.dto';
 import { ProductionOrderHardnessChecksService } from './production-order-hardness-checks.service';
+import { CreateProductionOrderTabletThicknessCheckDto } from './dto/create-production-order-tablet-thickness-check.dto';
+import { UpdateProductionOrderTabletThicknessCheckDto } from './dto/update-production-order-tablet-thickness-check.dto';
+import { ProductionOrderTabletThicknessChecksService } from './production-order-tablet-thickness-checks.service';
 import { CreateProductionOrderFactoryReleaseReviewDto } from './dto/create-production-order-factory-release-review.dto';
 import { UpdateProductionOrderFactoryReleaseReviewDto } from './dto/update-production-order-factory-release-review.dto';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
@@ -288,6 +291,7 @@ export class ProductionOrdersController {
     private readonly productionOrderMaterialSummariesService: ProductionOrderMaterialSummariesService,
     private readonly productionOrderLeakTightnessChecksService: ProductionOrderLeakTightnessChecksService,
     private readonly productionOrderHardnessChecksService: ProductionOrderHardnessChecksService,
+    private readonly productionOrderTabletThicknessChecksService: ProductionOrderTabletThicknessChecksService,
     private readonly productionOrderFactoryReleaseReviewsService: ProductionOrderFactoryReleaseReviewsService,
     private readonly productionOrderDocumentControlsService: ProductionOrderDocumentControlsService,
   ) {}
@@ -890,6 +894,31 @@ export class ProductionOrdersController {
   @Delete('hardness-checks/:checkId')
   async deleteHardnessCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderHardnessChecksService.delete(checkId);
+  }
+
+  @Get('tablet-thickness-checks/:checkId')
+  async findTabletThicknessCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderTabletThicknessChecksService.findById(checkId);
+  }
+
+  @Patch('tablet-thickness-checks/:checkId')
+  async updateTabletThicknessCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderTabletThicknessCheckDto,
+  ) {
+    return this.productionOrderTabletThicknessChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('tablet-thickness-checks/:checkId')
+  async deleteTabletThicknessCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderTabletThicknessChecksService.delete(checkId);
   }
 
   @Get('vial-inspection-checks/:checkId')
@@ -1815,6 +1844,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderHardnessChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/tablet-thickness-checks')
+  async findTabletThicknessChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderTabletThicknessChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/tablet-thickness-checks')
+  async createTabletThicknessCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderTabletThicknessCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderTabletThicknessChecksService.create(
       id,
       createDto,
       req.user,

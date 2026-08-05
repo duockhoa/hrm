@@ -5066,6 +5066,101 @@ Lỗi thường gặp:
 
 - `404 Hardness check not found`
 
+## Production Order Tablet Thickness Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu yêu cầu, dạng bào chế và kết quả đo chiều dày của tối đa 10 đơn vị theo từng lệnh sản xuất. Mỗi lệnh sản xuất có thể có nhiều lần kiểm tra. Đơn vị mặc định là `mm`; chỉ đơn vị 1 là bắt buộc.
+
+### Lấy danh sách theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/tablet-thickness-checks
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "requirement": "Chiều dày từ 4.0 mm đến 4.4 mm",
+    "dosage_form_stage": "tablet",
+    "unit_1_thickness": "4.200",
+    "unit_2_thickness": "4.100",
+    "unit_3_thickness": null,
+    "unit_4_thickness": null,
+    "unit_5_thickness": null,
+    "unit_6_thickness": null,
+    "unit_7_thickness": null,
+    "unit_8_thickness": null,
+    "unit_9_thickness": null,
+    "unit_10_thickness": null,
+    "unit": "mm",
+    "created_by_id": 7,
+    "created_at": "2026-08-05T00:00:00.000Z",
+    "updated_at": "2026-08-05T00:00:00.000Z"
+  }
+]
+```
+
+### Lấy một bản ghi theo ID
+
+```http
+GET /production-orders/tablet-thickness-checks/:checkId
+```
+
+### Tạo bản ghi
+
+```http
+POST /production-orders/:id/tablet-thickness-checks
+Content-Type: application/json
+```
+
+```json
+{
+  "requirement": "Chiều dày từ 4.0 mm đến 4.4 mm",
+  "dosage_form_stage": "tablet",
+  "unit_1_thickness": 4.2,
+  "unit_2_thickness": "4,1",
+  "unit_10_thickness": 4.3
+}
+```
+
+Quy tắc:
+
+- `requirement` và `dosage_form_stage` không bắt buộc; gửi `null` hoặc chuỗi rỗng sẽ lưu `null`. `dosage_form_stage` tối đa 50 ký tự.
+- `unit_1_thickness` bắt buộc và phải lớn hơn `0`.
+- `unit_2_thickness` đến `unit_10_thickness` không bắt buộc; gửi `null` hoặc chuỗi rỗng sẽ lưu `null`.
+- Giá trị chiều dày lưu dạng `DECIMAL(10, 3)`, tối đa 3 chữ số sau dấu phẩy. Có thể gửi số hoặc chuỗi số dùng dấu chấm/dấu phẩy, ví dụ `4.2`, `"4.2"`, `"4,2"`.
+- `unit` không bắt buộc. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì lưu mặc định `mm`; nếu gửi phải là chuỗi không rỗng, tối đa 10 ký tự.
+- `production_order_id` lấy từ `:id`; `created_by_id` lấy từ user đăng nhập.
+
+### Cập nhật bản ghi
+
+```http
+PATCH /production-orders/tablet-thickness-checks/:checkId
+Content-Type: application/json
+```
+
+```json
+{
+  "requirement": "Yêu cầu mới",
+  "unit_2_thickness": null,
+  "unit_10_thickness": 4.5,
+  "unit": "mm"
+}
+```
+
+`unit_2_thickness` đến `unit_10_thickness`, `requirement` và `dosage_form_stage` có thể gửi `null` hoặc chuỗi rỗng để xóa. `unit_1_thickness` không được xóa; `unit` không được gửi `null` hoặc chuỗi rỗng khi cập nhật.
+
+### Xóa bản ghi
+
+```http
+DELETE /production-orders/tablet-thickness-checks/:checkId
+```
+
 ## Production Order Cylinder Calibrations
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

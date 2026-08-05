@@ -30,6 +30,7 @@ import { ProductionOrderSemiFinishedProductSummariesService } from './production
 import { ProductionOrderMaterialSummariesService } from './production-order-material-summaries.service';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 import { ProductionOrderHardnessChecksService } from './production-order-hardness-checks.service';
+import { ProductionOrderTabletThicknessChecksService } from './production-order-tablet-thickness-checks.service';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 import { ProductionOrderHygieneChecksService } from './production-order-hygiene-checks.service';
 import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
@@ -240,6 +241,13 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderHardnessChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderTabletThicknessChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -472,6 +480,13 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderTabletThicknessChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
     productionOrderFactoryReleaseReviewsService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -605,6 +620,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderHardnessChecksService,
           useValue: productionOrderHardnessChecksService,
+        },
+        {
+          provide: ProductionOrderTabletThicknessChecksService,
+          useValue: productionOrderTabletThicknessChecksService,
         },
         {
           provide: ProductionOrderFactoryReleaseReviewsService,
