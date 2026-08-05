@@ -126,6 +126,7 @@ describe('ProductionOrderDisintegrationChecksService', () => {
       expect.objectContaining({
         data: {
           production_order_id: 2031,
+          requirement: null,
           dosage_form_stage: 'film_coated_tablet',
           unit_1_passed: true,
           unit_2_passed: true,
@@ -195,6 +196,7 @@ describe('ProductionOrderDisintegrationChecksService', () => {
 
     await expect(
       service.update(1, {
+        requirement: '  Thời gian rã không quá 15 phút  ',
         dosage_form_stage: ' film_coated_tablet ',
         unit_2_passed: 'Không đạt',
         unit_6_passed: null,
@@ -206,12 +208,49 @@ describe('ProductionOrderDisintegrationChecksService', () => {
       expect.objectContaining({
         where: { id: 1 },
         data: {
+          requirement: 'Thời gian rã không quá 15 phút',
           dosage_form_stage: 'film_coated_tablet',
           unit_2_passed: false,
           unit_6_passed: null,
         },
       }),
     );
+  });
+
+  it('clears requirement when updated with empty text', async () => {
+    prismaService.productionOrderDisintegrationChecks.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderDisintegrationChecks.update.mockResolvedValue({
+      id: 1,
+      requirement: null,
+    });
+
+    await service.update(1, { requirement: '  ' });
+
+    expect(
+      prismaService.productionOrderDisintegrationChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { requirement: null },
+      }),
+    );
+  });
+
+  it('rejects a non-string requirement', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        {
+          requirement: 15 as unknown as string,
+          dosage_form_stage: 'tablet',
+          unit_1_passed: true,
+        },
+        { id: 7 },
+      ),
+    ).rejects.toThrow('requirement must be a string');
   });
 
   it('rejects an update without any supported fields', async () => {

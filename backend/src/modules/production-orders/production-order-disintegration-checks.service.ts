@@ -97,6 +97,10 @@ export class ProductionOrderDisintegrationChecksService {
     return this.prismaService.productionOrderDisintegrationChecks.create({
       data: {
         production_order_id: productionOrderId,
+        requirement: this.normalizeOptionalText(
+          dto?.requirement,
+          'requirement',
+        ),
         dosage_form_stage: this.normalizeRequiredString(
           dto?.dosage_form_stage,
           'dosage_form_stage',
@@ -159,6 +163,13 @@ export class ProductionOrderDisintegrationChecksService {
     const updateDto = dto ?? {};
     const data: Prisma.ProductionOrderDisintegrationChecksUpdateInput = {};
 
+    if ('requirement' in updateDto) {
+      data.requirement = this.normalizeOptionalText(
+        updateDto.requirement,
+        'requirement',
+      );
+    }
+
     if ('dosage_form_stage' in updateDto) {
       data.dosage_form_stage = this.normalizeRequiredString(
         updateDto.dosage_form_stage,
@@ -220,6 +231,20 @@ export class ProductionOrderDisintegrationChecksService {
     }
 
     return value.trim();
+  }
+
+  private normalizeOptionalText(value: unknown, fieldName: string) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be a string`);
+    }
+
+    const normalizedValue = value.trim();
+
+    return normalizedValue || null;
   }
 
   private normalizePassResult(value: unknown, fieldName: string) {

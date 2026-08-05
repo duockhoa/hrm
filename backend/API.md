@@ -3345,6 +3345,7 @@ Response mẫu:
   {
     "id": 1,
     "production_order_id": 2031,
+    "requirement": "Thời gian rã không quá 15 phút",
     "dosage_form_stage": "film_coated_tablet",
     "unit_1_passed": true,
     "unit_2_passed": true,
@@ -3392,6 +3393,7 @@ Body:
 
 ```json
 {
+  "requirement": "Thời gian rã không quá 15 phút",
   "dosage_form_stage": "film_coated_tablet",
   "unit_1_passed": "Đạt"
 }
@@ -3401,6 +3403,7 @@ Quy tắc:
 
 - `dosage_form_stage` bắt buộc và không được rỗng.
 - `dosage_form_stage` có thể dùng các giá trị như `tablet`, `film_coated_tablet`, `capsule`.
+- `requirement` không bắt buộc và được lưu dạng `TEXT`. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
 - `unit_1_passed` bắt buộc.
 - `unit_2_passed` đến `unit_6_passed` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì backend lưu `null`.
 - Các field `unit_*_passed` khi có giá trị có thể gửi boolean, `1`/`0`, hoặc chuỗi như `Đạt`, `Không đạt`, `dat`, `khong dat`, `pass`, `fail`.
@@ -3412,6 +3415,7 @@ Quy tắc:
 Lỗi thường gặp:
 
 - `404 Production order not found`
+- `400 requirement must be a string`
 - `400 dosage_form_stage is required`
 - `400 unit_1_passed is required`
 - `400 unit_6_passed must be pass or fail`
@@ -3428,17 +3432,18 @@ Body chỉ cần gửi các field muốn cập nhật:
 
 ```json
 {
+  "requirement": "Thời gian rã không quá 15 phút",
   "dosage_form_stage": "film_coated_tablet",
   "unit_6_passed": null
 }
 ```
 
-Quy tắc validate và normalize giống API tạo. Với `unit_2_passed` đến `unit_6_passed`, gửi `null` hoặc chuỗi rỗng sẽ cập nhật field đó về `null`. Riêng `unit_1_passed` vẫn bắt buộc có giá trị hợp lệ nếu được gửi trong body.
+Quy tắc validate và normalize giống API tạo. Với `unit_2_passed` đến `unit_6_passed` và `requirement`, gửi `null` hoặc chuỗi rỗng sẽ cập nhật field đó về `null`. Riêng `unit_1_passed` vẫn bắt buộc có giá trị hợp lệ nếu được gửi trong body.
 
 Lỗi thường gặp:
 
 - `400 At least one field is required`
-- Các lỗi kiểm tra `dosage_form_stage` và `unit_*_passed` giống API tạo.
+- Các lỗi kiểm tra `requirement`, `dosage_form_stage` và `unit_*_passed` giống API tạo.
 - `404 Disintegration check not found`
 
 ### Xóa dữ liệu kiểm tra độ rã
