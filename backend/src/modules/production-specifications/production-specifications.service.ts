@@ -14,6 +14,8 @@ const DECIMAL_PATTERN = /^-?\d+(?:\.\d{1,6})?$/;
 const DECIMAL_INTEGER_DIGITS = 12;
 const LIMIT_COMPARISON_OPERATORS = new Set(['<', '<=', '>', '>=']);
 const DEFAULT_HARDNESS_UNIT = 'N';
+const DEFAULT_TABLET_THICKNESS_UNIT = 'mm';
+const DEFAULT_DISINTEGRATION_TIME_UNIT = 'phút';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -312,6 +314,32 @@ export class ProductionSpecificationsService {
         'hardness_unit',
         DEFAULT_HARDNESS_UNIT,
       ),
+      tablet_thickness_control_limit: this.normalizeOptionalDecimal(
+        dto.tablet_thickness_control_limit,
+        'tablet_thickness_control_limit',
+      ),
+      tablet_thickness_allowed_limit: this.normalizeOptionalDecimal(
+        dto.tablet_thickness_allowed_limit,
+        'tablet_thickness_allowed_limit',
+      ),
+      tablet_thickness_unit: this.normalizeOptionalStringWithDefault(
+        dto.tablet_thickness_unit,
+        'tablet_thickness_unit',
+        DEFAULT_TABLET_THICKNESS_UNIT,
+      ),
+      disintegration_time_control_limit: this.normalizeOptionalDecimal(
+        dto.disintegration_time_control_limit,
+        'disintegration_time_control_limit',
+      ),
+      disintegration_time_allowed_limit: this.normalizeOptionalDecimal(
+        dto.disintegration_time_allowed_limit,
+        'disintegration_time_allowed_limit',
+      ),
+      disintegration_time_unit: this.normalizeOptionalStringWithDefault(
+        dto.disintegration_time_unit,
+        'disintegration_time_unit',
+        DEFAULT_DISINTEGRATION_TIME_UNIT,
+      ),
     };
   }
 
@@ -489,6 +517,50 @@ export class ProductionSpecificationsService {
         dto.hardness_unit,
         'hardness_unit',
         DEFAULT_HARDNESS_UNIT,
+      );
+    }
+
+    if (dto.tablet_thickness_control_limit !== undefined) {
+      data.tablet_thickness_control_limit = this.normalizeOptionalDecimal(
+        dto.tablet_thickness_control_limit,
+        'tablet_thickness_control_limit',
+      );
+    }
+
+    if (dto.tablet_thickness_allowed_limit !== undefined) {
+      data.tablet_thickness_allowed_limit = this.normalizeOptionalDecimal(
+        dto.tablet_thickness_allowed_limit,
+        'tablet_thickness_allowed_limit',
+      );
+    }
+
+    if (dto.tablet_thickness_unit !== undefined) {
+      data.tablet_thickness_unit = this.normalizeOptionalStringWithDefault(
+        dto.tablet_thickness_unit,
+        'tablet_thickness_unit',
+        DEFAULT_TABLET_THICKNESS_UNIT,
+      );
+    }
+
+    if (dto.disintegration_time_control_limit !== undefined) {
+      data.disintegration_time_control_limit = this.normalizeOptionalDecimal(
+        dto.disintegration_time_control_limit,
+        'disintegration_time_control_limit',
+      );
+    }
+
+    if (dto.disintegration_time_allowed_limit !== undefined) {
+      data.disintegration_time_allowed_limit = this.normalizeOptionalDecimal(
+        dto.disintegration_time_allowed_limit,
+        'disintegration_time_allowed_limit',
+      );
+    }
+
+    if (dto.disintegration_time_unit !== undefined) {
+      data.disintegration_time_unit = this.normalizeOptionalStringWithDefault(
+        dto.disintegration_time_unit,
+        'disintegration_time_unit',
+        DEFAULT_DISINTEGRATION_TIME_UNIT,
       );
     }
 

@@ -118,6 +118,12 @@ describe('ProductionSpecificationsService', () => {
         hardness_lower_allowed_limit: null,
         hardness_upper_allowed_limit: null,
         hardness_unit: 'N',
+        tablet_thickness_control_limit: null,
+        tablet_thickness_allowed_limit: null,
+        tablet_thickness_unit: 'mm',
+        disintegration_time_control_limit: null,
+        disintegration_time_allowed_limit: null,
+        disintegration_time_unit: 'phút',
         updated_by_id: 7,
       },
       include: {
@@ -320,6 +326,46 @@ describe('ProductionSpecificationsService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           hardness_unit: 'N',
+          updated_by_id: 7,
+        }),
+      }),
+    );
+  });
+
+  it('updates tablet thickness and disintegration time limits with their units', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00009' });
+    prismaService.productionSpecifications.findUnique.mockResolvedValue({
+      item_code: 'TP00009',
+      deleted_at: null,
+    });
+    prismaService.productionSpecifications.update.mockResolvedValue({
+      item_code: 'TP00009',
+      tablet_thickness_unit: 'mm',
+      disintegration_time_unit: 'phút',
+    });
+
+    await service.update(
+      'TP00009',
+      {
+        tablet_thickness_control_limit: 4.2,
+        tablet_thickness_allowed_limit: '4.4',
+        tablet_thickness_unit: ' mm ',
+        disintegration_time_control_limit: 11,
+        disintegration_time_allowed_limit: '12.5',
+        disintegration_time_unit: ' phút ',
+      },
+      authenticatedUser,
+    );
+
+    expect(prismaService.productionSpecifications.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tablet_thickness_control_limit: expect.any(Object),
+          tablet_thickness_allowed_limit: expect.any(Object),
+          tablet_thickness_unit: 'mm',
+          disintegration_time_control_limit: expect.any(Object),
+          disintegration_time_allowed_limit: expect.any(Object),
+          disintegration_time_unit: 'phút',
           updated_by_id: 7,
         }),
       }),

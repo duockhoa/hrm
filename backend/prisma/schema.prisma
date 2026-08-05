@@ -617,6 +617,12 @@ model ProductionSpecifications {
   hardness_lower_allowed_limit                  Decimal?      @db.Decimal(18, 6)
   hardness_upper_allowed_limit                  Decimal?      @db.Decimal(18, 6)
   hardness_unit                                 String        @default("N") @db.VarChar(20)
+  tablet_thickness_control_limit                Decimal?      @db.Decimal(18, 6)
+  tablet_thickness_allowed_limit                Decimal?      @db.Decimal(18, 6)
+  tablet_thickness_unit                         String        @default("mm") @db.VarChar(20)
+  disintegration_time_control_limit             Decimal?      @db.Decimal(18, 6)
+  disintegration_time_allowed_limit             Decimal?      @db.Decimal(18, 6)
+  disintegration_time_unit                      String        @default("phút") @db.VarChar(20)
   updated_by_id                                 Int?
   updatedBy                                     Users?        @relation("ProductionSpecificationUpdater", fields: [updated_by_id], references: [id], onDelete: SetNull)
   created_at                                    DateTime      @default(now())

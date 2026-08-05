@@ -26,4 +26,10 @@ export class UpdateProductionSpecificationDto {
   hardness_lower_allowed_limit?: string | number | null;
   hardness_upper_allowed_limit?: string | number | null;
   hardness_unit?: string | null;
+  tablet_thickness_control_limit?: string | number | null;
+  tablet_thickness_allowed_limit?: string | number | null;
+  tablet_thickness_unit?: string | null;
+  disintegration_time_control_limit?: string | number | null;
+  disintegration_time_allowed_limit?: string | number | null;
+  disintegration_time_unit?: string | null;
 }

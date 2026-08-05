@@ -6021,6 +6021,12 @@ Response là mảng specification. Mỗi phần tử trả đầy đủ thông t
     "hardness_lower_allowed_limit": "70.000000",
     "hardness_upper_allowed_limit": "90.000000",
     "hardness_unit": "N",
+    "tablet_thickness_control_limit": "4.200000",
+    "tablet_thickness_allowed_limit": "4.400000",
+    "tablet_thickness_unit": "mm",
+    "disintegration_time_control_limit": "11.000000",
+    "disintegration_time_allowed_limit": "12.500000",
+    "disintegration_time_unit": "phút",
     "updated_by_id": 7,
     "created_at": "2026-07-28T08:00:00.000Z",
     "updated_at": "2026-07-28T09:00:00.000Z",
@@ -6092,6 +6098,12 @@ Response là một object cùng cấu trúc với từng phần tử của API l
   "hardness_lower_allowed_limit": "70.000000",
   "hardness_upper_allowed_limit": "90.000000",
   "hardness_unit": "N",
+  "tablet_thickness_control_limit": "4.200000",
+  "tablet_thickness_allowed_limit": "4.400000",
+  "tablet_thickness_unit": "mm",
+  "disintegration_time_control_limit": "11.000000",
+  "disintegration_time_allowed_limit": "12.500000",
+  "disintegration_time_unit": "phút",
   "updated_by_id": 7,
   "created_at": "2026-07-28T08:00:00.000Z",
   "updated_at": "2026-07-28T09:00:00.000Z",
@@ -6159,7 +6171,13 @@ Body:
   "hardness_upper_control_limit": 85,
   "hardness_lower_allowed_limit": 70,
   "hardness_upper_allowed_limit": 90,
-  "hardness_unit": "N"
+  "hardness_unit": "N",
+  "tablet_thickness_control_limit": 4.2,
+  "tablet_thickness_allowed_limit": 4.4,
+  "tablet_thickness_unit": "mm",
+  "disintegration_time_control_limit": 11,
+  "disintegration_time_allowed_limit": 12.5,
+  "disintegration_time_unit": "phút"
 }
 ```
 
@@ -6168,10 +6186,12 @@ Quy tắc:
 - `item_code` phải tồn tại trong bảng `items`.
 - `product_line_id` là tùy chọn và phải tồn tại trong bảng `product_lines`.
 - Backend vẫn nhận `product_line` dạng text để tương thích request cũ; nếu gửi text, hệ thống sẽ tìm hoặc tạo `product_lines` tương ứng.
-- Các field giới hạn, bao gồm giới hạn số liều xịt, khối lượng viên nén bao phim và độ cứng, là số thập phân, tối đa 6 chữ số sau dấu phẩy.
+- Các field giới hạn, bao gồm giới hạn số liều xịt, khối lượng viên nén bao phim, độ cứng, chiều dày viên và thời gian rã, là số thập phân, tối đa 6 chữ số sau dấu phẩy.
 - Các field operator của giới hạn nhận một trong các giá trị `<`, `<=`, `>`, `>=`.
 - `film_coated_tablet_weight_unit` là đơn vị khối lượng viên nén bao phim, ví dụ `mg` hoặc `g`.
 - `hardness_unit` là đơn vị độ cứng. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `N`.
+- `tablet_thickness_unit` là đơn vị chiều dày viên. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `mm`.
+- `disintegration_time_unit` là đơn vị thời gian rã. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `phút`.
 - Nếu specification đã bị soft delete, API create/update có thể restore bản ghi.
 
 Response include thêm `productLine`, `updated_by_id` và `updatedBy`.
@@ -6204,7 +6224,13 @@ Body: gửi các field cần đổi.
   "hardness_upper_control_limit": 85,
   "hardness_lower_allowed_limit": 70,
   "hardness_upper_allowed_limit": 90,
-  "hardness_unit": "N"
+  "hardness_unit": "N",
+  "tablet_thickness_control_limit": 4.2,
+  "tablet_thickness_allowed_limit": 4.4,
+  "tablet_thickness_unit": "mm",
+  "disintegration_time_control_limit": 11,
+  "disintegration_time_allowed_limit": 12.5,
+  "disintegration_time_unit": "phút"
 }
 ```
 
