@@ -73,6 +73,7 @@ model Users {
   createdEquipment                                      Equipment[]                                           @relation("EquipmentCreator")
   createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
+  createdFilterCatalogs                                 FilterCatalogs[]                                     @relation("FilterCatalogCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
   userApplications                                      UserApplications[]
 
@@ -92,6 +93,21 @@ model UserProfiles {
   users      Users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("user_profiles")
+}
+
+model FilterCatalogs {
+  id                  Int      @id @default(autoincrement())
+  filter_code         String   @unique @db.VarChar(50)
+  filter_type         String   @db.VarChar(100)
+  usable_steam_cycles Int?
+  description         String?  @db.Text
+  created_by_id       Int
+  createdBy           Users    @relation("FilterCatalogCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "filter_catalogs_created_by_id_fkey")
+  created_at          DateTime @default(now())
+  updated_at          DateTime @default(now()) @updatedAt
+
+  @@index([created_by_id], map: "filter_catalogs_created_by_id_idx")
+  @@map("filter_catalogs")
 }
 
 model Tokens {

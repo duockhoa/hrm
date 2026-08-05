@@ -6614,6 +6614,95 @@ Quy tắc:
 - Cần có ít nhất một trong hai field: `message` hoặc `html`.
 - Tên người gửi được cấu hình bằng biến môi trường `EMAIL_SENDER_NAME`.
 
+## Filter Catalogs
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+### Lấy danh sách danh mục lọc
+
+```http
+GET /filter-catalogs
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "filter_code": "LOC-001",
+    "filter_type": "HEPA",
+    "usable_steam_cycles": 25,
+    "description": "Lọc khí",
+    "created_by_id": 7,
+    "created_at": "2026-08-05T00:00:00.000Z",
+    "updated_at": "2026-08-05T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh"
+    }
+  }
+]
+```
+
+### Lấy danh mục lọc theo ID
+
+```http
+GET /filter-catalogs/:id
+```
+
+### Tạo danh mục lọc
+
+```http
+POST /filter-catalogs
+Content-Type: application/json
+```
+
+```json
+{
+  "filter_code": "LOC-001",
+  "filter_type": "HEPA",
+  "usable_steam_cycles": 25,
+  "description": "Lọc khí"
+}
+```
+
+Quy tắc:
+
+- `filter_code` và `filter_type` là bắt buộc; `filter_code` là duy nhất.
+- `usable_steam_cycles` không bắt buộc. Có thể gửi số nguyên không âm, chuỗi số nguyên, hoặc `null`; `null`/chuỗi rỗng được lưu là `null`.
+- `description` không bắt buộc; `null`/chuỗi rỗng được lưu là `null`.
+- `created_by_id` lấy từ người dùng đăng nhập, không nhận từ body.
+
+### Cập nhật danh mục lọc
+
+```http
+PATCH /filter-catalogs/:id
+Content-Type: application/json
+```
+
+Body chỉ cần gửi các trường muốn thay đổi. Ví dụ:
+
+```json
+{
+  "usable_steam_cycles": null,
+  "description": "Đã cập nhật"
+}
+```
+
+### Xóa danh mục lọc
+
+```http
+DELETE /filter-catalogs/:id
+```
+
+Lỗi thường gặp:
+
+- `404 Filter catalog not found`
+- `409 Filter code already exists`
+- `400 usable_steam_cycles must be a non-negative integer`
+
 ## App Root
 
 Các route này hiện có trong `AppController`, chủ yếu dùng kiểm tra server.

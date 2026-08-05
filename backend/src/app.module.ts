@@ -27,6 +27,7 @@ import { EquipmentModule } from './modules/equipment/equipment.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { RegistrationNumbersSyncModule } from './modules/registration-numbers-sync/registration-numbers-sync.module';
 import { RegistrationNumbersModule } from './modules/registration-numbers/registration-numbers.module';
+import { FilterCatalogsModule } from './modules/filter-catalogs/filter-catalogs.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { RegistrationNumbersModule } from './modules/registration-numbers/regist
     ApplicationsModule,
     RegistrationNumbersSyncModule,
     RegistrationNumbersModule,
+    FilterCatalogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
