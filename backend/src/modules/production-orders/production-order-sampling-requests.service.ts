@@ -26,6 +26,11 @@ type AuthenticatedUser = {
 
 const DEFAULT_PYCLM_API_TIMEOUT_MS = 30000;
 
+type PyclmSubjectPrefix =
+  | 'PYCLM THÀNH PHẨM'
+  | 'PYCLM BÁN THÀNH PHẨM'
+  | 'PYCLM NGUYÊN LIỆU';
+
 const padTwoDigits = (value: number) => String(value).padStart(2, '0');
 
 const formatShortDateParts = (day: string, month: string, year: string) => {
@@ -266,6 +271,7 @@ export class ProductionOrderSamplingRequestsService {
         productionOrder.warehouse ??
         '',
       emailRecipients: this.getEmailRecipients(user),
+      subjectPrefix: this.getPyclmSubjectPrefix(productionOrder.item_code),
     };
   }
 
@@ -279,6 +285,7 @@ export class ProductionOrderSamplingRequestsService {
     sender: string;
     location: string;
     emailRecipients: string;
+    subjectPrefix?: PyclmSubjectPrefix;
   }): Promise<Required<Pick<AppsScriptPyclmResponse, 'url'>>> {
     try {
       const response = await axios.post<AppsScriptPyclmResponse>(
@@ -396,6 +403,26 @@ export class ProductionOrderSamplingRequestsService {
     const uniqueRecipients = [...new Set(recipients)];
 
     return uniqueRecipients.join(',');
+  }
+
+  private getPyclmSubjectPrefix(
+    itemCode?: string | null,
+  ): PyclmSubjectPrefix | undefined {
+    const normalizedItemCode = itemCode?.trim().toUpperCase() ?? '';
+
+    if (normalizedItemCode.startsWith('TP')) {
+      return 'PYCLM THÀNH PHẨM';
+    }
+
+    if (normalizedItemCode.startsWith('BTP')) {
+      return 'PYCLM BÁN THÀNH PHẨM';
+    }
+
+    if (normalizedItemCode.startsWith('NL')) {
+      return 'PYCLM NGUYÊN LIỆU';
+    }
+
+    return undefined;
   }
 
   private normalizeEmailRecipients(value?: string | null) {

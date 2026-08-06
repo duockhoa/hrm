@@ -122,6 +122,7 @@ describe('ProductionOrderSamplingRequestsService', () => {
         sender: 'Binh',
         location: 'Kiem nghiem',
         emailRecipients: 'binh@example.com',
+        subjectPrefix: 'PYCLM THÀNH PHẨM',
       },
       {
         headers: {
@@ -165,6 +166,45 @@ describe('ProductionOrderSamplingRequestsService', () => {
       samplingRequest: createdSamplingRequest,
     });
   });
+
+  it.each([
+    ['BTP00063', 'PYCLM BÁN THÀNH PHẨM'],
+    [' nl00063 ', 'PYCLM NGUYÊN LIỆU'],
+    ['HH00063', undefined],
+  ])(
+    'sends the PYCLM email subject prefix for item code %s',
+    async (itemCode, subjectPrefix) => {
+      prismaService.productionOrders.findUnique.mockResolvedValue({
+        id: 2031,
+        item_code: itemCode,
+        item: {
+          item_name: 'San pham test',
+          registration: null,
+        },
+        planned_quatity: 1000,
+        unit: 'kg',
+        description: 'Fallback name',
+        lot_no: '010126',
+        expire_date: '2028-05-03',
+        warehouse: 'K-KHKV',
+      });
+      mockedAxiosPost.mockResolvedValue({
+        data: {
+          status: 'success',
+          url: 'https://docs.google.com/document/d/test',
+        },
+      });
+      prismaService.productionOrderSamplingRequests.create.mockResolvedValue({});
+
+      await service.create(2031, {}, { id: 7, name: 'Binh' });
+
+      expect(mockedAxiosPost).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ subjectPrefix }),
+        expect.any(Object),
+      );
+    },
+  );
 
   it('creates a new sampling request when an existing sent request is present', async () => {
     const createdSamplingRequest = {
