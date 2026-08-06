@@ -87,6 +87,9 @@ import { ProductionOrderDateChecksService } from './production-order-date-checks
 import { CreateProductionOrderSteamSterilizationCheckDto } from './dto/create-production-order-steam-sterilization-check.dto';
 import { UpdateProductionOrderSteamSterilizationCheckDto } from './dto/update-production-order-steam-sterilization-check.dto';
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
+import { CreateProductionOrderFiltrationCheckDto } from './dto/create-production-order-filtration-check.dto';
+import { UpdateProductionOrderFiltrationCheckDto } from './dto/update-production-order-filtration-check.dto';
+import { ProductionOrderFiltrationChecksService } from './production-order-filtration-checks.service';
 import { CreateProductionOrderSemiFinishedGrossWeightCheckDto } from './dto/create-production-order-semi-finished-gross-weight-check.dto';
 import { UpdateProductionOrderSemiFinishedGrossWeightCheckDto } from './dto/update-production-order-semi-finished-gross-weight-check.dto';
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
@@ -285,6 +288,7 @@ export class ProductionOrdersController {
     private readonly productionOrderTenUnitSensoryChecksService: ProductionOrderTenUnitSensoryChecksService,
     private readonly productionOrderDateChecksService: ProductionOrderDateChecksService,
     private readonly productionOrderSteamSterilizationChecksService: ProductionOrderSteamSterilizationChecksService,
+    private readonly productionOrderFiltrationChecksService: ProductionOrderFiltrationChecksService,
     private readonly productionOrderSemiFinishedGrossWeightChecksService: ProductionOrderSemiFinishedGrossWeightChecksService,
     private readonly productionOrderSemiFinishedNetWeightChecksService: ProductionOrderSemiFinishedNetWeightChecksService,
     private readonly productionOrderSemiFinishedProductSummariesService: ProductionOrderSemiFinishedProductSummariesService,
@@ -1197,6 +1201,29 @@ export class ProductionOrdersController {
     return this.productionOrderSteamSterilizationChecksService.delete(checkId);
   }
 
+  @Get('filtration-checks/:checkId')
+  async findFiltrationCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderFiltrationChecksService.findById(checkId);
+  }
+
+  @Patch('filtration-checks/:checkId')
+  async updateFiltrationCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderFiltrationCheckDto,
+  ) {
+    return this.productionOrderFiltrationChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('filtration-checks/:checkId')
+  async deleteFiltrationCheck(@Param('checkId', ParseIntPipe) checkId: number) {
+    return this.productionOrderFiltrationChecksService.delete(checkId);
+  }
+
   @Get('date-checks/:checkId')
   async findDateCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDateChecksService.findById(checkId);
@@ -2006,6 +2033,21 @@ export class ProductionOrdersController {
       await removeUploadedSteamSterilizationCheckImages(uploadedImages);
       throw error;
     }
+  }
+
+  @Get(':id/filtration-checks')
+  async findFiltrationChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderFiltrationChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/filtration-checks')
+  async createFiltrationCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderFiltrationCheckDto,
+  ) {
+    return this.productionOrderFiltrationChecksService.create(id, createDto);
   }
 
   @Get(':id/ten-unit-sensory-checks')

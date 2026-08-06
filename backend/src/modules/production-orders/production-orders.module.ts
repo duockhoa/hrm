@@ -29,6 +29,7 @@ import { ProductionOrderDateChecksService } from './production-order-date-checks
 import { ProductionOrderCylinderCalibrationsService } from './production-order-cylinder-calibrations.service';
 import { ProductionOrderSensoryChecksService } from './production-order-sensory-checks.service';
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
+import { ProductionOrderFiltrationChecksService } from './production-order-filtration-checks.service';
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
 import { ProductionOrderSemiFinishedProductSummariesService } from './production-order-semi-finished-product-summaries.service';
@@ -67,6 +68,7 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
     ProductionOrderSensoryChecksService,
     ProductionOrderDateChecksService,
     ProductionOrderSteamSterilizationChecksService,
+    ProductionOrderFiltrationChecksService,
     ProductionOrderSemiFinishedGrossWeightChecksService,
     ProductionOrderSemiFinishedNetWeightChecksService,
     ProductionOrderSemiFinishedProductSummariesService,

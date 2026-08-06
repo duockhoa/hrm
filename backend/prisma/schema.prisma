@@ -75,6 +75,9 @@ model Users {
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
   createdFilterCatalogs                                 FilterCatalogs[]                                     @relation("FilterCatalogCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
+  sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
+  filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckFilterer")
+  inspectedProductionOrderFiltrationChecks              ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckInspector")
   userApplications                                      UserApplications[]
 
   @@index([department], map: "users_department_fkey")
@@ -103,6 +106,7 @@ model FilterCatalogs {
   description         String?  @db.Text
   created_by_id       Int
   createdBy           Users    @relation("FilterCatalogCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "filter_catalogs_created_by_id_fkey")
+  productionOrderFiltrationChecks ProductionOrderFiltrationChecks[]
   created_at          DateTime @default(now())
   updated_at          DateTime @default(now()) @updatedAt
 
@@ -530,6 +534,7 @@ model ProductionOrders {
   disinfectantPreparations             ProductionOrderDisinfectantPreparations[]
   steamSterilizationChecks             ProductionOrderSteamSterilizationChecks[]
   postPreparationSolutionChecks        ProductionOrderPostPreparationSolutionChecks[]
+  filtrationChecks                     ProductionOrderFiltrationChecks[]
   factoryReleaseReviews                ProductionOrderFactoryReleaseReviews[]
   equipmentMonitoringRecords           EquipmentMonitoringRecords[]
   documentControl                      ProductionOrderDocumentControls?
@@ -848,6 +853,40 @@ model ProductionOrderSteamSterilizationChecks {
   @@index([created_by_id], map: "po_steam_sterilization_checks_created_by_id_fkey")
   @@index([checked_by_id], map: "po_steam_sterilization_checks_checked_by_id_fkey")
   @@map("production_order_steam_sterilization_checks")
+}
+
+model ProductionOrderFiltrationChecks {
+  id                                          Int              @id @default(autoincrement())
+  production_order_id                         Int
+  productionOrder                             ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_filtration_checks_po_id_fkey")
+  filter_position                             String?          @db.VarChar(255)
+  filter_membrane_id                          Int?
+  filterMembrane                              FilterCatalogs?  @relation(fields: [filter_membrane_id], references: [id], onDelete: SetNull, map: "po_filtration_checks_filter_membrane_id_fkey")
+  pre_filter_appearance_requirement          String?          @db.Text
+  pre_filter_appearance_result                String?          @db.Text
+  pre_sterilization_integrity_requirement    String?          @db.Text
+  pre_sterilization_integrity_result          String?          @db.Text
+  sterilized_by_id                            Int?
+  sterilizedBy                                Users?           @relation("ProductionOrderFiltrationCheckSterilizer", fields: [sterilized_by_id], references: [id], onDelete: SetNull, map: "po_filtration_checks_sterilized_by_id_fkey")
+  rinse_water_volume_liters                   Decimal?         @db.Decimal(12, 3)
+  filtering_started_at                        DateTime?
+  filtering_finished_at                       DateTime?
+  filtered_by_id                              Int?
+  filteredBy                                  Users?           @relation("ProductionOrderFiltrationCheckFilterer", fields: [filtered_by_id], references: [id], onDelete: SetNull, map: "po_filtration_checks_filtered_by_id_fkey")
+  tank_residual_volume_liters                 Decimal?         @db.Decimal(12, 3)
+  post_filter_test_requirement                String?          @db.Text
+  post_filter_test_result                     String?          @db.Text
+  post_filter_membrane_appearance_requirement String?          @db.Text
+  post_filter_membrane_appearance_result      String?          @db.Text
+  inspected_after_filter_by_id                Int?
+  inspectedAfterFilterBy                      Users?           @relation("ProductionOrderFiltrationCheckInspector", fields: [inspected_after_filter_by_id], references: [id], onDelete: SetNull, map: "po_filtration_checks_inspected_by_id_fkey")
+
+  @@index([production_order_id], map: "po_filtration_checks_po_id_fkey")
+  @@index([filter_membrane_id], map: "po_filtration_checks_filter_membrane_id_fkey")
+  @@index([sterilized_by_id], map: "po_filtration_checks_sterilized_by_id_fkey")
+  @@index([filtered_by_id], map: "po_filtration_checks_filtered_by_id_fkey")
+  @@index([inspected_after_filter_by_id], map: "po_filtration_checks_inspected_by_id_fkey")
+  @@map("production_order_filtration_checks")
 }
 
 model ProductionOrderFriabilityChecks {

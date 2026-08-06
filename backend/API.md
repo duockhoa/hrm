@@ -2352,6 +2352,165 @@ Lỗi thường gặp:
 
 - `404 Steam sterilization check not found`
 
+## Production Order Filtration Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu kiểm tra quá trình lọc theo lệnh sản xuất. `:id` là ID lệnh sản xuất (ID sản phẩm đang thực hiện). `filter_membrane_id` tham chiếu `filter_catalogs.id`; các trường người thực hiện tham chiếu `users.id`.
+
+### Lấy danh sách kiểm tra quá trình lọc
+
+```http
+GET /production-orders/:id/filtration-checks
+```
+
+Response sắp xếp theo `id` mới nhất trước.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "filter_position": "Bồn pha chế số 1",
+    "filter_membrane_id": 3,
+    "pre_filter_appearance_requirement": "Màng sạch, không rách",
+    "pre_filter_appearance_result": "Đạt",
+    "pre_sterilization_integrity_requirement": "Không rò rỉ",
+    "pre_sterilization_integrity_result": "Đạt",
+    "sterilized_by_id": 7,
+    "rinse_water_volume_liters": "20.000",
+    "filtering_started_at": "2026-08-06T08:00:00.000Z",
+    "filtering_finished_at": "2026-08-06T09:00:00.000Z",
+    "filtered_by_id": 8,
+    "tank_residual_volume_liters": "1.500",
+    "post_filter_test_requirement": "Dịch trong",
+    "post_filter_test_result": "Đạt",
+    "post_filter_membrane_appearance_requirement": "Không biến dạng",
+    "post_filter_membrane_appearance_result": "Đạt",
+    "inspected_after_filter_by_id": 9,
+    "filterMembrane": {
+      "id": 3,
+      "filter_code": "LOC-003",
+      "filter_type": "Màng lọc"
+    },
+    "sterilizedBy": {
+      "id": 7,
+      "username": "operator1",
+      "name": "Nguyễn Văn A"
+    },
+    "filteredBy": {
+      "id": 8,
+      "username": "operator2",
+      "name": "Trần Văn B"
+    },
+    "inspectedAfterFilterBy": {
+      "id": 9,
+      "username": "qa1",
+      "name": "Lê Văn C"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi kiểm tra lọc theo ID
+
+```http
+GET /production-orders/filtration-checks/:checkId
+```
+
+Lỗi thường gặp:
+
+- `404 Filtration check not found`
+
+### Thêm bản ghi kiểm tra lọc
+
+```http
+POST /production-orders/:id/filtration-checks
+Content-Type: application/json
+```
+
+Body mẫu:
+
+```json
+{
+  "filter_position": "Bồn pha chế số 1",
+  "filter_membrane_id": 3,
+  "pre_filter_appearance_requirement": "Màng sạch, không rách",
+  "pre_filter_appearance_result": "Đạt",
+  "pre_sterilization_integrity_requirement": "Không rò rỉ",
+  "pre_sterilization_integrity_result": "Đạt",
+  "sterilized_by_id": 7,
+  "rinse_water_volume_liters": 20,
+  "filtering_started_at": "2026-08-06T08:00:00.000Z",
+  "filtering_finished_at": "2026-08-06T09:00:00.000Z",
+  "filtered_by_id": 8,
+  "tank_residual_volume_liters": 1.5,
+  "post_filter_test_requirement": "Dịch trong",
+  "post_filter_test_result": "Đạt",
+  "post_filter_membrane_appearance_requirement": "Không biến dạng",
+  "post_filter_membrane_appearance_result": "Đạt",
+  "inspected_after_filter_by_id": 9
+}
+```
+
+Quy tắc:
+
+- Tất cả field trong body không bắt buộc; không gửi, gửi `null`, hoặc chuỗi rỗng sẽ được lưu là `null`.
+- `filter_membrane_id`, `sterilized_by_id`, `filtered_by_id`, `inspected_after_filter_by_id` nếu gửi phải là số nguyên dương và tồn tại trong bảng liên quan.
+- `rinse_water_volume_liters` và `tank_residual_volume_liters` là số không âm, tối đa 3 chữ số thập phân.
+- `filtering_started_at` và `filtering_finished_at` dùng định dạng ISO 8601 hợp lệ.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `404 Filter membrane not found`
+- `404 <user field> user not found`
+- `400 <field> must be a positive integer`
+
+### Cập nhật bản ghi kiểm tra lọc
+
+```http
+PATCH /production-orders/filtration-checks/:checkId
+Content-Type: application/json
+```
+
+Body chỉ gửi các field muốn cập nhật. Ví dụ:
+
+```json
+{
+  "filtering_finished_at": "2026-08-06T09:15:00.000Z",
+  "tank_residual_volume_liters": 1.25,
+  "post_filter_test_result": "Đạt"
+}
+```
+
+Gửi `null` hoặc chuỗi rỗng để xóa giá trị của một field.
+
+Lỗi thường gặp:
+
+- `404 Filtration check not found`
+- `404 Filter membrane not found`
+- `404 <user field> user not found`
+- `400 At least one field is required`
+
+### Xóa bản ghi kiểm tra lọc
+
+```http
+DELETE /production-orders/filtration-checks/:checkId
+```
+
+Response trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Filtration check not found`
+
 ## Production Order Environment Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
