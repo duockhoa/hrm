@@ -6814,6 +6814,35 @@ Response mẫu:
 GET /filter-catalogs/:id
 ```
 
+Response của API chi tiết có thêm `productionOrderFiltrationChecks`: danh sách các lần màng lọc đã được sử dụng trong quá trình lọc, sắp xếp theo `id` mới nhất trước. Mỗi lần sử dụng bao gồm lệnh sản xuất, vị trí lọc, thời điểm bắt đầu/kết thúc lọc và thông tin người hấp, người lọc, người kiểm tra sau lọc.
+
+Ví dụ phần dữ liệu lần sử dụng:
+
+```json
+{
+  "productionOrderFiltrationChecks": [
+    {
+      "id": 15,
+      "production_order_id": 2031,
+      "filter_position": "Bồn pha chế số 1",
+      "filtering_started_at": "2026-08-06T08:00:00.000Z",
+      "filtering_finished_at": "2026-08-06T09:00:00.000Z",
+      "productionOrder": {
+        "id": 2031,
+        "item_code": "SP-001",
+        "production_order_code": "LSX-2031",
+        "lot_no": "LOT-001"
+      },
+      "sterilizedBy": { "id": 7, "name": "Nguyễn Văn A" },
+      "filteredBy": { "id": 8, "name": "Trần Văn B" },
+      "inspectedAfterFilterBy": { "id": 9, "name": "Lê Văn C" }
+    }
+  ]
+}
+```
+
+Nếu màng lọc chưa từng được sử dụng, `productionOrderFiltrationChecks` là mảng rỗng `[]`.
+
 ### Tạo danh mục lọc
 
 ```http

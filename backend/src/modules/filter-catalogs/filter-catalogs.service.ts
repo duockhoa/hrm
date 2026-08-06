@@ -25,6 +25,35 @@ const filterCatalogInclude = {
   createdBy: { select: filterCatalogCreatorSelect },
 } satisfies Prisma.FilterCatalogsInclude;
 
+const filterCatalogUsageUserSelect = {
+  id: true,
+  username: true,
+  name: true,
+  email: true,
+  department: true,
+  position: true,
+};
+
+const filterCatalogDetailInclude = {
+  ...filterCatalogInclude,
+  productionOrderFiltrationChecks: {
+    include: {
+      productionOrder: {
+        select: {
+          id: true,
+          item_code: true,
+          production_order_code: true,
+          lot_no: true,
+        },
+      },
+      sterilizedBy: { select: filterCatalogUsageUserSelect },
+      filteredBy: { select: filterCatalogUsageUserSelect },
+      inspectedAfterFilterBy: { select: filterCatalogUsageUserSelect },
+    },
+    orderBy: { id: 'desc' },
+  },
+} satisfies Prisma.FilterCatalogsInclude;
+
 @Injectable()
 export class FilterCatalogsService {
   constructor(private readonly prismaService: PrismaService) {}
@@ -39,7 +68,7 @@ export class FilterCatalogsService {
   async findById(id: number) {
     const filterCatalog = await this.prismaService.filterCatalogs.findUnique({
       where: { id },
-      include: filterCatalogInclude,
+      include: filterCatalogDetailInclude,
     });
 
     if (!filterCatalog) {

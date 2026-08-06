@@ -128,4 +128,21 @@ describe('FilterCatalogsService', () => {
       service.create({ filter_code: 'LOC-001', filter_type: 'HEPA' }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('includes filtration usage records when retrieving catalog detail', async () => {
+    prismaService.filterCatalogs.findUnique.mockResolvedValue({ id: 1 });
+
+    await service.findById(1);
+
+    expect(prismaService.filterCatalogs.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        include: expect.objectContaining({
+          productionOrderFiltrationChecks: expect.objectContaining({
+            orderBy: { id: 'desc' },
+          }),
+        }),
+      }),
+    );
+  });
 });
