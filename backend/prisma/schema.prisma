@@ -883,6 +883,8 @@ model ProductionOrderFiltrationChecks {
   post_filter_membrane_appearance_result      String?          @db.Text
   inspected_after_filter_by_id                Int?
   inspectedAfterFilterBy                      Users?           @relation("ProductionOrderFiltrationCheckInspector", fields: [inspected_after_filter_by_id], references: [id], onDelete: SetNull, map: "po_filtration_checks_inspected_by_id_fkey")
+  created_at                                  DateTime         @default(now())
+  updated_at                                  DateTime         @default(now()) @updatedAt
 
   @@index([production_order_id], map: "po_filtration_checks_po_id_fkey")
   @@index([filter_membrane_id], map: "po_filtration_checks_filter_membrane_id_fkey")

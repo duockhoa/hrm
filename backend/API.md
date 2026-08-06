@@ -2364,7 +2364,7 @@ Nhóm API này lưu kiểm tra quá trình lọc theo lệnh sản xuất. `:id`
 GET /production-orders/:id/filtration-checks
 ```
 
-Response sắp xếp theo `id` mới nhất trước.
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước.
 
 Response mẫu:
 
@@ -2390,6 +2390,8 @@ Response mẫu:
     "post_filter_membrane_appearance_requirement": "Không biến dạng",
     "post_filter_membrane_appearance_result": "Đạt",
     "inspected_after_filter_by_id": 9,
+    "created_at": "2026-08-06T09:10:00.000Z",
+    "updated_at": "2026-08-06T09:10:00.000Z",
     "filterMembrane": {
       "id": 3,
       "filter_code": "LOC-003",
@@ -2462,6 +2464,7 @@ Body mẫu:
 Quy tắc:
 
 - Tất cả field trong body không bắt buộc; không gửi, gửi `null`, hoặc chuỗi rỗng sẽ được lưu là `null`.
+- `created_at` và `updated_at` được backend tự tạo/cập nhật; frontend không gửi hai field này.
 - `filter_membrane_id`, `sterilized_by_id`, `filtered_by_id`, `inspected_after_filter_by_id` nếu gửi phải là số nguyên dương và tồn tại trong bảng liên quan.
 - `rinse_water_volume_liters` và `tank_residual_volume_liters` là số không âm, tối đa 3 chữ số thập phân.
 - `filtering_started_at` và `filtering_finished_at` dùng định dạng ISO 8601 hợp lệ.

@@ -48,7 +48,7 @@ export class ProductionOrderFiltrationChecksService {
     return this.prismaService.productionOrderFiltrationChecks.findMany({
       where: { production_order_id: productionOrderId },
       include: filtrationCheckInclude,
-      orderBy: { id: 'desc' },
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     });
   }
 
