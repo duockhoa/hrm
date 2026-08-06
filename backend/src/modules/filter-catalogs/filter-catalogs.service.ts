@@ -90,9 +90,13 @@ export class FilterCatalogsService {
         dto?.usable_steam_cycles,
         'usable_steam_cycles',
       ),
-      sensory_requirement: this.normalizeOptionalText(
-        dto?.sensory_requirement,
-        'sensory_requirement',
+      pre_filter_sensory_requirement: this.normalizeOptionalText(
+        dto?.pre_filter_sensory_requirement,
+        'pre_filter_sensory_requirement',
+      ),
+      post_filter_sensory_requirement: this.normalizeOptionalText(
+        dto?.post_filter_sensory_requirement,
+        'post_filter_sensory_requirement',
       ),
       integrity_requirement: this.normalizeOptionalText(
         dto?.integrity_requirement,
@@ -128,10 +132,17 @@ export class FilterCatalogsService {
       );
     }
 
-    if (dto.sensory_requirement !== undefined) {
-      data.sensory_requirement = this.normalizeOptionalText(
-        dto.sensory_requirement,
-        'sensory_requirement',
+    if (dto.pre_filter_sensory_requirement !== undefined) {
+      data.pre_filter_sensory_requirement = this.normalizeOptionalText(
+        dto.pre_filter_sensory_requirement,
+        'pre_filter_sensory_requirement',
+      );
+    }
+
+    if (dto.post_filter_sensory_requirement !== undefined) {
+      data.post_filter_sensory_requirement = this.normalizeOptionalText(
+        dto.post_filter_sensory_requirement,
+        'post_filter_sensory_requirement',
       );
     }
 

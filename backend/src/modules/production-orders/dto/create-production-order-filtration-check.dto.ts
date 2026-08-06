@@ -11,8 +11,8 @@ export class CreateProductionOrderFiltrationCheckDto {
   filtering_finished_at?: string | Date | null;
   filtered_by_id?: number | string | null;
   tank_residual_volume_liters?: number | string | null;
-  post_filter_test_requirement?: string | null;
-  post_filter_test_result?: string | null;
+  post_filter_integrity_requirement?: string | null;
+  post_filter_integrity_result?: string | null;
   post_filter_membrane_appearance_requirement?: string | null;
   post_filter_membrane_appearance_result?: string | null;
   inspected_after_filter_by_id?: number | string | null;

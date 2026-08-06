@@ -103,7 +103,8 @@ model FilterCatalogs {
   filter_code         String   @unique @db.VarChar(50)
   filter_type         String   @db.VarChar(100)
   usable_steam_cycles Int?
-  sensory_requirement String?  @db.Text
+  pre_filter_sensory_requirement String? @db.Text
+  post_filter_sensory_requirement String? @db.Text
   integrity_requirement String? @db.Text
   description         String?  @db.Text
   created_by_id       Int
@@ -876,8 +877,8 @@ model ProductionOrderFiltrationChecks {
   filtered_by_id                              Int?
   filteredBy                                  Users?           @relation("ProductionOrderFiltrationCheckFilterer", fields: [filtered_by_id], references: [id], onDelete: SetNull, map: "po_filtration_checks_filtered_by_id_fkey")
   tank_residual_volume_liters                 Decimal?         @db.Decimal(12, 3)
-  post_filter_test_requirement                String?          @db.Text
-  post_filter_test_result                     String?          @db.Text
+  post_filter_integrity_requirement           String?          @db.Text
+  post_filter_integrity_result                String?          @db.Text
   post_filter_membrane_appearance_requirement String?          @db.Text
   post_filter_membrane_appearance_result      String?          @db.Text
   inspected_after_filter_by_id                Int?

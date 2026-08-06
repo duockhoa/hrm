@@ -2385,8 +2385,8 @@ Response mẫu:
     "filtering_finished_at": "2026-08-06T09:00:00.000Z",
     "filtered_by_id": 8,
     "tank_residual_volume_liters": "1.500",
-    "post_filter_test_requirement": "Dịch trong",
-    "post_filter_test_result": "Đạt",
+    "post_filter_integrity_requirement": "Không rò rỉ",
+    "post_filter_integrity_result": "Đạt",
     "post_filter_membrane_appearance_requirement": "Không biến dạng",
     "post_filter_membrane_appearance_result": "Đạt",
     "inspected_after_filter_by_id": 9,
@@ -2451,8 +2451,8 @@ Body mẫu:
   "filtering_finished_at": "2026-08-06T09:00:00.000Z",
   "filtered_by_id": 8,
   "tank_residual_volume_liters": 1.5,
-  "post_filter_test_requirement": "Dịch trong",
-  "post_filter_test_result": "Đạt",
+  "post_filter_integrity_requirement": "Không rò rỉ",
+  "post_filter_integrity_result": "Đạt",
   "post_filter_membrane_appearance_requirement": "Không biến dạng",
   "post_filter_membrane_appearance_result": "Đạt",
   "inspected_after_filter_by_id": 9
@@ -2486,7 +2486,7 @@ Body chỉ gửi các field muốn cập nhật. Ví dụ:
 {
   "filtering_finished_at": "2026-08-06T09:15:00.000Z",
   "tank_residual_volume_liters": 1.25,
-  "post_filter_test_result": "Đạt"
+  "post_filter_integrity_result": "Đạt"
 }
 ```
 
@@ -6792,7 +6792,8 @@ Response mẫu:
     "filter_code": "LOC-001",
     "filter_type": "HEPA",
     "usable_steam_cycles": 25,
-    "sensory_requirement": "Màng sạch, không rách",
+    "pre_filter_sensory_requirement": "Màng sạch, không rách",
+    "post_filter_sensory_requirement": "Không biến dạng",
     "integrity_requirement": "Không rò rỉ",
     "description": "Lọc khí",
     "created_by_id": 7,
@@ -6825,7 +6826,8 @@ Content-Type: application/json
   "filter_code": "LOC-001",
   "filter_type": "HEPA",
   "usable_steam_cycles": 25,
-  "sensory_requirement": "Màng sạch, không rách",
+  "pre_filter_sensory_requirement": "Màng sạch, không rách",
+  "post_filter_sensory_requirement": "Không biến dạng",
   "integrity_requirement": "Không rò rỉ",
   "description": "Lọc khí"
 }
@@ -6835,7 +6837,7 @@ Quy tắc:
 
 - `filter_code` và `filter_type` là bắt buộc; `filter_code` là duy nhất.
 - `usable_steam_cycles` không bắt buộc. Có thể gửi số nguyên không âm, chuỗi số nguyên, hoặc `null`; `null`/chuỗi rỗng được lưu là `null`.
-- `sensory_requirement` (yêu cầu cảm quan) và `integrity_requirement` (yêu cầu toàn vẹn) không bắt buộc; `null`/chuỗi rỗng được lưu là `null`.
+- `pre_filter_sensory_requirement` (yêu cầu cảm quan trước lọc), `post_filter_sensory_requirement` (yêu cầu cảm quan sau lọc) và `integrity_requirement` (yêu cầu toàn vẹn) không bắt buộc; `null`/chuỗi rỗng được lưu là `null`.
 - `description` không bắt buộc; `null`/chuỗi rỗng được lưu là `null`.
 - `created_by_id` lấy từ người dùng đăng nhập, không nhận từ body.
 
@@ -6851,7 +6853,8 @@ Body chỉ cần gửi các trường muốn thay đổi. Ví dụ:
 ```json
 {
   "usable_steam_cycles": null,
-  "sensory_requirement": "Màng sạch, không rách",
+  "pre_filter_sensory_requirement": "Màng sạch, không rách",
+  "post_filter_sensory_requirement": "Không biến dạng",
   "integrity_requirement": "Không rò rỉ",
   "description": "Đã cập nhật"
 }

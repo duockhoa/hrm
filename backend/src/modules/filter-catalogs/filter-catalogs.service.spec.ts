@@ -52,7 +52,8 @@ describe('FilterCatalogsService', () => {
           filter_code: 'LOC-001',
           filter_type: 'HEPA',
           usable_steam_cycles: null,
-          sensory_requirement: null,
+          pre_filter_sensory_requirement: null,
+          post_filter_sensory_requirement: null,
           integrity_requirement: null,
           description: 'Lọc khí',
           created_by_id: 7,
@@ -75,19 +76,21 @@ describe('FilterCatalogsService', () => {
     );
   });
 
-  it('updates sensory and integrity requirements', async () => {
+  it('updates pre-filter, post-filter sensory and integrity requirements', async () => {
     prismaService.filterCatalogs.findUnique.mockResolvedValue({ id: 1 });
     prismaService.filterCatalogs.update.mockResolvedValue({ id: 1 });
 
     await service.update(1, {
-      sensory_requirement: 'Màng sạch',
+      pre_filter_sensory_requirement: 'Màng sạch',
+      post_filter_sensory_requirement: 'Không biến dạng',
       integrity_requirement: 'Không rò rỉ',
     });
 
     expect(prismaService.filterCatalogs.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: {
-          sensory_requirement: 'Màng sạch',
+          pre_filter_sensory_requirement: 'Màng sạch',
+          post_filter_sensory_requirement: 'Không biến dạng',
           integrity_requirement: 'Không rò rỉ',
         },
       }),

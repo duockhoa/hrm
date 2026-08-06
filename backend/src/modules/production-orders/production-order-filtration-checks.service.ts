@@ -125,8 +125,8 @@ export class ProductionOrderFiltrationChecksService {
       'pre_filter_appearance_result',
       'pre_sterilization_integrity_requirement',
       'pre_sterilization_integrity_result',
-      'post_filter_test_requirement',
-      'post_filter_test_result',
+      'post_filter_integrity_requirement',
+      'post_filter_integrity_result',
       'post_filter_membrane_appearance_requirement',
       'post_filter_membrane_appearance_result',
     ];
