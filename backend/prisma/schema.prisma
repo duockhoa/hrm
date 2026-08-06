@@ -103,6 +103,8 @@ model FilterCatalogs {
   filter_code         String   @unique @db.VarChar(50)
   filter_type         String   @db.VarChar(100)
   usable_steam_cycles Int?
+  sensory_requirement String?  @db.Text
+  integrity_requirement String? @db.Text
   description         String?  @db.Text
   created_by_id       Int
   createdBy           Users    @relation("FilterCatalogCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "filter_catalogs_created_by_id_fkey")

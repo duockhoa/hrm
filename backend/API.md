@@ -6792,6 +6792,8 @@ Response mẫu:
     "filter_code": "LOC-001",
     "filter_type": "HEPA",
     "usable_steam_cycles": 25,
+    "sensory_requirement": "Màng sạch, không rách",
+    "integrity_requirement": "Không rò rỉ",
     "description": "Lọc khí",
     "created_by_id": 7,
     "created_at": "2026-08-05T00:00:00.000Z",
@@ -6823,6 +6825,8 @@ Content-Type: application/json
   "filter_code": "LOC-001",
   "filter_type": "HEPA",
   "usable_steam_cycles": 25,
+  "sensory_requirement": "Màng sạch, không rách",
+  "integrity_requirement": "Không rò rỉ",
   "description": "Lọc khí"
 }
 ```
@@ -6831,6 +6835,7 @@ Quy tắc:
 
 - `filter_code` và `filter_type` là bắt buộc; `filter_code` là duy nhất.
 - `usable_steam_cycles` không bắt buộc. Có thể gửi số nguyên không âm, chuỗi số nguyên, hoặc `null`; `null`/chuỗi rỗng được lưu là `null`.
+- `sensory_requirement` (yêu cầu cảm quan) và `integrity_requirement` (yêu cầu toàn vẹn) không bắt buộc; `null`/chuỗi rỗng được lưu là `null`.
 - `description` không bắt buộc; `null`/chuỗi rỗng được lưu là `null`.
 - `created_by_id` lấy từ người dùng đăng nhập, không nhận từ body.
 
@@ -6846,6 +6851,8 @@ Body chỉ cần gửi các trường muốn thay đổi. Ví dụ:
 ```json
 {
   "usable_steam_cycles": null,
+  "sensory_requirement": "Màng sạch, không rách",
+  "integrity_requirement": "Không rò rỉ",
   "description": "Đã cập nhật"
 }
 ```

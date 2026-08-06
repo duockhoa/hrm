@@ -90,6 +90,14 @@ export class FilterCatalogsService {
         dto?.usable_steam_cycles,
         'usable_steam_cycles',
       ),
+      sensory_requirement: this.normalizeOptionalText(
+        dto?.sensory_requirement,
+        'sensory_requirement',
+      ),
+      integrity_requirement: this.normalizeOptionalText(
+        dto?.integrity_requirement,
+        'integrity_requirement',
+      ),
       description: this.normalizeOptionalText(dto?.description, 'description'),
     };
   }
@@ -117,6 +125,20 @@ export class FilterCatalogsService {
       data.usable_steam_cycles = this.normalizeOptionalNonNegativeInt(
         dto.usable_steam_cycles,
         'usable_steam_cycles',
+      );
+    }
+
+    if (dto.sensory_requirement !== undefined) {
+      data.sensory_requirement = this.normalizeOptionalText(
+        dto.sensory_requirement,
+        'sensory_requirement',
+      );
+    }
+
+    if (dto.integrity_requirement !== undefined) {
+      data.integrity_requirement = this.normalizeOptionalText(
+        dto.integrity_requirement,
+        'integrity_requirement',
       );
     }
 
