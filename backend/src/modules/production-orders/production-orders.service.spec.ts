@@ -475,6 +475,14 @@ describe('ProductionOrdersService', () => {
         unit: 'Hop',
         dk_code: null,
         registration_id: null,
+        registration: {
+          id: 583,
+          registration_number: 'VD-12345-26',
+          product_name: 'EUCIGA 5 ml',
+          created_at: new Date('2026-01-01T00:00:00.000Z'),
+          updated_at: new Date('2026-01-01T00:00:00.000Z'),
+          deleted_at: null,
+        },
         created_at: new Date('2026-01-01T00:00:00.000Z'),
         update_at: new Date('2026-01-01T00:00:00.000Z'),
         deleted_at: null,
@@ -491,7 +499,11 @@ describe('ProductionOrdersService', () => {
         id: 2031,
       },
       include: {
-        item: true,
+        item: {
+          include: {
+            registration: true,
+          },
+        },
       },
     });
     expect(exportedFile.filename).toBe(
@@ -512,6 +524,7 @@ describe('ProductionOrdersService', () => {
     expect(documentXml).toContain('10.000 lọ');
     expect(documentXml).toContain('260126');
     expect(documentXml).toContain('260129');
+    expect(documentXml).toContain('VD-12345-26');
     expect(documentXml).not.toContain('TGĐ Sản xuất');
     expect(documentXml).not.toContain('{{item_code}}');
   });
@@ -541,6 +554,14 @@ describe('ProductionOrdersService', () => {
         unit: 'Kg',
         dk_code: null,
         registration_id: null,
+        registration: {
+          id: 584,
+          registration_number: 'BTP-67890-26',
+          product_name: 'Bán thành phẩm test',
+          created_at: new Date('2026-06-01T00:00:00.000Z'),
+          updated_at: new Date('2026-06-01T00:00:00.000Z'),
+          deleted_at: null,
+        },
         created_at: new Date('2026-06-01T00:00:00.000Z'),
         update_at: new Date('2026-06-01T00:00:00.000Z'),
         deleted_at: null,
@@ -557,7 +578,11 @@ describe('ProductionOrdersService', () => {
         id: 2032,
       },
       include: {
-        item: true,
+        item: {
+          include: {
+            registration: true,
+          },
+        },
       },
     });
     expect(exportedFile.filename).toBe(
@@ -575,7 +600,8 @@ describe('ProductionOrdersService', () => {
     expect(documentXml).toContain('500 kg');
     expect(documentXml).toContain('020626');
     expect(documentXml).toContain('020627');
-    expect(documentXml).toContain('TGĐ Sản xuất');
+    expect(documentXml).toContain('BTP-67890-26');
+    expect(documentXml).toContain('PGĐ');
     expect(documentXml).not.toContain('{{item_code}}');
   });
 

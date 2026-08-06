@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { Items, ProductionOrders } from '@prisma/client';
+import type {
+  Items,
+  ProductionOrders,
+  RegistrationNumbers,
+} from '@prisma/client';
 import Docxtemplater from 'docxtemplater';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -25,7 +29,9 @@ const SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
 );
 
 type ProductionOrderForExport = ProductionOrders & {
-  item?: Items | null;
+  item?: (Items & {
+    registration?: RegistrationNumbers | null;
+  }) | null;
 };
 
 const normalizeTemplateValue = (value: unknown) => {
@@ -188,6 +194,9 @@ const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
   expire_date: formatShortDate(productionOrder.expire_date),
   packing_specification: normalizeTemplateValue(
     productionOrder.packing_specification,
+  ),
+  registration_number: normalizeTemplateValue(
+    productionOrder.item?.registration?.registration_number,
   ),
   remarks: normalizeTemplateValue(productionOrder.remarks),
 });

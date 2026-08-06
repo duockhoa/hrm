@@ -364,7 +364,11 @@ export class ProductionOrdersService {
           id,
         },
         include: {
-          item: true,
+          item: {
+            include: {
+              registration: true,
+            },
+          },
         },
       });
 
