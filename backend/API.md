@@ -6799,6 +6799,7 @@ Response mẫu:
     "post_filter_sensory_requirement": "Không biến dạng",
     "integrity_requirement": "Không rò rỉ",
     "description": "Lọc khí",
+    "production_order_filtration_checks_count": 3,
     "created_by_id": 7,
     "created_at": "2026-08-05T00:00:00.000Z",
     "updated_at": "2026-08-05T00:00:00.000Z",
@@ -6810,6 +6811,8 @@ Response mẫu:
   }
 ]
 ```
+
+`production_order_filtration_checks_count` là tổng số bản ghi `ProductionOrderFiltrationChecks` đang tham chiếu đến danh mục lọc tương ứng.
 
 ### Lấy danh mục lọc theo ID
 

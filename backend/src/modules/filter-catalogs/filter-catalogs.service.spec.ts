@@ -145,4 +145,30 @@ describe('FilterCatalogsService', () => {
       }),
     );
   });
+
+  it('includes filtration check count for every catalog in the list', async () => {
+    prismaService.filterCatalogs.findMany.mockResolvedValue([
+      {
+        id: 1,
+        _count: { productionOrderFiltrationChecks: 3 },
+      },
+    ]);
+
+    await expect(service.findAll()).resolves.toEqual([
+      {
+        id: 1,
+        production_order_filtration_checks_count: 3,
+      },
+    ]);
+
+    expect(prismaService.filterCatalogs.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          _count: {
+            select: { productionOrderFiltrationChecks: true },
+          },
+        }),
+      }),
+    );
+  });
 });

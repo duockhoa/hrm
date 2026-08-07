@@ -25,6 +25,15 @@ const filterCatalogInclude = {
   createdBy: { select: filterCatalogCreatorSelect },
 } satisfies Prisma.FilterCatalogsInclude;
 
+const filterCatalogListInclude = {
+  ...filterCatalogInclude,
+  _count: {
+    select: {
+      productionOrderFiltrationChecks: true,
+    },
+  },
+} satisfies Prisma.FilterCatalogsInclude;
+
 const filterCatalogUsageUserSelect = {
   id: true,
   username: true,
@@ -59,10 +68,18 @@ export class FilterCatalogsService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async findAll() {
-    return this.prismaService.filterCatalogs.findMany({
-      include: filterCatalogInclude,
+    const filterCatalogs = await this.prismaService.filterCatalogs.findMany({
+      include: filterCatalogListInclude,
       orderBy: [{ filter_code: 'asc' }, { id: 'asc' }],
     });
+
+    return filterCatalogs.map(
+      ({ _count, ...filterCatalog }) => ({
+        ...filterCatalog,
+        production_order_filtration_checks_count:
+          _count.productionOrderFiltrationChecks,
+      }),
+    );
   }
 
   async findById(id: number) {
