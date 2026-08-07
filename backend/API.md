@@ -2397,6 +2397,13 @@ Response mẫu:
       "filter_code": "LOC-003",
       "filter_type": "Màng lọc"
     },
+    "productionOrder": {
+      "id": 2031,
+      "item_code": "SP-001",
+      "item": {
+        "item_name": "Tên sản phẩm"
+      }
+    },
     "sterilizedBy": {
       "id": 7,
       "username": "operator1",
@@ -6836,6 +6843,9 @@ Ví dụ phần dữ liệu lần sử dụng:
       "productionOrder": {
         "id": 2031,
         "item_code": "SP-001",
+        "item": {
+          "item_name": "Tên sản phẩm"
+        },
         "production_order_code": "LSX-2031",
         "lot_no": "LOT-001"
       },

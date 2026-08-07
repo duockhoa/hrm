@@ -53,6 +53,11 @@ const filterCatalogDetailInclude = {
           item_code: true,
           production_order_code: true,
           lot_no: true,
+          item: {
+            select: {
+              item_name: true,
+            },
+          },
         },
       },
       sterilizedBy: { select: filterCatalogUsageUserSelect },

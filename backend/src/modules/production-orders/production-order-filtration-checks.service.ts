@@ -24,6 +24,21 @@ const filtrationCheckInclude = {
   inspectedAfterFilterBy: { select: userSelect },
 } satisfies Prisma.ProductionOrderFiltrationChecksInclude;
 
+const filtrationCheckListInclude = {
+  ...filtrationCheckInclude,
+  productionOrder: {
+    select: {
+      id: true,
+      item_code: true,
+      item: {
+        select: {
+          item_name: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.ProductionOrderFiltrationChecksInclude;
+
 @Injectable()
 export class ProductionOrderFiltrationChecksService {
   constructor(private readonly prismaService: PrismaService) {}
@@ -47,7 +62,7 @@ export class ProductionOrderFiltrationChecksService {
 
     return this.prismaService.productionOrderFiltrationChecks.findMany({
       where: { production_order_id: productionOrderId },
-      include: filtrationCheckInclude,
+      include: filtrationCheckListInclude,
       orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     });
   }

@@ -140,6 +140,13 @@ describe('FilterCatalogsService', () => {
         include: expect.objectContaining({
           productionOrderFiltrationChecks: expect.objectContaining({
             orderBy: { id: 'desc' },
+            include: expect.objectContaining({
+              productionOrder: {
+                select: expect.objectContaining({
+                  item: { select: { item_name: true } },
+                }),
+              },
+            }),
           }),
         }),
       }),
