@@ -177,7 +177,23 @@ Body:
 
 ## Users
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer`. Các API quản trị yêu cầu thêm key quyền tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `users.list` | `GET /users` |
+| `users.list.deleted` | `GET /users/with-deleted` |
+| `users.read` | `GET /users/:id` |
+| `users.create` | `POST /users` |
+| `users.update` | `PUT /users/:id` |
+| `users.delete` | `DELETE /users/:id` |
+| `users.roles.read` | `GET /users/:id/roles` |
+| `users.roles.assign` | `POST`, `PUT`, `DELETE /users/:id/roles...` |
+| `users.applications.read` | `GET /users/:id/applications` |
+| `users.applications.assign` | `PUT /users/:id/applications` |
+| `users.permissions.read` | `GET /users/:id/permissions` |
+
+Các route tự phục vụ chỉ yêu cầu đăng nhập: `GET /users/me`, `GET /users/me/applications`, `GET /users/me/permissions`, `POST /users/me/avatar`, `POST /users/me/change-password`.
 
 ### Lấy danh sách user
 
@@ -235,6 +251,28 @@ GET /users/:id/roles
 ```
 
 Response gồm danh sách `userRoles`, mỗi item include `roles` và `rolePermissions`.
+
+### Lấy key phân quyền của user hiện tại
+
+```http
+GET /users/me/permissions
+```
+
+Response trả về các key quyền mà user nhận được từ toàn bộ role, đã loại bỏ key trùng lặp và sắp xếp tăng dần:
+
+```json
+{
+  "permissionKeys": ["roles.read", "users.read", "users.write"]
+}
+```
+
+### Lấy key phân quyền của một user
+
+```http
+GET /users/:id/permissions
+```
+
+Response có cùng cấu trúc với `GET /users/me/permissions`.
 
 ### Gán role cho user
 

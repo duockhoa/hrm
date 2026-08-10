@@ -19,12 +19,15 @@ import { ValidationPipe } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UseGuards } from '@nestjs/common';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
+import { Permissions } from 'src/decorators/permissions.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from 'src/cloudinary.service';
 import { AddUserRolesDto, SyncUserRolesDto } from './dto/update-user-roles.dto';
 import { SyncUserApplicationsDto } from './dto/update-user-applications.dto';
+import { USER_PERMISSIONS } from './users.permissions';
 
-@UseGuards(jwtAuthGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('users')
 @UsePipes(
   new ValidationPipe({
@@ -38,11 +41,13 @@ export class UsersController {
   ) {}
 
   @Get()
+  @Permissions(USER_PERMISSIONS.LIST)
   findAll() {
     return this.usersService.findAll();
   }
 
   @Get('with-deleted')
+  @Permissions(USER_PERMISSIONS.LIST_DELETED)
   findAllWithDeleted() {
     return this.usersService.findAllWithDeleted();
   }
@@ -58,12 +63,25 @@ export class UsersController {
     return this.usersService.findApplicationsByUserId(req.user.id);
   }
 
+  @Get('/me/permissions')
+  async findMyPermissionKeys(@Request() req: any) {
+    return this.usersService.findPermissionKeysByUserId(req.user.id);
+  }
+
   @Get(':id/roles')
+  @Permissions(USER_PERMISSIONS.ROLES_READ)
   async findRolesByUserId(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findRolesByUserId(id);
   }
 
+  @Get(':id/permissions')
+  @Permissions(USER_PERMISSIONS.PERMISSIONS_READ)
+  async findPermissionKeysByUserId(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.findPermissionKeysByUserId(id);
+  }
+
   @Post(':id/roles')
+  @Permissions(USER_PERMISSIONS.ROLES_ASSIGN)
   async addRolesToUser(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: AddUserRolesDto,
@@ -72,6 +90,7 @@ export class UsersController {
   }
 
   @Put(':id/roles')
+  @Permissions(USER_PERMISSIONS.ROLES_ASSIGN)
   async syncRoles(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: SyncUserRolesDto,
@@ -80,6 +99,7 @@ export class UsersController {
   }
 
   @Delete(':id/roles/:roleId')
+  @Permissions(USER_PERMISSIONS.ROLES_ASSIGN)
   async removeRoleFromUser(
     @Param('id', ParseIntPipe) id: number,
     @Param('roleId', ParseIntPipe) roleId: number,
@@ -88,11 +108,13 @@ export class UsersController {
   }
 
   @Get(':id/applications')
+  @Permissions(USER_PERMISSIONS.APPLICATIONS_READ)
   async findApplicationsByUserId(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findApplicationsByUserId(id);
   }
 
   @Put(':id/applications')
+  @Permissions(USER_PERMISSIONS.APPLICATIONS_ASSIGN)
   async syncApplications(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: SyncUserApplicationsDto,
@@ -101,6 +123,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @Permissions(USER_PERMISSIONS.READ)
   async findById(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.findById(id);
     if (!user) {
@@ -157,6 +180,7 @@ export class UsersController {
   }
 
   @Post()
+  @Permissions(USER_PERMISSIONS.CREATE)
   async createUser(@Body() createUserDto: CreateUserDto) {
     const user = await this.usersService.createUser(createUserDto);
     if (!user) {
@@ -169,6 +193,7 @@ export class UsersController {
   }
 
   @Put(':id')
+  @Permissions(USER_PERMISSIONS.UPDATE)
   async updateUser(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: Partial<CreateUserDto>,
@@ -181,6 +206,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Permissions(USER_PERMISSIONS.DELETE)
   async deleteUser(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.deleteUser(id);
     if (!user) {

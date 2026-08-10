@@ -29,6 +29,10 @@ const APPLICATION_ORDER_BY = [
   { id: 'asc' },
 ] satisfies Prisma.ApplicationsOrderByWithRelationInput[];
 
+type UserPermissionKeys = {
+  permissionKeys: string[];
+};
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -134,6 +138,34 @@ export class UsersService {
       include: USER_ROLE_INCLUDE,
       orderBy: { id: 'asc' },
     });
+  }
+
+  /**
+   * Returns the permission keys inherited by a user through their roles.
+   * A permission may be assigned by more than one role, so the result is
+   * de-duplicated to give callers a stable list for authorization checks.
+   */
+  async findPermissionKeysByUserId(
+    userId: number,
+  ): Promise<UserPermissionKeys> {
+    await this.ensureUserExists(userId);
+
+    const userRoles = await this.prisma.userRoles.findMany({
+      where: { user_id: userId },
+      include: USER_ROLE_INCLUDE,
+    });
+
+    const permissionKeys = [
+      ...new Set(
+        userRoles.flatMap((userRole) =>
+          userRole.roles.rolePermissions.map(
+            (rolePermission) => rolePermission.permissions.name,
+          ),
+        ),
+      ),
+    ].sort();
+
+    return { permissionKeys };
   }
 
   async addRoleToUser(userId: number, roleId: number) {

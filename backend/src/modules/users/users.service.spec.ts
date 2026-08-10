@@ -112,6 +112,32 @@ describe('UsersService', () => {
     expect(prismaService.userRoles.createMany).not.toHaveBeenCalled();
   });
 
+  it('returns unique, sorted permission keys inherited from user roles', async () => {
+    prismaService.users.findUnique.mockResolvedValue({ id: 1 });
+    prismaService.userRoles.findMany.mockResolvedValue([
+      {
+        roles: {
+          rolePermissions: [
+            { permissions: { name: 'users.write' } },
+            { permissions: { name: 'users.read' } },
+          ],
+        },
+      },
+      {
+        roles: {
+          rolePermissions: [
+            { permissions: { name: 'users.read' } },
+            { permissions: { name: 'roles.read' } },
+          ],
+        },
+      },
+    ]);
+
+    await expect(service.findPermissionKeysByUserId(1)).resolves.toEqual({
+      permissionKeys: ['roles.read', 'users.read', 'users.write'],
+    });
+  });
+
   it('gets active applications for a user', async () => {
     const applications = [{ id: 1, key: 'hrm', name: 'HRM' }];
     prismaService.users.findUnique.mockResolvedValue({ id: 1 });
