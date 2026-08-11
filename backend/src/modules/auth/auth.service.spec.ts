@@ -52,6 +52,63 @@ describe('AuthService', () => {
     expect(service).toBeDefined();
   });
 
+  it('issues tokens without roles or permissions', async () => {
+    const jwtService = (service as any).jwtService as JwtService;
+    (jwtService.sign as jest.Mock)
+      .mockReturnValueOnce('refresh-token')
+      .mockReturnValueOnce('access-token');
+    prisma.tokens.create.mockResolvedValue({});
+
+    await expect(
+      service.login({
+        id: 1,
+        username: 'user@example.com',
+        userRoles: [
+          {
+            roles: {
+              name: 'admin',
+              rolePermissions: [{ permissions: { name: 'users.write' } }],
+            },
+          },
+        ],
+      }),
+    ).resolves.toEqual({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
+
+    expect(jwtService.sign).toHaveBeenNthCalledWith(
+      1,
+      { username: 'user@example.com', sub: 1 },
+      { expiresIn: '70d' },
+    );
+    expect(jwtService.sign).toHaveBeenNthCalledWith(2, {
+      username: 'user@example.com',
+      sub: 1,
+    });
+  });
+
+  it('refreshes an access token without roles or permissions', async () => {
+    const jwtService = (service as any).jwtService as JwtService;
+    prisma.tokens.findUnique.mockResolvedValue({ user_id: 1 });
+    (jwtService.verify as jest.Mock).mockReturnValue({
+      username: 'user@example.com',
+      sub: 1,
+      roles: ['admin'],
+      permissions: ['users.write'],
+    });
+    (jwtService.sign as jest.Mock).mockReturnValue('new-access-token');
+
+    await expect(service.refreshToken({ refreshToken: 'refresh-token' })).resolves.toEqual({
+      accessToken: 'new-access-token',
+    });
+
+    expect(jwtService.sign).toHaveBeenCalledWith({
+      username: 'user@example.com',
+      sub: 1,
+    });
+  });
+
   it('creates a reset OTP, stores the hash, and emails the HTML OTP', async () => {
     prisma.users.findUnique.mockResolvedValue({
       id: 1,

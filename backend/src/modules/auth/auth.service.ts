@@ -13,15 +13,9 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
   async login(user: any) {
-    const roles = user.userRoles.map((userRole) => userRole.roles.name);
-    const permissions = user.userRoles.flatMap((ur) =>
-      ur.roles.rolePermissions.map((rp) => rp.permissions.name),
-    );
     const payload = {
       username: user.username,
       sub: user.id,
-      roles,
-      permissions,
     };
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: '70d',
@@ -57,8 +51,6 @@ export class AuthService {
     const newAccessToken = this.jwtService.sign({
       username: payload.username,
       sub: payload.sub,
-      roles: payload.roles,
-      permissions: payload.permissions,
     });
     return {
       accessToken: newAccessToken,
