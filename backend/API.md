@@ -4980,6 +4980,154 @@ Lỗi thường gặp:
 
 - `404 Material summary not found`
 
+## Production Order Material Process Summaries
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Nhóm API này lưu tổng kết quá trình sản xuất nguyên liệu theo từng giai đoạn của lệnh sản xuất. Một lệnh sản xuất có thể có nhiều dòng tổng kết. Mỗi dòng có tối đa một ảnh.
+
+### Lấy danh sách theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/material-process-summaries
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "process_stage": "Sấy",
+    "yielded_quantity": "125.500",
+    "yielded_unit": "kg",
+    "moisture_percent": "4.25",
+    "image_path": "/production-orders/material-process-summaries/images/say-a1b2c3.jpg",
+    "note": "Đạt yêu cầu",
+    "created_by_id": 7,
+    "created_at": "2026-08-11T08:00:00.000Z",
+    "updated_at": "2026-08-11T08:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+
+### Lấy một bản ghi theo ID
+
+```http
+GET /production-orders/material-process-summaries/:summaryId
+```
+
+Lỗi thường gặp:
+
+- `404 Material process summary not found`
+
+### Tạo bản ghi
+
+```http
+POST /production-orders/:id/material-process-summaries
+Content-Type: multipart/form-data
+```
+
+Field form-data:
+
+| Field | Bắt buộc | Mô tả |
+| --- | --- | --- |
+| `process_stage` | Có | Giai đoạn sản xuất, tối đa 100 ký tự. |
+| `yielded_quantity` | Có | Khối lượng thu được; `DECIMAL(12, 3)`. Nhận số hoặc chuỗi số, dùng dấu chấm/dấu phẩy. |
+| `yielded_unit` | Không | Đơn vị khối lượng, tối đa 20 ký tự; mặc định `kg`. |
+| `moisture_percent` | Không | Hàm ẩm (%), tối đa 2 chữ số thập phân, từ 0 đến 100. |
+| `image` | Không | Một ảnh JPG, PNG, WEBP hoặc GIF; tối đa 20 MB. |
+| `note` | Không | Ghi chú. |
+
+Ví dụ cURL:
+
+```bash
+curl -X POST http://localhost:3000/production-orders/2031/material-process-summaries \
+  -H "Authorization: Bearer <accessToken>" \
+  -F "process_stage=Sấy" \
+  -F "yielded_quantity=125,5" \
+  -F "yielded_unit=kg" \
+  -F "moisture_percent=4,25" \
+  -F "note=Đạt yêu cầu" \
+  -F "image=@./say.jpg"
+```
+
+`production_order_id` lấy từ `:id`; `created_by_id` lấy từ user đang đăng nhập. Khi không gửi ảnh, `image_path` là `null`.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 process_stage is required`
+- `400 process_stage must be at most 100 characters`
+- `400 yielded_quantity must fit DECIMAL(12, 3) with up to 3 decimal places`
+- `400 yielded_unit is required`
+- `400 yielded_unit must be at most 20 characters`
+- `400 moisture_percent must have up to 2 decimal places`
+- `400 moisture_percent must not exceed 100`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi
+
+```http
+PATCH /production-orders/material-process-summaries/:summaryId
+Content-Type: multipart/form-data
+```
+
+Chỉ gửi các field muốn thay đổi. Các field văn bản và số tuân theo quy tắc như API tạo. Gửi một file qua field `image` để thay ảnh cũ; ảnh cũ sẽ được xóa sau khi cập nhật thành công.
+
+Ví dụ:
+
+```bash
+curl -X PATCH http://localhost:3000/production-orders/material-process-summaries/1 \
+  -H "Authorization: Bearer <accessToken>" \
+  -F "process_stage=Hoàn tất sấy" \
+  -F "moisture_percent=4.10" \
+  -F "image=@./say-moi.png"
+```
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- Các lỗi kiểm tra field giống API tạo.
+- `404 Material process summary not found`
+
+### Lấy ảnh
+
+```http
+GET /production-orders/material-process-summaries/images/:filename
+```
+
+`filename` là tên file trong `image_path` trả về từ API. API trả về binary của ảnh.
+
+Lỗi thường gặp:
+
+- `404 Material process summary image not found`
+
+### Xóa bản ghi
+
+```http
+DELETE /production-orders/material-process-summaries/:summaryId
+```
+
+API trả về bản ghi vừa xóa và đồng thời xóa ảnh liên kết (nếu có).
+
+Lỗi thường gặp:
+
+- `404 Material process summary not found`
+
 ## Production Order Leak Tightness Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

@@ -102,6 +102,9 @@ import { ProductionOrderSemiFinishedProductSummariesService } from './production
 import { CreateProductionOrderMaterialSummaryDto } from './dto/create-production-order-material-summary.dto';
 import { UpdateProductionOrderMaterialSummaryDto } from './dto/update-production-order-material-summary.dto';
 import { ProductionOrderMaterialSummariesService } from './production-order-material-summaries.service';
+import { CreateProductionOrderMaterialProcessSummaryDto } from './dto/create-production-order-material-process-summary.dto';
+import { UpdateProductionOrderMaterialProcessSummaryDto } from './dto/update-production-order-material-process-summary.dto';
+import { ProductionOrderMaterialProcessSummariesService } from './production-order-material-process-summaries.service';
 import { CreateProductionOrderLeakTightnessCheckDto } from './dto/create-production-order-leak-tightness-check.dto';
 import { UpdateProductionOrderLeakTightnessCheckDto } from './dto/update-production-order-leak-tightness-check.dto';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
@@ -128,6 +131,11 @@ import {
   removeUploadedSensoryCheckImage,
 } from './production-order-sensory-check-upload.config';
 import {
+  getMaterialProcessSummaryImagePath,
+  productionOrderMaterialProcessSummaryImageUploadOptions,
+  removeUploadedMaterialProcessSummaryImage,
+} from './production-order-material-process-summary-upload.config';
+import {
   getPostHomogenizationGranuleCheckImagePath,
   productionOrderPostHomogenizationGranuleCheckImageUploadOptions,
   removeUploadedPostHomogenizationGranuleCheckImage,
@@ -151,6 +159,10 @@ type DateCheckUploadFields = {
 
 type SensoryCheckUploadFields = {
   sensory_image?: Express.Multer.File[];
+  image?: Express.Multer.File[];
+};
+
+type MaterialProcessSummaryUploadFields = {
   image?: Express.Multer.File[];
 };
 
@@ -192,6 +204,10 @@ const getUploadedDateCheckFiles = (uploadedFiles?: DateCheckUploadFields) => [
 const getUploadedSensoryCheckImages = (
   uploadedFiles?: SensoryCheckUploadFields,
 ) => [...(uploadedFiles?.sensory_image ?? []), ...(uploadedFiles?.image ?? [])];
+
+const getUploadedMaterialProcessSummaryImages = (
+  uploadedFiles?: MaterialProcessSummaryUploadFields,
+) => uploadedFiles?.image ?? [];
 
 const getUploadedPostHomogenizationGranuleCheckImages = (
   uploadedFiles?: PostHomogenizationGranuleCheckUploadFields,
@@ -293,6 +309,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSemiFinishedNetWeightChecksService: ProductionOrderSemiFinishedNetWeightChecksService,
     private readonly productionOrderSemiFinishedProductSummariesService: ProductionOrderSemiFinishedProductSummariesService,
     private readonly productionOrderMaterialSummariesService: ProductionOrderMaterialSummariesService,
+    private readonly productionOrderMaterialProcessSummariesService: ProductionOrderMaterialProcessSummariesService,
     private readonly productionOrderLeakTightnessChecksService: ProductionOrderLeakTightnessChecksService,
     private readonly productionOrderHardnessChecksService: ProductionOrderHardnessChecksService,
     private readonly productionOrderTabletThicknessChecksService: ProductionOrderTabletThicknessChecksService,
@@ -837,6 +854,54 @@ export class ProductionOrdersController {
     return this.productionOrderMaterialSummariesService.delete(summaryId);
   }
 
+  @Get('material-process-summaries/:summaryId')
+  async findMaterialProcessSummaryById(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderMaterialProcessSummariesService.findById(
+      summaryId,
+    );
+  }
+
+  @Patch('material-process-summaries/:summaryId')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [{ name: 'image', maxCount: 1 }],
+      productionOrderMaterialProcessSummaryImageUploadOptions,
+    ),
+  )
+  async updateMaterialProcessSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Body() updateDto: UpdateProductionOrderMaterialProcessSummaryDto,
+    @UploadedFiles()
+    uploadedFiles: MaterialProcessSummaryUploadFields | undefined,
+  ) {
+    const uploadedImages =
+      getUploadedMaterialProcessSummaryImages(uploadedFiles);
+
+    try {
+      return await this.productionOrderMaterialProcessSummariesService.update(
+        summaryId,
+        updateDto,
+        { imagePath: getMaterialProcessSummaryImagePath(uploadedImages[0]) },
+      );
+    } catch (error) {
+      await Promise.all(
+        uploadedImages.map(removeUploadedMaterialProcessSummaryImage),
+      );
+      throw error;
+    }
+  }
+
+  @Delete('material-process-summaries/:summaryId')
+  async deleteMaterialProcessSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderMaterialProcessSummariesService.delete(
+      summaryId,
+    );
+  }
+
   @Patch('semi-finished-net-weight-checks/:checkId')
   async updateSemiFinishedNetWeightCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1002,6 +1067,29 @@ export class ProductionOrdersController {
 
     if (!imageFile) {
       throw new NotFoundException('Sensory check image not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
+  @Get('material-process-summaries/images/:filename')
+  async getMaterialProcessSummaryImage(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.productionOrderMaterialProcessSummariesService.findImageFile(
+        filename,
+      );
+
+    if (!imageFile) {
+      throw new NotFoundException('Material process summary image not found');
     }
 
     response.set({
@@ -1835,6 +1923,45 @@ export class ProductionOrdersController {
       createDto,
       req.user,
     );
+  }
+
+  @Get(':id/material-process-summaries')
+  async findMaterialProcessSummaries(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderMaterialProcessSummariesService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/material-process-summaries')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [{ name: 'image', maxCount: 1 }],
+      productionOrderMaterialProcessSummaryImageUploadOptions,
+    ),
+  )
+  async createMaterialProcessSummary(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderMaterialProcessSummaryDto,
+    @UploadedFiles()
+    uploadedFiles: MaterialProcessSummaryUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    const uploadedImages =
+      getUploadedMaterialProcessSummaryImages(uploadedFiles);
+
+    try {
+      return await this.productionOrderMaterialProcessSummariesService.create(
+        id,
+        createDto,
+        req.user,
+        { imagePath: getMaterialProcessSummaryImagePath(uploadedImages[0]) },
+      );
+    } catch (error) {
+      await Promise.all(
+        uploadedImages.map(removeUploadedMaterialProcessSummaryImage),
+      );
+      throw error;
+    }
   }
 
   @Get(':id/leak-tightness-checks')

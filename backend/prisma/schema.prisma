@@ -59,6 +59,7 @@ model Users {
   createdProductionOrderSemiFinishedProductSummaries    ProductionOrderSemiFinishedProductSummaries[]         @relation("ProductionOrderSemiFinishedProductSummaryCreator")
   summarizedProductionOrderMaterialSummaries            ProductionOrderMaterialSummaries[]                    @relation("ProductionOrderMaterialSummarySummarizer")
   createdProductionOrderMaterialSummaries               ProductionOrderMaterialSummaries[]                    @relation("ProductionOrderMaterialSummaryCreator")
+  createdProductionOrderMaterialProcessSummaries        ProductionOrderMaterialProcessSummaries[]             @relation("ProductionOrderMaterialProcessSummaryCreator")
   createdProductionOrderLeakTightnessChecks             ProductionOrderLeakTightnessChecks[]                  @relation("ProductionOrderLeakTightnessCheckCreator")
   createdProductionOrderHardnessChecks                  ProductionOrderHardnessChecks[]                       @relation("ProductionOrderHardnessCheckCreator")
   createdProductionOrderTabletThicknessChecks           ProductionOrderTabletThicknessChecks[]                @relation("ProductionOrderTabletThicknessCheckCreator")
@@ -526,6 +527,7 @@ model ProductionOrders {
   semiFinishedProductNetWeightChecks   ProductionOrderSemiFinishedProductNetWeightChecks[]
   semiFinishedProductSummaries         ProductionOrderSemiFinishedProductSummaries[]
   materialSummaries                    ProductionOrderMaterialSummaries[]
+  materialProcessSummaries             ProductionOrderMaterialProcessSummaries[]
   leakTightnessChecks                  ProductionOrderLeakTightnessChecks[]
   hardnessChecks                       ProductionOrderHardnessChecks[]
   tabletThicknessChecks                 ProductionOrderTabletThicknessChecks[]
@@ -1179,6 +1181,26 @@ model ProductionOrderMaterialSummaries {
   @@index([summarized_by_id], map: "po_material_summaries_summarized_by_id_idx")
   @@index([created_by_id], map: "po_material_summaries_created_by_id_idx")
   @@map("production_order_material_summaries")
+}
+
+model ProductionOrderMaterialProcessSummaries {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_material_process_summaries_po_id_fkey")
+  process_stage       String           @db.VarChar(100)
+  yielded_quantity    Decimal          @db.Decimal(12, 3)
+  yielded_unit        String           @default("kg") @db.VarChar(20)
+  moisture_percent    Decimal?         @db.Decimal(5, 2)
+  image_path          String?          @db.Text
+  note                String?          @db.Text
+  created_by_id       Int
+  createdBy           Users            @relation("ProductionOrderMaterialProcessSummaryCreator", fields: [created_by_id], references: [id], map: "po_material_process_summaries_created_by_id_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_material_process_summaries_po_id_idx")
+  @@index([created_by_id], map: "po_material_process_summaries_created_by_id_idx")
+  @@map("production_order_material_process_summaries")
 }
 
 model ProductionOrderLeakTightnessChecks {
