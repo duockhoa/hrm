@@ -1360,7 +1360,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-`features` là danh mục action/view chuẩn. `item_features` là liên kết item nào bật action/view nào.
+`features` là danh mục action/view chuẩn. `item_features` là liên kết item nào bật action/view nào. Trường `group_name` dùng để phân nhóm feature, là chuỗi tối đa 100 ký tự và có thể là `null`.
 
 ### Lấy danh sách feature
 
@@ -1393,6 +1393,7 @@ Body:
   "key": "environment_checks",
   "kind": "section",
   "label": "Nhiệt độ/độ ẩm",
+  "group_name": "Kiểm tra môi trường",
   "default_order": 10
 }
 ```
@@ -1408,6 +1409,7 @@ Body:
 ```json
 {
   "label": "Nhiệt độ/độ ẩm",
+  "group_name": "Kiểm tra môi trường",
   "default_order": 10
 }
 ```
@@ -1445,6 +1447,7 @@ Response:
       "key": "create_environment_check",
       "kind": "action",
       "label": "Nhập nhiệt độ/độ ẩm",
+      "group_name": "Kiểm tra môi trường",
       "order": 10,
       "enabled": true
     }
@@ -1455,6 +1458,7 @@ Response:
       "key": "environment_checks",
       "kind": "section",
       "label": "Nhiệt độ/độ ẩm",
+      "group_name": "Kiểm tra môi trường",
       "order": 10,
       "enabled": true
     }
@@ -1465,6 +1469,7 @@ Response:
       "key": "create_environment_check",
       "kind": "action",
       "label": "Nhập nhiệt độ/độ ẩm",
+      "group_name": "Kiểm tra môi trường",
       "order": 10,
       "enabled": true
     },
@@ -1473,6 +1478,7 @@ Response:
       "key": "environment_checks",
       "kind": "section",
       "label": "Nhiệt độ/độ ẩm",
+      "group_name": "Kiểm tra môi trường",
       "order": 10,
       "enabled": true
     }

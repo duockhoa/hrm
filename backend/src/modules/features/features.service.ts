@@ -123,6 +123,7 @@ export class FeaturesService {
       key: itemFeature.feature.key,
       kind: itemFeature.feature.kind,
       label: itemFeature.feature.label,
+      group_name: itemFeature.feature.group_name,
       order: itemFeature.order ?? itemFeature.feature.default_order,
       enabled: itemFeature.enabled,
     }));
@@ -211,6 +212,7 @@ export class FeaturesService {
       key: this.normalizeRequiredString(dto.key, 'key'),
       kind: this.normalizeRequiredString(dto.kind, 'kind'),
       label: this.normalizeRequiredString(dto.label, 'label'),
+      group_name: this.normalizeOptionalString(dto.group_name, 'group_name'),
       default_order:
         this.normalizeOptionalInt(dto.default_order, 'default_order') ?? 0,
     };
@@ -241,6 +243,13 @@ export class FeaturesService {
 
     if (dto.label !== undefined) {
       data.label = this.normalizeRequiredString(dto.label, 'label');
+    }
+
+    if (dto.group_name !== undefined) {
+      data.group_name = this.normalizeOptionalString(
+        dto.group_name,
+        'group_name',
+      );
     }
 
     if (dto.default_order !== undefined) {
@@ -370,6 +379,18 @@ export class FeaturesService {
     }
 
     return value.trim();
+  }
+
+  private normalizeOptionalString(value: unknown, fieldName: string) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be a string`);
+    }
+
+    return value.trim() || null;
   }
 
   private normalizeRequiredInt(value: unknown, fieldName: string) {

@@ -296,6 +296,7 @@ model Features {
   key           String         @unique
   kind          String
   label         String
+  group_name    String?        @db.VarChar(100)
   default_order Int            @default(0)
   created_at    DateTime       @default(now())
   updated_at    DateTime       @default(now()) @updatedAt
