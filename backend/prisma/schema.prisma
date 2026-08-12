@@ -51,6 +51,7 @@ model Users {
   approvedProductionOrderDateChecks                     ProductionOrderDateChecks[]                           @relation("ProductionOrderDateCheckApprover")
   createdProductionOrderDateCheckImages                 ProductionOrderDateCheckImages[]                      @relation("ProductionOrderDateCheckImageCreator")
   createdProductionWorkshopPressureDifferentials        ProductionWorkshopPressureDifferentials[]             @relation("ProductionWorkshopPressureDifferentialCreator")
+  cleanedProductionWorkshopCleaningChecklists           ProductionWorkshopCleaningChecklists[]                @relation("ProductionWorkshopCleaningChecklistCleaner")
   createdProductionOrderDisinfectantPreparations        ProductionOrderDisinfectantPreparations[]             @relation("ProductionOrderDisinfectantPreparationCreator")
   createdProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]             @relation("ProductionOrderSteamSterilizationCheckCreator")
   checkedProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]             @relation("ProductionOrderSteamSterilizationCheckChecker")
@@ -74,7 +75,7 @@ model Users {
   createdEquipment                                      Equipment[]                                           @relation("EquipmentCreator")
   createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
-  createdFilterCatalogs                                 FilterCatalogs[]                                     @relation("FilterCatalogCreator")
+  createdFilterCatalogs                                 FilterCatalogs[]                                      @relation("FilterCatalogCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
   sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
   filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckFilterer")
@@ -100,19 +101,19 @@ model UserProfiles {
 }
 
 model FilterCatalogs {
-  id                  Int      @id @default(autoincrement())
-  filter_code         String   @unique @db.VarChar(50)
-  filter_type         String   @db.VarChar(100)
-  usable_steam_cycles Int?
-  pre_filter_sensory_requirement String? @db.Text
-  post_filter_sensory_requirement String? @db.Text
-  integrity_requirement String? @db.Text
-  description         String?  @db.Text
-  created_by_id       Int
-  createdBy           Users    @relation("FilterCatalogCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "filter_catalogs_created_by_id_fkey")
+  id                              Int                               @id @default(autoincrement())
+  filter_code                     String                            @unique @db.VarChar(50)
+  filter_type                     String                            @db.VarChar(100)
+  usable_steam_cycles             Int?
+  pre_filter_sensory_requirement  String?                           @db.Text
+  post_filter_sensory_requirement String?                           @db.Text
+  integrity_requirement           String?                           @db.Text
+  description                     String?                           @db.Text
+  created_by_id                   Int
+  createdBy                       Users                             @relation("FilterCatalogCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "filter_catalogs_created_by_id_fkey")
   productionOrderFiltrationChecks ProductionOrderFiltrationChecks[]
-  created_at          DateTime @default(now())
-  updated_at          DateTime @default(now()) @updatedAt
+  created_at                      DateTime                          @default(now())
+  updated_at                      DateTime                          @default(now()) @updatedAt
 
   @@index([created_by_id], map: "filter_catalogs_created_by_id_idx")
   @@map("filter_catalogs")
@@ -466,6 +467,7 @@ model ProductionWorkshops {
   updated_at               DateTime                                  @default(now()) @updatedAt
   deleted_at               DateTime?
   pressureDifferentials    ProductionWorkshopPressureDifferentials[]
+  cleaningChecklists       ProductionWorkshopCleaningChecklists[]
   disinfectantPreparations ProductionOrderDisinfectantPreparations[]
 
   @@map("production_workshops")
@@ -487,6 +489,25 @@ model ProductionWorkshopPressureDifferentials {
   @@index([workshop_id], map: "pw_pressure_diff_workshop_id_fkey")
   @@index([created_by_id], map: "pw_pressure_diff_created_by_id_fkey")
   @@map("production_workshop_pressure_differentials")
+}
+
+model ProductionWorkshopCleaningChecklists {
+  id            Int                 @id @default(autoincrement())
+  workshop_id   Int
+  workshop      ProductionWorkshops @relation(fields: [workshop_id], references: [id], onDelete: Cascade, map: "pw_cleaning_checklists_workshop_id_fkey")
+  subject       String              @db.VarChar(255)
+  category      String              @db.VarChar(100)
+  requirement   String              @db.Text
+  result        String              @db.VarChar(100)
+  note          String?             @db.Text
+  cleaned_by_id Int
+  cleanedBy     Users               @relation("ProductionWorkshopCleaningChecklistCleaner", fields: [cleaned_by_id], references: [id], map: "pw_cleaning_checklists_cleaned_by_id_fkey")
+  created_at    DateTime            @default(now())
+  updated_at    DateTime            @default(now()) @updatedAt
+
+  @@index([workshop_id], map: "pw_cleaning_checklists_workshop_id_fkey")
+  @@index([cleaned_by_id], map: "pw_cleaning_checklists_cleaned_by_id_fkey")
+  @@map("production_workshop_cleaning_checklists")
 }
 
 model ProductionOrders {
@@ -531,7 +552,7 @@ model ProductionOrders {
   materialProcessSummaries             ProductionOrderMaterialProcessSummaries[]
   leakTightnessChecks                  ProductionOrderLeakTightnessChecks[]
   hardnessChecks                       ProductionOrderHardnessChecks[]
-  tabletThicknessChecks                 ProductionOrderTabletThicknessChecks[]
+  tabletThicknessChecks                ProductionOrderTabletThicknessChecks[]
   tenUnitSensoryChecks                 ProductionOrderTenUnitSensoryChecks[]
   vialInspectionChecks                 ProductionOrderVialInspectionChecks[]
   cylinderCalibration                  ProductionOrderCylinderCalibrations?
@@ -868,9 +889,9 @@ model ProductionOrderFiltrationChecks {
   filter_position                             String?          @db.VarChar(255)
   filter_membrane_id                          Int?
   filterMembrane                              FilterCatalogs?  @relation(fields: [filter_membrane_id], references: [id], onDelete: SetNull, map: "po_filtration_checks_filter_membrane_id_fkey")
-  pre_filter_appearance_requirement          String?          @db.Text
+  pre_filter_appearance_requirement           String?          @db.Text
   pre_filter_appearance_result                String?          @db.Text
-  pre_sterilization_integrity_requirement    String?          @db.Text
+  pre_sterilization_integrity_requirement     String?          @db.Text
   pre_sterilization_integrity_result          String?          @db.Text
   sterilized_by_id                            Int?
   sterilizedBy                                Users?           @relation("ProductionOrderFiltrationCheckSterilizer", fields: [sterilized_by_id], references: [id], onDelete: SetNull, map: "po_filtration_checks_sterilized_by_id_fkey")

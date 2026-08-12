@@ -7053,6 +7053,74 @@ Body gửi các field cần đổi:
 DELETE /production-workshops/pressure-differentials/:pressureDifferentialId
 ```
 
+## Production Workshop Cleaning Checklists
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Checklist vệ sinh thuộc về một xưởng. `cleaned_by_id` là ID của người vệ sinh trong bảng `users`; backend kiểm tra user này tồn tại trước khi tạo hoặc cập nhật.
+
+### Lấy danh sách checklist vệ sinh theo xưởng
+
+```http
+GET /production-workshops/:id/cleaning-checklists
+```
+
+Response sắp xếp theo `created_at` mới nhất trước, sau đó `id` mới nhất trước. Mỗi bản ghi trả về kèm thông tin `workshop` và `cleanedBy`.
+
+### Lấy checklist vệ sinh theo id
+
+```http
+GET /production-workshops/cleaning-checklists/:cleaningChecklistId
+```
+
+### Tạo checklist vệ sinh
+
+```http
+POST /production-workshops/:id/cleaning-checklists
+```
+
+Body:
+
+```json
+{
+  "subject": "Bàn thao tác",
+  "category": "Vệ sinh định kỳ",
+  "requirement": "Sạch, không còn bụi và cặn bẩn",
+  "result": "Đạt",
+  "note": "Đã hoàn thành",
+  "cleaned_by_id": 2
+}
+```
+
+Trong đó:
+
+- `subject`, `category`, `requirement`, `result`, `cleaned_by_id` là bắt buộc.
+- `note` là tùy chọn; có thể gửi `null` để không lưu ghi chú.
+- ID xưởng lấy từ `:id` trên URL, không gửi `workshop_id` trong body.
+- `created_at` và `updated_at` được backend tự thiết lập.
+
+### Cập nhật checklist vệ sinh
+
+```http
+PUT /production-workshops/cleaning-checklists/:cleaningChecklistId
+```
+
+Body gửi các field cần đổi:
+
+```json
+{
+  "result": "Không đạt",
+  "note": "Cần vệ sinh lại khu vực góc bàn",
+  "cleaned_by_id": 3
+}
+```
+
+### Xóa checklist vệ sinh
+
+```http
+DELETE /production-workshops/cleaning-checklists/:cleaningChecklistId
+```
+
 ## Xét Duyệt Xuất Xưởng
 
 Các API này nằm dưới module production order và yêu cầu Bearer token như các API `/production-orders` khác.

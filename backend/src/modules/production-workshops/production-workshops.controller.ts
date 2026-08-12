@@ -12,9 +12,12 @@ import {
 } from '@nestjs/common';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { CreateProductionWorkshopPressureDifferentialDto } from './dto/create-production-workshop-pressure-differential.dto';
+import { CreateProductionWorkshopCleaningChecklistDto } from './dto/create-production-workshop-cleaning-checklist.dto';
 import { CreateProductionWorkshopDto } from './dto/create-production-workshop.dto';
+import { UpdateProductionWorkshopCleaningChecklistDto } from './dto/update-production-workshop-cleaning-checklist.dto';
 import { UpdateProductionWorkshopPressureDifferentialDto } from './dto/update-production-workshop-pressure-differential.dto';
 import { UpdateProductionWorkshopDto } from './dto/update-production-workshop.dto';
+import { ProductionWorkshopCleaningChecklistsService } from './production-workshop-cleaning-checklists.service';
 import { ProductionWorkshopPressureDifferentialsService } from './production-workshop-pressure-differentials.service';
 import { ProductionWorkshopsService } from './production-workshops.service';
 
@@ -24,6 +27,7 @@ export class ProductionWorkshopsController {
   constructor(
     private readonly productionWorkshopsService: ProductionWorkshopsService,
     private readonly productionWorkshopPressureDifferentialsService: ProductionWorkshopPressureDifferentialsService,
+    private readonly productionWorkshopCleaningChecklistsService: ProductionWorkshopCleaningChecklistsService,
   ) {}
 
   @Get()
@@ -63,6 +67,38 @@ export class ProductionWorkshopsController {
     );
   }
 
+  @Get('cleaning-checklists/:cleaningChecklistId')
+  async findCleaningChecklistById(
+    @Param('cleaningChecklistId', ParseIntPipe)
+    cleaningChecklistId: number,
+  ) {
+    return this.productionWorkshopCleaningChecklistsService.findById(
+      cleaningChecklistId,
+    );
+  }
+
+  @Put('cleaning-checklists/:cleaningChecklistId')
+  async updateCleaningChecklist(
+    @Param('cleaningChecklistId', ParseIntPipe)
+    cleaningChecklistId: number,
+    @Body() updateDto: UpdateProductionWorkshopCleaningChecklistDto,
+  ) {
+    return this.productionWorkshopCleaningChecklistsService.update(
+      cleaningChecklistId,
+      updateDto,
+    );
+  }
+
+  @Delete('cleaning-checklists/:cleaningChecklistId')
+  async deleteCleaningChecklist(
+    @Param('cleaningChecklistId', ParseIntPipe)
+    cleaningChecklistId: number,
+  ) {
+    return this.productionWorkshopCleaningChecklistsService.delete(
+      cleaningChecklistId,
+    );
+  }
+
   @Get(':id/pressure-differentials')
   async findPressureDifferentials(@Param('id', ParseIntPipe) id: number) {
     return this.productionWorkshopPressureDifferentialsService.findAllByProductionWorkshop(
@@ -81,6 +117,21 @@ export class ProductionWorkshopsController {
       createDto,
       req.user,
     );
+  }
+
+  @Get(':id/cleaning-checklists')
+  async findCleaningChecklists(@Param('id', ParseIntPipe) id: number) {
+    return this.productionWorkshopCleaningChecklistsService.findAllByProductionWorkshop(
+      id,
+    );
+  }
+
+  @Post(':id/cleaning-checklists')
+  async createCleaningChecklist(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionWorkshopCleaningChecklistDto,
+  ) {
+    return this.productionWorkshopCleaningChecklistsService.create(id, createDto);
   }
 
   @Get(':id')
