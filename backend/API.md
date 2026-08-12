@@ -17,6 +17,16 @@ Content-Type: application/json
 
 Với API upload file, dùng `multipart/form-data`.
 
+## Swagger UI
+
+Khi backend đang chạy, Swagger UI được phục vụ tại:
+
+```text
+http://localhost:50000/api-docs
+```
+
+Có thể thay đổi port bằng biến môi trường `SWAGGER_PORT`. Swagger dùng chung API handler với backend, nên các request thử nghiệm trong giao diện được gửi tới cùng port `50000`.
+
 ## Quy Ước Chung
 
 - Date/time dùng ISO 8601, ví dụ: `2026-06-11T08:00:00.000Z`.
