@@ -27,7 +27,7 @@ describe('AuthService', () => {
     process.env.PASSWORD_RESET_OTP_EXPIRES_IN_MINUTES = '10';
     process.env.PASSWORD_RESET_EMAIL_LOGO_URL =
       'https://example.com/dkpharmalogo.png';
-    process.env.JWT_REFRESH_EXPIRES_IN = '45d';
+    process.env.JWT_REFRESH_EXPIRES_IN = '3888000';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -82,7 +82,7 @@ describe('AuthService', () => {
     expect(jwtService.sign).toHaveBeenNthCalledWith(
       1,
       { username: 'user@example.com', sub: 1 },
-      { expiresIn: '45d' },
+      { expiresIn: 3888000 },
     );
     expect(jwtService.sign).toHaveBeenNthCalledWith(2, {
       username: 'user@example.com',

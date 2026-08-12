@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import type { StringValue } from 'ms';
 import { PrismaService } from 'src/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { generateOtp } from 'src/common/utils/otp.util';
@@ -19,7 +18,7 @@ export class AuthService {
       sub: user.id,
     };
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '70d') as StringValue,
+      expiresIn: Number(process.env.JWT_REFRESH_EXPIRES_IN) || 6048000,
     });
     await this.prisma.tokens.create({
       data: {
