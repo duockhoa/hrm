@@ -5,6 +5,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ensureProductionOrderDeviationUploadDir } from './modules/production-order-deviations/production-order-deviation-upload.config';
+import { enrichOpenApiDocument } from './swagger/enrich-openapi-document';
 
 async function bootstrap() {
   ensureProductionOrderDeviationUploadDir();
@@ -21,10 +22,10 @@ async function bootstrap() {
     .addBearerAuth()
     .addSecurityRequirements('bearer')
     .build();
-  const swaggerDocument = SwaggerModule.createDocument(
-    app,
-    swaggerDocumentConfig,
-    { deepScanRoutes: true },
+  const swaggerDocument = enrichOpenApiDocument(
+    SwaggerModule.createDocument(app, swaggerDocumentConfig, {
+      deepScanRoutes: true,
+    }),
   );
   SwaggerModule.setup('api-docs', app, swaggerDocument, {
     jsonDocumentUrl: 'api-docs-json',

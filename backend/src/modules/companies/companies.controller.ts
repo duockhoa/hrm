@@ -11,6 +11,8 @@ import { CompaniesService } from './companies.service';
 import { UseGuards } from '@nestjs/common';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/guards/roles.guard';
+import { CreateCompanyDto } from './dto/create-copanies.dto';
+import { UpdateCompanyDto } from './dto/update-company.dto';
 
 @UseGuards(jwtAuthGuard)
 @Controller('companies')
@@ -27,7 +29,7 @@ export class CompaniesController {
   }
 
   @Post()
-  async create(@Body() createCompanyDto: any) {
+  async create(@Body() createCompanyDto: CreateCompanyDto) {
     return this.companiesService.create(createCompanyDto);
   }
 
@@ -36,7 +38,10 @@ export class CompaniesController {
     return this.companiesService.delete(id);
   }
   @Put(':id')
-  async update(@Param('id') id: number, @Body() updateCompanyDto: any) {
+  async update(
+    @Param('id') id: number,
+    @Body() updateCompanyDto: UpdateCompanyDto,
+  ) {
     console.log('updateCompanyDto', updateCompanyDto);
     const idNumber = Number(id);
     return this.companiesService.update(idNumber, updateCompanyDto);

@@ -10,6 +10,7 @@ import {
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
 import { SapB1ConnectorService } from './sap-b1-connector.service';
+import { ApiBody } from '@nestjs/swagger';
 
 @UseGuards(jwtAuthGuard)
 @Controller('sap-b1-connector')
@@ -35,6 +36,15 @@ export class SapB1ConnectorController {
   }
 
   @Patch('production-orders/:id')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      additionalProperties: true,
+      description:
+        'Các trường cần cập nhật được chuyển tiếp tới SAP Business One Service Layer.',
+      example: { Status: 'bost_Open' },
+    },
+  })
   async patchProductionOrderById(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: Record<string, unknown>,
