@@ -1360,12 +1360,46 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-`features` là danh mục action/view chuẩn. `item_features` là liên kết item nào bật action/view nào. Trường `group_name` dùng để phân nhóm feature, là chuỗi tối đa 100 ký tự và có thể là `null`.
+`features` là danh mục action/view chuẩn của hệ thống; `item_features` là liên kết xác định item nào được bật từng feature. Một feature có thể được dùng cho nhiều item.
+
+### Cấu trúc feature
+
+| Field | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `id` | number | Tự sinh | ID feature. |
+| `key` | string | Có khi tạo | Khóa duy nhất của feature, ví dụ `environment_checks`. Giá trị được cắt khoảng trắng đầu/cuối. |
+| `kind` | string | Có khi tạo | Loại feature. API config frontend tách riêng `action` và `section`; các giá trị khác vẫn được trả về trong mảng `features`. |
+| `label` | string | Có khi tạo | Tên hiển thị. Giá trị được cắt khoảng trắng đầu/cuối. |
+| `group_name` | string \| null | Không | Tên nhóm để frontend phân nhóm feature, ví dụ `Kiểm tra môi trường`. Tối đa 100 ký tự. Gửi `null` hoặc chuỗi rỗng để bỏ nhóm. |
+| `default_order` | number | Không | Thứ tự mặc định, mặc định là `0`. Có thể là số nguyên âm. |
+| `created_at` | ISO 8601 datetime | Tự sinh | Thời điểm tạo. |
+| `updated_at` | ISO 8601 datetime | Tự sinh | Thời điểm cập nhật gần nhất. |
+
+`group_name` chỉ là metadata phục vụ hiển thị/phân nhóm; không làm thay đổi quyền truy cập hay trạng thái bật/tắt feature.
 
 ### Lấy danh sách feature
 
 ```http
 GET /features
+```
+
+Trả về mảng feature, sắp xếp theo `default_order` tăng dần, sau đó theo `key` tăng dần.
+
+Ví dụ response:
+
+```json
+[
+  {
+    "id": 1,
+    "key": "environment_checks",
+    "kind": "section",
+    "label": "Nhiệt độ/độ ẩm",
+    "group_name": "Kiểm tra môi trường",
+    "default_order": 10,
+    "created_at": "2026-08-11T08:00:00.000Z",
+    "updated_at": "2026-08-11T08:00:00.000Z"
+  }
+]
 ```
 
 ### Lấy feature theo id
@@ -1374,16 +1408,30 @@ GET /features
 GET /features/:id
 ```
 
+`id` phải là số nguyên. Response là feature kèm mảng `itemFeatures`, thể hiện các item đang liên kết với feature đó.
+
+Lỗi thường gặp:
+
+- `404 Feature not found`
+
 ### Lấy feature theo key
 
 ```http
 GET /features/key/:key
 ```
 
+`key` không được rỗng. Response giống `GET /features/:id`, bao gồm mảng `itemFeatures`.
+
+Lỗi thường gặp:
+
+- `400 key is required`
+- `404 Feature not found`
+
 ### Tạo feature
 
 ```http
 POST /features
+Content-Type: application/json
 ```
 
 Body:
@@ -1398,13 +1446,30 @@ Body:
 }
 ```
 
+Quy tắc:
+
+- `key`, `kind`, `label` là bắt buộc, phải là chuỗi không rỗng.
+- `key` phải là duy nhất.
+- `group_name` không bắt buộc. Nếu không gửi, gửi `null`, hoặc gửi chuỗi rỗng thì feature không thuộc nhóm nào.
+- `default_order` không bắt buộc; nếu không gửi thì nhận giá trị `0`.
+
+Response là feature vừa tạo, bao gồm `id`, `created_at` và `updated_at`.
+
+Lỗi thường gặp:
+
+- `400 key is required`, `400 kind is required`, `400 label is required`
+- `400 group_name must be a string`
+- `400 default_order must be an integer`
+- `409 Feature key already exists`
+
 ### Cập nhật feature
 
 ```http
 PUT /features/:id
+Content-Type: application/json
 ```
 
-Body:
+Chỉ gửi các field cần thay đổi. Ví dụ:
 
 ```json
 {
@@ -1414,11 +1479,34 @@ Body:
 }
 ```
 
+Để bỏ nhóm, gửi:
+
+```json
+{
+  "group_name": null
+}
+```
+
+Nếu đổi `key`, key mới phải là duy nhất. `updated_at` được cập nhật tự động.
+
+Lỗi thường gặp:
+
+- `400 No update data provided`
+- Các lỗi validate field giống API tạo
+- `404 Feature not found`
+- `409 Feature key already exists`
+
 ### Xóa feature
 
 ```http
 DELETE /features/:id
 ```
+
+Xóa vĩnh viễn feature. Các liên kết `item_features` của feature này cũng bị xóa theo cấu hình quan hệ DB.
+
+Lỗi thường gặp:
+
+- `404 Feature not found`
 
 ### Lấy action/view theo item
 
@@ -1427,7 +1515,37 @@ GET /features/items/:item_code
 GET /features/items/:item_code?includeDisabled=true
 ```
 
-Response là danh sách raw từ bảng `item_features`.
+Mặc định chỉ trả về liên kết có `enabled = true`. Thêm `includeDisabled=true` để lấy cả liên kết đang tắt. `item_code` phải thuộc một item chưa bị xóa.
+
+Response là mảng bản ghi `item_features`, kèm object `feature` và `item`. Giá trị `feature.group_name` có mặt trong object `feature`.
+
+Ví dụ response rút gọn:
+
+```json
+[
+  {
+    "id": 12,
+    "item_code": "TP00001",
+    "feature_id": 1,
+    "enabled": true,
+    "order": null,
+    "feature": {
+      "id": 1,
+      "key": "create_environment_check",
+      "kind": "action",
+      "label": "Nhập nhiệt độ/độ ẩm",
+      "group_name": "Kiểm tra môi trường",
+      "default_order": 10
+    }
+  }
+]
+```
+
+Nếu `order` là `null`, frontend nên dùng `feature.default_order` làm thứ tự hiển thị.
+
+Lỗi thường gặp:
+
+- `404 Item not found`
 
 ### Lấy action/view theo item dạng config frontend
 
@@ -1486,13 +1604,26 @@ Response:
 }
 ```
 
+Ý nghĩa response:
+
+- `features`: tất cả feature áp dụng cho item, sau khi lọc theo `includeDisabled`.
+- `actions`: các phần tử trong `features` có `kind = "action"`.
+- `sections`: các phần tử trong `features` có `kind = "section"`.
+- `order`: ưu tiên `item_features.order`; khi giá trị này là `null`, API trả `feature.default_order`.
+- `group_name`: nhóm của feature, có thể là `null`.
+
+Lỗi thường gặp:
+
+- `404 Item not found`
+
 ### Bật hoặc cập nhật feature cho item
 
 ```http
 POST /features/items/:item_code
+Content-Type: application/json
 ```
 
-Body dùng `feature_id` hoặc `feature_key`:
+API tạo mới hoặc cập nhật liên kết `item_features` theo cặp `item_code` và feature. Body dùng một trong các field định danh `feature_id`/`featureId` hoặc `feature_key`/`featureKey`; nếu gửi cả ID và key, API ưu tiên ID.
 
 ```json
 {
@@ -1502,13 +1633,32 @@ Body dùng `feature_id` hoặc `feature_key`:
 }
 ```
 
+Quy tắc:
+
+- `feature_id` phải là số nguyên dương; `feature_key` phải là chuỗi không rỗng.
+- `enabled` mặc định là `true`; chấp nhận `true`/`false`, `1`/`0`, hoặc chuỗi `"true"`/`"false"`/`"1"`/`"0"`.
+- `order` không bắt buộc. Gửi `null` để sử dụng `default_order` của feature.
+- `item_code` và feature phải tồn tại.
+
+Response là bản ghi liên kết vừa tạo/cập nhật, kèm `feature` và `item`.
+
+Lỗi thường gặp:
+
+- `400 feature_id or feature_key is required`
+- `400 feature_id must be a positive integer`
+- `400 enabled must be a boolean`
+- `400 order must be an integer`
+- `404 Item not found`
+- `404 Feature not found`
+
 ### Cập nhật liên kết item-feature
 
 ```http
 PUT /features/items/:item_code/:feature_id
+Content-Type: application/json
 ```
 
-Body:
+Chỉ gửi `enabled`, `order`, hoặc cả hai. Ví dụ:
 
 ```json
 {
@@ -1517,11 +1667,30 @@ Body:
 }
 ```
 
+Gửi `"order": null` để quay về thứ tự mặc định của feature. Response là liên kết sau cập nhật, kèm `feature` và `item`.
+
+Lỗi thường gặp:
+
+- `400 No update data provided`
+- `400 enabled must be a boolean`
+- `400 order must be an integer`
+- `404 Item not found`
+- `404 Feature not found`
+- `404 Item feature not found`
+
 ### Xóa liên kết item-feature
 
 ```http
 DELETE /features/items/:item_code/:feature_id
 ```
+
+Chỉ xóa liên kết giữa item và feature; không xóa item hoặc feature gốc. Response là liên kết vừa xóa, kèm `feature` và `item`.
+
+Lỗi thường gặp:
+
+- `404 Item not found`
+- `404 Feature not found`
+- `404 Item feature not found`
 
 ## Production Orders
 
