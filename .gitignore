@@ -52,6 +52,7 @@ frontend/.turbo/
 backend/node_modules/
 backend/.env
 backend/.env.*
+!backend/.env.example
 backend/logs/
 backend/build/
 backend/dist/
@@ -61,6 +62,7 @@ backend/uploads/
 frontend/node_modules/
 frontend/.env
 frontend/.env.*
+!frontend/.env.example
 frontend/logs/
 frontend/build/
 frontend/dist/
@@ -95,4 +97,3 @@ mobileapp/ios/*.xcuserstate
 mobileapp/*.keystore
 mobileapp/*.log
 mobileapp/*.p12
-
