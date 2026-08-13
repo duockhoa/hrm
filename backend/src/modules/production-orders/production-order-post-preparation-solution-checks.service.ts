@@ -242,7 +242,18 @@ export class ProductionOrderPostPreparationSolutionChecksService {
         dto?.solution_clarity,
         'solution_clarity',
       ),
-      solution_ph: this.normalizeOptionalPh(dto?.solution_ph, 'solution_ph'),
+      solution_ph_1: this.normalizeOptionalPh(
+        dto?.solution_ph_1,
+        'solution_ph_1',
+      ),
+      solution_ph_2: this.normalizeOptionalPh(
+        dto?.solution_ph_2,
+        'solution_ph_2',
+      ),
+      solution_ph_3: this.normalizeOptionalPh(
+        dto?.solution_ph_3,
+        'solution_ph_3',
+      ),
       checked_by_id: normalizedCheckedById,
     };
   }
@@ -269,10 +280,24 @@ export class ProductionOrderPostPreparationSolutionChecksService {
       );
     }
 
-    if ('solution_ph' in updateDto) {
-      data.solution_ph = this.normalizeOptionalPh(
-        updateDto.solution_ph,
-        'solution_ph',
+    if ('solution_ph_1' in updateDto) {
+      data.solution_ph_1 = this.normalizeOptionalPh(
+        updateDto.solution_ph_1,
+        'solution_ph_1',
+      );
+    }
+
+    if ('solution_ph_2' in updateDto) {
+      data.solution_ph_2 = this.normalizeOptionalPh(
+        updateDto.solution_ph_2,
+        'solution_ph_2',
+      );
+    }
+
+    if ('solution_ph_3' in updateDto) {
+      data.solution_ph_3 = this.normalizeOptionalPh(
+        updateDto.solution_ph_3,
+        'solution_ph_3',
       );
     }
 

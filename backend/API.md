@@ -3633,7 +3633,9 @@ Response mẫu:
     "solution_color": "Vàng nhạt",
     "solution_image_path": "/production-orders/post-preparation-solution-checks/images/dich-sau-pha-che.jpg",
     "solution_clarity": "Trong",
-    "solution_ph": "6.50",
+    "solution_ph_1": "6.50",
+    "solution_ph_2": "6.60",
+    "solution_ph_3": "6.55",
     "checked_by_id": 7,
     "created_at": "2026-07-15T08:10:00.000Z",
     "updated_at": "2026-07-15T08:10:00.000Z",
@@ -3685,7 +3687,9 @@ Body JSON nếu không gửi ảnh:
 {
   "solution_color": "Vàng nhạt",
   "solution_clarity": "Trong",
-  "solution_ph": 6.5,
+  "solution_ph_1": 6.5,
+  "solution_ph_2": 6.6,
+  "solution_ph_3": 6.55,
   "checked_by_id": 7
 }
 ```
@@ -3694,7 +3698,9 @@ Nếu có ảnh, gửi `multipart/form-data`:
 
 - `solution_color`: `Vàng nhạt`
 - `solution_clarity`: `Trong`
-- `solution_ph`: `6.5`
+- `solution_ph_1`: `6.5`
+- `solution_ph_2`: `6.6`
+- `solution_ph_3`: `6.55`
 - `checked_by_id`: `7`
 - `final_volume_image`: file ảnh thể tích cuối
 - `solution_image`: file ảnh dịch
@@ -3703,7 +3709,7 @@ Quy tắc:
 
 - Tất cả field nghiệp vụ đều không bắt buộc.
 - `solution_color` và `solution_clarity` lưu dạng text; gửi `null` hoặc chuỗi rỗng thì lưu `null`.
-- `solution_ph` không bắt buộc, lưu dạng `DECIMAL(5, 2)`, tối đa 2 chữ số sau dấu phẩy và phải nằm trong khoảng `0` đến `14`.
+- `solution_ph_1`, `solution_ph_2`, `solution_ph_3` không bắt buộc, mỗi giá trị lưu dạng `DECIMAL(5, 2)`, tối đa 2 chữ số sau dấu phẩy và phải nằm trong khoảng `0` đến `14`.
 - `checked_by_id` không bắt buộc; nếu gửi thì phải tồn tại trong bảng `users`.
 - Ảnh phải là JPG, PNG, WEBP hoặc GIF.
 
@@ -3712,8 +3718,8 @@ Lỗi thường gặp:
 - `404 Production order not found`
 - `404 Checked user not found`
 - `400 solution_color must be a string`
-- `400 solution_ph must fit DECIMAL(5, 2) with up to 2 decimal places`
-- `400 solution_ph must be between 0 and 14`
+- `400 solution_ph_1 must fit DECIMAL(5, 2) with up to 2 decimal places` (tương tự cho `_2`, `_3`)
+- `400 solution_ph_1 must be between 0 and 14` (tương tự cho `_2`, `_3`)
 - `400 image must be a JPG, PNG, WEBP, or GIF image`
 
 ### Cập nhật kiểm tra dịch sau pha chế
@@ -3727,7 +3733,7 @@ Body JSON nếu không đổi ảnh:
 ```json
 {
   "solution_clarity": "Trong, không có cặn",
-  "solution_ph": null
+  "solution_ph_2": null
 }
 ```
 
@@ -3735,9 +3741,9 @@ Nếu có ảnh mới, gửi `multipart/form-data` với các field tương tự
 
 Quy tắc:
 
-- Có thể cập nhật `solution_color`, `solution_clarity`, `solution_ph`, `checked_by_id`, `final_volume_image`, `solution_image`.
+- Có thể cập nhật `solution_color`, `solution_clarity`, `solution_ph_1`, `solution_ph_2`, `solution_ph_3`, `checked_by_id`, `final_volume_image`, `solution_image`.
 - Gửi ít nhất một field hoặc một ảnh mới.
-- `solution_color`, `solution_clarity`, `solution_ph`, `checked_by_id` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
+- `solution_color`, `solution_clarity`, `solution_ph_1`, `solution_ph_2`, `solution_ph_3`, `checked_by_id` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 - Nếu gửi ảnh mới, backend cập nhật đường dẫn ảnh tương ứng và xóa file ảnh cũ nếu có.
 
 Lỗi thường gặp:
@@ -3745,8 +3751,8 @@ Lỗi thường gặp:
 - `404 Post-preparation solution check not found`
 - `404 Checked user not found`
 - `400 At least one field is required`
-- `400 solution_ph must fit DECIMAL(5, 2) with up to 2 decimal places`
-- `400 solution_ph must be between 0 and 14`
+- `400 solution_ph_1 must fit DECIMAL(5, 2) with up to 2 decimal places` (tương tự cho `_2`, `_3`)
+- `400 solution_ph_1 must be between 0 and 14` (tương tự cho `_2`, `_3`)
 - `400 image must be a JPG, PNG, WEBP, or GIF image`
 
 ### Xóa kiểm tra dịch sau pha chế
