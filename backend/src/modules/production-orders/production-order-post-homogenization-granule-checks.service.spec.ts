@@ -112,6 +112,7 @@ describe('ProductionOrderPostHomogenizationGranuleChecksService', () => {
       {
         bulk_density: '0,520000',
         tapped_density: '0.680000',
+        moisture_percent: '4,25',
       },
       { id: 7 },
       {
@@ -136,6 +137,7 @@ describe('ProductionOrderPostHomogenizationGranuleChecksService', () => {
     expect(createArg.data.bulk_density.toString()).toBe('0.52');
     expect(createArg.data.tapped_density.toString()).toBe('0.68');
     expect(createArg.data.carr_index.toString()).toBe('23.5294');
+    expect(createArg.data.moisture_percent.toString()).toBe('4.25');
   });
 
   it('throws BadRequestException when tapped density is less than bulk density', async () => {
@@ -214,6 +216,48 @@ describe('ProductionOrderPostHomogenizationGranuleChecksService', () => {
     await expect(service.update(1, {})).rejects.toThrow(
       'At least one field is required',
     );
+  });
+
+  it('updates the moisture percentage without recalculating Carr index', async () => {
+    const updatedCheck = { id: 1, production_order_id: 2031 };
+    prismaService.productionOrderPostHomogenizationGranuleChecks.findUnique.mockResolvedValue(
+      {
+        id: 1,
+        bulk_density: new Prisma.Decimal('0.52'),
+        tapped_density: new Prisma.Decimal('0.68'),
+        moisture_percent: null,
+        image_path: null,
+      },
+    );
+    prismaService.productionOrderPostHomogenizationGranuleChecks.update.mockResolvedValue(
+      updatedCheck,
+    );
+
+    await expect(service.update(1, { moisture_percent: '4,25' })).resolves.toBe(
+      updatedCheck,
+    );
+
+    const updateArg =
+      prismaService.productionOrderPostHomogenizationGranuleChecks.update.mock
+        .calls[0][0];
+    expect(updateArg.data.moisture_percent.toString()).toBe('4.25');
+    expect(updateArg.data.carr_index).toBeUndefined();
+  });
+
+  it('rejects a moisture percentage above 100', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        {
+          bulk_density: 0.52,
+          tapped_density: 0.68,
+          moisture_percent: 100.01,
+        },
+        { id: 7 },
+      ),
+    ).rejects.toThrow('moisture_percent must not exceed 100');
   });
 
   it('throws NotFoundException when updating a missing post-homogenization granule check', async () => {

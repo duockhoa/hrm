@@ -999,6 +999,7 @@ model ProductionOrderPostHomogenizationGranuleChecks {
   density_unit        String           @default("g/ml") @db.VarChar(20)
   image_path          String?          @db.Text
   carr_index          Decimal          @db.Decimal(8, 4)
+  moisture_percent    Decimal?         @db.Decimal(5, 2)
   created_by_id       Int
   createdBy           Users            @relation("ProductionOrderPostHomogenizationGranuleCheckCreator", fields: [created_by_id], references: [id], map: "po_post_homogenization_granule_checks_created_by_id_fkey")
   created_at          DateTime         @default(now())
@@ -1017,7 +1018,9 @@ model ProductionOrderPostPreparationSolutionChecks {
   solution_color          String?          @db.Text
   solution_image_path     String?          @db.Text
   solution_clarity        String?          @db.Text
-  solution_ph             Decimal?         @db.Decimal(5, 2)
+  solution_ph_1           Decimal?         @db.Decimal(5, 2)
+  solution_ph_2           Decimal?         @db.Decimal(5, 2)
+  solution_ph_3           Decimal?         @db.Decimal(5, 2)
   checked_by_id           Int?
   checkedBy               Users?           @relation("ProductionOrderPostPreparationSolutionCheckChecker", fields: [checked_by_id], references: [id], map: "po_post_preparation_solution_checks_checked_by_id_fkey")
   created_at              DateTime         @default(now())

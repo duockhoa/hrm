@@ -3479,6 +3479,7 @@ Response mẫu:
     "density_unit": "g/ml",
     "image_path": "/production-orders/post-homogenization-granule-checks/images/com-sau-dong-nhat.jpg",
     "carr_index": "23.5294",
+    "moisture_percent": "4.25",
     "created_by_id": 7,
     "created_at": "2026-06-29T08:10:00.000Z",
     "updated_at": "2026-06-29T08:10:00.000Z",
@@ -3529,7 +3530,8 @@ Body JSON nếu không gửi ảnh:
 ```json
 {
   "bulk_density": 0.52,
-  "tapped_density": 0.68
+  "tapped_density": 0.68,
+  "moisture_percent": 4.25
 }
 ```
 
@@ -3537,11 +3539,13 @@ Nếu có ảnh, gửi `multipart/form-data`:
 
 - `bulk_density`: `0.52`
 - `tapped_density`: `0.68`
+- `moisture_percent`: `4.25`
 - `granule_image` hoặc `image`: file ảnh, tối đa 1 file
 
 Quy tắc:
 
 - `bulk_density` và `tapped_density` là bắt buộc, lưu dạng `DECIMAL(12, 6)`.
+- `moisture_percent` không bắt buộc, lưu dạng `DECIMAL(5, 2)`, từ `0` đến `100` (%), tối đa 2 chữ số sau dấu phẩy. Gửi `null` hoặc chuỗi rỗng thì lưu `null`.
 - Đơn vị mặc định là `g/ml`, backend tự lưu `density_unit = "g/ml"`.
 - Có thể gửi số dạng chuỗi, ví dụ `"0.520000"` hoặc `"0,520000"`.
 - `tapped_density` phải lớn hơn hoặc bằng `bulk_density`.
@@ -3556,6 +3560,8 @@ Lỗi thường gặp:
 - `404 Production order not found`
 - `400 bulk_density is required`
 - `400 tapped_density must be greater than or equal to bulk_density`
+- `400 moisture_percent must have up to 2 decimal places`
+- `400 moisture_percent must not exceed 100`
 - `400 image must be a JPG, PNG, WEBP, or GIF image`
 - `401 Authenticated user not found`
 
@@ -3569,7 +3575,8 @@ Body JSON nếu không đổi ảnh:
 
 ```json
 {
-  "tapped_density": 0.7
+  "tapped_density": 0.7,
+  "moisture_percent": 4.1
 }
 ```
 
@@ -3577,14 +3584,16 @@ Nếu có ảnh mới, gửi `multipart/form-data`:
 
 - `bulk_density`: `0.52`
 - `tapped_density`: `0.70`
+- `moisture_percent`: `4.10`
 - `granule_image` hoặc `image`: file ảnh, tối đa 1 file
 
 Quy tắc:
 
-- Có thể cập nhật `bulk_density`, `tapped_density`, và ảnh kiểm tra.
+- Có thể cập nhật `bulk_density`, `tapped_density`, `moisture_percent`, và ảnh kiểm tra.
 - Gửi ít nhất một field hoặc một ảnh mới.
 - Nếu chỉ cập nhật một tỷ trọng, backend dùng tỷ trọng còn lại trên bản ghi hiện có để tính lại `carr_index`.
 - `bulk_density` và `tapped_density` khi gửi phải là số thập phân hợp lệ `DECIMAL(12, 6)` và lớn hơn `0`.
+- `moisture_percent` khi gửi phải là số thập phân hợp lệ `DECIMAL(5, 2)`, từ `0` đến `100`; gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 - `tapped_density` phải lớn hơn hoặc bằng `bulk_density`.
 - Nếu gửi ảnh mới, backend cập nhật `image_path` và xóa file ảnh cũ nếu có.
 
@@ -3594,6 +3603,8 @@ Lỗi thường gặp:
 - `400 At least one field is required`
 - `400 bulk_density is required`
 - `400 tapped_density must be greater than or equal to bulk_density`
+- `400 moisture_percent must have up to 2 decimal places`
+- `400 moisture_percent must not exceed 100`
 - `400 image must be a JPG, PNG, WEBP, or GIF image`
 
 ### Xóa kiểm tra cốm sau đồng nhất

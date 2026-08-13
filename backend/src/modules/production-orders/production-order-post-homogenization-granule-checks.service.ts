@@ -21,6 +21,7 @@ type AuthenticatedUser = {
 const DENSITY_UNIT = 'g/ml';
 const DENSITY_DECIMAL_PATTERN = /^\d+(?:\.\d{1,6})?$/;
 const DENSITY_INTEGER_DIGITS = 6;
+const MOISTURE_PERCENT_PATTERN = /^\d+(?:\.\d{1,2})?$/;
 
 const postHomogenizationGranuleCheckCreatorSelect = {
   id: true,
@@ -42,6 +43,7 @@ const postHomogenizationGranuleCheckValueSelect = {
   bulk_density: true,
   tapped_density: true,
   image_path: true,
+  moisture_percent: true,
 } satisfies Prisma.ProductionOrderPostHomogenizationGranuleChecksSelect;
 
 type PostHomogenizationGranuleCheckValues =
@@ -142,6 +144,9 @@ export class ProductionOrderPostHomogenizationGranuleChecksService {
       'tapped_density',
     );
     const carrIndex = this.calculateCarrIndex(bulkDensity, tappedDensity);
+    const moisturePercent = this.normalizeOptionalMoisturePercent(
+      dto?.moisture_percent,
+    );
 
     return this.prismaService.productionOrderPostHomogenizationGranuleChecks.create(
       {
@@ -152,6 +157,7 @@ export class ProductionOrderPostHomogenizationGranuleChecksService {
           density_unit: DENSITY_UNIT,
           image_path: files.imagePath ?? null,
           carr_index: carrIndex,
+          moisture_percent: moisturePercent,
           created_by_id: this.normalizeUserId(user),
         },
         include: postHomogenizationGranuleCheckInclude,
@@ -268,10 +274,16 @@ export class ProductionOrderPostHomogenizationGranuleChecksService {
     const updateDto = dto ?? {};
     const hasBulkDensity = 'bulk_density' in updateDto;
     const hasTappedDensity = 'tapped_density' in updateDto;
+    const hasMoisturePercent = 'moisture_percent' in updateDto;
     const data: Prisma.ProductionOrderPostHomogenizationGranuleChecksUpdateInput =
       {};
 
-    if (!hasBulkDensity && !hasTappedDensity && !files.imagePath) {
+    if (
+      !hasBulkDensity &&
+      !hasTappedDensity &&
+      !hasMoisturePercent &&
+      !files.imagePath
+    ) {
       throw new BadRequestException('At least one field is required');
     }
 
@@ -295,6 +307,12 @@ export class ProductionOrderPostHomogenizationGranuleChecksService {
 
     if (hasBulkDensity || hasTappedDensity) {
       data.carr_index = this.calculateCarrIndex(bulkDensity, tappedDensity);
+    }
+
+    if (hasMoisturePercent) {
+      data.moisture_percent = this.normalizeOptionalMoisturePercent(
+        updateDto.moisture_percent,
+      );
     }
 
     if (files.imagePath) {
@@ -337,6 +355,37 @@ export class ProductionOrderPostHomogenizationGranuleChecksService {
     }
 
     return decimalValue;
+  }
+
+  private normalizeOptionalMoisturePercent(value: unknown) {
+    if (
+      value === null ||
+      value === undefined ||
+      (typeof value === 'string' && value.trim() === '')
+    ) {
+      return null;
+    }
+
+    const normalizedValue =
+      typeof value === 'number'
+        ? String(value)
+        : typeof value === 'string'
+          ? value.trim().replace(',', '.')
+          : '';
+
+    if (!MOISTURE_PERCENT_PATTERN.test(normalizedValue)) {
+      throw new BadRequestException(
+        'moisture_percent must have up to 2 decimal places',
+      );
+    }
+
+    const moisturePercent = new Prisma.Decimal(normalizedValue);
+
+    if (moisturePercent.gt(100)) {
+      throw new BadRequestException('moisture_percent must not exceed 100');
+    }
+
+    return moisturePercent;
   }
 
   private normalizeUserId(user?: AuthenticatedUser) {
