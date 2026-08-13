@@ -34,6 +34,54 @@ Có thể thay đổi port bằng biến môi trường `SWAGGER_PORT`. Swagger 
 - Response lỗi theo chuẩn NestJS, thường có `statusCode`, `message`, `error`.
 - Các API export trả về file binary, không trả JSON.
 
+## Cleaning Objects và Cleaning Requirements
+
+Tất cả endpoint bên dưới yêu cầu `Auth: Bearer`. Trường `created_by_id` được lấy tự động từ access token và không cần (cũng không nên) gửi từ client.
+
+### Cleaning objects
+
+```http
+GET    /cleaning-objects
+GET    /cleaning-objects/:id
+GET    /cleaning-objects/qr/:qrCode
+POST   /cleaning-objects
+PATCH  /cleaning-objects/:id
+DELETE /cleaning-objects/:id
+```
+
+Body tạo/cập nhật:
+
+```json
+{
+  "name": "Bàn đóng gói số 1",
+  "qr_code": "CLEAN-OBJ-001"
+}
+```
+
+`qr_code` là duy nhất. API chi tiết đối tượng trả kèm `cleaningRequirements`; API danh sách trả kèm `cleaning_requirements_count`. Xóa đối tượng sẽ xóa các yêu cầu thuộc đối tượng đó.
+
+### Cleaning requirements
+
+```http
+GET    /cleaning-requirements
+GET    /cleaning-requirements/:id
+POST   /cleaning-requirements
+PATCH  /cleaning-requirements/:id
+DELETE /cleaning-requirements/:id
+```
+
+Body tạo:
+
+```json
+{
+  "cleaning_object_id": 1,
+  "requirement_type": "Disinfection",
+  "requirement_content": "Lau bề mặt bằng dung dịch sát khuẩn theo SOP."
+}
+```
+
+Các trường trên đều có thể cập nhật qua `PATCH`; `cleaning_object_id` phải tham chiếu đến một đối tượng tồn tại.
+
 ## Auth
 
 ### Đăng nhập

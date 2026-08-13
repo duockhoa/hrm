@@ -76,6 +76,8 @@ model Users {
   createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
   createdFilterCatalogs                                 FilterCatalogs[]                                      @relation("FilterCatalogCreator")
+  createdCleaningObjects                                CleaningObjects[]                                     @relation("CleaningObjectCreator")
+  createdCleaningRequirements                           CleaningRequirements[]                                @relation("CleaningRequirementCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
   sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
   filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckFilterer")
@@ -117,6 +119,36 @@ model FilterCatalogs {
 
   @@index([created_by_id], map: "filter_catalogs_created_by_id_idx")
   @@map("filter_catalogs")
+}
+
+model CleaningObjects {
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @db.VarChar(255)
+  qr_code              String                 @unique @db.VarChar(255)
+  created_by_id        Int
+  createdBy            Users                  @relation("CleaningObjectCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "cleaning_objects_created_by_id_fkey")
+  cleaningRequirements CleaningRequirements[]
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @default(now()) @updatedAt
+
+  @@index([created_by_id], map: "cleaning_objects_created_by_id_idx")
+  @@map("cleaning_objects")
+}
+
+model CleaningRequirements {
+  id                  Int             @id @default(autoincrement())
+  cleaning_object_id  Int
+  cleaningObject      CleaningObjects @relation(fields: [cleaning_object_id], references: [id], onDelete: Cascade, map: "cleaning_requirements_cleaning_object_id_fkey")
+  requirement_type    String          @db.VarChar(100)
+  requirement_content String          @db.Text
+  created_by_id       Int
+  createdBy           Users           @relation("CleaningRequirementCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "cleaning_requirements_created_by_id_fkey")
+  created_at          DateTime        @default(now())
+  updated_at          DateTime        @default(now()) @updatedAt
+
+  @@index([cleaning_object_id], map: "cleaning_requirements_cleaning_object_id_idx")
+  @@index([created_by_id], map: "cleaning_requirements_created_by_id_idx")
+  @@map("cleaning_requirements")
 }
 
 model Tokens {

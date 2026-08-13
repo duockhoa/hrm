@@ -28,6 +28,8 @@ import { ApplicationsModule } from './modules/applications/applications.module';
 import { RegistrationNumbersSyncModule } from './modules/registration-numbers-sync/registration-numbers-sync.module';
 import { RegistrationNumbersModule } from './modules/registration-numbers/registration-numbers.module';
 import { FilterCatalogsModule } from './modules/filter-catalogs/filter-catalogs.module';
+import { CleaningObjectsModule } from './modules/cleaning-objects/cleaning-objects.module';
+import { CleaningRequirementsModule } from './modules/cleaning-requirements/cleaning-requirements.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { FilterCatalogsModule } from './modules/filter-catalogs/filter-catalogs.
     RegistrationNumbersSyncModule,
     RegistrationNumbersModule,
     FilterCatalogsModule,
+    CleaningObjectsModule,
+    CleaningRequirementsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
