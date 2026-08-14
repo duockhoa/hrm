@@ -75,6 +75,7 @@ model Users {
   createdEquipment                                      Equipment[]                                           @relation("EquipmentCreator")
   createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
+  createdEquipmentMonitoringRecordImages                EquipmentMonitoringRecordImages[]                    @relation("EquipmentMonitoringRecordImageCreator")
   createdFilterCatalogs                                 FilterCatalogs[]                                      @relation("FilterCatalogCreator")
   createdCleaningObjects                                CleaningObjects[]                                     @relation("CleaningObjectCreator")
   createdCleaningRequirements                           CleaningRequirements[]                                @relation("CleaningRequirementCreator")
@@ -444,6 +445,7 @@ model EquipmentMonitoringRecords {
   created_by_id       Int
   createdBy           Users                       @relation("EquipmentMonitoringRecordCreator", fields: [created_by_id], references: [id], map: "equipment_monitoring_records_created_by_id_fkey")
   values              EquipmentMonitoringValues[]
+  images              EquipmentMonitoringRecordImages[]
   created_at          DateTime                    @default(now())
   updated_at          DateTime                    @default(now()) @updatedAt
   deleted_at          DateTime?
@@ -453,6 +455,21 @@ model EquipmentMonitoringRecords {
   @@index([production_order_id, equipment_id, recorded_at], map: "equipment_monitoring_records_po_equipment_recorded_idx")
   @@index([created_by_id], map: "equipment_monitoring_records_created_by_id_idx")
   @@map("equipment_monitoring_records")
+}
+
+model EquipmentMonitoringRecordImages {
+  id            Int                        @id @default(autoincrement())
+  record_id     Int
+  record        EquipmentMonitoringRecords @relation(fields: [record_id], references: [id], onDelete: Cascade, map: "equipment_monitoring_record_images_record_id_fkey")
+  image_path    String                     @db.Text
+  created_by_id Int
+  createdBy     Users                      @relation("EquipmentMonitoringRecordImageCreator", fields: [created_by_id], references: [id], map: "equipment_monitoring_record_images_created_by_id_fkey")
+  created_at    DateTime                   @default(now())
+  updated_at    DateTime                   @default(now()) @updatedAt
+
+  @@index([record_id], map: "equipment_monitoring_record_images_record_id_idx")
+  @@index([created_by_id], map: "equipment_monitoring_record_images_created_by_id_idx")
+  @@map("equipment_monitoring_record_images")
 }
 
 model EquipmentMonitoringValues {

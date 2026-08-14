@@ -11,6 +11,11 @@ import {
   CreateEquipmentMonitoringValueDto,
 } from './dto/create-equipment-monitoring-record.dto';
 import { UpdateEquipmentMonitoringRecordDto } from './dto/update-equipment-monitoring-record.dto';
+import {
+  getEquipmentMonitoringRecordImageLookupPaths,
+  removeStoredEquipmentMonitoringRecordImage,
+  resolveEquipmentMonitoringRecordImageFile,
+} from './equipment-monitoring-record-upload.config';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -81,6 +86,14 @@ const monitoringRecordInclude = {
       parameter_id: 'asc',
     },
   },
+  images: {
+    include: {
+      createdBy: {
+        select: monitoringCreatorSelect,
+      },
+    },
+    orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+  },
 } satisfies Prisma.EquipmentMonitoringRecordsInclude;
 
 @Injectable()
@@ -103,7 +116,9 @@ export class EquipmentMonitoringRecordsService {
     return this.prismaService.equipmentMonitoringRecords.findMany({
       where: {
         deleted_at: null,
-        ...(productionOrderId ? { production_order_id: productionOrderId } : {}),
+        ...(productionOrderId
+          ? { production_order_id: productionOrderId }
+          : {}),
         ...(equipmentId ? { equipment_id: equipmentId } : {}),
       },
       include: monitoringRecordInclude,
@@ -126,6 +141,25 @@ export class EquipmentMonitoringRecordsService {
     }
 
     return record;
+  }
+
+  async findImageFile(filename: string) {
+    const imagePaths = getEquipmentMonitoringRecordImageLookupPaths(filename);
+
+    if (imagePaths.length === 0) {
+      return null;
+    }
+
+    const image =
+      await this.prismaService.equipmentMonitoringRecordImages.findFirst({
+        where: {
+          image_path: { in: imagePaths },
+          record: { deleted_at: null },
+        },
+        select: { id: true },
+      });
+
+    return image ? resolveEquipmentMonitoringRecordImageFile(filename) : null;
   }
 
   async create(
@@ -229,6 +263,54 @@ export class EquipmentMonitoringRecordsService {
       },
       include: monitoringRecordInclude,
     });
+  }
+
+  async addImages(
+    recordId: number,
+    imagePaths: string[],
+    user?: AuthenticatedUser,
+  ) {
+    if (imagePaths.length === 0) {
+      throw new BadRequestException('images are required');
+    }
+
+    await this.findById(recordId);
+    const userId = this.normalizeUserId(user);
+
+    await this.prismaService.equipmentMonitoringRecordImages.createMany({
+      data: imagePaths.map((imagePath) => ({
+        record_id: recordId,
+        image_path: imagePath,
+        created_by_id: userId,
+      })),
+    });
+
+    return this.findById(recordId);
+  }
+
+  async deleteImage(imageId: number) {
+    const image =
+      await this.prismaService.equipmentMonitoringRecordImages.findUnique({
+        where: { id: imageId },
+        include: {
+          record: {
+            select: { deleted_at: true },
+          },
+        },
+      });
+
+    if (!image || image.record.deleted_at) {
+      throw new NotFoundException(
+        'Equipment monitoring record image not found',
+      );
+    }
+
+    await this.prismaService.equipmentMonitoringRecordImages.delete({
+      where: { id: imageId },
+    });
+    await removeStoredEquipmentMonitoringRecordImage(image.image_path);
+
+    return image;
   }
 
   private async buildValueCreateData(

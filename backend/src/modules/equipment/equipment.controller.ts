@@ -1,16 +1,25 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Patch,
   Post,
   Query,
   Request,
+  Res,
+  StreamableFile,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { createReadStream } from 'fs';
+import type { Response } from 'express';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { CreateEquipmentMonitoringRecordDto } from './dto/create-equipment-monitoring-record.dto';
 import { CreateEquipmentParameterDto } from './dto/create-equipment-parameter.dto';
@@ -21,6 +30,26 @@ import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentMonitoringRecordsService } from './equipment-monitoring-records.service';
 import { EquipmentParametersService } from './equipment-parameters.service';
 import { EquipmentService } from './equipment.service';
+import {
+  equipmentMonitoringRecordImageUploadOptions,
+  getEquipmentMonitoringRecordImagePaths,
+  MAX_EQUIPMENT_MONITORING_RECORD_IMAGE_COUNT,
+  removeUploadedEquipmentMonitoringRecordImages,
+} from './equipment-monitoring-record-upload.config';
+
+type EquipmentMonitoringRecordImageUploadFields = {
+  images?: Express.Multer.File[];
+  image?: Express.Multer.File[];
+};
+
+const equipmentMonitoringRecordImageUploadFields = [
+  { name: 'images', maxCount: MAX_EQUIPMENT_MONITORING_RECORD_IMAGE_COUNT },
+  { name: 'image', maxCount: MAX_EQUIPMENT_MONITORING_RECORD_IMAGE_COUNT },
+];
+
+const getUploadedEquipmentMonitoringRecordImages = (
+  uploadedFiles?: EquipmentMonitoringRecordImageUploadFields,
+) => [...(uploadedFiles?.images ?? []), ...(uploadedFiles?.image ?? [])];
 
 @UseGuards(jwtAuthGuard)
 @Controller('equipment')
@@ -47,6 +76,29 @@ export class EquipmentController {
     return this.equipmentMonitoringRecordsService.findAll(query);
   }
 
+  @Get('monitoring-records/images/:filename')
+  async getMonitoringRecordImage(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.equipmentMonitoringRecordsService.findImageFile(filename);
+
+    if (!imageFile) {
+      throw new NotFoundException(
+        'Equipment monitoring record image not found',
+      );
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
   @Get('monitoring-records/:recordId')
   async findMonitoringRecordById(
     @Param('recordId', ParseIntPipe) recordId: number,
@@ -70,11 +122,53 @@ export class EquipmentController {
     return this.equipmentMonitoringRecordsService.update(recordId, updateDto);
   }
 
+  @Delete('monitoring-records/images/:imageId')
+  async deleteMonitoringRecordImage(
+    @Param('imageId', ParseIntPipe) imageId: number,
+  ) {
+    return this.equipmentMonitoringRecordsService.deleteImage(imageId);
+  }
+
   @Delete('monitoring-records/:recordId')
   async deleteMonitoringRecord(
     @Param('recordId', ParseIntPipe) recordId: number,
   ) {
     return this.equipmentMonitoringRecordsService.delete(recordId);
+  }
+
+  @Post('monitoring-records/:recordId/images')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      equipmentMonitoringRecordImageUploadFields,
+      equipmentMonitoringRecordImageUploadOptions,
+    ),
+  )
+  async addMonitoringRecordImages(
+    @Param('recordId', ParseIntPipe) recordId: number,
+    @UploadedFiles()
+    uploadedFiles: EquipmentMonitoringRecordImageUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    const uploadedImages =
+      getUploadedEquipmentMonitoringRecordImages(uploadedFiles);
+
+    if (uploadedImages.length > MAX_EQUIPMENT_MONITORING_RECORD_IMAGE_COUNT) {
+      await removeUploadedEquipmentMonitoringRecordImages(uploadedImages);
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_EQUIPMENT_MONITORING_RECORD_IMAGE_COUNT} files`,
+      );
+    }
+
+    try {
+      return await this.equipmentMonitoringRecordsService.addImages(
+        recordId,
+        getEquipmentMonitoringRecordImagePaths(uploadedImages),
+        req.user,
+      );
+    } catch (error) {
+      await removeUploadedEquipmentMonitoringRecordImages(uploadedImages);
+      throw error;
+    }
   }
 
   @Get('parameters/:parameterId')

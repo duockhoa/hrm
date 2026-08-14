@@ -1304,7 +1304,7 @@ Query không bắt buộc:
 GET /equipment/monitoring-records?production_order_id=1001&equipment_id=1
 ```
 
-Response gồm lệnh sản xuất, thiết bị, người tạo và danh sách giá trị theo từng thông số.
+Response gồm lệnh sản xuất, thiết bị, người tạo, danh sách giá trị theo từng thông số và `images`. Chi tiết cấu trúc `images` ở phần [Ảnh của monitoring record](#ảnh-của-monitoring-record).
 
 ### Lấy một lần theo dõi thông số thiết bị
 
@@ -1413,6 +1413,144 @@ API xóa mềm bằng `deleted_at`.
 Lỗi thường gặp:
 
 - `404 Equipment monitoring record not found`
+
+### Ảnh của monitoring record
+
+Ảnh là tệp đính kèm cấp **lần theo dõi** (`equipment_monitoring_records`), không phải giá trị trong `values`. Vì vậy một ảnh có thể làm bằng chứng chung cho nhiều thông số, ví dụ ảnh đồng hồ hiển thị nhiệt độ và áp suất trong cùng một lần kiểm tra.
+
+Danh sách `images` luôn được trả về trong response của cả `GET /equipment/monitoring-records` và `GET /equipment/monitoring-records/:recordId`, theo thứ tự thời gian thêm ảnh tăng dần.
+
+Mỗi phần tử có dạng:
+
+```json
+{
+  "id": 101,
+  "record_id": 501,
+  "image_path": "/equipment/monitoring-records/images/nhiet-do-a1b2c3.jpg",
+  "created_by_id": 7,
+  "created_at": "2026-08-14T08:30:00.000Z",
+  "updated_at": "2026-08-14T08:30:00.000Z",
+  "createdBy": {
+    "id": 7,
+    "username": "nguyenvana",
+    "name": "Nguyễn Văn A",
+    "email": "nguyenvana@example.com",
+    "department": "QA",
+    "position": "Nhân viên"
+  }
+}
+```
+
+- `image_path` là đường dẫn tương đối do backend sinh ra. Frontend ghép với base URL API và gửi Bearer token khi tải ảnh.
+- Backend không lưu binary/base64 của ảnh trong database; database chỉ lưu `image_path` và metadata ảnh.
+- Khi monitoring record bị xóa mềm, các ảnh của record đó không còn được truy cập bằng API lấy file.
+
+### Thêm ảnh cho lần theo dõi thông số thiết bị
+
+```http
+POST /equipment/monitoring-records/:recordId/images
+Content-Type: multipart/form-data
+Authorization: Bearer <access_token>
+```
+
+Form-data:
+
+| Field | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `images` | file | Có* | Một hoặc nhiều ảnh. Đây là field nên dùng. |
+| `image` | file | Có* | Field tương thích ngược; dùng thay cho `images`. |
+
+`*` Cần gửi ít nhất một file ở một trong hai field. Tổng số ảnh tối đa là 10 cho mỗi request. Không cần, và không nên, gửi cả hai field.
+
+Định dạng được chấp nhận: JPG/JPEG, PNG, WEBP, GIF. Mỗi file tối đa 20 MB. Tên file khi lưu được backend chuẩn hóa và thêm UUID để tránh trùng tên.
+
+Ví dụ cURL upload hai ảnh:
+
+```bash
+curl -X POST "$API_BASE/equipment/monitoring-records/501/images" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -F "images=@./nhiet-do.jpg" \
+  -F "images=@./ap-suat.png"
+```
+
+Response là monitoring record sau khi thêm ảnh, bao gồm toàn bộ `images` hiện có:
+
+```json
+{
+  "id": 501,
+  "production_order_id": 1001,
+  "equipment_id": 1,
+  "recorded_at": "2026-08-14T08:00:00.000Z",
+  "images": [
+    {
+      "id": 101,
+      "record_id": 501,
+      "image_path": "/equipment/monitoring-records/images/nhiet-do-a1b2c3.jpg",
+      "created_by_id": 7,
+      "created_at": "2026-08-14T08:30:00.000Z",
+      "updated_at": "2026-08-14T08:30:00.000Z",
+      "createdBy": {
+        "id": 7,
+        "username": "nguyenvana",
+        "name": "Nguyễn Văn A"
+      }
+    }
+  ]
+}
+```
+
+Lỗi thường gặp:
+
+- `400 images are required`: request không có file hợp lệ.
+- `400 images cannot exceed 10 files`
+- `400 images must be JPG, PNG, WEBP, or GIF images`
+- `401 Authenticated user not found`
+- `404 Equipment monitoring record not found`
+
+### Lấy file ảnh monitoring record
+
+```http
+GET /equipment/monitoring-records/images/:filename
+Authorization: Bearer <access_token>
+```
+
+`:filename` là phần cuối của `image_path`; frontend nên dùng nguyên `image_path` trong response, không tự ghép tên file.
+
+Ví dụ, với `image_path` là `/equipment/monitoring-records/images/nhiet-do-a1b2c3.jpg`:
+
+```bash
+curl "$API_BASE/equipment/monitoring-records/images/nhiet-do-a1b2c3.jpg" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  --output nhiet-do.jpg
+```
+
+Response trả binary ảnh với `Content-Type` tương ứng và `Cache-Control: private, max-age=300`.
+
+Lỗi thường gặp:
+
+- `404 Equipment monitoring record image not found`: ảnh không tồn tại, tên file không hợp lệ hoặc record đã bị xóa mềm.
+
+### Xóa một ảnh monitoring record
+
+```http
+DELETE /equipment/monitoring-records/images/:imageId
+Authorization: Bearer <access_token>
+```
+
+Thao tác này xóa vĩnh viễn bản ghi ảnh và file ảnh trên storage; không xóa monitoring record hoặc các ảnh khác.
+
+Ví dụ:
+
+```bash
+curl -X DELETE "$API_BASE/equipment/monitoring-records/images/101" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+Response trả metadata ảnh vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Equipment monitoring record image not found`
 
 ## Features
 

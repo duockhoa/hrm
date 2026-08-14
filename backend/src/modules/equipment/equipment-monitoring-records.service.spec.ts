@@ -25,6 +25,9 @@ describe('EquipmentMonitoringRecordsService', () => {
       deleteMany: jest.Mock;
       createMany: jest.Mock;
     };
+    equipmentMonitoringRecordImages: {
+      createMany: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
 
@@ -52,6 +55,9 @@ describe('EquipmentMonitoringRecordsService', () => {
             },
             equipmentMonitoringValues: {
               deleteMany: jest.fn(),
+              createMany: jest.fn(),
+            },
+            equipmentMonitoringRecordImages: {
               createMany: jest.fn(),
             },
             $transaction: jest.fn(),
@@ -114,7 +120,9 @@ describe('EquipmentMonitoringRecordsService', () => {
       ),
     ).resolves.toBe(record);
 
-    expect(prismaService.equipmentMonitoringRecords.create).toHaveBeenCalledWith(
+    expect(
+      prismaService.equipmentMonitoringRecords.create,
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           production_order_id: 1001,
@@ -168,5 +176,40 @@ describe('EquipmentMonitoringRecordsService', () => {
         { id: 7 },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('adds image paths to an active monitoring record', async () => {
+    const record = { id: 1, deleted_at: null };
+    prismaService.equipmentMonitoringRecords.findFirst.mockResolvedValue(
+      record,
+    );
+
+    await expect(
+      service.addImages(
+        1,
+        [
+          '/equipment/monitoring-records/images/temperature.jpg',
+          '/equipment/monitoring-records/images/pressure.jpg',
+        ],
+        { id: 7 },
+      ),
+    ).resolves.toBe(record);
+
+    expect(
+      prismaService.equipmentMonitoringRecordImages.createMany,
+    ).toHaveBeenCalledWith({
+      data: [
+        {
+          record_id: 1,
+          image_path: '/equipment/monitoring-records/images/temperature.jpg',
+          created_by_id: 7,
+        },
+        {
+          record_id: 1,
+          image_path: '/equipment/monitoring-records/images/pressure.jpg',
+          created_by_id: 7,
+        },
+      ],
+    });
   });
 });
