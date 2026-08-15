@@ -126,9 +126,10 @@ import {
   removeUploadedDateCheckFiles,
 } from './production-order-date-check-upload.config';
 import {
-  getSensoryCheckImagePath,
+  getSensoryCheckImagePaths,
+  MAX_SENSORY_CHECK_IMAGE_COUNT,
   productionOrderSensoryCheckImageUploadOptions,
-  removeUploadedSensoryCheckImage,
+  removeUploadedSensoryCheckImages,
 } from './production-order-sensory-check-upload.config';
 import {
   getMaterialProcessSummaryImagePath,
@@ -158,6 +159,7 @@ type DateCheckUploadFields = {
 };
 
 type SensoryCheckUploadFields = {
+  images?: Express.Multer.File[];
   sensory_image?: Express.Multer.File[];
   image?: Express.Multer.File[];
 };
@@ -203,7 +205,17 @@ const getUploadedDateCheckFiles = (uploadedFiles?: DateCheckUploadFields) => [
 
 const getUploadedSensoryCheckImages = (
   uploadedFiles?: SensoryCheckUploadFields,
-) => [...(uploadedFiles?.sensory_image ?? []), ...(uploadedFiles?.image ?? [])];
+) => [
+  ...(uploadedFiles?.images ?? []),
+  ...(uploadedFiles?.sensory_image ?? []),
+  ...(uploadedFiles?.image ?? []),
+];
+
+const sensoryCheckImageUploadFields = [
+  { name: 'images', maxCount: MAX_SENSORY_CHECK_IMAGE_COUNT },
+  { name: 'sensory_image', maxCount: MAX_SENSORY_CHECK_IMAGE_COUNT },
+  { name: 'image', maxCount: MAX_SENSORY_CHECK_IMAGE_COUNT },
+];
 
 const getUploadedMaterialProcessSummaryImages = (
   uploadedFiles?: MaterialProcessSummaryUploadFields,
@@ -1180,39 +1192,51 @@ export class ProductionOrdersController {
   }
 
   @Patch('sensory-checks/:checkId')
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'sensory_image', maxCount: 1 },
-        { name: 'image', maxCount: 1 },
-      ],
-      productionOrderSensoryCheckImageUploadOptions,
-    ),
-  )
   async updateSensoryCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
     @Body() updateDto: UpdateProductionOrderSensoryCheckDto,
+  ) {
+    return this.productionOrderSensoryChecksService.update(checkId, updateDto);
+  }
+
+  @Post('sensory-checks/:checkId/images')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      sensoryCheckImageUploadFields,
+      productionOrderSensoryCheckImageUploadOptions,
+    ),
+  )
+  async addSensoryCheckImages(
+    @Param('checkId', ParseIntPipe) checkId: number,
     @UploadedFiles() uploadedFiles: SensoryCheckUploadFields | undefined,
+    @Request() req: any,
   ) {
     const uploadedImages = getUploadedSensoryCheckImages(uploadedFiles);
 
-    if (uploadedImages.length > 1) {
-      await Promise.all(uploadedImages.map(removeUploadedSensoryCheckImage));
-      throw new BadRequestException('Only one sensory check image is allowed');
+    if (uploadedImages.length > MAX_SENSORY_CHECK_IMAGE_COUNT) {
+      await removeUploadedSensoryCheckImages(uploadedImages);
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_SENSORY_CHECK_IMAGE_COUNT} files per sensory check`,
+      );
     }
 
     try {
-      return await this.productionOrderSensoryChecksService.update(
+      return await this.productionOrderSensoryChecksService.addImages(
         checkId,
-        updateDto,
-        {
-          imagePath: getSensoryCheckImagePath(uploadedImages[0]),
-        },
+        getSensoryCheckImagePaths(uploadedImages),
+        req.user,
       );
     } catch (error) {
-      await Promise.all(uploadedImages.map(removeUploadedSensoryCheckImage));
+      await removeUploadedSensoryCheckImages(uploadedImages);
       throw error;
     }
+  }
+
+  @Delete('sensory-checks/images/:imageId')
+  async deleteSensoryCheckImage(
+    @Param('imageId', ParseIntPipe) imageId: number,
+  ) {
+    return this.productionOrderSensoryChecksService.deleteImage(imageId);
   }
 
   @Delete('sensory-checks/:checkId')
@@ -2090,10 +2114,7 @@ export class ProductionOrdersController {
   @Post(':id/sensory-checks')
   @UseInterceptors(
     FileFieldsInterceptor(
-      [
-        { name: 'sensory_image', maxCount: 1 },
-        { name: 'image', maxCount: 1 },
-      ],
+      sensoryCheckImageUploadFields,
       productionOrderSensoryCheckImageUploadOptions,
     ),
   )
@@ -2105,9 +2126,11 @@ export class ProductionOrdersController {
   ) {
     const uploadedImages = getUploadedSensoryCheckImages(uploadedFiles);
 
-    if (uploadedImages.length > 1) {
-      await Promise.all(uploadedImages.map(removeUploadedSensoryCheckImage));
-      throw new BadRequestException('Only one sensory check image is allowed');
+    if (uploadedImages.length > MAX_SENSORY_CHECK_IMAGE_COUNT) {
+      await removeUploadedSensoryCheckImages(uploadedImages);
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_SENSORY_CHECK_IMAGE_COUNT} files per sensory check`,
+      );
     }
 
     try {
@@ -2116,11 +2139,11 @@ export class ProductionOrdersController {
         createDto,
         req.user,
         {
-          imagePath: getSensoryCheckImagePath(uploadedImages[0]),
+          imagePaths: getSensoryCheckImagePaths(uploadedImages),
         },
       );
     } catch (error) {
-      await Promise.all(uploadedImages.map(removeUploadedSensoryCheckImage));
+      await removeUploadedSensoryCheckImages(uploadedImages);
       throw error;
     }
   }

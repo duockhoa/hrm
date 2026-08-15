@@ -10,7 +10,8 @@ import { CreateProductionOrderSensoryCheckDto } from './dto/create-production-or
 import { UpdateProductionOrderSensoryCheckDto } from './dto/update-production-order-sensory-check.dto';
 import {
   getSensoryCheckImageLookupPaths,
-  removeSensoryCheckImageByPath,
+  MAX_SENSORY_CHECK_IMAGE_COUNT,
+  removeSensoryCheckImagesByPath,
   resolveSensoryCheckImageFile,
 } from './production-order-sensory-check-upload.config';
 
@@ -29,11 +30,44 @@ const sensoryCheckCreatorSelect = {
   position: true,
 };
 
-const sensoryCheckInclude = {
+const sensoryCheckImageCreatorSelect = {
+  id: true,
+  username: true,
+  name: true,
+  email: true,
+  department: true,
+  position: true,
+};
+
+const sensoryCheckSelect = {
+  id: true,
+  production_order_id: true,
+  color: true,
+  smell: true,
+  taste: true,
+  note: true,
+  created_by_id: true,
+  created_at: true,
+  updated_at: true,
   createdBy: {
     select: sensoryCheckCreatorSelect,
   },
-} satisfies Prisma.ProductionOrderSensoryChecksInclude;
+  images: {
+    include: {
+      createdBy: {
+        select: sensoryCheckImageCreatorSelect,
+      },
+    },
+    orderBy: [
+      {
+        created_at: 'asc' as const,
+      },
+      {
+        id: 'asc' as const,
+      },
+    ],
+  },
+} satisfies Prisma.ProductionOrderSensoryChecksSelect;
 
 const sensoryCheckValueSelect = {
   id: true,
@@ -41,7 +75,11 @@ const sensoryCheckValueSelect = {
   smell: true,
   taste: true,
   note: true,
-  image_path: true,
+  images: {
+    select: {
+      image_path: true,
+    },
+  },
 } satisfies Prisma.ProductionOrderSensoryChecksSelect;
 
 type SensoryCheckValues = Prisma.ProductionOrderSensoryChecksGetPayload<{
@@ -58,7 +96,7 @@ export class ProductionOrderSensoryChecksService {
         where: {
           id: checkId,
         },
-        include: sensoryCheckInclude,
+        select: sensoryCheckSelect,
       });
 
     if (!sensoryCheck) {
@@ -75,7 +113,7 @@ export class ProductionOrderSensoryChecksService {
       where: {
         production_order_id: productionOrderId,
       },
-      include: sensoryCheckInclude,
+      select: sensoryCheckSelect,
       orderBy: [
         {
           created_at: 'desc',
@@ -95,7 +133,7 @@ export class ProductionOrderSensoryChecksService {
     }
 
     const sensoryCheck =
-      await this.prismaService.productionOrderSensoryChecks.findFirst({
+      await this.prismaService.productionOrderSensoryCheckImages.findFirst({
         where: {
           image_path: {
             in: imagePaths,
@@ -118,20 +156,32 @@ export class ProductionOrderSensoryChecksService {
     dto: CreateProductionOrderSensoryCheckDto,
     user?: AuthenticatedUser,
     files: {
-      imagePath?: string;
+      imagePaths?: string[];
     } = {},
   ) {
     await this.ensureProductionOrderExists(productionOrderId);
+
+    const imagePaths = files.imagePaths ?? [];
+
+    if (imagePaths.length > MAX_SENSORY_CHECK_IMAGE_COUNT) {
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_SENSORY_CHECK_IMAGE_COUNT} files per sensory check`,
+      );
+    }
+
+    const userId = this.normalizeUserId(user);
 
     const data = {
       color: this.normalizeOptionalText(dto?.color, 'color'),
       smell: this.normalizeOptionalText(dto?.smell, 'smell'),
       taste: this.normalizeOptionalText(dto?.taste, 'taste'),
       note: this.normalizeOptionalLongText(dto?.note, 'note'),
-      image_path: files.imagePath ?? null,
     };
 
-    if (Object.values(data).every((value) => value === null)) {
+    if (
+      Object.values(data).every((value) => value === null) &&
+      imagePaths.length === 0
+    ) {
       throw new BadRequestException(
         'At least one sensory check value is required',
       );
@@ -141,21 +191,24 @@ export class ProductionOrderSensoryChecksService {
       data: {
         production_order_id: productionOrderId,
         ...data,
-        created_by_id: this.normalizeUserId(user),
+        created_by_id: userId,
+        images:
+          imagePaths.length > 0
+            ? {
+                create: imagePaths.map((imagePath) => ({
+                  image_path: imagePath,
+                  created_by_id: userId,
+                })),
+              }
+            : undefined,
       },
-      include: sensoryCheckInclude,
+      select: sensoryCheckSelect,
     });
   }
 
-  async update(
-    checkId: number,
-    dto: UpdateProductionOrderSensoryCheckDto,
-    files: {
-      imagePath?: string;
-    } = {},
-  ) {
+  async update(checkId: number, dto: UpdateProductionOrderSensoryCheckDto) {
     const existingCheck = await this.findValuesByIdOrThrow(checkId);
-    const data = this.normalizeUpdateData(dto, files);
+    const data = this.normalizeUpdateData(dto);
 
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('At least one field is required');
@@ -163,22 +216,11 @@ export class ProductionOrderSensoryChecksService {
 
     this.ensureUpdatedCheckHasValue(existingCheck, data);
 
-    const updatedCheck =
-      await this.prismaService.productionOrderSensoryChecks.update({
-        where: { id: checkId },
-        data,
-        include: sensoryCheckInclude,
-      });
-
-    if (
-      files.imagePath &&
-      existingCheck.image_path &&
-      existingCheck.image_path !== files.imagePath
-    ) {
-      await removeSensoryCheckImageByPath(existingCheck.image_path);
-    }
-
-    return updatedCheck;
+    return this.prismaService.productionOrderSensoryChecks.update({
+      where: { id: checkId },
+      data,
+      select: sensoryCheckSelect,
+    });
   }
 
   async delete(checkId: number) {
@@ -187,20 +229,91 @@ export class ProductionOrderSensoryChecksService {
     const deletedCheck =
       await this.prismaService.productionOrderSensoryChecks.delete({
         where: { id: checkId },
-        include: sensoryCheckInclude,
+        select: sensoryCheckSelect,
       });
 
-    await removeSensoryCheckImageByPath(existingCheck.image_path);
+    await removeSensoryCheckImagesByPath(
+      existingCheck.images.map((image) => image.image_path),
+    );
 
     return deletedCheck;
   }
 
-  private normalizeUpdateData(
-    dto: UpdateProductionOrderSensoryCheckDto,
-    files: {
-      imagePath?: string;
-    },
+  async addImages(
+    checkId: number,
+    imagePaths: string[],
+    user?: AuthenticatedUser,
   ) {
+    if (imagePaths.length === 0) {
+      throw new BadRequestException('images are required');
+    }
+
+    const existingCheck = await this.findValuesByIdOrThrow(checkId);
+
+    if (
+      existingCheck.images.length + imagePaths.length >
+      MAX_SENSORY_CHECK_IMAGE_COUNT
+    ) {
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_SENSORY_CHECK_IMAGE_COUNT} files per sensory check`,
+      );
+    }
+
+    const userId = this.normalizeUserId(user);
+
+    await this.prismaService.productionOrderSensoryCheckImages.createMany({
+      data: imagePaths.map((imagePath) => ({
+        sensory_check_id: checkId,
+        image_path: imagePath,
+        created_by_id: userId,
+      })),
+    });
+
+    return this.findById(checkId);
+  }
+
+  async deleteImage(imageId: number) {
+    const image =
+      await this.prismaService.productionOrderSensoryCheckImages.findUnique({
+        where: {
+          id: imageId,
+        },
+        include: {
+          sensoryCheck: {
+            select: sensoryCheckValueSelect,
+          },
+        },
+      });
+
+    if (!image) {
+      throw new NotFoundException('Sensory check image not found');
+    }
+
+    const hasTextValue = [
+      image.sensoryCheck.color,
+      image.sensoryCheck.smell,
+      image.sensoryCheck.taste,
+      image.sensoryCheck.note,
+    ].some((value) => value !== null);
+
+    if (!hasTextValue && image.sensoryCheck.images.length === 1) {
+      throw new BadRequestException(
+        'At least one sensory check value is required',
+      );
+    }
+
+    await this.prismaService.productionOrderSensoryCheckImages.delete({
+      where: {
+        id: imageId,
+      },
+    });
+
+    await removeSensoryCheckImagesByPath([image.image_path]);
+
+    return image;
+  }
+
+  private normalizeUpdateData(dto: UpdateProductionOrderSensoryCheckDto) {
     const updateDto = dto ?? {};
     const data: Prisma.ProductionOrderSensoryChecksUpdateInput = {};
 
@@ -220,10 +333,6 @@ export class ProductionOrderSensoryChecksService {
       data.note = this.normalizeOptionalLongText(updateDto.note, 'note');
     }
 
-    if (files.imagePath) {
-      data.image_path = files.imagePath;
-    }
-
     return data;
   }
 
@@ -231,16 +340,17 @@ export class ProductionOrderSensoryChecksService {
     existingCheck: SensoryCheckValues,
     data: Prisma.ProductionOrderSensoryChecksUpdateInput,
   ) {
-    const finalValues = {
+    const finalTextValues = {
       color: 'color' in data ? data.color : existingCheck.color,
       smell: 'smell' in data ? data.smell : existingCheck.smell,
       taste: 'taste' in data ? data.taste : existingCheck.taste,
       note: 'note' in data ? data.note : existingCheck.note,
-      image_path:
-        'image_path' in data ? data.image_path : existingCheck.image_path,
     };
 
-    if (Object.values(finalValues).every((value) => value === null)) {
+    if (
+      Object.values(finalTextValues).every((value) => value === null) &&
+      existingCheck.images.length === 0
+    ) {
       throw new BadRequestException(
         'At least one sensory check value is required',
       );

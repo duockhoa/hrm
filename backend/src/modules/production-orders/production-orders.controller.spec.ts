@@ -24,10 +24,12 @@ import { ProductionOrderSensoryChecksService } from './production-order-sensory-
 import { ProductionOrderTenUnitSensoryChecksService } from './production-order-ten-unit-sensory-checks.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 import { ProductionOrderSteamSterilizationChecksService } from './production-order-steam-sterilization-checks.service';
+import { ProductionOrderFiltrationChecksService } from './production-order-filtration-checks.service';
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
 import { ProductionOrderSemiFinishedProductSummariesService } from './production-order-semi-finished-product-summaries.service';
 import { ProductionOrderMaterialSummariesService } from './production-order-material-summaries.service';
+import { ProductionOrderMaterialProcessSummariesService } from './production-order-material-process-summaries.service';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
 import { ProductionOrderHardnessChecksService } from './production-order-hardness-checks.service';
 import { ProductionOrderTabletThicknessChecksService } from './production-order-tablet-thickness-checks.service';
@@ -176,6 +178,8 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
+    addImages: jest.Mock;
+    deleteImage: jest.Mock;
     findImageFile: jest.Mock;
   };
   let productionOrderTenUnitSensoryChecksService: {
@@ -196,6 +200,13 @@ describe('ProductionOrdersController', () => {
     deleteImage: jest.Mock;
     findImageFile: jest.Mock;
     findRequestFile: jest.Mock;
+  };
+  let productionOrderFiltrationChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderSteamSterilizationChecksService: {
     findById: jest.Mock;
@@ -232,6 +243,14 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
+  };
+  let productionOrderMaterialProcessSummariesService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+    findImageFile: jest.Mock;
   };
   let productionOrderLeakTightnessChecksService: {
     findById: jest.Mock;
@@ -409,6 +428,8 @@ describe('ProductionOrdersController', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      addImages: jest.fn(),
+      deleteImage: jest.fn(),
       findImageFile: jest.fn(),
     };
     productionOrderTenUnitSensoryChecksService = {
@@ -429,6 +450,13 @@ describe('ProductionOrdersController', () => {
       deleteImage: jest.fn(),
       findImageFile: jest.fn(),
       findRequestFile: jest.fn(),
+    };
+    productionOrderFiltrationChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderSteamSterilizationChecksService = {
       findById: jest.fn(),
@@ -465,6 +493,14 @@ describe('ProductionOrdersController', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+    };
+    productionOrderMaterialProcessSummariesService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findImageFile: jest.fn(),
     };
     productionOrderLeakTightnessChecksService = {
       findById: jest.fn(),
@@ -598,6 +634,10 @@ describe('ProductionOrdersController', () => {
           useValue: productionOrderSteamSterilizationChecksService,
         },
         {
+          provide: ProductionOrderFiltrationChecksService,
+          useValue: productionOrderFiltrationChecksService,
+        },
+        {
           provide: ProductionOrderSemiFinishedGrossWeightChecksService,
           useValue: productionOrderSemiFinishedGrossWeightChecksService,
         },
@@ -612,6 +652,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderMaterialSummariesService,
           useValue: productionOrderMaterialSummariesService,
+        },
+        {
+          provide: ProductionOrderMaterialProcessSummariesService,
+          useValue: productionOrderMaterialProcessSummariesService,
         },
         {
           provide: ProductionOrderLeakTightnessChecksService,
@@ -2199,7 +2243,7 @@ describe('ProductionOrdersController', () => {
       createDto,
       user,
       {
-        imagePath: undefined,
+        imagePaths: [],
       },
     );
   });
@@ -2211,16 +2255,38 @@ describe('ProductionOrdersController', () => {
     const result = { id: 1, color: 'vang dam' };
     productionOrderSensoryChecksService.update.mockResolvedValue(result);
 
-    await expect(
-      controller.updateSensoryCheck(1, updateDto, undefined),
-    ).resolves.toBe(result);
+    await expect(controller.updateSensoryCheck(1, updateDto)).resolves.toBe(
+      result,
+    );
     expect(productionOrderSensoryChecksService.update).toHaveBeenCalledWith(
       1,
       updateDto,
-      {
-        imagePath: undefined,
-      },
     );
+  });
+
+  it('adds sensory check images using the authenticated user', async () => {
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, images: [] };
+    productionOrderSensoryChecksService.addImages.mockResolvedValue(result);
+
+    await expect(
+      controller.addSensoryCheckImages(1, undefined, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderSensoryChecksService.addImages).toHaveBeenCalledWith(
+      1,
+      [],
+      user,
+    );
+  });
+
+  it('deletes a sensory check image', async () => {
+    const result = { id: 1 };
+    productionOrderSensoryChecksService.deleteImage.mockResolvedValue(result);
+
+    await expect(controller.deleteSensoryCheckImage(1)).resolves.toBe(result);
+    expect(
+      productionOrderSensoryChecksService.deleteImage,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('deletes a sensory check', async () => {

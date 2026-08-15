@@ -21,6 +21,12 @@ describe('ProductionOrderSensoryChecksService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    productionOrderSensoryCheckImages: {
+      findFirst: jest.Mock;
+      findUnique: jest.Mock;
+      createMany: jest.Mock;
+      delete: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
@@ -34,6 +40,12 @@ describe('ProductionOrderSensoryChecksService', () => {
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
+      },
+      productionOrderSensoryCheckImages: {
+        findFirst: jest.fn(),
+        findUnique: jest.fn(),
+        createMany: jest.fn(),
         delete: jest.fn(),
       },
     };
@@ -90,7 +102,7 @@ describe('ProductionOrderSensoryChecksService', () => {
     await expect(service.findById(1)).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('creates a sensory check with normalized text and image path', async () => {
+  it('creates a sensory check with normalized text and image paths', async () => {
     const createdCheck = { id: 1, production_order_id: 2031 };
     prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
     prismaService.productionOrderSensoryChecks.create.mockResolvedValue(
@@ -108,7 +120,10 @@ describe('ProductionOrderSensoryChecksService', () => {
         },
         { id: '7' },
         {
-          imagePath: '/production-orders/sensory-checks/images/test.jpg',
+          imagePaths: [
+            '/production-orders/sensory-checks/images/test-1.jpg',
+            '/production-orders/sensory-checks/images/test-2.jpg',
+          ],
         },
       ),
     ).resolves.toBe(createdCheck);
@@ -123,8 +138,21 @@ describe('ProductionOrderSensoryChecksService', () => {
           smell: 'thom',
           taste: 'ngot',
           note: 'dat yeu cau',
-          image_path: '/production-orders/sensory-checks/images/test.jpg',
           created_by_id: 7,
+          images: {
+            create: [
+              {
+                image_path:
+                  '/production-orders/sensory-checks/images/test-1.jpg',
+                created_by_id: 7,
+              },
+              {
+                image_path:
+                  '/production-orders/sensory-checks/images/test-2.jpg',
+                created_by_id: 7,
+              },
+            ],
+          },
         },
       }),
     );
@@ -144,7 +172,7 @@ describe('ProductionOrderSensoryChecksService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('updates a sensory check with normalized text and image path', async () => {
+  it('updates a sensory check with normalized text', async () => {
     const updatedCheck = { id: 1, color: 'vang dam' };
     prismaService.productionOrderSensoryChecks.findUnique.mockResolvedValue({
       id: 1,
@@ -152,23 +180,17 @@ describe('ProductionOrderSensoryChecksService', () => {
       smell: null,
       taste: null,
       note: null,
-      image_path: '/production-orders/sensory-checks/images/old.jpg',
+      images: [],
     });
     prismaService.productionOrderSensoryChecks.update.mockResolvedValue(
       updatedCheck,
     );
 
     await expect(
-      service.update(
-        1,
-        {
-          color: ' vang dam ',
-          note: ' dat ',
-        },
-        {
-          imagePath: '/production-orders/sensory-checks/images/new.jpg',
-        },
-      ),
+      service.update(1, {
+        color: ' vang dam ',
+        note: ' dat ',
+      }),
     ).resolves.toBe(updatedCheck);
     expect(
       prismaService.productionOrderSensoryChecks.update,
@@ -178,7 +200,6 @@ describe('ProductionOrderSensoryChecksService', () => {
         data: {
           color: 'vang dam',
           note: 'dat',
-          image_path: '/production-orders/sensory-checks/images/new.jpg',
         },
       }),
     );
@@ -191,7 +212,7 @@ describe('ProductionOrderSensoryChecksService', () => {
       smell: null,
       taste: null,
       note: null,
-      image_path: null,
+      images: [],
     });
 
     await expect(service.update(1, {})).rejects.toThrow(
@@ -209,7 +230,7 @@ describe('ProductionOrderSensoryChecksService', () => {
       smell: null,
       taste: null,
       note: null,
-      image_path: null,
+      images: [],
     });
 
     await expect(service.update(1, { color: '' })).rejects.toThrow(
@@ -228,7 +249,9 @@ describe('ProductionOrderSensoryChecksService', () => {
       smell: null,
       taste: null,
       note: null,
-      image_path: '/production-orders/sensory-checks/images/old.jpg',
+      images: [
+        { image_path: '/production-orders/sensory-checks/images/old.jpg' },
+      ],
     });
     prismaService.productionOrderSensoryChecks.delete.mockResolvedValue(
       deletedCheck,
@@ -277,5 +300,103 @@ describe('ProductionOrderSensoryChecksService', () => {
         color: 'vang nhat',
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('adds images to an existing sensory check', async () => {
+    prismaService.productionOrderSensoryChecks.findUnique.mockResolvedValue({
+      id: 1,
+      color: 'vang nhat',
+      smell: null,
+      taste: null,
+      note: null,
+      images: [],
+    });
+    prismaService.productionOrderSensoryCheckImages.createMany.mockResolvedValue(
+      { count: 2 },
+    );
+    prismaService.productionOrderSensoryChecks.findUnique
+      .mockResolvedValueOnce({
+        id: 1,
+        color: 'vang nhat',
+        smell: null,
+        taste: null,
+        note: null,
+        images: [],
+      })
+      .mockResolvedValueOnce({ id: 1, images: [] });
+
+    await service.addImages(
+      1,
+      [
+        '/production-orders/sensory-checks/images/test-1.jpg',
+        '/production-orders/sensory-checks/images/test-2.jpg',
+      ],
+      { id: 7 },
+    );
+
+    expect(
+      prismaService.productionOrderSensoryCheckImages.createMany,
+    ).toHaveBeenCalledWith({
+      data: [
+        {
+          sensory_check_id: 1,
+          image_path: '/production-orders/sensory-checks/images/test-1.jpg',
+          created_by_id: 7,
+        },
+        {
+          sensory_check_id: 1,
+          image_path: '/production-orders/sensory-checks/images/test-2.jpg',
+          created_by_id: 7,
+        },
+      ],
+    });
+  });
+
+  it('rejects adding images above the limit for a sensory check', async () => {
+    prismaService.productionOrderSensoryChecks.findUnique.mockResolvedValue({
+      id: 1,
+      color: 'vang nhat',
+      smell: null,
+      taste: null,
+      note: null,
+      images: Array.from({ length: 10 }, () => ({ image_path: 'old.jpg' })),
+    });
+
+    await expect(
+      service.addImages(
+        1,
+        ['/production-orders/sensory-checks/images/new.jpg'],
+        {
+          id: 7,
+        },
+      ),
+    ).rejects.toThrow('images cannot exceed 10 files per sensory check');
+  });
+
+  it('does not remove the final image from an otherwise empty sensory check', async () => {
+    prismaService.productionOrderSensoryCheckImages.findUnique.mockResolvedValue(
+      {
+        id: 1,
+        image_path: '/production-orders/sensory-checks/images/only.jpg',
+        sensoryCheck: {
+          color: null,
+          smell: null,
+          taste: null,
+          note: null,
+          images: [
+            {
+              image_path: '/production-orders/sensory-checks/images/only.jpg',
+            },
+          ],
+        },
+      },
+    );
+
+    await expect(service.deleteImage(1)).rejects.toThrow(
+      'At least one sensory check value is required',
+    );
+    expect(
+      prismaService.productionOrderSensoryCheckImages.delete,
+    ).not.toHaveBeenCalled();
   });
 });

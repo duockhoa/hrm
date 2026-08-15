@@ -47,6 +47,7 @@ model Users {
   createdProductionOrderVialInspectionChecks            ProductionOrderVialInspectionChecks[]                 @relation("ProductionOrderVialInspectionCheckCreator")
   createdProductionOrderCylinderCalibrations            ProductionOrderCylinderCalibrations[]                 @relation("ProductionOrderCylinderCalibrationCreator")
   createdProductionOrderSensoryChecks                   ProductionOrderSensoryChecks[]                        @relation("ProductionOrderSensoryCheckCreator")
+  createdProductionOrderSensoryCheckImages              ProductionOrderSensoryCheckImages[]                   @relation("ProductionOrderSensoryCheckImageCreator")
   createdProductionOrderDateChecks                      ProductionOrderDateChecks[]                           @relation("ProductionOrderDateCheckCreator")
   approvedProductionOrderDateChecks                     ProductionOrderDateChecks[]                           @relation("ProductionOrderDateCheckApprover")
   createdProductionOrderDateCheckImages                 ProductionOrderDateCheckImages[]                      @relation("ProductionOrderDateCheckImageCreator")
@@ -1419,22 +1420,38 @@ model ProductionOrderCylinderCalibrations {
 }
 
 model ProductionOrderSensoryChecks {
-  id                  Int              @id @default(autoincrement())
+  id                  Int                                 @id @default(autoincrement())
   production_order_id Int
-  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_sensory_checks_po_id_fkey")
-  color               String?          @db.VarChar(255)
-  smell               String?          @db.VarChar(255)
-  taste               String?          @db.VarChar(255)
-  note                String?          @db.Text
-  image_path          String?          @db.Text
+  productionOrder     ProductionOrders                    @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_sensory_checks_po_id_fkey")
+  color               String?                             @db.VarChar(255)
+  smell               String?                             @db.VarChar(255)
+  taste               String?                             @db.VarChar(255)
+  note                String?                             @db.Text
+  image_path          String?                             @db.Text
   created_by_id       Int
-  createdBy           Users            @relation("ProductionOrderSensoryCheckCreator", fields: [created_by_id], references: [id], map: "po_sensory_checks_created_by_id_fkey")
-  created_at          DateTime         @default(now())
-  updated_at          DateTime         @default(now()) @updatedAt
+  createdBy           Users                               @relation("ProductionOrderSensoryCheckCreator", fields: [created_by_id], references: [id], map: "po_sensory_checks_created_by_id_fkey")
+  created_at          DateTime                            @default(now())
+  updated_at          DateTime                            @default(now()) @updatedAt
+  images              ProductionOrderSensoryCheckImages[]
 
   @@index([production_order_id], map: "po_sensory_checks_po_id_fkey")
   @@index([created_by_id], map: "po_sensory_checks_created_by_id_fkey")
   @@map("production_order_sensory_checks")
+}
+
+model ProductionOrderSensoryCheckImages {
+  id               Int                          @id @default(autoincrement())
+  sensory_check_id Int
+  sensoryCheck     ProductionOrderSensoryChecks @relation(fields: [sensory_check_id], references: [id], onDelete: Cascade, map: "po_sensory_check_images_check_id_fkey")
+  image_path       String                       @db.Text
+  created_by_id    Int
+  createdBy        Users                        @relation("ProductionOrderSensoryCheckImageCreator", fields: [created_by_id], references: [id], map: "po_sensory_check_images_created_by_id_fkey")
+  created_at       DateTime                     @default(now())
+  updated_at       DateTime                     @default(now()) @updatedAt
+
+  @@index([sensory_check_id], map: "po_sensory_check_images_check_id_fkey")
+  @@index([created_by_id], map: "po_sensory_check_images_created_by_id_fkey")
+  @@map("production_order_sensory_check_images")
 }
 
 model ProductionOrderDateChecks {

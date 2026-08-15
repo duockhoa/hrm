@@ -25,6 +25,8 @@ export const PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_UPLOAD_DIR = join(
 
 const MAX_SENSORY_CHECK_IMAGE_SIZE_IN_BYTES = 20 * 1024 * 1024;
 
+export const MAX_SENSORY_CHECK_IMAGE_COUNT = 10;
+
 const IMAGE_EXTENSIONS_BY_MIME_TYPE = new Map([
   ['image/jpeg', '.jpg'],
   ['image/png', '.png'],
@@ -122,6 +124,11 @@ export const getSensoryCheckImagePath = (file?: Express.Multer.File) => {
   return `${PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_ROUTE}/${file.filename}`;
 };
 
+export const getSensoryCheckImagePaths = (files?: Express.Multer.File[]) =>
+  files
+    ?.map((file) => getSensoryCheckImagePath(file))
+    .filter((imagePath): imagePath is string => Boolean(imagePath)) ?? [];
+
 const getSafeFilename = (filename: string) => {
   const normalizedFilename = filename.trim();
 
@@ -199,6 +206,13 @@ export const removeUploadedSensoryCheckImage = async (
   await unlink(file.path).catch(() => undefined);
 };
 
+export const removeUploadedSensoryCheckImages = async (
+  files?: Express.Multer.File[],
+) =>
+  Promise.all(
+    files?.map((file) => removeUploadedSensoryCheckImage(file)) ?? [],
+  );
+
 export const removeSensoryCheckImageByPath = async (
   imagePath?: string | null,
 ) => {
@@ -219,3 +233,11 @@ export const removeSensoryCheckImageByPath = async (
 
   await unlink(filePath).catch(() => undefined);
 };
+
+export const removeSensoryCheckImagesByPath = async (
+  imagePaths?: Array<string | null | undefined>,
+) =>
+  Promise.all(
+    imagePaths?.map((imagePath) => removeSensoryCheckImageByPath(imagePath)) ??
+      [],
+  );

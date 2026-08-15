@@ -6154,7 +6154,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu các lần thử màu sắc, mùi, vị và hình ảnh của một lệnh sản xuất. Một lệnh sản xuất có thể có nhiều lần thử. Bảng này không có field `checked_at`; thời điểm tạo lấy từ `created_at`.
+Nhóm API này lưu các lần thử màu sắc, mùi, vị và hình ảnh của một lệnh sản xuất. Một lệnh sản xuất có thể có nhiều lần thử; mỗi lần thử có tối đa 10 ảnh. Bảng này không có field `checked_at`; thời điểm tạo lấy từ `created_at`.
 
 ### Lấy danh sách thử mùi vị của lệnh sản xuất
 
@@ -6175,7 +6175,16 @@ Response mẫu:
     "smell": "Thơm đặc trưng",
     "taste": "Ngọt nhẹ",
     "note": "Đạt yêu cầu cảm quan",
-    "image_path": "/production-orders/sensory-checks/images/mau-thu-abc.jpg",
+    "images": [
+      {
+        "id": 12,
+        "sensory_check_id": 1,
+        "image_path": "/production-orders/sensory-checks/images/mau-thu-abc.jpg",
+        "created_by_id": 7,
+        "created_at": "2026-06-24T00:00:00.000Z",
+        "updated_at": "2026-06-24T00:00:00.000Z"
+      }
+    ],
     "created_by_id": 7,
     "created_at": "2026-06-24T00:00:00.000Z",
     "updated_at": "2026-06-24T00:00:00.000Z",
@@ -6214,13 +6223,15 @@ color=Vàng nhạt
 smell=Thơm đặc trưng
 taste=Ngọt nhẹ
 note=Đạt yêu cầu cảm quan
-image=<file>
+images=<file>
+images=<file>
 ```
 
 Tên field ảnh hợp lệ:
 
-- `image`
-- `sensory_image`
+- `images` (khuyến nghị)
+- `image` (tương thích ngược)
+- `sensory_image` (tương thích ngược)
 
 Nếu không có ảnh, có thể gửi JSON:
 
@@ -6238,7 +6249,7 @@ Quy tắc:
 - Mỗi lần gọi API tạo một bản ghi thử mới.
 - `color`, `smell`, `taste` không bắt buộc, tối đa 255 ký tự mỗi field.
 - `note` không bắt buộc, lưu dạng ghi chú dài.
-- `image` không bắt buộc, chỉ nhận JPG, PNG, WEBP hoặc GIF, tối đa 20MB.
+- Có thể gửi tối đa 10 ảnh cho một lần thử; mỗi ảnh chỉ nhận JPG, PNG, WEBP hoặc GIF, tối đa 20MB.
 - Phải có ít nhất một trong các dữ liệu: `color`, `smell`, `taste`, `note`, hoặc ảnh.
 - `production_order_id` lấy từ `:id`.
 - Người tạo dữ liệu là user đăng nhập, lưu ở `created_by_id`; frontend không gửi field này.
@@ -6252,7 +6263,7 @@ Lỗi thường gặp:
 - `400 smell must be at most 255 characters`
 - `400 taste must be at most 255 characters`
 - `400 note must be a string`
-- `400 Only one sensory check image is allowed`
+- `400 images cannot exceed 10 files per sensory check`
 - `401 Authenticated user not found`
 
 ### Cập nhật dữ liệu thử mùi vị
@@ -6271,19 +6282,12 @@ Body chỉ cần gửi field muốn cập nhật:
 }
 ```
 
-Nếu cần thay ảnh, gửi `multipart/form-data` với field ảnh `image` hoặc `sensory_image`:
-
-```text
-color=Vàng đậm
-image=<file>
-```
-
 Quy tắc:
 
-- Có thể cập nhật `color`, `smell`, `taste`, `note`, hoặc thay ảnh.
+- Có thể cập nhật `color`, `smell`, `taste`, hoặc `note`.
 - `color`, `smell`, `taste`, `note` có thể gửi `null` hoặc chuỗi rỗng để xóa giá trị.
 - Sau cập nhật, bản ghi vẫn phải còn ít nhất một trong các dữ liệu: `color`, `smell`, `taste`, `note`, hoặc ảnh.
-- Nếu gửi ảnh mới, backend cập nhật `image_path` và xóa file ảnh cũ nếu có.
+- Để thêm hoặc xóa ảnh, dùng API ảnh riêng bên dưới.
 
 Lỗi thường gặp:
 
@@ -6293,8 +6297,51 @@ Lỗi thường gặp:
 - `400 smell must be at most 255 characters`
 - `400 taste must be at most 255 characters`
 - `400 note must be a string`
-- `400 Only one sensory check image is allowed`
 - `404 Sensory check not found`
+
+### Thêm ảnh vào một lần thử mùi vị
+
+```http
+POST /production-orders/sensory-checks/:checkId/images
+```
+
+Content-Type: `multipart/form-data`
+
+Body:
+
+```text
+images=<file>
+images=<file>
+```
+
+Quy tắc:
+
+- Field upload hỗ trợ `images`, `image` hoặc `sensory_image`.
+- Tối đa 10 ảnh cho mỗi lần thử, bao gồm cả ảnh đã có trước đó.
+- File hợp lệ: JPG, PNG, WEBP, GIF; dung lượng tối đa 20 MB mỗi file.
+- Backend tự set `created_by_id` của ảnh theo user đăng nhập.
+
+Lỗi thường gặp:
+
+- `404 Sensory check not found`
+- `400 images are required`
+- `400 images cannot exceed 10 files per sensory check`
+- `401 Authenticated user not found`
+
+### Xóa một ảnh thử mùi vị
+
+```http
+DELETE /production-orders/sensory-checks/images/:imageId
+```
+
+API trả về record ảnh vừa xóa và xóa file vật lý tương ứng.
+
+Không thể xóa ảnh cuối cùng nếu lần thử không còn dữ liệu `color`, `smell`, `taste` hoặc `note`.
+
+Lỗi thường gặp:
+
+- `404 Sensory check image not found`
+- `400 At least one sensory check value is required`
 
 ### Xóa dữ liệu thử mùi vị
 
@@ -6302,7 +6349,7 @@ Lỗi thường gặp:
 DELETE /production-orders/sensory-checks/:checkId
 ```
 
-API trả về bản ghi vừa xóa. Nếu bản ghi có ảnh, backend xóa file ảnh tương ứng.
+API trả về bản ghi vừa xóa. Backend xóa toàn bộ file ảnh tương ứng.
 
 Lỗi thường gặp:
 
