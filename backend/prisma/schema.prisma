@@ -81,6 +81,7 @@ model Users {
   createdCleaningObjects                                CleaningObjects[]                                     @relation("CleaningObjectCreator")
   createdCleaningRequirements                           CleaningRequirements[]                                @relation("CleaningRequirementCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
+  createdPrimaryPackagingConfirmations                  ProductionOrderPrimaryPackagingConfirmations[]        @relation("ProductionOrderPrimaryPackagingConfirmationCreator")
   sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
   filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckFilterer")
   inspectedProductionOrderFiltrationChecks              ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckInspector")
@@ -615,6 +616,7 @@ model ProductionOrders {
   factoryReleaseReviews                ProductionOrderFactoryReleaseReviews[]
   equipmentMonitoringRecords           EquipmentMonitoringRecords[]
   documentControl                      ProductionOrderDocumentControls?
+  primaryPackagingConfirmations        ProductionOrderPrimaryPackagingConfirmations[]
   registrationNumber                   ProductionOrderRegistrationNumbers?
 
   @@index([item_code], map: "production_orders_item_code_fkey")
@@ -660,6 +662,26 @@ model ProductionOrderDocumentControls {
   @@index([test_certificate_received_by_id], map: "po_document_controls_test_certificate_received_by_idx")
   @@index([warehouse_release_received_by_id], map: "po_document_controls_warehouse_release_received_by_idx")
   @@map("production_order_document_controls")
+}
+
+model ProductionOrderPrimaryPackagingConfirmations {
+  id                     Int              @id @default(autoincrement())
+  production_order_id    Int
+  productionOrder        ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_primary_packaging_confirmations_po_id_fkey")
+  volume_weight_checked  Boolean          @default(false)
+  sensory_checked        Boolean          @default(false)
+  date_print_checked     Boolean          @default(false)
+  hygiene_checked        Boolean          @default(false)
+  seal_integrity_checked Boolean          @default(false)
+  note                   String?          @db.Text
+  created_by_id          Int
+  createdBy              Users            @relation("ProductionOrderPrimaryPackagingConfirmationCreator", fields: [created_by_id], references: [id], map: "po_primary_packaging_confirmations_created_by_fkey")
+  created_at             DateTime         @default(now())
+  updated_at             DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_primary_packaging_confirmations_po_id_idx")
+  @@index([created_by_id], map: "po_primary_packaging_confirmations_created_by_idx")
+  @@map("production_order_primary_packaging_confirmations")
 }
 
 model ProductionOrderFactoryReleaseReviews {

@@ -118,6 +118,9 @@ import { CreateProductionOrderFactoryReleaseReviewDto } from './dto/create-produ
 import { UpdateProductionOrderFactoryReleaseReviewDto } from './dto/update-production-order-factory-release-review.dto';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
+import { CreateProductionOrderPrimaryPackagingConfirmationDto } from './dto/create-production-order-primary-packaging-confirmation.dto';
+import { UpdateProductionOrderPrimaryPackagingConfirmationDto } from './dto/update-production-order-primary-packaging-confirmation.dto';
+import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 import {
   getDateCheckImagePaths,
   getDateCheckRequestFilePath,
@@ -327,6 +330,7 @@ export class ProductionOrdersController {
     private readonly productionOrderTabletThicknessChecksService: ProductionOrderTabletThicknessChecksService,
     private readonly productionOrderFactoryReleaseReviewsService: ProductionOrderFactoryReleaseReviewsService,
     private readonly productionOrderDocumentControlsService: ProductionOrderDocumentControlsService,
+    private readonly productionOrderPrimaryPackagingConfirmationsService: ProductionOrderPrimaryPackagingConfirmationsService,
   ) {}
 
   @Get()
@@ -419,6 +423,35 @@ export class ProductionOrdersController {
     @Param('reviewId', ParseIntPipe) reviewId: number,
   ) {
     return this.productionOrderFactoryReleaseReviewsService.delete(reviewId);
+  }
+
+  @Get('primary-packaging-confirmations/:confirmationId')
+  async findPrimaryPackagingConfirmationById(
+    @Param('confirmationId', ParseIntPipe) confirmationId: number,
+  ) {
+    return this.productionOrderPrimaryPackagingConfirmationsService.findById(
+      confirmationId,
+    );
+  }
+
+  @Patch('primary-packaging-confirmations/:confirmationId')
+  async updatePrimaryPackagingConfirmation(
+    @Param('confirmationId', ParseIntPipe) confirmationId: number,
+    @Body() updateDto: UpdateProductionOrderPrimaryPackagingConfirmationDto,
+  ) {
+    return this.productionOrderPrimaryPackagingConfirmationsService.update(
+      confirmationId,
+      updateDto,
+    );
+  }
+
+  @Delete('primary-packaging-confirmations/:confirmationId')
+  async deletePrimaryPackagingConfirmation(
+    @Param('confirmationId', ParseIntPipe) confirmationId: number,
+  ) {
+    return this.productionOrderPrimaryPackagingConfirmationsService.delete(
+      confirmationId,
+    );
   }
 
   @Get('density-checks/:checkId')
@@ -2281,6 +2314,28 @@ export class ProductionOrdersController {
   async findFactoryReleaseReviews(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderFactoryReleaseReviewsService.findAllByProductionOrder(
       id,
+    );
+  }
+
+  @Get(':id/primary-packaging-confirmations')
+  async findPrimaryPackagingConfirmations(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.productionOrderPrimaryPackagingConfirmationsService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/primary-packaging-confirmations')
+  async createPrimaryPackagingConfirmation(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderPrimaryPackagingConfirmationDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderPrimaryPackagingConfirmationsService.create(
+      id,
+      createDto,
+      req.user,
     );
   }
 

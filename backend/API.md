@@ -2189,6 +2189,59 @@ Ví dụ `documentControl`:
 
 Nếu chưa có dòng document control cho lệnh sản xuất, `documentControl` trả về `null`.
 
+### Xác nhận trước đóng gói bao bì cấp 1
+
+Một lệnh sản xuất có thể có nhiều lần xác nhận. Người tạo mỗi bản ghi được lấy từ access token (`created_by_id`); client không gửi trường này.
+
+```http
+GET    /production-orders/:id/primary-packaging-confirmations
+POST   /production-orders/:id/primary-packaging-confirmations
+GET    /production-orders/primary-packaging-confirmations/:confirmationId
+PATCH  /production-orders/primary-packaging-confirmations/:confirmationId
+DELETE /production-orders/primary-packaging-confirmations/:confirmationId
+```
+
+`GET /production-orders/:id/primary-packaging-confirmations` trả về mảng rỗng nếu lệnh sản xuất chưa có bản xác nhận.
+
+`POST` tạo một lần xác nhận mới. Năm trường kiểm tra đều bắt buộc và phải là Boolean. `PATCH` chỉ cập nhật những trường được gửi.
+
+```json
+{
+  "volume_weight_checked": true,
+  "sensory_checked": true,
+  "date_print_checked": true,
+  "hygiene_checked": true,
+  "seal_integrity_checked": true,
+  "note": "Đủ điều kiện đóng gói bao bì cấp 1."
+}
+```
+
+Response ví dụ:
+
+```json
+{
+  "id": 1,
+  "production_order_id": 1001,
+  "volume_weight_checked": true,
+  "sensory_checked": true,
+  "date_print_checked": true,
+  "hygiene_checked": true,
+  "seal_integrity_checked": true,
+  "note": "Đủ điều kiện đóng gói bao bì cấp 1.",
+  "created_by_id": 5,
+  "created_at": "2026-08-15T08:00:00.000Z",
+  "updated_at": "2026-08-15T08:00:00.000Z",
+  "createdBy": {
+    "id": 5,
+    "username": "qc01",
+    "name": "Nguyen Van A",
+    "email": "qc01@example.com",
+    "department": "QC",
+    "position": "Staff"
+  }
+}
+```
+
 ### Lấy trạng thái chứng từ của lệnh sản xuất
 
 ```http
