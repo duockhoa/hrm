@@ -12,11 +12,15 @@ import {
   Request,
   Res,
   StreamableFile,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import {
+  FileInterceptor,
+  FileFieldsInterceptor,
+} from '@nestjs/platform-express';
 import { createReadStream } from 'fs';
 import type { Response } from 'express';
 import { ProductionOrdersService } from './production-orders.service';
@@ -127,6 +131,7 @@ import { ProductionOrderDocumentControlsService } from './production-order-docum
 import { CreateProductionOrderPrimaryPackagingConfirmationDto } from './dto/create-production-order-primary-packaging-confirmation.dto';
 import { UpdateProductionOrderPrimaryPackagingConfirmationDto } from './dto/update-production-order-primary-packaging-confirmation.dto';
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
+import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
 import {
   getDateCheckImagePaths,
   getDateCheckRequestFilePath,
@@ -160,6 +165,10 @@ import {
   productionOrderSteamSterilizationCheckImageUploadOptions,
   removeUploadedSteamSterilizationCheckImages,
 } from './production-order-steam-sterilization-check-upload.config';
+import {
+  productionOrderProductionGuideUploadOptions,
+  removeUploadedProductionGuide,
+} from './production-order-production-guide-upload.config';
 
 type DateCheckUploadFields = {
   request_file?: Express.Multer.File[];
@@ -339,6 +348,7 @@ export class ProductionOrdersController {
     private readonly productionOrderFactoryReleaseReviewsService: ProductionOrderFactoryReleaseReviewsService,
     private readonly productionOrderDocumentControlsService: ProductionOrderDocumentControlsService,
     private readonly productionOrderPrimaryPackagingConfirmationsService: ProductionOrderPrimaryPackagingConfirmationsService,
+    private readonly productionOrderProductionGuidesService: ProductionOrderProductionGuidesService,
   ) {}
 
   @Get()
@@ -437,7 +447,9 @@ export class ProductionOrdersController {
   async findSecondaryPackagingCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
-    return this.productionOrderSecondaryPackagingChecksService.findById(checkId);
+    return this.productionOrderSecondaryPackagingChecksService.findById(
+      checkId,
+    );
   }
 
   @Patch('secondary-packaging-checks/:checkId')
@@ -1543,6 +1555,63 @@ export class ProductionOrdersController {
   async findProductionOrderById(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderById(id);
   }
+
+  @Get(':id/production-guide')
+  async findProductionGuide(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderProductionGuidesService.findByProductionOrder(
+      id,
+    );
+  }
+
+  @Get(':id/production-guide/file')
+  async downloadProductionGuide(
+    @Param('id', ParseIntPipe) id: number,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const { productionGuide, file } =
+      await this.productionOrderProductionGuidesService.getFile(id);
+    const filenameFallback = getAsciiFilenameFallback(
+      productionGuide.original_filename,
+    );
+    const encodedFilename = encodeContentDispositionFilename(
+      productionGuide.original_filename,
+    );
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Disposition': `attachment; filename="${filenameFallback}"; filename*=UTF-8''${encodedFilename}`,
+      'Content-Length': file.size,
+      'Content-Type': productionGuide.mime_type,
+    });
+
+    return new StreamableFile(createReadStream(file.filePath));
+  }
+
+  @Post(':id/production-guide')
+  @UseInterceptors(
+    FileInterceptor('file', productionOrderProductionGuideUploadOptions),
+  )
+  async uploadProductionGuide(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    if (!file) {
+      throw new BadRequestException('file is required');
+    }
+
+    try {
+      return await this.productionOrderProductionGuidesService.upload(id, file);
+    } catch (error) {
+      await removeUploadedProductionGuide(file);
+      throw error;
+    }
+  }
+
+  @Delete(':id/production-guide')
+  async deleteProductionGuide(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderProductionGuidesService.delete(id);
+  }
+
   @Get(':id/production-order-lines')
   async findProductionOrderLines(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderLines(id);

@@ -2046,6 +2046,86 @@ Ví dụ `featureConfig`:
 GET /production-orders/:id/production-order-lines
 ```
 
+## Production Order Production Guides
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+Mỗi lệnh sản xuất chỉ có tối đa một file hướng dẫn sản xuất. Bản ghi được lưu trong bảng `production_order_production_guides` với `production_order_id` là duy nhất. Upload file mới cho cùng lệnh sản xuất sẽ thay thế bản ghi và file cũ.
+
+Các định dạng được hỗ trợ: PDF, Word (`.doc`, `.docx`), Excel (`.xls`, `.xlsx`), TXT và CSV. Dung lượng tối đa là 20 MB.
+
+### Lấy thông tin file hướng dẫn
+
+```http
+GET /production-orders/:id/production-guide
+```
+
+Response là `null` khi lệnh sản xuất chưa có file hướng dẫn:
+
+```json
+{
+  "id": 1,
+  "production_order_id": 1001,
+  "original_filename": "Huong-dan-san-xuat.pdf",
+  "file_path": "/production-orders/production-guides/550e8400-e29b-41d4-a716-446655440000.pdf",
+  "mime_type": "application/pdf",
+  "file_size": 245678,
+  "created_at": "2026-08-16T08:00:00.000Z",
+  "updated_at": "2026-08-16T08:00:00.000Z"
+}
+```
+
+`file_path` là đường dẫn lưu nội bộ. Client tải file qua endpoint `GET /production-orders/:id/production-guide/file` bên dưới.
+
+### Upload hoặc thay thế file hướng dẫn
+
+```http
+POST /production-orders/:id/production-guide
+Content-Type: multipart/form-data
+```
+
+Gửi một file bằng field `file`. Không gửi JSON body.
+
+Ví dụ `curl`:
+
+```bash
+curl -X POST http://localhost:3000/production-orders/1001/production-guide \
+  -H "Authorization: Bearer <accessToken>" \
+  -F "file=@./Huong-dan-san-xuat.pdf"
+```
+
+Response: object file hướng dẫn như phần `GET` phía trên. Nếu lệnh sản xuất đã có file, backend thay thế file cũ và vẫn chỉ giữ một bản ghi.
+
+Lỗi thường gặp:
+
+- `400 file is required`: chưa gửi field `file`.
+- `400 file must be PDF, Word, Excel, TXT, or CSV`: định dạng file không được hỗ trợ.
+- `404 Production order not found`: lệnh sản xuất không tồn tại.
+
+### Tải file hướng dẫn
+
+```http
+GET /production-orders/:id/production-guide/file
+```
+
+Response là file binary với header `Content-Disposition: attachment`; trình duyệt sẽ tải xuống với đúng tên file gốc.
+
+### Xóa file hướng dẫn
+
+```http
+DELETE /production-orders/:id/production-guide
+```
+
+Response:
+
+```json
+{
+  "message": "Production guide deleted"
+}
+```
+
+Khi xóa lệnh sản xuất, bản ghi hướng dẫn liên quan bị xóa theo quan hệ cascade của database. Để xóa cả file vật lý trên server, dùng endpoint `DELETE /production-orders/:id/production-guide` trước.
+
 ## SAP B1 Connector
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

@@ -45,6 +45,7 @@ import { ProductionOrderPostPreparationSolutionChecksService } from './productio
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
+import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
 import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.module';
 
 @Module({
@@ -88,6 +89,7 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
     ProductionOrderFactoryReleaseReviewsService,
     ProductionOrderDocumentControlsService,
     ProductionOrderPrimaryPackagingConfirmationsService,
+    ProductionOrderProductionGuidesService,
     WarehouseReleaseExportService,
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,

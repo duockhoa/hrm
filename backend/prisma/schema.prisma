@@ -636,6 +636,7 @@ model ProductionOrders {
   factoryReleaseReviews                ProductionOrderFactoryReleaseReviews[]
   equipmentMonitoringRecords           EquipmentMonitoringRecords[]
   documentControl                      ProductionOrderDocumentControls?
+  productionGuide                      ProductionOrderProductionGuides?
   primaryPackagingConfirmations        ProductionOrderPrimaryPackagingConfirmations[]
   registrationNumber                   ProductionOrderRegistrationNumbers?
 
@@ -682,6 +683,20 @@ model ProductionOrderDocumentControls {
   @@index([test_certificate_received_by_id], map: "po_document_controls_test_certificate_received_by_idx")
   @@index([warehouse_release_received_by_id], map: "po_document_controls_warehouse_release_received_by_idx")
   @@map("production_order_document_controls")
+}
+
+model ProductionOrderProductionGuides {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int              @unique(map: "po_production_guides_po_id_key")
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_production_guides_po_id_fkey")
+  original_filename   String           @db.VarChar(255)
+  file_path           String           @db.Text
+  mime_type           String           @db.VarChar(100)
+  file_size           Int
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@map("production_order_production_guides")
 }
 
 model ProductionOrderPrimaryPackagingConfirmations {
