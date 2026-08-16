@@ -34,6 +34,7 @@ model Users {
   createdProductionOrderEnvironmentChecks               ProductionOrderEnvironmentChecks[]                    @relation("ProductionOrderEnvironmentCheckCreator")
   createdProductionOrderHygieneChecks                   ProductionOrderHygieneChecks[]                        @relation("ProductionOrderHygieneCheckCreator")
   createdProductionOrderLineClearanceChecks             ProductionOrderLineClearanceChecks[]                  @relation("ProductionOrderLineClearanceCheckCreator")
+  checkedProductionOrderSecondaryPackagingChecks        ProductionOrderSecondaryPackagingChecks[]             @relation("ProductionOrderSecondaryPackagingCheckInspector")
   createdProductionOrderFinishedProductSummaries        ProductionOrderFinishedProductSummaries[]             @relation("ProductionOrderFinishedProductSummaryCreator")
   createdProductionOrderDensityChecks                   ProductionOrderDensityChecks[]                        @relation("ProductionOrderDensityCheckCreator")
   createdProductionOrderSamplingRecords                 ProductionOrderSamplingRecords[]                      @relation("ProductionOrderSamplingRecordCreator")
@@ -588,6 +589,7 @@ model ProductionOrders {
   hygieneChecks                        ProductionOrderHygieneChecks[]
   lineClearanceChecks                  ProductionOrderLineClearanceChecks[]                  @relation("LineClearanceCurrentOrder")
   lineClearanceChecksAsPreviousOrder   ProductionOrderLineClearanceChecks[]                  @relation("LineClearancePreviousOrder")
+  secondaryPackagingChecks             ProductionOrderSecondaryPackagingChecks[]
   finishedProductSummaries             ProductionOrderFinishedProductSummaries[]
   densityChecks                        ProductionOrderDensityChecks[]
   samplingRecords                      ProductionOrderSamplingRecords[]
@@ -875,6 +877,24 @@ model ProductionOrderLineClearanceChecks {
   @@index([previous_production_order_id], map: "po_line_clearance_checks_previous_po_id_fkey")
   @@index([created_by_id], map: "po_line_clearance_checks_created_by_id_fkey")
   @@map("production_order_line_clearance_checks")
+}
+
+model ProductionOrderSecondaryPackagingChecks {
+  id                  Int              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_secondary_packaging_checks_po_id_fkey")
+  stage               String           @db.VarChar(100)
+  requirement         String           @db.Text
+  quantity_checked    Int
+  quantity_passed     Int
+  checked_by_id       Int
+  checkedBy           Users            @relation("ProductionOrderSecondaryPackagingCheckInspector", fields: [checked_by_id], references: [id], map: "po_secondary_packaging_checks_checked_by_id_fkey")
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_secondary_packaging_checks_po_id_fkey")
+  @@index([checked_by_id], map: "po_secondary_packaging_checks_checked_by_id_fkey")
+  @@map("production_order_secondary_packaging_checks")
 }
 
 model ProductionOrderFinishedProductSummaries {

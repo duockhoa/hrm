@@ -3298,6 +3298,54 @@ Gửi một hoặc nhiều trường có thể cập nhật trong body.
 DELETE /production-orders/line-clearance-checks/:checkId
 ```
 
+## Production Order Secondary Packaging Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`. Mỗi bản ghi là một hạng mục kiểm tra của công đoạn đóng gói bao bì cấp 2.
+
+### Lấy danh sách hạng mục kiểm tra
+
+```http
+GET /production-orders/:id/secondary-packaging-checks
+```
+
+### Lấy một hạng mục theo ID
+
+```http
+GET /production-orders/secondary-packaging-checks/:checkId
+```
+
+### Thêm hạng mục kiểm tra
+
+```http
+POST /production-orders/:id/secondary-packaging-checks
+```
+
+```json
+{
+  "stage": "Đóng hộp",
+  "requirement": "Nhãn, số lô và quy cách đóng gói đúng yêu cầu",
+  "quantity_checked": 100,
+  "quantity_passed": 98
+}
+```
+
+- `stage`, `requirement`, `quantity_checked`, `quantity_passed` là bắt buộc.
+- `quantity_checked` phải là số nguyên lớn hơn 0.
+- `quantity_passed` là số nguyên từ 0 đến `quantity_checked`.
+- Người kiểm tra (`checked_by_id`) được lấy từ tài khoản đăng nhập.
+
+### Cập nhật hạng mục kiểm tra
+
+```http
+PATCH /production-orders/secondary-packaging-checks/:checkId
+```
+
+### Xóa hạng mục kiểm tra
+
+```http
+DELETE /production-orders/secondary-packaging-checks/:checkId
+```
+
 ## Production Order Density Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

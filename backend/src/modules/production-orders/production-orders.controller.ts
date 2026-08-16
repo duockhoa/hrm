@@ -39,6 +39,9 @@ import { ProductionOrderHygieneChecksService } from './production-order-hygiene-
 import { CreateProductionOrderLineClearanceCheckDto } from './dto/create-production-order-line-clearance-check.dto';
 import { UpdateProductionOrderLineClearanceCheckDto } from './dto/update-production-order-line-clearance-check.dto';
 import { ProductionOrderLineClearanceChecksService } from './production-order-line-clearance-checks.service';
+import { CreateProductionOrderSecondaryPackagingCheckDto } from './dto/create-production-order-secondary-packaging-check.dto';
+import { UpdateProductionOrderSecondaryPackagingCheckDto } from './dto/update-production-order-secondary-packaging-check.dto';
+import { ProductionOrderSecondaryPackagingChecksService } from './production-order-secondary-packaging-checks.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
@@ -306,6 +309,7 @@ export class ProductionOrdersController {
     private readonly productionOrderEnvironmentChecksService: ProductionOrderEnvironmentChecksService,
     private readonly productionOrderHygieneChecksService: ProductionOrderHygieneChecksService,
     private readonly productionOrderLineClearanceChecksService: ProductionOrderLineClearanceChecksService,
+    private readonly productionOrderSecondaryPackagingChecksService: ProductionOrderSecondaryPackagingChecksService,
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
     private readonly productionOrderFriabilityChecksService: ProductionOrderFriabilityChecksService,
@@ -427,6 +431,31 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderLineClearanceChecksService.delete(checkId);
+  }
+
+  @Get('secondary-packaging-checks/:checkId')
+  async findSecondaryPackagingCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderSecondaryPackagingChecksService.findById(checkId);
+  }
+
+  @Patch('secondary-packaging-checks/:checkId')
+  async updateSecondaryPackagingCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderSecondaryPackagingCheckDto,
+  ) {
+    return this.productionOrderSecondaryPackagingChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Delete('secondary-packaging-checks/:checkId')
+  async deleteSecondaryPackagingCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderSecondaryPackagingChecksService.delete(checkId);
   }
 
   @Get('factory-release-reviews/:reviewId')
@@ -1684,6 +1713,26 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     return this.productionOrderLineClearanceChecksService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/secondary-packaging-checks')
+  async findSecondaryPackagingChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderSecondaryPackagingChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/secondary-packaging-checks')
+  async createSecondaryPackagingCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderSecondaryPackagingCheckDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderSecondaryPackagingChecksService.create(
       id,
       createDto,
       req.user,

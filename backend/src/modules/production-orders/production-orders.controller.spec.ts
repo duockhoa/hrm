@@ -36,6 +36,7 @@ import { ProductionOrderTabletThicknessChecksService } from './production-order-
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 import { ProductionOrderHygieneChecksService } from './production-order-hygiene-checks.service';
 import { ProductionOrderLineClearanceChecksService } from './production-order-line-clearance-checks.service';
+import { ProductionOrderSecondaryPackagingChecksService } from './production-order-secondary-packaging-checks.service';
 import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 
@@ -85,6 +86,13 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderLineClearanceChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderSecondaryPackagingChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -355,6 +363,13 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderSecondaryPackagingChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
     productionOrderFinishedProductSummariesService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -598,6 +613,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderLineClearanceChecksService,
           useValue: productionOrderLineClearanceChecksService,
+        },
+        {
+          provide: ProductionOrderSecondaryPackagingChecksService,
+          useValue: productionOrderSecondaryPackagingChecksService,
         },
         {
           provide: ProductionOrderFinishedProductSummariesService,
@@ -1128,6 +1147,84 @@ describe('ProductionOrdersController', () => {
     await expect(controller.deleteLineClearanceCheck(1)).resolves.toBe(result);
     expect(
       productionOrderLineClearanceChecksService.delete,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('gets secondary packaging checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderSecondaryPackagingChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findSecondaryPackagingChecks(2031)).resolves.toBe(
+      checks,
+    );
+    expect(
+      productionOrderSecondaryPackagingChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a secondary packaging check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderSecondaryPackagingChecksService.findById.mockResolvedValue(
+      check,
+    );
+
+    await expect(controller.findSecondaryPackagingCheckById(1)).resolves.toBe(
+      check,
+    );
+    expect(
+      productionOrderSecondaryPackagingChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a secondary packaging check using the authenticated user', async () => {
+    const createDto = {
+      stage: 'Đóng hộp',
+      requirement: 'Nhãn đúng quy định',
+      quantity_checked: 100,
+      quantity_passed: 98,
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSecondaryPackagingChecksService.create.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.createSecondaryPackagingCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSecondaryPackagingChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a secondary packaging check', async () => {
+    const updateDto = { quantity_passed: 100 };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSecondaryPackagingChecksService.update.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.updateSecondaryPackagingCheck(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderSecondaryPackagingChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a secondary packaging check', async () => {
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderSecondaryPackagingChecksService.delete.mockResolvedValue(
+      result,
+    );
+
+    await expect(controller.deleteSecondaryPackagingCheck(1)).resolves.toBe(
+      result,
+    );
+    expect(
+      productionOrderSecondaryPackagingChecksService.delete,
     ).toHaveBeenCalledWith(1);
   });
 
