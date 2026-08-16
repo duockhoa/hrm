@@ -3298,6 +3298,29 @@ Gửi một hoặc nhiều trường có thể cập nhật trong body.
 DELETE /production-orders/line-clearance-checks/:checkId
 ```
 
+## Secondary Packaging Stage Requirements
+
+Tất cả API trong nhóm này cần `Auth: Bearer`. Đây là danh mục yêu cầu dùng chung cho các giai đoạn đóng gói bao bì cấp 2.
+
+```http
+GET /secondary-packaging-stage-requirements
+GET /secondary-packaging-stage-requirements/:id
+POST /secondary-packaging-stage-requirements
+PATCH /secondary-packaging-stage-requirements/:id
+DELETE /secondary-packaging-stage-requirements/:id
+```
+
+Ví dụ body khi tạo:
+
+```json
+{
+  "stage": "Đóng hộp",
+  "requirement": "Nhãn, số lô và quy cách đóng gói phải đúng yêu cầu"
+}
+```
+
+`stage` (tối đa 100 ký tự) và `requirement` là bắt buộc. `created_by_id` lấy từ tài khoản đăng nhập.
+
 ## Production Order Secondary Packaging Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`. Mỗi bản ghi là một hạng mục kiểm tra của công đoạn đóng gói bao bì cấp 2.

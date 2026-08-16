@@ -35,6 +35,7 @@ model Users {
   createdProductionOrderHygieneChecks                   ProductionOrderHygieneChecks[]                        @relation("ProductionOrderHygieneCheckCreator")
   createdProductionOrderLineClearanceChecks             ProductionOrderLineClearanceChecks[]                  @relation("ProductionOrderLineClearanceCheckCreator")
   checkedProductionOrderSecondaryPackagingChecks        ProductionOrderSecondaryPackagingChecks[]             @relation("ProductionOrderSecondaryPackagingCheckInspector")
+  createdSecondaryPackagingStageRequirements            SecondaryPackagingStageRequirements[]                 @relation("SecondaryPackagingStageRequirementCreator")
   createdProductionOrderFinishedProductSummaries        ProductionOrderFinishedProductSummaries[]             @relation("ProductionOrderFinishedProductSummaryCreator")
   createdProductionOrderDensityChecks                   ProductionOrderDensityChecks[]                        @relation("ProductionOrderDensityCheckCreator")
   createdProductionOrderSamplingRecords                 ProductionOrderSamplingRecords[]                      @relation("ProductionOrderSamplingRecordCreator")
@@ -154,6 +155,20 @@ model CleaningRequirements {
   @@index([cleaning_object_id], map: "cleaning_requirements_cleaning_object_id_idx")
   @@index([created_by_id], map: "cleaning_requirements_created_by_id_idx")
   @@map("cleaning_requirements")
+}
+
+model SecondaryPackagingStageRequirements {
+  id            Int      @id @default(autoincrement())
+  stage         String   @db.VarChar(100)
+  requirement   String   @db.Text
+  created_by_id Int
+  createdBy     Users    @relation("SecondaryPackagingStageRequirementCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "secondary_packaging_stage_requirements_created_by_id_fkey")
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+
+  @@index([stage], map: "secondary_packaging_stage_requirements_stage_idx")
+  @@index([created_by_id], map: "secondary_packaging_stage_requirements_created_by_id_idx")
+  @@map("secondary_packaging_stage_requirements")
 }
 
 model Tokens {

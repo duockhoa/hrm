@@ -30,6 +30,7 @@ import { RegistrationNumbersModule } from './modules/registration-numbers/regist
 import { FilterCatalogsModule } from './modules/filter-catalogs/filter-catalogs.module';
 import { CleaningObjectsModule } from './modules/cleaning-objects/cleaning-objects.module';
 import { CleaningRequirementsModule } from './modules/cleaning-requirements/cleaning-requirements.module';
+import { SecondaryPackagingStageRequirementsModule } from './modules/secondary-packaging-stage-requirements/secondary-packaging-stage-requirements.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { CleaningRequirementsModule } from './modules/cleaning-requirements/clea
     FilterCatalogsModule,
     CleaningObjectsModule,
     CleaningRequirementsModule,
+    SecondaryPackagingStageRequirementsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
