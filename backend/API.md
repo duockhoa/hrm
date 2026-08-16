@@ -3246,6 +3246,58 @@ Lỗi thường gặp:
 
 - `404 Hygiene check not found`
 
+## Production Order Line Clearance Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`. Mỗi bản ghi là một hạng mục dọn quang dây chuyền thuộc một lệnh sản xuất.
+
+### Lấy danh sách hạng mục dọn quang
+
+```http
+GET /production-orders/:id/line-clearance-checks
+```
+
+### Lấy một hạng mục theo ID
+
+```http
+GET /production-orders/line-clearance-checks/:checkId
+```
+
+### Thêm hạng mục dọn quang
+
+```http
+POST /production-orders/:id/line-clearance-checks
+```
+
+```json
+{
+  "check_type": "Kiểm tra thiết bị",
+  "requirement": "Không còn nguyên liệu, nhãn và bao bì của lô trước",
+  "result": "Đạt",
+  "previous_production_order_id": 2001
+}
+```
+
+- `check_type` bắt buộc, tối đa 100 ký tự.
+- `requirement` bắt buộc.
+- `result` bắt buộc và chỉ nhận `Đạt` hoặc `Không đạt`.
+- `previous_production_order_id` tùy chọn. Khi gửi, hệ thống tự lấy `previous_lot_no` từ lệnh đó.
+- Có thể gửi trực tiếp `previous_lot_no` nếu không có ID lệnh sản xuất trước.
+- `created_by_id` được lấy từ tài khoản đăng nhập.
+
+### Cập nhật hạng mục dọn quang
+
+```http
+PATCH /production-orders/line-clearance-checks/:checkId
+```
+
+Gửi một hoặc nhiều trường có thể cập nhật trong body.
+
+### Xóa hạng mục dọn quang
+
+```http
+DELETE /production-orders/line-clearance-checks/:checkId
+```
+
 ## Production Order Density Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

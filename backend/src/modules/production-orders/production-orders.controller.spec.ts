@@ -35,7 +35,9 @@ import { ProductionOrderHardnessChecksService } from './production-order-hardnes
 import { ProductionOrderTabletThicknessChecksService } from './production-order-tablet-thickness-checks.service';
 import { ProductionOrderFactoryReleaseReviewsService } from './production-order-factory-release-reviews.service';
 import { ProductionOrderHygieneChecksService } from './production-order-hygiene-checks.service';
+import { ProductionOrderLineClearanceChecksService } from './production-order-line-clearance-checks.service';
 import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
+import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -76,6 +78,13 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderHygieneChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderLineClearanceChecksService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -287,6 +296,13 @@ describe('ProductionOrdersController', () => {
     receiveTestCertificate: jest.Mock;
     receiveWarehouseRelease: jest.Mock;
   };
+  let productionOrderPrimaryPackagingConfirmationsService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
 
   beforeEach(async () => {
     productionOrdersService = {
@@ -326,6 +342,13 @@ describe('ProductionOrdersController', () => {
       delete: jest.fn(),
     };
     productionOrderHygieneChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
+    productionOrderLineClearanceChecksService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
@@ -537,6 +560,13 @@ describe('ProductionOrdersController', () => {
       receiveTestCertificate: jest.fn(),
       receiveWarehouseRelease: jest.fn(),
     };
+    productionOrderPrimaryPackagingConfirmationsService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -564,6 +594,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderHygieneChecksService,
           useValue: productionOrderHygieneChecksService,
+        },
+        {
+          provide: ProductionOrderLineClearanceChecksService,
+          useValue: productionOrderLineClearanceChecksService,
         },
         {
           provide: ProductionOrderFinishedProductSummariesService,
@@ -676,6 +710,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderDocumentControlsService,
           useValue: productionOrderDocumentControlsService,
+        },
+        {
+          provide: ProductionOrderPrimaryPackagingConfirmationsService,
+          useValue: productionOrderPrimaryPackagingConfirmationsService,
         },
       ],
     }).compile();
@@ -1027,6 +1065,70 @@ describe('ProductionOrdersController', () => {
     expect(productionOrderEnvironmentChecksService.delete).toHaveBeenCalledWith(
       1,
     );
+  });
+
+  it('gets line clearance checks for a production order', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderLineClearanceChecksService.findAllByProductionOrder.mockResolvedValue(
+      checks,
+    );
+
+    await expect(controller.findLineClearanceChecks(2031)).resolves.toBe(checks);
+    expect(
+      productionOrderLineClearanceChecksService.findAllByProductionOrder,
+    ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets a line clearance check by id', async () => {
+    const check = { id: 1, production_order_id: 2031 };
+    productionOrderLineClearanceChecksService.findById.mockResolvedValue(check);
+
+    await expect(controller.findLineClearanceCheckById(1)).resolves.toBe(check);
+    expect(
+      productionOrderLineClearanceChecksService.findById,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('creates a line clearance check using the authenticated user', async () => {
+    const createDto = {
+      check_type: 'Kiểm tra thiết bị',
+      requirement: 'Không còn vật tư lô trước',
+      result: 'Đạt',
+      previous_lot_no: 'LO-TRUOC-01',
+    };
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderLineClearanceChecksService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createLineClearanceCheck(2031, createDto, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderLineClearanceChecksService.create,
+    ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a line clearance check', async () => {
+    const updateDto = { result: 'Không đạt' };
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderLineClearanceChecksService.update.mockResolvedValue(result);
+
+    await expect(controller.updateLineClearanceCheck(1, updateDto)).resolves.toBe(
+      result,
+    );
+    expect(
+      productionOrderLineClearanceChecksService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a line clearance check', async () => {
+    const result = { id: 1, production_order_id: 2031 };
+    productionOrderLineClearanceChecksService.delete.mockResolvedValue(result);
+
+    await expect(controller.deleteLineClearanceCheck(1)).resolves.toBe(result);
+    expect(
+      productionOrderLineClearanceChecksService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('gets density checks for a production order', async () => {
