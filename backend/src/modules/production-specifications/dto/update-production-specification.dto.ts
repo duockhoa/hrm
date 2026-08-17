@@ -2,7 +2,7 @@ export class UpdateProductionSpecificationDto {
   product_line_id?: number | string | null;
   productLineId?: number | string | null;
   product_line?: string | null;
-  dosage_form?: string | null;
+  dosage_form_id?: number | string | null;
   lower_control_limit?: string | number | null;
   lower_control_limit_operator?: string | null;
   upper_control_limit?: string | number | null;

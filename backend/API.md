@@ -7136,14 +7136,14 @@ Tất cả API trong nhóm này cần `Auth: Bearer`.
 GET /production-specifications
 ```
 
-Response là mảng specification. Mỗi phần tử trả đầy đủ thông tin specification, item, product line và người cập nhật:
+Response là mảng specification. Mỗi phần tử trả đầy đủ thông tin specification, item, product line, dạng bào chế và người cập nhật:
 
 ```json
 [
   {
     "item_code": "TP00001",
     "product_line_id": 1,
-    "dosage_form": "Liquid",
+    "dosage_form_id": 2,
     "lower_control_limit": "95.000000",
     "lower_control_limit_operator": ">=",
     "upper_control_limit": "105.000000",
@@ -7194,6 +7194,10 @@ Response là mảng specification. Mỗi phần tử trả đầy đủ thông t
       "created_at": "2026-07-28T08:00:00.000Z",
       "updated_at": "2026-07-28T08:00:00.000Z"
     },
+    "dosageForm": {
+      "id": 2,
+      "name": "Dung dịch uống"
+    },
     "updatedBy": {
       "id": 7,
       "username": "user01",
@@ -7220,7 +7224,7 @@ Response là một object cùng cấu trúc với từng phần tử của API l
 {
   "item_code": "TP00001",
   "product_line_id": 1,
-  "dosage_form": "Liquid",
+  "dosage_form_id": 2,
   "lower_control_limit": "95.000000",
   "lower_control_limit_operator": ">=",
   "upper_control_limit": "105.000000",
@@ -7271,6 +7275,10 @@ Response là một object cùng cấu trúc với từng phần tử của API l
     "created_at": "2026-07-28T08:00:00.000Z",
     "updated_at": "2026-07-28T08:00:00.000Z"
   },
+  "dosageForm": {
+    "id": 2,
+    "name": "Dung dịch uống"
+  },
   "updatedBy": {
     "id": 7,
     "username": "user01",
@@ -7294,7 +7302,7 @@ Body:
 {
   "item_code": "TP00001",
   "product_line_id": 1,
-  "dosage_form": "Liquid",
+  "dosage_form_id": 2,
   "lower_control_limit": 95,
   "lower_control_limit_operator": ">=",
   "upper_control_limit": 105,
@@ -7332,6 +7340,7 @@ Quy tắc:
 - `item_code` phải tồn tại trong bảng `items`.
 - `product_line_id` là tùy chọn và phải tồn tại trong bảng `product_lines`.
 - Backend vẫn nhận `product_line` dạng text để tương thích request cũ; nếu gửi text, hệ thống sẽ tìm hoặc tạo `product_lines` tương ứng.
+- `dosage_form_id` là tùy chọn. Nếu có giá trị, phải tham chiếu đến một bản ghi tồn tại trong `dosage_forms`; gửi `null` hoặc chuỗi rỗng để không chọn dạng bào chế.
 - Các field giới hạn, bao gồm giới hạn số liều xịt, khối lượng viên nén bao phim, độ cứng, chiều dày viên và thời gian rã, là số thập phân, tối đa 6 chữ số sau dấu phẩy.
 - Các field operator của giới hạn nhận một trong các giá trị `<`, `<=`, `>`, `>=`.
 - `film_coated_tablet_weight_unit` là đơn vị khối lượng viên nén bao phim, ví dụ `mg` hoặc `g`.
@@ -7340,7 +7349,7 @@ Quy tắc:
 - `disintegration_time_unit` là đơn vị thời gian rã. Nếu không gửi, gửi `null` hoặc chuỗi rỗng thì backend lưu mặc định `phút`.
 - Nếu specification đã bị soft delete, API create/update có thể restore bản ghi.
 
-Response include thêm `productLine`, `updated_by_id` và `updatedBy`.
+Response include thêm `productLine`, `dosageForm`, `updated_by_id` và `updatedBy`.
 
 ### Cập nhật specification
 

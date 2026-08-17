@@ -21,6 +21,9 @@ describe('ProductionSpecificationsService', () => {
       findFirst: jest.Mock;
       create: jest.Mock;
     };
+    dosageForms: {
+      findUnique: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
@@ -44,6 +47,9 @@ describe('ProductionSpecificationsService', () => {
               findUnique: jest.fn(),
               findFirst: jest.fn(),
               create: jest.fn(),
+            },
+            dosageForms: {
+              findUnique: jest.fn(),
             },
           },
         },
@@ -94,7 +100,7 @@ describe('ProductionSpecificationsService', () => {
       data: {
         item_code: 'TP00001',
         product_line_id: 2,
-        dosage_form: null,
+        dosage_form_id: null,
         lower_control_limit: null,
         lower_control_limit_operator: null,
         upper_control_limit: null,
@@ -129,6 +135,7 @@ describe('ProductionSpecificationsService', () => {
       include: {
         item: true,
         productLine: true,
+        dosageForm: true,
         updatedBy: {
           select: {
             id: true,
@@ -181,6 +188,51 @@ describe('ProductionSpecificationsService', () => {
         }),
       }),
     );
+  });
+
+  it('uses an existing dosage form by ID', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00010' });
+    prismaService.dosageForms.findUnique.mockResolvedValue({
+      id: 4,
+      name: 'Viên nén bao phim',
+    });
+    prismaService.productionSpecifications.findUnique.mockResolvedValue(null);
+    prismaService.productionSpecifications.create.mockResolvedValue({
+      item_code: 'TP00010',
+      dosage_form_id: 4,
+    });
+
+    await service.create(
+      {
+        item_code: 'TP00010',
+        dosage_form_id: '4',
+      },
+      authenticatedUser,
+    );
+
+    expect(prismaService.dosageForms.findUnique).toHaveBeenCalledWith({
+      where: { id: 4 },
+    });
+    expect(prismaService.productionSpecifications.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ dosage_form_id: 4 }),
+      }),
+    );
+  });
+
+  it('rejects an unknown dosage form ID', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00011' });
+    prismaService.dosageForms.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.create(
+        {
+          item_code: 'TP00011',
+          dosage_form_id: 999,
+        },
+        authenticatedUser,
+      ),
+    ).rejects.toThrow('Dosage form not found');
   });
 
   it('updates spray dose limits', async () => {

@@ -33,6 +33,7 @@ const productionSpecificationUserSelect = {
 const productionSpecificationInclude = {
   item: true,
   productLine: true,
+  dosageForm: true,
   updatedBy: {
     select: productionSpecificationUserSelect,
   },
@@ -219,7 +220,7 @@ export class ProductionSpecificationsService {
     return {
       item_code: this.normalizeRequiredString(dto.item_code, 'item_code'),
       product_line_id: await this.resolveProductLineId(dto),
-      dosage_form: this.normalizeOptionalString(dto.dosage_form, 'dosage_form'),
+      dosage_form_id: await this.resolveDosageFormId(dto),
       lower_control_limit: this.normalizeOptionalDecimal(
         dto.lower_control_limit,
         'lower_control_limit',
@@ -350,11 +351,8 @@ export class ProductionSpecificationsService {
       data.product_line_id = await this.resolveProductLineId(dto);
     }
 
-    if (dto.dosage_form !== undefined) {
-      data.dosage_form = this.normalizeOptionalString(
-        dto.dosage_form,
-        'dosage_form',
-      );
+    if (dto.dosage_form_id !== undefined) {
+      data.dosage_form_id = await this.resolveDosageFormId(dto);
     }
 
     if (dto.lower_control_limit !== undefined) {
@@ -619,6 +617,29 @@ export class ProductionSpecificationsService {
     if (!productLine) {
       throw new NotFoundException('Product line not found');
     }
+  }
+
+  private async resolveDosageFormId(
+    dto: CreateProductionSpecificationDto | UpdateProductionSpecificationDto,
+  ) {
+    const dosageFormId = this.normalizeOptionalInt(
+      dto.dosage_form_id,
+      'dosage_form_id',
+    );
+
+    if (dosageFormId === null) {
+      return null;
+    }
+
+    const dosageForm = await this.prismaService.dosageForms.findUnique({
+      where: { id: dosageFormId },
+    });
+
+    if (!dosageForm) {
+      throw new NotFoundException('Dosage form not found');
+    }
+
+    return dosageFormId;
   }
 
   private async findOrCreateProductLineId(name: string) {
