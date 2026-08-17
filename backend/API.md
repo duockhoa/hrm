@@ -7862,6 +7862,86 @@ Lỗi thường gặp:
 - `409 Filter code already exists`
 - `400 usable_steam_cycles must be a non-negative integer`
 
+## Dosage Forms
+
+Tất cả API trong nhóm này cần `Auth: Bearer`. Trường `created_by_id` được lấy tự động từ access token và không nhận từ body.
+
+### Lấy danh sách dạng bào chế
+
+```http
+GET /dosage-forms
+```
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Viên nén bao phim",
+    "created_by_id": 7,
+    "created_at": "2026-08-17T00:00:00.000Z",
+    "updated_at": "2026-08-17T00:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
+Kết quả được sắp xếp theo tên dạng bào chế tăng dần.
+
+### Lấy dạng bào chế theo ID
+
+```http
+GET /dosage-forms/:id
+```
+
+### Thêm dạng bào chế
+
+```http
+POST /dosage-forms
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Viên nén bao phim"
+}
+```
+
+`name` là bắt buộc, tự động loại bỏ khoảng trắng ở đầu/cuối và phải là duy nhất.
+
+### Cập nhật dạng bào chế
+
+```http
+PATCH /dosage-forms/:id
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Viên nang mềm"
+}
+```
+
+### Xóa dạng bào chế
+
+```http
+DELETE /dosage-forms/:id
+```
+
+Lỗi thường gặp:
+
+- `404 Dosage form not found`
+- `409 Dosage form name already exists`
+- `400 name is required`
+
 ## App Root
 
 Các route này hiện có trong `AppController`, chủ yếu dùng kiểm tra server.

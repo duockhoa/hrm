@@ -81,6 +81,7 @@ model Users {
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
   createdEquipmentMonitoringRecordImages                EquipmentMonitoringRecordImages[]                    @relation("EquipmentMonitoringRecordImageCreator")
   createdFilterCatalogs                                 FilterCatalogs[]                                      @relation("FilterCatalogCreator")
+  createdDosageForms                                    DosageForms[]                                         @relation("DosageFormCreator")
   createdCleaningObjects                                CleaningObjects[]                                     @relation("CleaningObjectCreator")
   createdCleaningRequirements                           CleaningRequirements[]                                @relation("CleaningRequirementCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
@@ -125,6 +126,18 @@ model FilterCatalogs {
 
   @@index([created_by_id], map: "filter_catalogs_created_by_id_idx")
   @@map("filter_catalogs")
+}
+
+model DosageForms {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique @db.VarChar(255)
+  created_by_id Int
+  createdBy     Users    @relation("DosageFormCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "dosage_forms_created_by_id_fkey")
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+
+  @@index([created_by_id], map: "dosage_forms_created_by_id_idx")
+  @@map("dosage_forms")
 }
 
 model CleaningObjects {

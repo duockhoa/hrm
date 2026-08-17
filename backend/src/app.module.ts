@@ -31,6 +31,7 @@ import { FilterCatalogsModule } from './modules/filter-catalogs/filter-catalogs.
 import { CleaningObjectsModule } from './modules/cleaning-objects/cleaning-objects.module';
 import { CleaningRequirementsModule } from './modules/cleaning-requirements/cleaning-requirements.module';
 import { SecondaryPackagingStageRequirementsModule } from './modules/secondary-packaging-stage-requirements/secondary-packaging-stage-requirements.module';
+import { DosageFormsModule } from './modules/dosage-forms/dosage-forms.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { SecondaryPackagingStageRequirementsModule } from './modules/secondary-p
     CleaningObjectsModule,
     CleaningRequirementsModule,
     SecondaryPackagingStageRequirementsModule,
+    DosageFormsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
