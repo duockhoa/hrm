@@ -54,6 +54,8 @@ model Users {
   createdProductionOrderDateChecks                      ProductionOrderDateChecks[]                           @relation("ProductionOrderDateCheckCreator")
   approvedProductionOrderDateChecks                     ProductionOrderDateChecks[]                           @relation("ProductionOrderDateCheckApprover")
   createdProductionOrderDateCheckImages                 ProductionOrderDateCheckImages[]                      @relation("ProductionOrderDateCheckImageCreator")
+  enteredProductionOrderAttachments                     ProductionOrderAttachments[]                          @relation("ProductionOrderAttachmentEnteredBy")
+  approvedProductionOrderAttachments                    ProductionOrderAttachments[]                          @relation("ProductionOrderAttachmentApprover")
   createdProductionWorkshopPressureDifferentials        ProductionWorkshopPressureDifferentials[]             @relation("ProductionWorkshopPressureDifferentialCreator")
   cleanedProductionWorkshopCleaningChecklists           ProductionWorkshopCleaningChecklists[]                @relation("ProductionWorkshopCleaningChecklistCleaner")
   createdProductionOrderDisinfectantPreparations        ProductionOrderDisinfectantPreparations[]             @relation("ProductionOrderDisinfectantPreparationCreator")
@@ -652,6 +654,7 @@ model ProductionOrders {
   documentControl                      ProductionOrderDocumentControls?
   productionGuide                      ProductionOrderProductionGuides?
   primaryPackagingConfirmations        ProductionOrderPrimaryPackagingConfirmations[]
+  attachments                          ProductionOrderAttachments[]
   registrationNumber                   ProductionOrderRegistrationNumbers?
 
   @@index([item_code], map: "production_orders_item_code_fkey")
@@ -711,6 +714,48 @@ model ProductionOrderProductionGuides {
   updated_at          DateTime         @default(now()) @updatedAt
 
   @@map("production_order_production_guides")
+}
+
+model ProductionOrderAttachments {
+  id                  Int                              @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders                 @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_attachments_po_id_fkey")
+  attachment_type     String                           @db.VarChar(50)
+  description         String?                          @db.Text
+  entered_by_id       Int
+  enteredBy           Users                            @relation("ProductionOrderAttachmentEnteredBy", fields: [entered_by_id], references: [id], map: "po_attachments_entered_by_id_fkey")
+  entered_at          DateTime                         @default(now())
+  requires_approval   Boolean                          @default(false)
+  approval_status     String?                          @db.VarChar(20)
+  approved_by_id      Int?
+  approvedBy          Users?                           @relation("ProductionOrderAttachmentApprover", fields: [approved_by_id], references: [id], onDelete: SetNull, map: "po_attachments_approved_by_id_fkey")
+  approved_at         DateTime?
+  approval_note       String?                          @db.Text
+  files               ProductionOrderAttachmentFiles[]
+  created_at          DateTime                         @default(now())
+  updated_at          DateTime                         @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_attachments_po_id_idx")
+  @@index([approval_status], map: "po_attachments_approval_status_idx")
+  @@index([entered_by_id], map: "po_attachments_entered_by_id_idx")
+  @@index([approved_by_id], map: "po_attachments_approved_by_id_idx")
+  @@map("production_order_attachments")
+}
+
+model ProductionOrderAttachmentFiles {
+  id                Int                        @id @default(autoincrement())
+  attachment_id     Int
+  attachment        ProductionOrderAttachments @relation(fields: [attachment_id], references: [id], onDelete: Cascade, map: "po_attachment_files_attachment_id_fkey")
+  file_path         String                     @db.Text
+  original_filename String                     @db.VarChar(255)
+  mime_type         String                     @db.VarChar(100)
+  file_size         Int
+  sort_order        Int                        @default(0)
+  note              String?                    @db.Text
+  created_at        DateTime                   @default(now())
+
+  @@index([attachment_id], map: "po_attachment_files_attachment_id_idx")
+  @@map("production_order_attachment_files")
 }
 
 model ProductionOrderPrimaryPackagingConfirmations {

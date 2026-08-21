@@ -7960,6 +7960,119 @@ GET /
 POST /
 ```
 
+## Ảnh đính kèm Production Order
+
+Tất cả API trong nhóm này cần `Auth: Bearer`. Một record đính kèm (`production_order_attachments`) có thể chứa nhiều file ảnh (`production_order_attachment_files`). Người nhập và thời điểm nhập được lấy tự động từ access token và thời điểm tạo record.
+
+Ảnh chỉ nhận định dạng JPG, PNG, WEBP hoặc GIF; tối đa 10 ảnh cho mỗi lần gọi API và mỗi ảnh tối đa 20 MB. Khi upload, dùng `multipart/form-data` với tên trường file là `files`.
+
+### Tạo record đính kèm kèm ảnh
+
+```http
+POST /production-orders/:id/attachments
+Content-Type: multipart/form-data
+```
+
+Các trường form:
+
+| Trường | Bắt buộc | Mô tả |
+|---|---:|---|
+| `attachment_type` | Có | Loại đính kèm, ví dụ: `production`, `quality_check`, `completion`, `defect` |
+| `description` | Không | Mô tả / ghi chú chung |
+| `requires_approval` | Không | `true` nếu record cần duyệt; mặc định là `false` |
+| `files` | Có | Một hoặc nhiều file ảnh |
+
+Ví dụ `curl`:
+
+```bash
+curl -X POST http://localhost:3000/production-orders/123/attachments \
+  -H "Authorization: Bearer <accessToken>" \
+  -F "attachment_type=quality_check" \
+  -F "description=Hình kiểm tra chất lượng" \
+  -F "requires_approval=true" \
+  -F "files=@./image-01.jpg" \
+  -F "files=@./image-02.jpg"
+```
+
+Nếu `requires_approval=true`, API tạo record với `approval_status` là `pending`. Nếu không yêu cầu duyệt, `approval_status`, `approved_by_id` và `approved_at` là `null`.
+
+### Lấy danh sách record theo Production Order
+
+```http
+GET /production-orders/:id/attachments
+```
+
+Response mỗi record bao gồm `enteredBy`, `approvedBy` và mảng `files`. Mỗi phần tử `files` có `file_path`, là URL tương đối để lấy ảnh.
+
+### Lấy một record đính kèm
+
+```http
+GET /production-orders/attachments/:attachmentId
+```
+
+### Cập nhật thông tin record
+
+```http
+PATCH /production-orders/attachments/:attachmentId
+Content-Type: application/json
+```
+
+Chỉ gửi các trường cần sửa:
+
+```json
+{
+  "attachment_type": "completion",
+  "description": "Hình thành phẩm sau đóng gói",
+  "requires_approval": true
+}
+```
+
+Thay đổi `requires_approval` sẽ đặt lại luồng duyệt: `true` chuyển trạng thái sang `pending`; `false` xóa trạng thái và thông tin phê duyệt.
+
+### Duyệt hoặc từ chối record
+
+```http
+PATCH /production-orders/attachments/:attachmentId/approval
+Content-Type: application/json
+```
+
+```json
+{
+  "approval_status": "approved",
+  "approval_note": "Đạt yêu cầu"
+}
+```
+
+`approval_status` chỉ chấp nhận `approved` hoặc `rejected`. API tự lưu `approved_by_id` theo người dùng đăng nhập và `approved_at` theo thời điểm duyệt. Chỉ record có `requires_approval=true` và trạng thái `pending` mới có thể duyệt.
+
+### Thêm ảnh vào record
+
+```http
+POST /production-orders/attachments/:attachmentId/files
+Content-Type: multipart/form-data
+```
+
+Gửi một hoặc nhiều file qua trường `files`.
+
+### Xóa ảnh hoặc record
+
+```http
+DELETE /production-orders/attachments/files/:fileId
+DELETE /production-orders/attachments/:attachmentId
+```
+
+### Lấy nội dung file ảnh
+
+```http
+GET /production-orders/attachments/files/:filename
+```
+
+### Quy tắc chỉnh sửa
+
+- Record có trạng thái `approved` hoặc `rejected` không thể cập nhật, thêm/xóa ảnh hoặc xóa record.
+- Record không yêu cầu duyệt (`requires_approval=false`) vẫn có thể chỉnh sửa bình thường.
+- Xóa record sẽ xóa toàn bộ file ảnh con trong cơ sở dữ liệu và file đã upload trên server.
+
 ## Module Chưa Có Endpoint Public
 
 Các controller sau đang tồn tại nhưng chưa khai báo route xử lý request:

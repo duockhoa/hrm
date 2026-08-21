@@ -18,6 +18,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import {
+  FilesInterceptor,
   FileInterceptor,
   FileFieldsInterceptor,
 } from '@nestjs/platform-express';
@@ -132,6 +133,10 @@ import { CreateProductionOrderPrimaryPackagingConfirmationDto } from './dto/crea
 import { UpdateProductionOrderPrimaryPackagingConfirmationDto } from './dto/update-production-order-primary-packaging-confirmation.dto';
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
+import { ProductionOrderAttachmentsService } from './production-order-attachments.service';
+import { CreateProductionOrderAttachmentDto } from './dto/create-production-order-attachment.dto';
+import { UpdateProductionOrderAttachmentDto } from './dto/update-production-order-attachment.dto';
+import { ApproveProductionOrderAttachmentDto } from './dto/approve-production-order-attachment.dto';
 import {
   getDateCheckImagePaths,
   getDateCheckRequestFilePath,
@@ -169,6 +174,11 @@ import {
   productionOrderProductionGuideUploadOptions,
   removeUploadedProductionGuide,
 } from './production-order-production-guide-upload.config';
+import {
+  MAX_PRODUCTION_ORDER_ATTACHMENT_FILE_COUNT,
+  productionOrderAttachmentUploadOptions,
+  removeUploadedProductionOrderAttachmentFiles,
+} from './production-order-attachment-upload.config';
 
 type DateCheckUploadFields = {
   request_file?: Express.Multer.File[];
@@ -349,6 +359,7 @@ export class ProductionOrdersController {
     private readonly productionOrderDocumentControlsService: ProductionOrderDocumentControlsService,
     private readonly productionOrderPrimaryPackagingConfirmationsService: ProductionOrderPrimaryPackagingConfirmationsService,
     private readonly productionOrderProductionGuidesService: ProductionOrderProductionGuidesService,
+    private readonly productionOrderAttachmentsService: ProductionOrderAttachmentsService,
   ) {}
 
   @Get()
@@ -1151,6 +1162,27 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Get('attachments/files/:filename')
+  async getProductionOrderAttachmentFile(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file =
+      await this.productionOrderAttachmentsService.findFile(filename);
+
+    if (!file) {
+      throw new NotFoundException('Production order attachment file not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': file.size,
+      'Content-Type': file.contentType,
+    });
+
+    return new StreamableFile(createReadStream(file.filePath));
+  }
+
   @Get('date-checks/request-files/:filename')
   async getDateCheckRequestFile(
     @Param('filename') filename: string,
@@ -1528,6 +1560,74 @@ export class ProductionOrdersController {
   @Delete('date-checks/images/:imageId')
   async deleteDateCheckImage(@Param('imageId', ParseIntPipe) imageId: number) {
     return this.productionOrderDateChecksService.deleteImage(imageId);
+  }
+
+  @Get('attachments/:attachmentId')
+  async findProductionOrderAttachmentById(
+    @Param('attachmentId', ParseIntPipe) attachmentId: number,
+  ) {
+    return this.productionOrderAttachmentsService.findById(attachmentId);
+  }
+
+  @Patch('attachments/:attachmentId')
+  async updateProductionOrderAttachment(
+    @Param('attachmentId', ParseIntPipe) attachmentId: number,
+    @Body() updateDto: UpdateProductionOrderAttachmentDto,
+  ) {
+    return this.productionOrderAttachmentsService.update(
+      attachmentId,
+      updateDto,
+    );
+  }
+
+  @Patch('attachments/:attachmentId/approval')
+  async approveProductionOrderAttachment(
+    @Param('attachmentId', ParseIntPipe) attachmentId: number,
+    @Body() approveDto: ApproveProductionOrderAttachmentDto,
+    @Request() request: any,
+  ) {
+    return this.productionOrderAttachmentsService.approve(
+      attachmentId,
+      approveDto,
+      request.user,
+    );
+  }
+
+  @Post('attachments/:attachmentId/files')
+  @UseInterceptors(
+    FilesInterceptor(
+      'files',
+      MAX_PRODUCTION_ORDER_ATTACHMENT_FILE_COUNT,
+      productionOrderAttachmentUploadOptions,
+    ),
+  )
+  async addProductionOrderAttachmentFiles(
+    @Param('attachmentId', ParseIntPipe) attachmentId: number,
+    @UploadedFiles() files: Express.Multer.File[] | undefined,
+  ) {
+    try {
+      return await this.productionOrderAttachmentsService.addFiles(
+        attachmentId,
+        files ?? [],
+      );
+    } catch (error) {
+      await removeUploadedProductionOrderAttachmentFiles(files);
+      throw error;
+    }
+  }
+
+  @Delete('attachments/files/:fileId')
+  async deleteProductionOrderAttachmentFile(
+    @Param('fileId', ParseIntPipe) fileId: number,
+  ) {
+    return this.productionOrderAttachmentsService.deleteFile(fileId);
+  }
+
+  @Delete('attachments/:attachmentId')
+  async deleteProductionOrderAttachment(
+    @Param('attachmentId', ParseIntPipe) attachmentId: number,
+  ) {
+    return this.productionOrderAttachmentsService.delete(attachmentId);
   }
 
   @Get(':id/export')
@@ -2423,6 +2523,38 @@ export class ProductionOrdersController {
   @Get(':id/date-checks')
   async findDateChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderDateChecksService.findAllByProductionOrder(id);
+  }
+
+  @Get(':id/attachments')
+  async findProductionOrderAttachments(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderAttachmentsService.findAllByProductionOrder(id);
+  }
+
+  @Post(':id/attachments')
+  @UseInterceptors(
+    FilesInterceptor(
+      'files',
+      MAX_PRODUCTION_ORDER_ATTACHMENT_FILE_COUNT,
+      productionOrderAttachmentUploadOptions,
+    ),
+  )
+  async createProductionOrderAttachment(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderAttachmentDto,
+    @UploadedFiles() files: Express.Multer.File[] | undefined,
+    @Request() request: any,
+  ) {
+    try {
+      return await this.productionOrderAttachmentsService.create(
+        id,
+        createDto,
+        request.user,
+        files ?? [],
+      );
+    } catch (error) {
+      await removeUploadedProductionOrderAttachmentFiles(files);
+      throw error;
+    }
   }
 
   @Post(':id/date-checks')
