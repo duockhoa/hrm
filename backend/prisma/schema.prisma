@@ -133,6 +133,7 @@ model FilterCatalogs {
 model DosageForms {
   id                       Int                        @id @default(autoincrement())
   name                     String                     @unique @db.VarChar(255)
+  sensory_requirement      String?                    @db.Text
   created_by_id            Int
   createdBy                Users                      @relation("DosageFormCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "dosage_forms_created_by_id_fkey")
   productionSpecifications ProductionSpecifications[]

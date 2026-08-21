@@ -7888,6 +7888,7 @@ Response mẫu:
   {
     "id": 1,
     "name": "Viên nén bao phim",
+    "sensory_requirement": "Bề mặt đồng đều, không nứt vỡ.",
     "created_by_id": 7,
     "created_at": "2026-08-17T00:00:00.000Z",
     "updated_at": "2026-08-17T00:00:00.000Z",
@@ -7920,11 +7921,13 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Viên nén bao phim"
+  "name": "Viên nén bao phim",
+  "sensory_requirement": "Bề mặt đồng đều, không nứt vỡ."
 }
 ```
 
-`name` là bắt buộc, tự động loại bỏ khoảng trắng ở đầu/cuối và phải là duy nhất.
+- `name` là bắt buộc, tự động loại bỏ khoảng trắng ở đầu/cuối và phải là duy nhất.
+- `sensory_requirement` không bắt buộc, lưu dạng `TEXT`. Backend tự động loại bỏ khoảng trắng ở đầu/cuối; không gửi, gửi `null` hoặc chuỗi rỗng sẽ lưu `null`.
 
 ### Cập nhật dạng bào chế
 
@@ -7935,9 +7938,11 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Viên nang mềm"
+  "sensory_requirement": "Màu sắc đồng nhất, không có vết lạ."
 }
 ```
+
+Có thể gửi `name`, `sensory_requirement`, hoặc cả hai. Gửi `sensory_requirement` là `null` hoặc chuỗi rỗng để xóa yêu cầu cảm quan.
 
 ### Xóa dạng bào chế
 
@@ -7950,6 +7955,8 @@ Lỗi thường gặp:
 - `404 Dosage form not found`
 - `409 Dosage form name already exists`
 - `400 name is required`
+- `400 sensory_requirement must be a string`
+- `400 No update data provided`
 
 ## App Root
 

@@ -56,6 +56,10 @@ export class DosageFormsService {
     return this.prismaService.dosageForms.create({
       data: {
         name,
+        sensory_requirement: this.normalizeOptionalText(
+          dto?.sensory_requirement,
+          'sensory_requirement',
+        ),
         created_by_id: this.normalizeUserId(user),
       },
       include: dosageFormInclude,
@@ -65,16 +69,28 @@ export class DosageFormsService {
   async update(id: number, dto: UpdateDosageFormDto) {
     await this.findById(id);
 
-    if (dto.name === undefined) {
+    if (dto.name === undefined && dto.sensory_requirement === undefined) {
       throw new BadRequestException('No update data provided');
     }
 
-    const name = this.normalizeRequiredText(dto.name, 'name');
-    await this.ensureNameAvailable(name, id);
+    const data: Prisma.DosageFormsUpdateInput = {};
+
+    if (dto.name !== undefined) {
+      const name = this.normalizeRequiredText(dto.name, 'name');
+      await this.ensureNameAvailable(name, id);
+      data.name = name;
+    }
+
+    if (dto.sensory_requirement !== undefined) {
+      data.sensory_requirement = this.normalizeOptionalText(
+        dto.sensory_requirement,
+        'sensory_requirement',
+      );
+    }
 
     return this.prismaService.dosageForms.update({
       where: { id },
-      data: { name },
+      data,
       include: dosageFormInclude,
     });
   }
@@ -104,6 +120,18 @@ export class DosageFormsService {
     }
 
     return value.trim();
+  }
+
+  private normalizeOptionalText(value: unknown, fieldName: string) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be a string`);
+    }
+
+    return value.trim() || null;
   }
 
   private normalizeUserId(user?: AuthenticatedUser) {
