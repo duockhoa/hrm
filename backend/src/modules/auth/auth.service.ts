@@ -4,6 +4,12 @@ import { PrismaService } from 'src/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { generateOtp } from 'src/common/utils/otp.util';
 import { EmailService } from '../email/email.service';
+import { randomUUID } from 'crypto';
+
+export interface LoginMetadata {
+  ipAddress?: string;
+  userAgent?: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -12,7 +18,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
   ) {}
-  async login(user: any) {
+  async login(user: any, metadata: LoginMetadata = {}) {
     const payload = {
       username: user.username,
       sub: user.id,
@@ -20,11 +26,24 @@ export class AuthService {
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: Number(process.env.JWT_REFRESH_EXPIRES_IN) || 6048000,
     });
-    await this.prisma.tokens.create({
-      data: {
-        user_id: user.id,
-        refreshToken: refreshToken,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      const storedToken = await tx.tokens.create({
+        data: {
+          user_id: user.id,
+          refreshToken: refreshToken,
+        },
+      });
+
+      await tx.userLoginSessions.create({
+        data: {
+          user_id: user.id,
+          token_id: storedToken.id,
+          session_key: randomUUID(),
+          ip_address: metadata.ipAddress?.slice(0, 45),
+          user_agent: metadata.userAgent?.slice(0, 1000),
+          last_activity_at: new Date(),
+        },
+      });
     });
     const accessToken = this.jwtService.sign(payload);
     return {
@@ -46,22 +65,45 @@ export class AuthService {
     try {
       payload = this.jwtService.verify(refreshToken);
     } catch (e) {
+      console.log("verify failed")
       return null;
     }
     const newAccessToken = this.jwtService.sign({
       username: payload.username,
       sub: payload.sub,
     });
+    console.log("verify successfully")
     return {
       accessToken: newAccessToken,
     };
   }
 
   async logout(refreshToken: string) {
-    const deleteResponse = await this.prisma.tokens.deleteMany({
-      where: { refreshToken },
+    return this.prisma.$transaction(async (tx) => {
+      const storedToken = await tx.tokens.findUnique({
+        where: { refreshToken },
+      });
+
+      if (!storedToken) {
+        return false;
+      }
+
+      const logoutAt = new Date();
+      await tx.userLoginSessions.updateMany({
+        where: { token_id: storedToken.id, logout_at: null },
+        data: {
+          logout_at: logoutAt,
+          last_activity_at: logoutAt,
+          logout_reason: 'manual',
+        },
+      });
+
+      await tx.tokens.delete({
+        where: { id: storedToken.id },
+      });
+
+      return true;
     });
-    return deleteResponse.count > 0;
   }
 
   async createResetPasswordOTP(email: string) {

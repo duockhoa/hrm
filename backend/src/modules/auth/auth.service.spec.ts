@@ -59,7 +59,7 @@ describe('AuthService', () => {
     (jwtService.sign as jest.Mock)
       .mockReturnValueOnce('refresh-token')
       .mockReturnValueOnce('access-token');
-    prisma.tokens.create.mockResolvedValue({});
+    prisma.tokens.create.mockResolvedValue({ id: 10 });
 
     await expect(
       service.login({
@@ -88,6 +88,32 @@ describe('AuthService', () => {
       username: 'user@example.com',
       sub: 1,
     });
+    expect(prisma.userLoginSessions.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        user_id: 1,
+        token_id: 10,
+        session_key: expect.any(String),
+        last_activity_at: expect.any(Date),
+      }),
+    });
+  });
+
+  it('closes the login session before deleting its refresh token', async () => {
+    prisma.tokens.findUnique.mockResolvedValue({ id: 10, user_id: 1 });
+    prisma.userLoginSessions.updateMany.mockResolvedValue({ count: 1 });
+    prisma.tokens.delete.mockResolvedValue({ id: 10 });
+
+    await expect(service.logout('refresh-token')).resolves.toBe(true);
+
+    expect(prisma.userLoginSessions.updateMany).toHaveBeenCalledWith({
+      where: { token_id: 10, logout_at: null },
+      data: {
+        logout_at: expect.any(Date),
+        last_activity_at: expect.any(Date),
+        logout_reason: 'manual',
+      },
+    });
+    expect(prisma.tokens.delete).toHaveBeenCalledWith({ where: { id: 10 } });
   });
 
   it('refreshes an access token without roles or permissions', async () => {
@@ -101,7 +127,9 @@ describe('AuthService', () => {
     });
     (jwtService.sign as jest.Mock).mockReturnValue('new-access-token');
 
-    await expect(service.refreshToken({ refreshToken: 'refresh-token' })).resolves.toEqual({
+    await expect(
+      service.refreshToken({ refreshToken: 'refresh-token' }),
+    ).resolves.toEqual({
       accessToken: 'new-access-token',
     });
 
@@ -267,8 +295,13 @@ function createPrismaMock() {
     },
     tokens: {
       create: jest.fn(),
+      delete: jest.fn(),
       deleteMany: jest.fn(),
       findUnique: jest.fn(),
+    },
+    userLoginSessions: {
+      create: jest.fn(),
+      updateMany: jest.fn(),
     },
   };
 

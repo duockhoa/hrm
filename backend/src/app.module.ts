@@ -32,6 +32,7 @@ import { CleaningObjectsModule } from './modules/cleaning-objects/cleaning-objec
 import { CleaningRequirementsModule } from './modules/cleaning-requirements/cleaning-requirements.module';
 import { SecondaryPackagingStageRequirementsModule } from './modules/secondary-packaging-stage-requirements/secondary-packaging-stage-requirements.module';
 import { DosageFormsModule } from './modules/dosage-forms/dosage-forms.module';
+import { UserLoginSessionsModule } from './modules/user-login-sessions/user-login-sessions.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { DosageFormsModule } from './modules/dosage-forms/dosage-forms.module';
     CleaningRequirementsModule,
     SecondaryPackagingStageRequirementsModule,
     DosageFormsModule,
+    UserLoginSessionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

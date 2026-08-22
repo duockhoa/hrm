@@ -51,7 +51,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Đăng ký tài khoản mới' })
   @ApiBody({ type: CreateUserDto })
   @ApiCreatedResponse({ type: UserResponseDto })
-  @ApiBadRequestResponse({ description: 'Tên đăng nhập đã tồn tại hoặc dữ liệu không hợp lệ' })
+  @ApiBadRequestResponse({
+    description: 'Tên đăng nhập đã tồn tại hoặc dữ liệu không hợp lệ',
+  })
   async register(@Body() userData: any) {
     // Implement registration logic here
     const { username } = userData;
@@ -68,7 +70,9 @@ export class AuthController {
   @ApiBody({ type: RefreshTokenDto })
   @ApiCreatedResponse({ type: AccessTokenResponseDto })
   @ApiBadRequestResponse({ description: 'Thiếu refresh token' })
-  @ApiUnauthorizedResponse({ description: 'Refresh token không hợp lệ hoặc đã hết hạn' })
+  @ApiUnauthorizedResponse({
+    description: 'Refresh token không hợp lệ hoặc đã hết hạn',
+  })
   async refreshToken(@Body() refreshToken: { refreshToken: string }) {
     if (!refreshToken || !refreshToken.refreshToken) {
       throw new HttpException('Refresh token is required', 400);
@@ -112,7 +116,9 @@ export class AuthController {
   }
 
   @Post('get-reset-password-otp')
-  @ApiOperation({ summary: 'Gửi OTP đặt lại mật khẩu (endpoint tương thích cũ)' })
+  @ApiOperation({
+    summary: 'Gửi OTP đặt lại mật khẩu (endpoint tương thích cũ)',
+  })
   @ApiCreatedResponse({ type: MessageResponseDto })
   @ApiNotFoundResponse({ description: 'Không tìm thấy user theo email' })
   async getResetPasswordOTP(@Body() resetData: RequestPasswordResetDto) {
@@ -160,13 +166,27 @@ export class AuthController {
   @ApiOperation({ summary: 'Đăng nhập' })
   @ApiBody({ type: LoginDto })
   @ApiCreatedResponse({ type: TokenPairResponseDto })
-  @ApiUnauthorizedResponse({ description: 'Tên đăng nhập hoặc mật khẩu không đúng' })
+  @ApiUnauthorizedResponse({
+    description: 'Tên đăng nhập hoặc mật khẩu không đúng',
+  })
   async login(@Request() request) {
-    const token = await this.authService.login(request.user);
+    const token = await this.authService.login(request.user, {
+      ipAddress: this.getClientIp(request),
+      userAgent: request.headers['user-agent'],
+    });
     if (!token) {
       throw new HttpException('Invalid credentials', 401);
     }
 
     return token;
+  }
+
+  private getClientIp(request: any): string | undefined {
+    const forwardedFor = request.headers['x-forwarded-for'];
+    if (typeof forwardedFor === 'string') {
+      return forwardedFor.split(',')[0].trim() || undefined;
+    }
+
+    return request.ip || request.socket?.remoteAddress;
   }
 }
