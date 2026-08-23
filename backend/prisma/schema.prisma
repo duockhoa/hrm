@@ -88,6 +88,7 @@ model Users {
   createdCleaningRequirements                           CleaningRequirements[]                                @relation("CleaningRequirementCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
   createdMixingActivityTemplates                        MixingActivityTemplates[]                             @relation("MixingActivityTemplateCreator")
+  createdMixingActivityTemplateStages                   MixingActivityTemplateStages[]                        @relation("MixingActivityTemplateStageCreator")
   createdPrimaryPackagingConfirmations                  ProductionOrderPrimaryPackagingConfirmations[]        @relation("ProductionOrderPrimaryPackagingConfirmationCreator")
   sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
   filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckFilterer")
@@ -569,21 +570,38 @@ model ItemEquipment {
 }
 
 model MixingActivityTemplates {
-  id              Int      @id @default(autoincrement())
+  id              Int                            @id @default(autoincrement())
   item_code       String
-  item            Items    @relation(fields: [item_code], references: [item_code], onDelete: Cascade, map: "mixing_activity_templates_item_code_fkey")
-  version         Int      @default(1)
-  batch_size      Decimal  @db.Decimal(18, 3)
-  unit_of_measure String   @db.VarChar(50)
-  description     String?  @db.Text
+  item            Items                          @relation(fields: [item_code], references: [item_code], onDelete: Cascade, map: "mixing_activity_templates_item_code_fkey")
+  version         Int                            @default(1)
+  batch_size      Decimal                        @db.Decimal(18, 3)
+  unit_of_measure String                         @db.VarChar(50)
+  description     String?                        @db.Text
   created_by_id   Int
-  createdBy       Users    @relation("MixingActivityTemplateCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "mixing_activity_templates_created_by_id_fkey")
-  created_at      DateTime @default(now())
-  updated_at      DateTime @default(now()) @updatedAt
+  createdBy       Users                          @relation("MixingActivityTemplateCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "mixing_activity_templates_created_by_id_fkey")
+  created_at      DateTime                       @default(now())
+  updated_at      DateTime                       @default(now()) @updatedAt
+  stages          MixingActivityTemplateStages[]
 
   @@index([item_code], map: "mixing_activity_templates_item_code_idx")
   @@index([created_by_id], map: "mixing_activity_templates_created_by_id_idx")
   @@map("mixing_activity_templates")
+}
+
+model MixingActivityTemplateStages {
+  id                          Int                     @id @default(autoincrement())
+  mixing_activity_template_id Int
+  mixingActivityTemplate      MixingActivityTemplates @relation(fields: [mixing_activity_template_id], references: [id], onDelete: Cascade, map: "mixing_activity_template_stages_template_id_fkey")
+  stage_name                  String                  @db.VarChar(255)
+  stage_order                 Int
+  created_by_id               Int
+  createdBy                   Users                   @relation("MixingActivityTemplateStageCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "mixing_activity_template_stages_created_by_id_fkey")
+  created_at                  DateTime                @default(now())
+  updated_at                  DateTime                @default(now()) @updatedAt
+
+  @@unique([mixing_activity_template_id, stage_order], map: "mixing_activity_template_stages_template_order_key")
+  @@index([created_by_id], map: "mixing_activity_template_stages_created_by_id_idx")
+  @@map("mixing_activity_template_stages")
 }
 
 model ProductionWorkshops {

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ItemEquipmentService } from './item-equipment.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
+import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
 import { ItemsController } from './items.controller';
 import { ItemsService } from './items.service';
 
@@ -23,6 +24,13 @@ describe('ItemsController', () => {
   let mixingActivityTemplatesService: {
     findById: jest.Mock;
     findAllByItem: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let mixingActivityTemplateStagesService: {
+    findById: jest.Mock;
+    findAllByTemplate: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
@@ -50,6 +58,13 @@ describe('ItemsController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    mixingActivityTemplateStagesService = {
+      findById: jest.fn(),
+      findAllByTemplate: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ItemsController],
@@ -65,6 +80,10 @@ describe('ItemsController', () => {
         {
           provide: MixingActivityTemplatesService,
           useValue: mixingActivityTemplatesService,
+        },
+        {
+          provide: MixingActivityTemplateStagesService,
+          useValue: mixingActivityTemplateStagesService,
         },
       ],
     }).compile();

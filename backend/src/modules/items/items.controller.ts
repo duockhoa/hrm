@@ -12,10 +12,13 @@ import {
 } from '@nestjs/common';
 import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
 import { CreateMixingActivityTemplateDto } from './dto/create-mixing-activity-template.dto';
+import { CreateMixingActivityTemplateStageDto } from './dto/create-mixing-activity-template-stage.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { UpdateMixingActivityTemplateDto } from './dto/update-mixing-activity-template.dto';
+import { UpdateMixingActivityTemplateStageDto } from './dto/update-mixing-activity-template-stage.dto';
 import { ItemEquipmentService } from './item-equipment.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
+import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
 import { ItemsService } from './items.service';
 
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -27,6 +30,7 @@ export class ItemsController {
     private readonly itemsService: ItemsService,
     private readonly itemEquipmentService: ItemEquipmentService,
     private readonly mixingActivityTemplatesService: MixingActivityTemplatesService,
+    private readonly mixingActivityTemplateStagesService: MixingActivityTemplateStagesService,
   ) {}
 
   @Get()
@@ -83,6 +87,50 @@ export class ItemsController {
     @Param('templateId', ParseIntPipe) templateId: number,
   ) {
     return this.mixingActivityTemplatesService.delete(templateId);
+  }
+
+  @Get('mixing-activity-template-stages/:stageId')
+  async findMixingActivityTemplateStageById(
+    @Param('stageId', ParseIntPipe) stageId: number,
+  ) {
+    return this.mixingActivityTemplateStagesService.findById(stageId);
+  }
+
+  @Patch('mixing-activity-template-stages/:stageId')
+  async updateMixingActivityTemplateStage(
+    @Param('stageId', ParseIntPipe) stageId: number,
+    @Body() updateDto: UpdateMixingActivityTemplateStageDto,
+  ) {
+    return this.mixingActivityTemplateStagesService.update(stageId, updateDto);
+  }
+
+  @Delete('mixing-activity-template-stages/:stageId')
+  async deleteMixingActivityTemplateStage(
+    @Param('stageId', ParseIntPipe) stageId: number,
+  ) {
+    return this.mixingActivityTemplateStagesService.delete(stageId);
+  }
+
+  @Get('mixing-activity-templates/:templateId/stages')
+  async findMixingActivityTemplateStages(
+    @Param('templateId', ParseIntPipe) templateId: number,
+  ) {
+    return this.mixingActivityTemplateStagesService.findAllByTemplate(
+      templateId,
+    );
+  }
+
+  @Post('mixing-activity-templates/:templateId/stages')
+  async createMixingActivityTemplateStage(
+    @Param('templateId', ParseIntPipe) templateId: number,
+    @Body() createDto: CreateMixingActivityTemplateStageDto,
+    @Request() req: any,
+  ) {
+    return this.mixingActivityTemplateStagesService.create(
+      templateId,
+      createDto,
+      req.user,
+    );
   }
 
   @Get(':item_code/equipment')

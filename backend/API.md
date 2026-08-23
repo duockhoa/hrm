@@ -1122,6 +1122,75 @@ Lỗi thường gặp:
 - `404 Item not found`
 - `404 Mixing activity template not found`
 
+## Mixing Activity Template Stages
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+`mixing_activity_template_stages` lưu các giai đoạn thuộc một template pha chế. `stage_order` là duy nhất trong phạm vi một template. Backend tự lấy `created_by_id` từ user đăng nhập.
+
+### Lấy danh sách giai đoạn của template
+
+```http
+GET /items/mixing-activity-templates/:templateId/stages
+```
+
+Danh sách được sắp xếp theo `stage_order` tăng dần và trả kèm `createdBy`.
+
+### Tạo giai đoạn
+
+```http
+POST /items/mixing-activity-templates/:templateId/stages
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "stage_name": "Pha dung dịch",
+  "stage_order": 1
+}
+```
+
+`stage_name` bắt buộc, tối đa 255 ký tự. `stage_order` bắt buộc là số nguyên dương và không được trùng trong cùng template.
+
+### Lấy chi tiết giai đoạn
+
+```http
+GET /items/mixing-activity-template-stages/:stageId
+```
+
+### Cập nhật giai đoạn
+
+```http
+PATCH /items/mixing-activity-template-stages/:stageId
+Content-Type: application/json
+```
+
+Chỉ gửi các trường cần thay đổi:
+
+```json
+{
+  "stage_name": "Khuấy trộn dung dịch",
+  "stage_order": 2
+}
+```
+
+### Xóa giai đoạn
+
+```http
+DELETE /items/mixing-activity-template-stages/:stageId
+```
+
+Lỗi thường gặp:
+
+- `400 stage_name is required`
+- `400 stage_order must be a positive integer`
+- `401 Authenticated user not found`
+- `404 Mixing activity template not found`
+- `404 Mixing activity template stage not found`
+- `409 Stage order already exists for this mixing activity template`
+
 ## Equipment
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
