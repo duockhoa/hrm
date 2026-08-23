@@ -1047,6 +1047,81 @@ Lỗi thường gặp:
 
 - `404 Item equipment not found`
 
+## Mixing Activity Templates
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+`mixing_activity_templates` là bảng biểu mẫu theo dõi hoạt động pha của item, không phải phiếu hoạt động pha thực tế. Một item có thể có nhiều template. Backend tự lấy `created_by_id` từ user đăng nhập; client không gửi `created_by_id`, `created_at` hoặc `updated_at`.
+
+### Lấy danh sách template của item
+
+```http
+GET /items/:item_code/mixing-activity-templates
+```
+
+Danh sách được sắp xếp theo `version` giảm dần, sau đó theo `id` giảm dần. Response mỗi template kèm `createdBy`.
+
+### Tạo template
+
+```http
+POST /items/:item_code/mixing-activity-templates
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "version": 1,
+  "batch_size": 100,
+  "unit_of_measure": "kg",
+  "description": "Biểu mẫu theo dõi hoạt động pha cỡ lô 100 kg"
+}
+```
+
+- `version` là số nguyên dương và mặc định `1` nếu không gửi.
+- `batch_size` bắt buộc, lớn hơn `0`.
+- `unit_of_measure` bắt buộc, tối đa 50 ký tự.
+- `description` không bắt buộc; `null` hoặc chuỗi rỗng được lưu là `null`.
+
+### Lấy chi tiết template
+
+```http
+GET /items/mixing-activity-templates/:templateId
+```
+
+### Cập nhật template
+
+```http
+PATCH /items/mixing-activity-templates/:templateId
+Content-Type: application/json
+```
+
+Chỉ gửi các trường muốn cập nhật:
+
+```json
+{
+  "version": 2,
+  "batch_size": 120,
+  "description": "Điều chỉnh cỡ lô"
+}
+```
+
+### Xóa template
+
+```http
+DELETE /items/mixing-activity-templates/:templateId
+```
+
+Lỗi thường gặp:
+
+- `400 version must be a positive integer`
+- `400 batch_size must be a positive number`
+- `400 unit_of_measure is required`
+- `401 Authenticated user not found`
+- `404 Item not found`
+- `404 Mixing activity template not found`
+
 ## Equipment
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

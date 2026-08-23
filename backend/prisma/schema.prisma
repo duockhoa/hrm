@@ -87,6 +87,7 @@ model Users {
   createdCleaningObjects                                CleaningObjects[]                                     @relation("CleaningObjectCreator")
   createdCleaningRequirements                           CleaningRequirements[]                                @relation("CleaningRequirementCreator")
   createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
+  createdMixingActivityTemplates                        MixingActivityTemplates[]                             @relation("MixingActivityTemplateCreator")
   createdPrimaryPackagingConfirmations                  ProductionOrderPrimaryPackagingConfirmations[]        @relation("ProductionOrderPrimaryPackagingConfirmationCreator")
   sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
   filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckFilterer")
@@ -375,6 +376,7 @@ model Items {
   registration            RegistrationNumbers?               @relation(fields: [registration_id], references: [id])
   itemFeatures            ItemFeatures[]
   itemEquipment           ItemEquipment[]
+  mixingActivityTemplates MixingActivityTemplates[]
   materialSummaries       ProductionOrderMaterialSummaries[]
   productionOrders        ProductionOrders[]
   productionSpecification ProductionSpecifications?
@@ -564,6 +566,24 @@ model ItemEquipment {
   @@index([equipment_id], map: "item_equipment_equipment_id_idx")
   @@index([created_by_id], map: "item_equipment_created_by_id_idx")
   @@map("item_equipment")
+}
+
+model MixingActivityTemplates {
+  id              Int      @id @default(autoincrement())
+  item_code       String
+  item            Items    @relation(fields: [item_code], references: [item_code], onDelete: Cascade, map: "mixing_activity_templates_item_code_fkey")
+  version         Int      @default(1)
+  batch_size      Decimal  @db.Decimal(18, 3)
+  unit_of_measure String   @db.VarChar(50)
+  description     String?  @db.Text
+  created_by_id   Int
+  createdBy       Users    @relation("MixingActivityTemplateCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "mixing_activity_templates_created_by_id_fkey")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now()) @updatedAt
+
+  @@index([item_code], map: "mixing_activity_templates_item_code_idx")
+  @@index([created_by_id], map: "mixing_activity_templates_created_by_id_idx")
+  @@map("mixing_activity_templates")
 }
 
 model ProductionWorkshops {
