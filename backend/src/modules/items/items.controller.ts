@@ -14,14 +14,17 @@ import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
 import { CreateMixingActivityTemplateDto } from './dto/create-mixing-activity-template.dto';
 import { CreateMixingActivityTemplateStageDto } from './dto/create-mixing-activity-template-stage.dto';
 import { CreateMixingActivityTemplateStageStepDto } from './dto/create-mixing-activity-template-stage-step.dto';
+import { CreateMixingActivityTemplateStageStepParameterDto } from './dto/create-mixing-activity-template-stage-step-parameter.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { UpdateMixingActivityTemplateDto } from './dto/update-mixing-activity-template.dto';
 import { UpdateMixingActivityTemplateStageDto } from './dto/update-mixing-activity-template-stage.dto';
 import { UpdateMixingActivityTemplateStageStepDto } from './dto/update-mixing-activity-template-stage-step.dto';
+import { UpdateMixingActivityTemplateStageStepParameterDto } from './dto/update-mixing-activity-template-stage-step-parameter.dto';
 import { ItemEquipmentService } from './item-equipment.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
 import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
+import { MixingActivityTemplateStageStepParametersService } from './mixing-activity-template-stage-step-parameters.service';
 import { ItemsService } from './items.service';
 
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -35,6 +38,7 @@ export class ItemsController {
     private readonly mixingActivityTemplatesService: MixingActivityTemplatesService,
     private readonly mixingActivityTemplateStagesService: MixingActivityTemplateStagesService,
     private readonly mixingActivityTemplateStageStepsService: MixingActivityTemplateStageStepsService,
+    private readonly mixingActivityTemplateStageStepParametersService: MixingActivityTemplateStageStepParametersService,
   ) {}
 
   @Get()
@@ -140,6 +144,35 @@ export class ItemsController {
     return this.mixingActivityTemplateStageStepsService.delete(stepId);
   }
 
+  @Get('mixing-activity-template-stage-step-parameters/:parameterId')
+  async findMixingActivityTemplateStageStepParameterById(
+    @Param('parameterId', ParseIntPipe) parameterId: number,
+  ) {
+    return this.mixingActivityTemplateStageStepParametersService.findById(
+      parameterId,
+    );
+  }
+
+  @Patch('mixing-activity-template-stage-step-parameters/:parameterId')
+  async updateMixingActivityTemplateStageStepParameter(
+    @Param('parameterId', ParseIntPipe) parameterId: number,
+    @Body() updateDto: UpdateMixingActivityTemplateStageStepParameterDto,
+  ) {
+    return this.mixingActivityTemplateStageStepParametersService.update(
+      parameterId,
+      updateDto,
+    );
+  }
+
+  @Delete('mixing-activity-template-stage-step-parameters/:parameterId')
+  async deleteMixingActivityTemplateStageStepParameter(
+    @Param('parameterId', ParseIntPipe) parameterId: number,
+  ) {
+    return this.mixingActivityTemplateStageStepParametersService.delete(
+      parameterId,
+    );
+  }
+
   @Get('mixing-activity-templates/:templateId/stages')
   async findMixingActivityTemplateStages(
     @Param('templateId', ParseIntPipe) templateId: number,
@@ -177,6 +210,28 @@ export class ItemsController {
   ) {
     return this.mixingActivityTemplateStageStepsService.create(
       stageId,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get('mixing-activity-template-stage-steps/:stepId/parameters')
+  async findMixingActivityTemplateStageStepParameters(
+    @Param('stepId', ParseIntPipe) stepId: number,
+  ) {
+    return this.mixingActivityTemplateStageStepParametersService.findAllByStep(
+      stepId,
+    );
+  }
+
+  @Post('mixing-activity-template-stage-steps/:stepId/parameters')
+  async createMixingActivityTemplateStageStepParameter(
+    @Param('stepId', ParseIntPipe) stepId: number,
+    @Body() createDto: CreateMixingActivityTemplateStageStepParameterDto,
+    @Request() req: any,
+  ) {
+    return this.mixingActivityTemplateStageStepParametersService.create(
+      stepId,
       createDto,
       req.user,
     );

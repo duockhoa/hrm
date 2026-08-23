@@ -90,6 +90,7 @@ model Users {
   createdMixingActivityTemplates                        MixingActivityTemplates[]                             @relation("MixingActivityTemplateCreator")
   createdMixingActivityTemplateStages                   MixingActivityTemplateStages[]                        @relation("MixingActivityTemplateStageCreator")
   createdMixingActivityTemplateStageSteps               MixingActivityTemplateStageSteps[]                    @relation("MixingActivityTemplateStageStepCreator")
+  createdMixingActivityTemplateStageStepParameters      MixingActivityTemplateStageStepParameters[]           @relation("MixingActivityTemplateStageStepParameterCreator")
   createdPrimaryPackagingConfirmations                  ProductionOrderPrimaryPackagingConfirmations[]        @relation("ProductionOrderPrimaryPackagingConfirmationCreator")
   sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
   filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckFilterer")
@@ -607,19 +608,38 @@ model MixingActivityTemplateStages {
 }
 
 model MixingActivityTemplateStageSteps {
-  id                                Int                          @id @default(autoincrement())
+  id                                Int                                         @id @default(autoincrement())
   mixing_activity_template_stage_id Int
-  mixingActivityTemplateStage       MixingActivityTemplateStages @relation(fields: [mixing_activity_template_stage_id], references: [id], onDelete: Cascade, map: "mixing_activity_template_stage_steps_stage_id_fkey")
-  step_name                         String                       @db.VarChar(255)
+  mixingActivityTemplateStage       MixingActivityTemplateStages                @relation(fields: [mixing_activity_template_stage_id], references: [id], onDelete: Cascade, map: "mixing_activity_template_stage_steps_stage_id_fkey")
+  step_name                         String                                      @db.VarChar(255)
   step_order                        Int
   created_by_id                     Int
-  createdBy                         Users                        @relation("MixingActivityTemplateStageStepCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "mixing_activity_template_stage_steps_created_by_id_fkey")
-  created_at                        DateTime                     @default(now())
-  updated_at                        DateTime                     @default(now()) @updatedAt
+  createdBy                         Users                                       @relation("MixingActivityTemplateStageStepCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "mixing_activity_template_stage_steps_created_by_id_fkey")
+  created_at                        DateTime                                    @default(now())
+  updated_at                        DateTime                                    @default(now()) @updatedAt
+  parameters                        MixingActivityTemplateStageStepParameters[]
 
   @@unique([mixing_activity_template_stage_id, step_order], map: "mixing_activity_template_stage_steps_stage_order_key")
   @@index([created_by_id], map: "mixing_activity_template_stage_steps_created_by_id_idx")
   @@map("mixing_activity_template_stage_steps")
+}
+
+model MixingActivityTemplateStageStepParameters {
+  id                                     Int                              @id @default(autoincrement())
+  mixing_activity_template_stage_step_id Int
+  mixingActivityTemplateStageStep        MixingActivityTemplateStageSteps @relation(fields: [mixing_activity_template_stage_step_id], references: [id], onDelete: Cascade, map: "mixing_activity_template_stage_step_parameters_step_id_fkey")
+  parameter_name                         String                           @db.VarChar(255)
+  data_type                              String                           @db.VarChar(30)
+  requirement                            String                           @db.Text
+  parameter_order                        Int
+  created_by_id                          Int
+  createdBy                              Users                            @relation("MixingActivityTemplateStageStepParameterCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "mat_stage_step_parameters_created_by_fkey")
+  created_at                             DateTime                         @default(now())
+  updated_at                             DateTime                         @default(now()) @updatedAt
+
+  @@unique([mixing_activity_template_stage_step_id, parameter_order], map: "mixing_activity_template_stage_step_parameters_step_order_key")
+  @@index([created_by_id], map: "mixing_activity_template_stage_step_parameters_created_by_id_idx")
+  @@map("mixing_activity_template_stage_step_parameters")
 }
 
 model ProductionWorkshops {

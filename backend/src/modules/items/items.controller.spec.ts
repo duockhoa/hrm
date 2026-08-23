@@ -3,6 +3,7 @@ import { ItemEquipmentService } from './item-equipment.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
 import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
+import { MixingActivityTemplateStageStepParametersService } from './mixing-activity-template-stage-step-parameters.service';
 import { ItemsController } from './items.controller';
 import { ItemsService } from './items.service';
 
@@ -39,6 +40,13 @@ describe('ItemsController', () => {
   let mixingActivityTemplateStageStepsService: {
     findById: jest.Mock;
     findAllByStage: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let mixingActivityTemplateStageStepParametersService: {
+    findById: jest.Mock;
+    findAllByStep: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
@@ -80,6 +88,13 @@ describe('ItemsController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    mixingActivityTemplateStageStepParametersService = {
+      findById: jest.fn(),
+      findAllByStep: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ItemsController],
@@ -103,6 +118,10 @@ describe('ItemsController', () => {
         {
           provide: MixingActivityTemplateStageStepsService,
           useValue: mixingActivityTemplateStageStepsService,
+        },
+        {
+          provide: MixingActivityTemplateStageStepParametersService,
+          useValue: mixingActivityTemplateStageStepParametersService,
         },
       ],
     }).compile();

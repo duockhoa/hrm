@@ -1260,6 +1260,79 @@ Lỗi thường gặp:
 - `404 Mixing activity template stage step not found`
 - `409 Step order already exists for this mixing activity template stage`
 
+## Mixing Activity Template Stage Step Parameters
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+`mixing_activity_template_stage_step_parameters` lưu các thông số cần theo dõi cho từng bước. `parameter_order` là duy nhất trong phạm vi một bước. Backend tự lấy `created_by_id` từ user đăng nhập.
+
+### Lấy danh sách thông số của bước
+
+```http
+GET /items/mixing-activity-template-stage-steps/:stepId/parameters
+```
+
+Danh sách được sắp xếp theo `parameter_order` tăng dần và trả kèm `createdBy`.
+
+### Tạo thông số
+
+```http
+POST /items/mixing-activity-template-stage-steps/:stepId/parameters
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "parameter_name": "Nhiệt độ",
+  "data_type": "decimal",
+  "requirement": "Trong khoảng 20–25 °C",
+  "parameter_order": 1
+}
+```
+
+`data_type` chỉ nhận một trong các giá trị: `text`, `number`, `decimal`, `boolean`, `date`, `datetime`, `select`. Các trường còn lại đều bắt buộc; `parameter_name` tối đa 255 ký tự và `parameter_order` là số nguyên dương, không trùng trong cùng một bước.
+
+### Lấy chi tiết thông số
+
+```http
+GET /items/mixing-activity-template-stage-step-parameters/:parameterId
+```
+
+### Cập nhật thông số
+
+```http
+PATCH /items/mixing-activity-template-stage-step-parameters/:parameterId
+Content-Type: application/json
+```
+
+Chỉ gửi các trường cần thay đổi:
+
+```json
+{
+  "requirement": "Trong khoảng 22–25 °C",
+  "parameter_order": 2
+}
+```
+
+### Xóa thông số
+
+```http
+DELETE /items/mixing-activity-template-stage-step-parameters/:parameterId
+```
+
+Lỗi thường gặp:
+
+- `400 parameter_name is required`
+- `400 requirement is required`
+- `400 data_type must be one of: text, number, decimal, boolean, date, datetime, select`
+- `400 parameter_order must be a positive integer`
+- `401 Authenticated user not found`
+- `404 Mixing activity template stage step not found`
+- `404 Mixing activity template stage step parameter not found`
+- `409 Parameter order already exists for this mixing activity template stage step`
+
 ## Equipment
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
