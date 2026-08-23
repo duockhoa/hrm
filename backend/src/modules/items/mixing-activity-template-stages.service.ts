@@ -89,10 +89,11 @@ export class MixingActivityTemplateStagesService {
     const stage = await this.findById(id);
     const data = this.normalizeUpdateData(dto);
 
-    if (data.stage_order !== undefined) {
+    const nextStageOrder = data.stage_order;
+    if (typeof nextStageOrder === 'number') {
       await this.ensureStageOrderAvailable(
         stage.mixing_activity_template_id,
-        data.stage_order,
+        nextStageOrder,
         id,
       );
     }
