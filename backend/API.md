@@ -1191,6 +1191,75 @@ Lỗi thường gặp:
 - `404 Mixing activity template stage not found`
 - `409 Stage order already exists for this mixing activity template`
 
+## Mixing Activity Template Stage Steps
+
+Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+`mixing_activity_template_stage_steps` lưu các bước thuộc một giai đoạn của template pha chế. `step_order` là duy nhất trong phạm vi một giai đoạn. Backend tự lấy `created_by_id` từ user đăng nhập.
+
+### Lấy danh sách bước của giai đoạn
+
+```http
+GET /items/mixing-activity-template-stages/:stageId/steps
+```
+
+Danh sách được sắp xếp theo `step_order` tăng dần và trả kèm `createdBy`.
+
+### Tạo bước
+
+```http
+POST /items/mixing-activity-template-stages/:stageId/steps
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "step_name": "Cân nguyên liệu",
+  "step_order": 1
+}
+```
+
+`step_name` bắt buộc, tối đa 255 ký tự. `step_order` bắt buộc là số nguyên dương và không được trùng trong cùng giai đoạn.
+
+### Lấy chi tiết bước
+
+```http
+GET /items/mixing-activity-template-stage-steps/:stepId
+```
+
+### Cập nhật bước
+
+```http
+PATCH /items/mixing-activity-template-stage-steps/:stepId
+Content-Type: application/json
+```
+
+Chỉ gửi các trường cần thay đổi:
+
+```json
+{
+  "step_name": "Cân và kiểm tra nguyên liệu",
+  "step_order": 2
+}
+```
+
+### Xóa bước
+
+```http
+DELETE /items/mixing-activity-template-stage-steps/:stepId
+```
+
+Lỗi thường gặp:
+
+- `400 step_name is required`
+- `400 step_order must be a positive integer`
+- `401 Authenticated user not found`
+- `404 Mixing activity template stage not found`
+- `404 Mixing activity template stage step not found`
+- `409 Step order already exists for this mixing activity template stage`
+
 ## Equipment
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

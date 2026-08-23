@@ -7,6 +7,7 @@ import { PrismaService } from 'src/prisma.service';
 import { ItemEquipmentService } from './item-equipment.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
+import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
 
 @Module({
   controllers: [ItemsController],
@@ -15,6 +16,7 @@ import { MixingActivityTemplateStagesService } from './mixing-activity-template-
     ItemEquipmentService,
     MixingActivityTemplatesService,
     MixingActivityTemplateStagesService,
+    MixingActivityTemplateStageStepsService,
     RolesGuard,
     PermissionsGuard,
     PrismaService,

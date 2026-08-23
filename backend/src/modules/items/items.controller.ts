@@ -13,12 +13,15 @@ import {
 import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
 import { CreateMixingActivityTemplateDto } from './dto/create-mixing-activity-template.dto';
 import { CreateMixingActivityTemplateStageDto } from './dto/create-mixing-activity-template-stage.dto';
+import { CreateMixingActivityTemplateStageStepDto } from './dto/create-mixing-activity-template-stage-step.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { UpdateMixingActivityTemplateDto } from './dto/update-mixing-activity-template.dto';
 import { UpdateMixingActivityTemplateStageDto } from './dto/update-mixing-activity-template-stage.dto';
+import { UpdateMixingActivityTemplateStageStepDto } from './dto/update-mixing-activity-template-stage-step.dto';
 import { ItemEquipmentService } from './item-equipment.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
+import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
 import { ItemsService } from './items.service';
 
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -31,6 +34,7 @@ export class ItemsController {
     private readonly itemEquipmentService: ItemEquipmentService,
     private readonly mixingActivityTemplatesService: MixingActivityTemplatesService,
     private readonly mixingActivityTemplateStagesService: MixingActivityTemplateStagesService,
+    private readonly mixingActivityTemplateStageStepsService: MixingActivityTemplateStageStepsService,
   ) {}
 
   @Get()
@@ -111,6 +115,31 @@ export class ItemsController {
     return this.mixingActivityTemplateStagesService.delete(stageId);
   }
 
+  @Get('mixing-activity-template-stage-steps/:stepId')
+  async findMixingActivityTemplateStageStepById(
+    @Param('stepId', ParseIntPipe) stepId: number,
+  ) {
+    return this.mixingActivityTemplateStageStepsService.findById(stepId);
+  }
+
+  @Patch('mixing-activity-template-stage-steps/:stepId')
+  async updateMixingActivityTemplateStageStep(
+    @Param('stepId', ParseIntPipe) stepId: number,
+    @Body() updateDto: UpdateMixingActivityTemplateStageStepDto,
+  ) {
+    return this.mixingActivityTemplateStageStepsService.update(
+      stepId,
+      updateDto,
+    );
+  }
+
+  @Delete('mixing-activity-template-stage-steps/:stepId')
+  async deleteMixingActivityTemplateStageStep(
+    @Param('stepId', ParseIntPipe) stepId: number,
+  ) {
+    return this.mixingActivityTemplateStageStepsService.delete(stepId);
+  }
+
   @Get('mixing-activity-templates/:templateId/stages')
   async findMixingActivityTemplateStages(
     @Param('templateId', ParseIntPipe) templateId: number,
@@ -128,6 +157,26 @@ export class ItemsController {
   ) {
     return this.mixingActivityTemplateStagesService.create(
       templateId,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get('mixing-activity-template-stages/:stageId/steps')
+  async findMixingActivityTemplateStageSteps(
+    @Param('stageId', ParseIntPipe) stageId: number,
+  ) {
+    return this.mixingActivityTemplateStageStepsService.findAllByStage(stageId);
+  }
+
+  @Post('mixing-activity-template-stages/:stageId/steps')
+  async createMixingActivityTemplateStageStep(
+    @Param('stageId', ParseIntPipe) stageId: number,
+    @Body() createDto: CreateMixingActivityTemplateStageStepDto,
+    @Request() req: any,
+  ) {
+    return this.mixingActivityTemplateStageStepsService.create(
+      stageId,
       createDto,
       req.user,
     );
