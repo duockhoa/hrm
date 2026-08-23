@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -7,7 +8,13 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderMixingRecordDto } from './dto/create-production-order-mixing-record.dto';
+import { CreateProductionOrderMixingRecordParameterDto } from './dto/create-production-order-mixing-record-parameter.dto';
+import { CreateProductionOrderMixingRecordStageDto } from './dto/create-production-order-mixing-record-stage.dto';
+import { CreateProductionOrderMixingRecordStepDto } from './dto/create-production-order-mixing-record-step.dto';
+import { UpdateProductionOrderMixingRecordParameterDto } from './dto/update-production-order-mixing-record-parameter.dto';
 import { UpdateProductionOrderMixingRecordParameterResultDto } from './dto/update-production-order-mixing-record-parameter-result.dto';
+import { UpdateProductionOrderMixingRecordStageDto } from './dto/update-production-order-mixing-record-stage.dto';
+import { UpdateProductionOrderMixingRecordStepDto } from './dto/update-production-order-mixing-record-step.dto';
 
 type AuthenticatedUser = { id?: number | string | null };
 
@@ -152,6 +159,237 @@ export class ProductionOrderMixingRecordsService {
     });
   }
 
+  async delete(id: number) {
+    await this.findById(id);
+
+    return this.prismaService.productionOrderMixingRecords.delete({
+      where: { id },
+      include: mixingRecordInclude,
+    });
+  }
+
+  async createStage(
+    recordId: number,
+    dto: CreateProductionOrderMixingRecordStageDto,
+  ) {
+    await this.ensureMixingRecordExists(recordId);
+    const stageOrder = this.normalizePositiveInteger(
+      dto?.stage_order,
+      'stage_order',
+    );
+    await this.ensureStageOrderAvailable(recordId, stageOrder);
+
+    return this.prismaService.productionOrderMixingRecordStages.create({
+      data: {
+        production_order_mixing_record_id: recordId,
+        stage_name: this.normalizeRequiredText(
+          dto?.stage_name,
+          'stage_name',
+          255,
+        ),
+        stage_order: stageOrder,
+      },
+    });
+  }
+
+  async updateStage(
+    stageId: number,
+    dto: UpdateProductionOrderMixingRecordStageDto,
+  ) {
+    const stage = await this.findStageOrThrow(stageId);
+    const data: Prisma.ProductionOrderMixingRecordStagesUncheckedUpdateInput =
+      {};
+
+    if ('stage_name' in (dto ?? {})) {
+      data.stage_name = this.normalizeRequiredText(
+        dto.stage_name,
+        'stage_name',
+        255,
+      );
+    }
+    if ('stage_order' in (dto ?? {})) {
+      data.stage_order = this.normalizePositiveInteger(
+        dto.stage_order,
+        'stage_order',
+      );
+    }
+    this.ensureUpdateData(data);
+
+    if (typeof data.stage_order === 'number') {
+      await this.ensureStageOrderAvailable(
+        stage.production_order_mixing_record_id,
+        data.stage_order,
+        stageId,
+      );
+    }
+
+    return this.prismaService.productionOrderMixingRecordStages.update({
+      where: { id: stageId },
+      data,
+    });
+  }
+
+  async deleteStage(stageId: number) {
+    await this.findStageOrThrow(stageId);
+    return this.prismaService.productionOrderMixingRecordStages.delete({
+      where: { id: stageId },
+    });
+  }
+
+  async createStep(
+    stageId: number,
+    dto: CreateProductionOrderMixingRecordStepDto,
+  ) {
+    await this.findStageOrThrow(stageId);
+    const stepOrder = this.normalizePositiveInteger(
+      dto?.step_order,
+      'step_order',
+    );
+    await this.ensureStepOrderAvailable(stageId, stepOrder);
+
+    return this.prismaService.productionOrderMixingRecordSteps.create({
+      data: {
+        production_order_mixing_record_stage_id: stageId,
+        step_name: this.normalizeRequiredText(dto?.step_name, 'step_name', 255),
+        step_order: stepOrder,
+      },
+    });
+  }
+
+  async updateStep(
+    stepId: number,
+    dto: UpdateProductionOrderMixingRecordStepDto,
+  ) {
+    const step = await this.findStepOrThrow(stepId);
+    const data: Prisma.ProductionOrderMixingRecordStepsUncheckedUpdateInput =
+      {};
+
+    if ('step_name' in (dto ?? {})) {
+      data.step_name = this.normalizeRequiredText(
+        dto.step_name,
+        'step_name',
+        255,
+      );
+    }
+    if ('step_order' in (dto ?? {})) {
+      data.step_order = this.normalizePositiveInteger(
+        dto.step_order,
+        'step_order',
+      );
+    }
+    this.ensureUpdateData(data);
+
+    if (typeof data.step_order === 'number') {
+      await this.ensureStepOrderAvailable(
+        step.production_order_mixing_record_stage_id,
+        data.step_order,
+        stepId,
+      );
+    }
+
+    return this.prismaService.productionOrderMixingRecordSteps.update({
+      where: { id: stepId },
+      data,
+    });
+  }
+
+  async deleteStep(stepId: number) {
+    await this.findStepOrThrow(stepId);
+    return this.prismaService.productionOrderMixingRecordSteps.delete({
+      where: { id: stepId },
+    });
+  }
+
+  async createParameter(
+    stepId: number,
+    dto: CreateProductionOrderMixingRecordParameterDto,
+  ) {
+    await this.findStepOrThrow(stepId);
+    const parameterOrder = this.normalizePositiveInteger(
+      dto?.parameter_order,
+      'parameter_order',
+    );
+    await this.ensureParameterOrderAvailable(stepId, parameterOrder);
+
+    return this.prismaService.productionOrderMixingRecordParameters.create({
+      data: {
+        production_order_mixing_record_step_id: stepId,
+        parameter_name: this.normalizeRequiredText(
+          dto?.parameter_name,
+          'parameter_name',
+          255,
+        ),
+        data_type: this.normalizeDataType(dto?.data_type),
+        unit: this.normalizeOptionalText(dto?.unit, 'unit', 50),
+        requirement: this.normalizeRequiredText(
+          dto?.requirement,
+          'requirement',
+        ),
+        parameter_order: parameterOrder,
+      },
+      include: { recordedBy: { select: userSelect } },
+    });
+  }
+
+  async updateParameter(
+    parameterId: number,
+    dto: UpdateProductionOrderMixingRecordParameterDto,
+  ) {
+    const parameter = await this.findParameterOrThrow(parameterId);
+    const data: Prisma.ProductionOrderMixingRecordParametersUncheckedUpdateInput =
+      {};
+    const updateDto = dto ?? {};
+
+    if ('parameter_name' in updateDto) {
+      data.parameter_name = this.normalizeRequiredText(
+        updateDto.parameter_name,
+        'parameter_name',
+        255,
+      );
+    }
+    if ('data_type' in updateDto) {
+      data.data_type = this.normalizeDataType(updateDto.data_type);
+    }
+    if ('unit' in updateDto) {
+      data.unit = this.normalizeOptionalText(updateDto.unit, 'unit', 50);
+    }
+    if ('requirement' in updateDto) {
+      data.requirement = this.normalizeRequiredText(
+        updateDto.requirement,
+        'requirement',
+      );
+    }
+    if ('parameter_order' in updateDto) {
+      data.parameter_order = this.normalizePositiveInteger(
+        updateDto.parameter_order,
+        'parameter_order',
+      );
+    }
+    this.ensureUpdateData(data);
+
+    if (typeof data.parameter_order === 'number') {
+      await this.ensureParameterOrderAvailable(
+        parameter.production_order_mixing_record_step_id,
+        data.parameter_order,
+        parameterId,
+      );
+    }
+
+    return this.prismaService.productionOrderMixingRecordParameters.update({
+      where: { id: parameterId },
+      data,
+      include: { recordedBy: { select: userSelect } },
+    });
+  }
+
+  async deleteParameter(parameterId: number) {
+    await this.findParameterOrThrow(parameterId);
+    return this.prismaService.productionOrderMixingRecordParameters.delete({
+      where: { id: parameterId },
+      include: { recordedBy: { select: userSelect } },
+    });
+  }
+
   async updateParameterResult(
     parameterId: number,
     dto: UpdateProductionOrderMixingRecordParameterResultDto,
@@ -197,6 +435,205 @@ export class ProductionOrderMixingRecordsService {
       data,
       include: { recordedBy: { select: userSelect } },
     });
+  }
+
+  private async ensureMixingRecordExists(recordId: number) {
+    const record =
+      await this.prismaService.productionOrderMixingRecords.findUnique({
+        where: { id: recordId },
+        select: { id: true },
+      });
+
+    if (!record) {
+      throw new NotFoundException('Production order mixing record not found');
+    }
+  }
+
+  private async findStageOrThrow(stageId: number) {
+    const stage =
+      await this.prismaService.productionOrderMixingRecordStages.findUnique({
+        where: { id: stageId },
+        select: { id: true, production_order_mixing_record_id: true },
+      });
+
+    if (!stage) {
+      throw new NotFoundException(
+        'Production order mixing record stage not found',
+      );
+    }
+
+    return stage;
+  }
+
+  private async findStepOrThrow(stepId: number) {
+    const step =
+      await this.prismaService.productionOrderMixingRecordSteps.findUnique({
+        where: { id: stepId },
+        select: { id: true, production_order_mixing_record_stage_id: true },
+      });
+
+    if (!step) {
+      throw new NotFoundException(
+        'Production order mixing record step not found',
+      );
+    }
+
+    return step;
+  }
+
+  private async findParameterOrThrow(parameterId: number) {
+    const parameter =
+      await this.prismaService.productionOrderMixingRecordParameters.findUnique(
+        {
+          where: { id: parameterId },
+          select: {
+            id: true,
+            production_order_mixing_record_step_id: true,
+          },
+        },
+      );
+
+    if (!parameter) {
+      throw new NotFoundException(
+        'Production order mixing record parameter not found',
+      );
+    }
+
+    return parameter;
+  }
+
+  private async ensureStageOrderAvailable(
+    recordId: number,
+    stageOrder: number,
+    excludedStageId?: number,
+  ) {
+    const existing =
+      await this.prismaService.productionOrderMixingRecordStages.findUnique({
+        where: {
+          production_order_mixing_record_id_stage_order: {
+            production_order_mixing_record_id: recordId,
+            stage_order: stageOrder,
+          },
+        },
+        select: { id: true },
+      });
+
+    if (existing && existing.id !== excludedStageId) {
+      throw new ConflictException(
+        'Stage order already exists for this production order mixing record',
+      );
+    }
+  }
+
+  private async ensureStepOrderAvailable(
+    stageId: number,
+    stepOrder: number,
+    excludedStepId?: number,
+  ) {
+    const existing =
+      await this.prismaService.productionOrderMixingRecordSteps.findUnique({
+        where: {
+          production_order_mixing_record_stage_id_step_order: {
+            production_order_mixing_record_stage_id: stageId,
+            step_order: stepOrder,
+          },
+        },
+        select: { id: true },
+      });
+
+    if (existing && existing.id !== excludedStepId) {
+      throw new ConflictException(
+        'Step order already exists for this production order mixing record stage',
+      );
+    }
+  }
+
+  private async ensureParameterOrderAvailable(
+    stepId: number,
+    parameterOrder: number,
+    excludedParameterId?: number,
+  ) {
+    const existing =
+      await this.prismaService.productionOrderMixingRecordParameters.findUnique(
+        {
+          where: {
+            production_order_mixing_record_step_id_parameter_order: {
+              production_order_mixing_record_step_id: stepId,
+              parameter_order: parameterOrder,
+            },
+          },
+          select: { id: true },
+        },
+      );
+
+    if (existing && existing.id !== excludedParameterId) {
+      throw new ConflictException(
+        'Parameter order already exists for this production order mixing record step',
+      );
+    }
+  }
+
+  private ensureUpdateData(data: object) {
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('At least one field is required');
+    }
+  }
+
+  private normalizeRequiredText(
+    value: unknown,
+    fieldName: string,
+    maxLength?: number,
+  ) {
+    if (value === null || value === undefined) {
+      throw new BadRequestException(`${fieldName} is required`);
+    }
+
+    const normalizedValue = String(value).trim();
+    if (!normalizedValue) {
+      throw new BadRequestException(`${fieldName} is required`);
+    }
+
+    if (maxLength && normalizedValue.length > maxLength) {
+      throw new BadRequestException(
+        `${fieldName} must not exceed ${maxLength} characters`,
+      );
+    }
+
+    return normalizedValue;
+  }
+
+  private normalizeOptionalText(
+    value: unknown,
+    fieldName: string,
+    maxLength?: number,
+  ) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    const normalizedValue = String(value).trim();
+    if (!normalizedValue) {
+      return null;
+    }
+
+    if (maxLength && normalizedValue.length > maxLength) {
+      throw new BadRequestException(
+        `${fieldName} must not exceed ${maxLength} characters`,
+      );
+    }
+
+    return normalizedValue;
+  }
+
+  private normalizeDataType(value: unknown) {
+    const normalizedValue = this.normalizeRequiredText(value, 'data_type', 30);
+    if (!DATA_TYPES.includes(normalizedValue as (typeof DATA_TYPES)[number])) {
+      throw new BadRequestException(
+        `data_type must be one of: ${DATA_TYPES.join(', ')}`,
+      );
+    }
+
+    return normalizedValue;
   }
 
   private async findProductionOrderOrThrow(productionOrderId: number) {

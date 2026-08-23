@@ -2219,6 +2219,58 @@ Content-Type: application/json
 
 `result_value` được kiểm tra theo `data_type` snapshot của thông số. Gửi `null` hoặc chuỗi rỗng để xóa kết quả; người nhập và thời điểm nhập cũng được xóa. Khi có kết quả, backend tự lưu `recorded_by_id` và `recorded_at`.
 
+### Chỉnh sửa snapshot phiếu pha
+
+Các API sau chỉ thay đổi dữ liệu snapshot trong phiếu pha thực tế, không tác động template. Giai đoạn, bước hoặc thông số được thêm thủ công có `source_template_*_id = null`.
+
+```http
+DELETE /production-orders/mixing-records/:recordId
+
+POST   /production-orders/mixing-records/:recordId/stages
+PATCH  /production-orders/mixing-record-stages/:stageId
+DELETE /production-orders/mixing-record-stages/:stageId
+
+POST   /production-orders/mixing-record-stages/:stageId/steps
+PATCH  /production-orders/mixing-record-steps/:stepId
+DELETE /production-orders/mixing-record-steps/:stepId
+
+POST   /production-orders/mixing-record-steps/:stepId/parameters
+PATCH  /production-orders/mixing-record-parameters/:parameterId
+DELETE /production-orders/mixing-record-parameters/:parameterId
+```
+
+Body tạo/cập nhật giai đoạn:
+
+```json
+{
+  "stage_name": "Pha dung dịch bổ sung",
+  "stage_order": 3
+}
+```
+
+Body tạo/cập nhật bước:
+
+```json
+{
+  "step_name": "Kiểm tra sau pha",
+  "step_order": 1
+}
+```
+
+Body tạo/cập nhật thông số:
+
+```json
+{
+  "parameter_name": "Nhiệt độ thực tế",
+  "data_type": "decimal",
+  "unit": "°C",
+  "requirement": "Trong khoảng 20–25 °C",
+  "parameter_order": 1
+}
+```
+
+`stage_order`, `step_order` và `parameter_order` là số nguyên dương, không trùng trong cùng cha tương ứng. Xóa giai đoạn sẽ xóa các bước và thông số con; xóa bước sẽ xóa các thông số con.
+
 Lỗi thường gặp:
 
 - `400 mixing_activity_template_id must be a positive integer`
@@ -2228,6 +2280,11 @@ Lỗi thường gặp:
 - `404 Mixing activity template not found`
 - `404 Production order mixing record not found`
 - `404 Production order mixing record parameter not found`
+- `404 Production order mixing record stage not found`
+- `404 Production order mixing record step not found`
+- `409 Stage order already exists for this production order mixing record`
+- `409 Step order already exists for this production order mixing record stage`
+- `409 Parameter order already exists for this production order mixing record step`
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
