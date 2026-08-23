@@ -64,7 +64,9 @@ const softDeleteExtension = Prisma.defineExtension((client) =>
             operation === 'update' ||
             operation === 'updateMany'
           ) {
-            return query(withNotDeleted(args));
+            // Prisma's generated union grows with every model. Keep this
+            // extension boundary untyped to avoid excessive type comparison.
+            return (query as (queryArgs: any) => any)(withNotDeleted(args));
           }
 
           if (operation === 'delete') {

@@ -47,11 +47,16 @@ import { ProductionOrderDocumentControlsService } from './production-order-docum
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
 import { ProductionOrderAttachmentsService } from './production-order-attachments.service';
+import { ProductionOrderMixingRecordsService } from './production-order-mixing-records.service';
+import { ProductionOrderMixingRecordsController } from './production-order-mixing-records.controller';
 import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.module';
 
 @Module({
   imports: [FeaturesModule, SapB1ConnectorModule],
-  controllers: [ProductionOrdersController],
+  controllers: [
+    ProductionOrdersController,
+    ProductionOrderMixingRecordsController,
+  ],
   providers: [
     ProductionOrdersService,
     ProductionOrderSamplingRequestsService,
@@ -92,6 +97,7 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
     ProductionOrderPrimaryPackagingConfirmationsService,
     ProductionOrderProductionGuidesService,
     ProductionOrderAttachmentsService,
+    ProductionOrderMixingRecordsService,
     WarehouseReleaseExportService,
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,

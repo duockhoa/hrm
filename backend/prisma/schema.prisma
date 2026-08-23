@@ -91,6 +91,8 @@ model Users {
   createdMixingActivityTemplateStages                   MixingActivityTemplateStages[]                        @relation("MixingActivityTemplateStageCreator")
   createdMixingActivityTemplateStageSteps               MixingActivityTemplateStageSteps[]                    @relation("MixingActivityTemplateStageStepCreator")
   createdMixingActivityTemplateStageStepParameters      MixingActivityTemplateStageStepParameters[]           @relation("MixingActivityTemplateStageStepParameterCreator")
+  createdProductionOrderMixingRecords                   ProductionOrderMixingRecords[]                        @relation("ProductionOrderMixingRecordCreator")
+  recordedProductionOrderMixingRecordParameters         ProductionOrderMixingRecordParameters[]               @relation("ProductionOrderMixingRecordParameterRecorder")
   createdPrimaryPackagingConfirmations                  ProductionOrderPrimaryPackagingConfirmations[]        @relation("ProductionOrderPrimaryPackagingConfirmationCreator")
   sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
   filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckFilterer")
@@ -757,9 +759,78 @@ model ProductionOrders {
   primaryPackagingConfirmations        ProductionOrderPrimaryPackagingConfirmations[]
   attachments                          ProductionOrderAttachments[]
   registrationNumber                   ProductionOrderRegistrationNumbers?
+  mixingRecords                        ProductionOrderMixingRecords[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
+}
+
+model ProductionOrderMixingRecords {
+  id                          Int                                 @id @default(autoincrement())
+  production_order_id         Int
+  productionOrder             ProductionOrders                    @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_mixing_records_order_id_fkey")
+  mixing_activity_template_id Int?
+  template_version            String?                             @db.VarChar(50)
+  created_by_id               Int
+  createdBy                   Users                               @relation("ProductionOrderMixingRecordCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "po_mixing_records_created_by_fkey")
+  stages                      ProductionOrderMixingRecordStages[]
+  created_at                  DateTime                            @default(now())
+  updated_at                  DateTime                            @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_mixing_records_order_id_idx")
+  @@index([created_by_id], map: "po_mixing_records_created_by_idx")
+  @@map("production_order_mixing_records")
+}
+
+model ProductionOrderMixingRecordStages {
+  id                                Int                                @id @default(autoincrement())
+  production_order_mixing_record_id Int
+  mixingRecord                      ProductionOrderMixingRecords       @relation(fields: [production_order_mixing_record_id], references: [id], onDelete: Cascade, map: "po_mixing_record_stages_record_id_fkey")
+  source_template_stage_id          Int?
+  stage_name                        String                             @db.VarChar(255)
+  stage_order                       Int
+  steps                             ProductionOrderMixingRecordSteps[]
+  created_at                        DateTime                           @default(now())
+  updated_at                        DateTime                           @default(now()) @updatedAt
+
+  @@unique([production_order_mixing_record_id, stage_order], map: "po_mixing_record_stages_order_key")
+  @@map("production_order_mixing_record_stages")
+}
+
+model ProductionOrderMixingRecordSteps {
+  id                                      Int                                     @id @default(autoincrement())
+  production_order_mixing_record_stage_id Int
+  mixingRecordStage                       ProductionOrderMixingRecordStages       @relation(fields: [production_order_mixing_record_stage_id], references: [id], onDelete: Cascade, map: "po_mixing_record_steps_stage_id_fkey")
+  source_template_step_id                 Int?
+  step_name                               String                                  @db.VarChar(255)
+  step_order                              Int
+  parameters                              ProductionOrderMixingRecordParameters[]
+  created_at                              DateTime                                @default(now())
+  updated_at                              DateTime                                @default(now()) @updatedAt
+
+  @@unique([production_order_mixing_record_stage_id, step_order], map: "po_mixing_record_steps_order_key")
+  @@map("production_order_mixing_record_steps")
+}
+
+model ProductionOrderMixingRecordParameters {
+  id                                     Int                              @id @default(autoincrement())
+  production_order_mixing_record_step_id Int
+  mixingRecordStep                       ProductionOrderMixingRecordSteps @relation(fields: [production_order_mixing_record_step_id], references: [id], onDelete: Cascade, map: "po_mixing_record_parameters_step_id_fkey")
+  source_template_parameter_id           Int?
+  parameter_name                         String                           @db.VarChar(255)
+  data_type                              String                           @db.VarChar(30)
+  requirement                            String                           @db.Text
+  parameter_order                        Int
+  result_value                           String?                          @db.Text
+  recorded_by_id                         Int?
+  recordedBy                             Users?                           @relation("ProductionOrderMixingRecordParameterRecorder", fields: [recorded_by_id], references: [id], onDelete: SetNull, map: "po_mixing_record_parameters_recorder_fkey")
+  recorded_at                            DateTime?
+  created_at                             DateTime                         @default(now())
+  updated_at                             DateTime                         @default(now()) @updatedAt
+
+  @@unique([production_order_mixing_record_step_id, parameter_order], map: "po_mixing_record_parameters_order_key")
+  @@index([recorded_by_id], map: "po_mixing_record_parameters_recorder_idx")
+  @@map("production_order_mixing_record_parameters")
 }
 
 model ProductionOrderRegistrationNumbers {

@@ -39,6 +39,8 @@ import { ProductionOrderLineClearanceChecksService } from './production-order-li
 import { ProductionOrderSecondaryPackagingChecksService } from './production-order-secondary-packaging-checks.service';
 import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
+import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
+import { ProductionOrderAttachmentsService } from './production-order-attachments.service';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -311,6 +313,23 @@ describe('ProductionOrdersController', () => {
     update: jest.Mock;
     delete: jest.Mock;
   };
+  let productionOrderProductionGuidesService: {
+    findByProductionOrder: jest.Mock;
+    getFile: jest.Mock;
+    upload: jest.Mock;
+    delete: jest.Mock;
+  };
+  let productionOrderAttachmentsService: {
+    findFile: jest.Mock;
+    findById: jest.Mock;
+    update: jest.Mock;
+    approve: jest.Mock;
+    addFiles: jest.Mock;
+    deleteFile: jest.Mock;
+    delete: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+  };
 
   beforeEach(async () => {
     productionOrdersService = {
@@ -582,6 +601,23 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderProductionGuidesService = {
+      findByProductionOrder: jest.fn(),
+      getFile: jest.fn(),
+      upload: jest.fn(),
+      delete: jest.fn(),
+    };
+    productionOrderAttachmentsService = {
+      findFile: jest.fn(),
+      findById: jest.fn(),
+      update: jest.fn(),
+      approve: jest.fn(),
+      addFiles: jest.fn(),
+      deleteFile: jest.fn(),
+      delete: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrdersController],
@@ -733,6 +769,14 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderPrimaryPackagingConfirmationsService,
           useValue: productionOrderPrimaryPackagingConfirmationsService,
+        },
+        {
+          provide: ProductionOrderProductionGuidesService,
+          useValue: productionOrderProductionGuidesService,
+        },
+        {
+          provide: ProductionOrderAttachmentsService,
+          useValue: productionOrderAttachmentsService,
         },
       ],
     }).compile();
@@ -1092,7 +1136,9 @@ describe('ProductionOrdersController', () => {
       checks,
     );
 
-    await expect(controller.findLineClearanceChecks(2031)).resolves.toBe(checks);
+    await expect(controller.findLineClearanceChecks(2031)).resolves.toBe(
+      checks,
+    );
     expect(
       productionOrderLineClearanceChecksService.findAllByProductionOrder,
     ).toHaveBeenCalledWith(2031);
@@ -1132,9 +1178,9 @@ describe('ProductionOrdersController', () => {
     const result = { id: 1, production_order_id: 2031 };
     productionOrderLineClearanceChecksService.update.mockResolvedValue(result);
 
-    await expect(controller.updateLineClearanceCheck(1, updateDto)).resolves.toBe(
-      result,
-    );
+    await expect(
+      controller.updateLineClearanceCheck(1, updateDto),
+    ).resolves.toBe(result);
     expect(
       productionOrderLineClearanceChecksService.update,
     ).toHaveBeenCalledWith(1, updateDto);

@@ -2176,6 +2176,57 @@ Lỗi thường gặp:
 
 ## Production Orders
 
+### Phiếu pha theo template
+
+Tất cả API bên dưới cần `Auth: Bearer`. Mỗi production order có thể có nhiều phiếu pha thực tế. Khi tạo, backend sao chép toàn bộ giai đoạn, bước, thông số, kiểu dữ liệu và yêu cầu từ template vào phiếu pha; do đó sửa hoặc xóa template sau này không ảnh hưởng dữ liệu phiếu đã tạo.
+
+Snapshot được lưu trong các bảng `production_order_mixing_records`, `production_order_mixing_record_stages`, `production_order_mixing_record_steps` và `production_order_mixing_record_parameters`. Các trường `mixing_activity_template_id` và `source_template_*_id` chỉ phục vụ truy vết, không là khóa ngoại tới template; có thể sửa hoặc xóa template sau khi đã tạo phiếu.
+
+```http
+POST /production-orders/:id/mixing-records
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "mixing_activity_template_id": 1
+}
+```
+
+Template phải thuộc cùng item với production order. Response trả toàn bộ snapshot theo thứ tự giai đoạn, bước và thông số.
+
+```http
+GET /production-orders/:id/mixing-records
+GET /production-orders/mixing-records/:recordId
+```
+
+Nhập hoặc cập nhật kết quả của một thông số:
+
+```http
+PATCH /production-orders/mixing-record-parameters/:parameterId/result
+Content-Type: application/json
+```
+
+```json
+{
+  "result_value": 22.5
+}
+```
+
+`result_value` được kiểm tra theo `data_type` snapshot của thông số. Gửi `null` hoặc chuỗi rỗng để xóa kết quả; người nhập và thời điểm nhập cũng được xóa. Khi có kết quả, backend tự lưu `recorded_by_id` và `recorded_at`.
+
+Lỗi thường gặp:
+
+- `400 mixing_activity_template_id must be a positive integer`
+- `400 Mixing activity template does not belong to production order item`
+- `400 result_value must be a number`
+- `404 Production order not found`
+- `404 Mixing activity template not found`
+- `404 Production order mixing record not found`
+- `404 Production order mixing record parameter not found`
+
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
 ### Lấy danh sách lệnh sản xuất
