@@ -632,6 +632,7 @@ model MixingActivityTemplateStageStepParameters {
   mixingActivityTemplateStageStep        MixingActivityTemplateStageSteps @relation(fields: [mixing_activity_template_stage_step_id], references: [id], onDelete: Cascade, map: "mixing_activity_template_stage_step_parameters_step_id_fkey")
   parameter_name                         String                           @db.VarChar(255)
   data_type                              String                           @db.VarChar(30)
+  unit                                   String?                          @db.VarChar(50)
   requirement                            String                           @db.Text
   parameter_order                        Int
   created_by_id                          Int
@@ -819,6 +820,7 @@ model ProductionOrderMixingRecordParameters {
   source_template_parameter_id           Int?
   parameter_name                         String                           @db.VarChar(255)
   data_type                              String                           @db.VarChar(30)
+  unit                                   String?                          @db.VarChar(50)
   requirement                            String                           @db.Text
   parameter_order                        Int
   result_value                           String?                          @db.Text

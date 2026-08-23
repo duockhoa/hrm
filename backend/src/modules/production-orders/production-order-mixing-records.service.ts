@@ -138,6 +138,7 @@ export class ProductionOrderMixingRecordsService {
                     source_template_parameter_id: parameter.id,
                     parameter_name: parameter.parameter_name,
                     data_type: parameter.data_type,
+                    unit: parameter.unit,
                     requirement: parameter.requirement,
                     parameter_order: parameter.parameter_order,
                   })),

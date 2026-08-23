@@ -1264,7 +1264,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-`mixing_activity_template_stage_step_parameters` lưu các thông số cần theo dõi cho từng bước. `parameter_order` là duy nhất trong phạm vi một bước. Backend tự lấy `created_by_id` từ user đăng nhập.
+`mixing_activity_template_stage_step_parameters` lưu các thông số cần theo dõi cho từng bước. `parameter_order` là duy nhất trong phạm vi một bước. `unit` là đơn vị tính tùy chọn, được sao chép sang phiếu pha thực tế. Backend tự lấy `created_by_id` từ user đăng nhập.
 
 ### Lấy danh sách thông số của bước
 
@@ -1287,12 +1287,13 @@ Body:
 {
   "parameter_name": "Nhiệt độ",
   "data_type": "decimal",
+  "unit": "°C",
   "requirement": "Trong khoảng 20–25 °C",
   "parameter_order": 1
 }
 ```
 
-`data_type` chỉ nhận một trong các giá trị: `text`, `number`, `decimal`, `boolean`, `date`, `datetime`, `select`. Các trường còn lại đều bắt buộc; `parameter_name` tối đa 255 ký tự và `parameter_order` là số nguyên dương, không trùng trong cùng một bước.
+`data_type` chỉ nhận một trong các giá trị: `text`, `number`, `decimal`, `boolean`, `date`, `datetime`, `select`. `unit` không bắt buộc, tối đa 50 ký tự; gửi `null` hoặc chuỗi rỗng để bỏ đơn vị. Các trường còn lại đều bắt buộc; `parameter_name` tối đa 255 ký tự và `parameter_order` là số nguyên dương, không trùng trong cùng một bước.
 
 ### Lấy chi tiết thông số
 
@@ -1312,6 +1313,7 @@ Chỉ gửi các trường cần thay đổi:
 ```json
 {
   "requirement": "Trong khoảng 22–25 °C",
+  "unit": "°C",
   "parameter_order": 2
 }
 ```
@@ -2178,7 +2180,7 @@ Lỗi thường gặp:
 
 ### Phiếu pha theo template
 
-Tất cả API bên dưới cần `Auth: Bearer`. Mỗi production order có thể có nhiều phiếu pha thực tế. Khi tạo, backend sao chép toàn bộ giai đoạn, bước, thông số, kiểu dữ liệu và yêu cầu từ template vào phiếu pha; do đó sửa hoặc xóa template sau này không ảnh hưởng dữ liệu phiếu đã tạo.
+Tất cả API bên dưới cần `Auth: Bearer`. Mỗi production order có thể có nhiều phiếu pha thực tế. Khi tạo, backend sao chép toàn bộ giai đoạn, bước, thông số, kiểu dữ liệu, đơn vị tính và yêu cầu từ template vào phiếu pha; do đó sửa hoặc xóa template sau này không ảnh hưởng dữ liệu phiếu đã tạo.
 
 Snapshot được lưu trong các bảng `production_order_mixing_records`, `production_order_mixing_record_stages`, `production_order_mixing_record_steps` và `production_order_mixing_record_parameters`. Các trường `mixing_activity_template_id` và `source_template_*_id` chỉ phục vụ truy vết, không là khóa ngoại tới template; có thể sửa hoặc xóa template sau khi đã tạo phiếu.
 

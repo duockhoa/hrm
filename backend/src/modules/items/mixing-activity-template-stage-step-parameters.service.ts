@@ -93,6 +93,7 @@ export class MixingActivityTemplateStageStepParametersService {
           255,
         ),
         data_type: this.normalizeDataType(dto?.data_type),
+        unit: this.normalizeOptionalText(dto?.unit, 'unit', 50),
         requirement: this.normalizeRequiredText(
           dto?.requirement,
           'requirement',
@@ -155,6 +156,10 @@ export class MixingActivityTemplateStageStepParametersService {
       data.data_type = this.normalizeDataType(updateDto.data_type);
     }
 
+    if ('unit' in updateDto) {
+      data.unit = this.normalizeOptionalText(updateDto.unit, 'unit', 50);
+    }
+
     if ('requirement' in updateDto) {
       data.requirement = this.normalizeRequiredText(
         updateDto.requirement,
@@ -188,6 +193,29 @@ export class MixingActivityTemplateStageStepParametersService {
     const normalizedValue = String(value).trim();
     if (!normalizedValue) {
       throw new BadRequestException(`${fieldName} is required`);
+    }
+
+    if (maxLength && normalizedValue.length > maxLength) {
+      throw new BadRequestException(
+        `${fieldName} must not exceed ${maxLength} characters`,
+      );
+    }
+
+    return normalizedValue;
+  }
+
+  private normalizeOptionalText(
+    value: unknown,
+    fieldName: string,
+    maxLength?: number,
+  ) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    const normalizedValue = String(value).trim();
+    if (!normalizedValue) {
+      return null;
     }
 
     if (maxLength && normalizedValue.length > maxLength) {
