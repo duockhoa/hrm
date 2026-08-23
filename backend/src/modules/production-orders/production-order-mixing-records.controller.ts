@@ -19,7 +19,9 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createReadStream } from 'fs';
 import type { Response } from 'express';
+import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateProductionOrderMixingRecordDto } from './dto/create-production-order-mixing-record.dto';
 import { CreateProductionOrderMixingRecordParameterDto } from './dto/create-production-order-mixing-record-parameter.dto';
 import { CreateProductionOrderMixingRecordStageDto } from './dto/create-production-order-mixing-record-stage.dto';
@@ -32,9 +34,10 @@ import {
   productionOrderMixingRecordParameterImageUploadOptions,
   removeUploadedProductionOrderMixingRecordParameterImage,
 } from './production-order-mixing-record-parameter-upload.config';
+import { PRODUCTION_ORDER_MIXING_RECORD_PERMISSIONS } from './production-order-mixing-records.permissions';
 import { ProductionOrderMixingRecordsService } from './production-order-mixing-records.service';
 
-@UseGuards(jwtAuthGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('production-orders')
 export class ProductionOrderMixingRecordsController {
   constructor(
@@ -47,6 +50,7 @@ export class ProductionOrderMixingRecordsController {
   }
 
   @Delete('mixing-records/:recordId')
+  @Permissions(PRODUCTION_ORDER_MIXING_RECORD_PERMISSIONS.DELETE)
   async delete(@Param('recordId', ParseIntPipe) recordId: number) {
     return this.productionOrderMixingRecordsService.delete(recordId);
   }

@@ -2293,6 +2293,8 @@ PATCH  /production-orders/mixing-record-parameters/:parameterId
 DELETE /production-orders/mixing-record-parameters/:parameterId
 ```
 
+Riêng API `DELETE /production-orders/mixing-records/:recordId` yêu cầu permission `production-orders.mixing-records.delete`. Permission này được tạo sẵn trong database; quản trị viên cần gán nó cho role được phép xóa phiếu pha.
+
 Body tạo/cập nhật giai đoạn:
 
 ```json
