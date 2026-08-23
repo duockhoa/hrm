@@ -1,15 +1,24 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Patch,
   Post,
   Request,
+  Res,
+  StreamableFile,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { createReadStream } from 'fs';
+import type { Response } from 'express';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { CreateProductionOrderMixingRecordDto } from './dto/create-production-order-mixing-record.dto';
 import { CreateProductionOrderMixingRecordParameterDto } from './dto/create-production-order-mixing-record-parameter.dto';
@@ -19,6 +28,10 @@ import { UpdateProductionOrderMixingRecordParameterDto } from './dto/update-prod
 import { UpdateProductionOrderMixingRecordParameterResultDto } from './dto/update-production-order-mixing-record-parameter-result.dto';
 import { UpdateProductionOrderMixingRecordStageDto } from './dto/update-production-order-mixing-record-stage.dto';
 import { UpdateProductionOrderMixingRecordStepDto } from './dto/update-production-order-mixing-record-step.dto';
+import {
+  productionOrderMixingRecordParameterImageUploadOptions,
+  removeUploadedProductionOrderMixingRecordParameterImage,
+} from './production-order-mixing-record-parameter-upload.config';
 import { ProductionOrderMixingRecordsService } from './production-order-mixing-records.service';
 
 @UseGuards(jwtAuthGuard)
@@ -36,6 +49,28 @@ export class ProductionOrderMixingRecordsController {
   @Delete('mixing-records/:recordId')
   async delete(@Param('recordId', ParseIntPipe) recordId: number) {
     return this.productionOrderMixingRecordsService.delete(recordId);
+  }
+
+  @Patch('mixing-records/:recordId/qa-staff-approval')
+  async approveByQaStaff(
+    @Param('recordId', ParseIntPipe) recordId: number,
+    @Request() req: any,
+  ) {
+    return this.productionOrderMixingRecordsService.approveByQaStaff(
+      recordId,
+      req.user,
+    );
+  }
+
+  @Patch('mixing-records/:recordId/qa-manager-approval')
+  async approveByQaManager(
+    @Param('recordId', ParseIntPipe) recordId: number,
+    @Request() req: any,
+  ) {
+    return this.productionOrderMixingRecordsService.approveByQaManager(
+      recordId,
+      req.user,
+    );
   }
 
   @Post('mixing-records/:recordId/stages')
@@ -122,6 +157,55 @@ export class ProductionOrderMixingRecordsController {
       dto,
       req.user,
     );
+  }
+
+  @Post('mixing-record-parameters/:parameterId/image')
+  @UseInterceptors(
+    FileInterceptor(
+      'image',
+      productionOrderMixingRecordParameterImageUploadOptions,
+    ),
+  )
+  async uploadParameterImage(
+    @Param('parameterId', ParseIntPipe) parameterId: number,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    if (!image) {
+      throw new BadRequestException('image is required');
+    }
+
+    try {
+      return await this.productionOrderMixingRecordsService.uploadParameterImage(
+        parameterId,
+        image,
+      );
+    } catch (error) {
+      await removeUploadedProductionOrderMixingRecordParameterImage(image);
+      throw error;
+    }
+  }
+
+  @Get('mixing-record-parameters/images/:filename')
+  async getParameterImage(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const image =
+      await this.productionOrderMixingRecordsService.findParameterImageFile(
+        filename,
+      );
+    if (!image) {
+      throw new NotFoundException(
+        'Production order mixing record parameter image not found',
+      );
+    }
+
+    response.set({
+      'Content-Type': image.contentType,
+      'Content-Length': String(image.size),
+      'Cache-Control': 'private, max-age=3600',
+    });
+    return new StreamableFile(createReadStream(image.filePath));
   }
 
   @Get(':id/mixing-records')

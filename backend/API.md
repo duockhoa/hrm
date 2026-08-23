@@ -2204,6 +2204,25 @@ GET /production-orders/:id/mixing-records
 GET /production-orders/mixing-records/:recordId
 ```
 
+Mỗi phiếu pha có hai nhóm thông tin phê duyệt độc lập:
+
+- `qa_staff_approved_by_id`, `qa_staff_approved_at`, `qaStaffApprovedBy`: phê duyệt của nhân viên QA.
+- `qa_manager_approved_by_id`, `qa_manager_approved_at`, `qaManagerApprovedBy`: phê duyệt của trưởng phòng QA.
+
+Ký duyệt nhân viên QA (không cần body):
+
+```http
+PATCH /production-orders/mixing-records/:recordId/qa-staff-approval
+```
+
+Ký duyệt trưởng phòng QA (không cần body):
+
+```http
+PATCH /production-orders/mixing-records/:recordId/qa-manager-approval
+```
+
+Cả hai API tự lấy người dùng đăng nhập để lưu vào trường `*_approved_by_id`, đồng thời tự ghi `*_approved_at` theo thời điểm gọi API. Gọi lại sẽ cập nhật chữ ký và thời điểm phê duyệt của nhóm tương ứng.
+
 Nhập hoặc cập nhật kết quả của một thông số:
 
 ```http
@@ -2217,7 +2236,42 @@ Content-Type: application/json
 }
 ```
 
-`result_value` được kiểm tra theo `data_type` snapshot của thông số. Gửi `null` hoặc chuỗi rỗng để xóa kết quả; người nhập và thời điểm nhập cũng được xóa. Khi có kết quả, backend tự lưu `recorded_by_id` và `recorded_at`.
+`result_value` được kiểm tra theo `data_type` snapshot của thông số. Có thể gửi thêm `result_image_path` là đường dẫn/URL ảnh kết quả. Gửi `null` hoặc chuỗi rỗng cho `result_image_path` để bỏ ảnh; gửi `null` hoặc chuỗi rỗng cho `result_value` để xóa kết quả, người nhập và thời điểm nhập. Khi có kết quả, backend tự lưu `recorded_by_id` và `recorded_at`.
+
+Để upload ảnh thật, dùng `multipart/form-data` với field tên `image`:
+
+```http
+POST /production-orders/mixing-record-parameters/:parameterId/image
+Content-Type: multipart/form-data
+```
+
+- Chấp nhận JPG/JPEG, PNG, WEBP, GIF; dung lượng tối đa 20 MB.
+- Response là thông số đã cập nhật, trong đó `result_image_path` là đường dẫn ảnh đã lưu.
+- Upload ảnh mới cho cùng thông số sẽ thay ảnh cũ và xóa file ảnh cũ do API này quản lý.
+
+Ảnh được đọc qua API có xác thực:
+
+```http
+GET /production-orders/mixing-record-parameters/images/:filename
+```
+
+Ví dụ dùng `curl`:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer <token>" \
+  -F "image=@./temperature-22-5.jpg" \
+  http://localhost:3000/production-orders/mixing-record-parameters/12/image
+```
+
+Nếu đã có ảnh từ hệ thống khác, vẫn có thể ghi đường dẫn/URL trực tiếp khi cập nhật kết quả:
+
+```json
+{
+  "result_value": 22.5,
+  "result_image_path": "/uploads/mixing-results/temperature-22-5.jpg"
+}
+```
 
 ### Chỉnh sửa snapshot phiếu pha
 

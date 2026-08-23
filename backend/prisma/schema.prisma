@@ -92,6 +92,8 @@ model Users {
   createdMixingActivityTemplateStageSteps               MixingActivityTemplateStageSteps[]                    @relation("MixingActivityTemplateStageStepCreator")
   createdMixingActivityTemplateStageStepParameters      MixingActivityTemplateStageStepParameters[]           @relation("MixingActivityTemplateStageStepParameterCreator")
   createdProductionOrderMixingRecords                   ProductionOrderMixingRecords[]                        @relation("ProductionOrderMixingRecordCreator")
+  qaStaffApprovedProductionOrderMixingRecords           ProductionOrderMixingRecords[]                        @relation("ProductionOrderMixingRecordQaStaffApprover")
+  qaManagerApprovedProductionOrderMixingRecords         ProductionOrderMixingRecords[]                        @relation("ProductionOrderMixingRecordQaManagerApprover")
   recordedProductionOrderMixingRecordParameters         ProductionOrderMixingRecordParameters[]               @relation("ProductionOrderMixingRecordParameterRecorder")
   createdPrimaryPackagingConfirmations                  ProductionOrderPrimaryPackagingConfirmations[]        @relation("ProductionOrderPrimaryPackagingConfirmationCreator")
   sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
@@ -774,12 +776,20 @@ model ProductionOrderMixingRecords {
   template_version            String?                             @db.VarChar(50)
   created_by_id               Int
   createdBy                   Users                               @relation("ProductionOrderMixingRecordCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "po_mixing_records_created_by_fkey")
+  qa_staff_approved_by_id     Int?
+  qaStaffApprovedBy           Users?                              @relation("ProductionOrderMixingRecordQaStaffApprover", fields: [qa_staff_approved_by_id], references: [id], onDelete: SetNull, map: "po_mixing_records_qa_staff_approved_by_fkey")
+  qa_staff_approved_at        DateTime?
+  qa_manager_approved_by_id   Int?
+  qaManagerApprovedBy         Users?                              @relation("ProductionOrderMixingRecordQaManagerApprover", fields: [qa_manager_approved_by_id], references: [id], onDelete: SetNull, map: "po_mixing_records_qa_manager_approved_by_fkey")
+  qa_manager_approved_at      DateTime?
   stages                      ProductionOrderMixingRecordStages[]
   created_at                  DateTime                            @default(now())
   updated_at                  DateTime                            @default(now()) @updatedAt
 
   @@index([production_order_id], map: "po_mixing_records_order_id_idx")
   @@index([created_by_id], map: "po_mixing_records_created_by_idx")
+  @@index([qa_staff_approved_by_id], map: "po_mixing_records_qa_staff_approved_by_idx")
+  @@index([qa_manager_approved_by_id], map: "po_mixing_records_qa_manager_approved_by_idx")
   @@map("production_order_mixing_records")
 }
 
@@ -824,6 +834,7 @@ model ProductionOrderMixingRecordParameters {
   requirement                            String                           @db.Text
   parameter_order                        Int
   result_value                           String?                          @db.Text
+  result_image_path                      String?                          @db.Text
   recorded_by_id                         Int?
   recordedBy                             Users?                           @relation("ProductionOrderMixingRecordParameterRecorder", fields: [recorded_by_id], references: [id], onDelete: SetNull, map: "po_mixing_record_parameters_recorder_fkey")
   recorded_at                            DateTime?

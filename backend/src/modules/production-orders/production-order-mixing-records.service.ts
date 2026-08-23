@@ -15,6 +15,11 @@ import { UpdateProductionOrderMixingRecordParameterDto } from './dto/update-prod
 import { UpdateProductionOrderMixingRecordParameterResultDto } from './dto/update-production-order-mixing-record-parameter-result.dto';
 import { UpdateProductionOrderMixingRecordStageDto } from './dto/update-production-order-mixing-record-stage.dto';
 import { UpdateProductionOrderMixingRecordStepDto } from './dto/update-production-order-mixing-record-step.dto';
+import {
+  getProductionOrderMixingRecordParameterImagePath,
+  removeProductionOrderMixingRecordParameterImageByPath,
+  resolveProductionOrderMixingRecordParameterImageFile,
+} from './production-order-mixing-record-parameter-upload.config';
 
 type AuthenticatedUser = { id?: number | string | null };
 
@@ -39,6 +44,8 @@ const userSelect = {
 
 const mixingRecordInclude = {
   createdBy: { select: userSelect },
+  qaStaffApprovedBy: { select: userSelect },
+  qaManagerApprovedBy: { select: userSelect },
   stages: {
     orderBy: [{ stage_order: 'asc' }, { id: 'asc' }],
     include: {
@@ -164,6 +171,32 @@ export class ProductionOrderMixingRecordsService {
 
     return this.prismaService.productionOrderMixingRecords.delete({
       where: { id },
+      include: mixingRecordInclude,
+    });
+  }
+
+  async approveByQaStaff(id: number, user?: AuthenticatedUser) {
+    await this.ensureMixingRecordExists(id);
+
+    return this.prismaService.productionOrderMixingRecords.update({
+      where: { id },
+      data: {
+        qa_staff_approved_by_id: this.normalizeUserId(user),
+        qa_staff_approved_at: new Date(),
+      },
+      include: mixingRecordInclude,
+    });
+  }
+
+  async approveByQaManager(id: number, user?: AuthenticatedUser) {
+    await this.ensureMixingRecordExists(id);
+
+    return this.prismaService.productionOrderMixingRecords.update({
+      where: { id },
+      data: {
+        qa_manager_approved_by_id: this.normalizeUserId(user),
+        qa_manager_approved_at: new Date(),
+      },
       include: mixingRecordInclude,
     });
   }
@@ -383,11 +416,26 @@ export class ProductionOrderMixingRecordsService {
   }
 
   async deleteParameter(parameterId: number) {
-    await this.findParameterOrThrow(parameterId);
-    return this.prismaService.productionOrderMixingRecordParameters.delete({
+    const parameter =
+      await this.prismaService.productionOrderMixingRecordParameters.findUnique({
+        where: { id: parameterId },
+        select: { id: true, result_image_path: true },
+      });
+    if (!parameter) {
+      throw new NotFoundException(
+        'Production order mixing record parameter not found',
+      );
+    }
+
+    const deleted =
+      await this.prismaService.productionOrderMixingRecordParameters.delete({
       where: { id: parameterId },
       include: { recordedBy: { select: userSelect } },
     });
+    await removeProductionOrderMixingRecordParameterImageByPath(
+      parameter.result_image_path,
+    );
+    return deleted;
   }
 
   async updateParameterResult(
@@ -395,15 +443,17 @@ export class ProductionOrderMixingRecordsService {
     dto: UpdateProductionOrderMixingRecordParameterResultDto,
     user?: AuthenticatedUser,
   ) {
-    if (!dto || !('result_value' in dto)) {
-      throw new BadRequestException('result_value is required');
+    if (!dto || (!('result_value' in dto) && !('result_image_path' in dto))) {
+      throw new BadRequestException(
+        'result_value or result_image_path is required',
+      );
     }
 
     const parameter =
       await this.prismaService.productionOrderMixingRecordParameters.findUnique(
         {
           where: { id: parameterId },
-          select: { id: true, data_type: true },
+          select: { id: true, data_type: true, result_image_path: true },
         },
       );
 
@@ -413,28 +463,86 @@ export class ProductionOrderMixingRecordsService {
       );
     }
 
-    const resultValue = this.normalizeResultValue(
-      dto.result_value,
-      parameter.data_type,
-    );
     const data: Prisma.ProductionOrderMixingRecordParametersUncheckedUpdateInput =
-      resultValue === null
-        ? {
-            result_value: null,
-            recorded_by_id: null,
-            recorded_at: null,
-          }
-        : {
-            result_value: resultValue,
-            recorded_by_id: this.normalizeUserId(user),
-            recorded_at: new Date(),
-          };
+      {};
 
-    return this.prismaService.productionOrderMixingRecordParameters.update({
+    if ('result_value' in dto) {
+      const resultValue = this.normalizeResultValue(
+        dto.result_value,
+        parameter.data_type,
+      );
+      if (resultValue === null) {
+        data.result_value = null;
+        data.recorded_by_id = null;
+        data.recorded_at = null;
+      } else {
+        data.result_value = resultValue;
+        data.recorded_by_id = this.normalizeUserId(user);
+        data.recorded_at = new Date();
+      }
+    }
+
+    if ('result_image_path' in dto) {
+      data.result_image_path = this.normalizeOptionalText(
+        dto.result_image_path,
+        'result_image_path',
+      );
+    }
+
+    const updated =
+      await this.prismaService.productionOrderMixingRecordParameters.update({
       where: { id: parameterId },
       data,
       include: { recordedBy: { select: userSelect } },
     });
+
+    if (
+      'result_image_path' in dto &&
+      parameter.result_image_path !== updated.result_image_path
+    ) {
+      await removeProductionOrderMixingRecordParameterImageByPath(
+        parameter.result_image_path,
+      );
+    }
+
+    return updated;
+  }
+
+  async uploadParameterImage(
+    parameterId: number,
+    file: Express.Multer.File,
+  ) {
+    const imagePath = getProductionOrderMixingRecordParameterImagePath(file);
+    if (!imagePath) {
+      throw new BadRequestException('image is required');
+    }
+
+    const parameter =
+      await this.prismaService.productionOrderMixingRecordParameters.findUnique({
+        where: { id: parameterId },
+        select: { id: true, result_image_path: true },
+      });
+    if (!parameter) {
+      throw new NotFoundException(
+        'Production order mixing record parameter not found',
+      );
+    }
+
+    const updated =
+      await this.prismaService.productionOrderMixingRecordParameters.update({
+        where: { id: parameterId },
+        data: { result_image_path: imagePath },
+        include: { recordedBy: { select: userSelect } },
+      });
+    await removeProductionOrderMixingRecordParameterImageByPath(
+      parameter.result_image_path,
+    );
+
+    return updated;
+  }
+
+  async findParameterImageFile(filename: string) {
+    return resolveProductionOrderMixingRecordParameterImageFile(filename);
   }
 
   private async ensureMixingRecordExists(recordId: number) {
