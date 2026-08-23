@@ -24,7 +24,7 @@ export class AuthService {
       sub: user.id,
     };
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: Number(process.env.JWT_REFRESH_EXPIRES_IN) || 6048000,
+      expiresIn: Number(process.env.JWT_REFRESH_EXPIRES_IN) || 2592000,
     });
     await this.prisma.$transaction(async (tx) => {
       const storedToken = await tx.tokens.create({
