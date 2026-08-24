@@ -47,6 +47,9 @@ import { ProductionOrderLineClearanceChecksService } from './production-order-li
 import { CreateProductionOrderSecondaryPackagingCheckDto } from './dto/create-production-order-secondary-packaging-check.dto';
 import { UpdateProductionOrderSecondaryPackagingCheckDto } from './dto/update-production-order-secondary-packaging-check.dto';
 import { ProductionOrderSecondaryPackagingChecksService } from './production-order-secondary-packaging-checks.service';
+import { CreateProductionOrderPreSecondaryPackagingCheckDto } from './dto/create-production-order-pre-secondary-packaging-check.dto';
+import { UpdateProductionOrderPreSecondaryPackagingCheckDto } from './dto/update-production-order-pre-secondary-packaging-check.dto';
+import { ProductionOrderPreSecondaryPackagingChecksService } from './production-order-pre-secondary-packaging-checks.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
@@ -151,6 +154,12 @@ import {
   removeUploadedSensoryCheckImages,
 } from './production-order-sensory-check-upload.config';
 import {
+  getPreSecondaryPackagingCheckImagePaths,
+  MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT,
+  preSecondaryPackagingCheckImageUploadOptions,
+  removeUploadedPreSecondaryPackagingCheckImages,
+} from './production-order-pre-secondary-packaging-check-upload.config';
+import {
   getMaterialProcessSummaryImagePath,
   productionOrderMaterialProcessSummaryImageUploadOptions,
   removeUploadedMaterialProcessSummaryImage,
@@ -189,6 +198,11 @@ type DateCheckUploadFields = {
 type SensoryCheckUploadFields = {
   images?: Express.Multer.File[];
   sensory_image?: Express.Multer.File[];
+  image?: Express.Multer.File[];
+};
+
+type PreSecondaryPackagingCheckUploadFields = {
+  images?: Express.Multer.File[];
   image?: Express.Multer.File[];
 };
 
@@ -238,6 +252,15 @@ const getUploadedSensoryCheckImages = (
   ...(uploadedFiles?.sensory_image ?? []),
   ...(uploadedFiles?.image ?? []),
 ];
+
+const preSecondaryPackagingCheckImageUploadFields = [
+  { name: 'images', maxCount: MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT },
+  { name: 'image', maxCount: MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT },
+];
+
+const getUploadedPreSecondaryPackagingCheckImages = (
+  uploadedFiles?: PreSecondaryPackagingCheckUploadFields,
+) => [...(uploadedFiles?.images ?? []), ...(uploadedFiles?.image ?? [])];
 
 const sensoryCheckImageUploadFields = [
   { name: 'images', maxCount: MAX_SENSORY_CHECK_IMAGE_COUNT },
@@ -329,6 +352,7 @@ export class ProductionOrdersController {
     private readonly productionOrderHygieneChecksService: ProductionOrderHygieneChecksService,
     private readonly productionOrderLineClearanceChecksService: ProductionOrderLineClearanceChecksService,
     private readonly productionOrderSecondaryPackagingChecksService: ProductionOrderSecondaryPackagingChecksService,
+    private readonly productionOrderPreSecondaryPackagingChecksService: ProductionOrderPreSecondaryPackagingChecksService,
     private readonly productionOrderFinishedProductSummariesService: ProductionOrderFinishedProductSummariesService,
     private readonly productionOrderDensityChecksService: ProductionOrderDensityChecksService,
     private readonly productionOrderFriabilityChecksService: ProductionOrderFriabilityChecksService,
@@ -479,6 +503,77 @@ export class ProductionOrdersController {
     @Param('checkId', ParseIntPipe) checkId: number,
   ) {
     return this.productionOrderSecondaryPackagingChecksService.delete(checkId);
+  }
+
+  @Get('pre-secondary-packaging-checks/:checkId')
+  async findPreSecondaryPackagingCheckById(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderPreSecondaryPackagingChecksService.findById(
+      checkId,
+    );
+  }
+
+  @Patch('pre-secondary-packaging-checks/:checkId')
+  async updatePreSecondaryPackagingCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @Body() updateDto: UpdateProductionOrderPreSecondaryPackagingCheckDto,
+  ) {
+    return this.productionOrderPreSecondaryPackagingChecksService.update(
+      checkId,
+      updateDto,
+    );
+  }
+
+  @Post('pre-secondary-packaging-checks/:checkId/images')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      preSecondaryPackagingCheckImageUploadFields,
+      preSecondaryPackagingCheckImageUploadOptions,
+    ),
+  )
+  async addPreSecondaryPackagingCheckImages(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @UploadedFiles()
+    uploadedFiles: PreSecondaryPackagingCheckUploadFields | undefined,
+  ) {
+    const uploadedImages =
+      getUploadedPreSecondaryPackagingCheckImages(uploadedFiles);
+
+    if (uploadedImages.length > MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT) {
+      await removeUploadedPreSecondaryPackagingCheckImages(uploadedImages);
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT} files per check`,
+      );
+    }
+
+    try {
+      return await this.productionOrderPreSecondaryPackagingChecksService.addImages(
+        checkId,
+        getPreSecondaryPackagingCheckImagePaths(uploadedImages),
+      );
+    } catch (error) {
+      await removeUploadedPreSecondaryPackagingCheckImages(uploadedImages);
+      throw error;
+    }
+  }
+
+  @Delete('pre-secondary-packaging-checks/images/:imageId')
+  async deletePreSecondaryPackagingCheckImage(
+    @Param('imageId', ParseIntPipe) imageId: number,
+  ) {
+    return this.productionOrderPreSecondaryPackagingChecksService.deleteImage(
+      imageId,
+    );
+  }
+
+  @Delete('pre-secondary-packaging-checks/:checkId')
+  async deletePreSecondaryPackagingCheck(
+    @Param('checkId', ParseIntPipe) checkId: number,
+  ) {
+    return this.productionOrderPreSecondaryPackagingChecksService.delete(
+      checkId,
+    );
   }
 
   @Get('factory-release-reviews/:reviewId')
@@ -1225,6 +1320,31 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Get('pre-secondary-packaging-checks/images/:filename')
+  async getPreSecondaryPackagingCheckImage(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.productionOrderPreSecondaryPackagingChecksService.findImageFile(
+        filename,
+      );
+
+    if (!imageFile) {
+      throw new NotFoundException(
+        'Pre-secondary packaging check image not found',
+      );
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
   @Get('material-process-summaries/images/:filename')
   async getMaterialProcessSummaryImage(
     @Param('filename') filename: string,
@@ -1906,6 +2026,50 @@ export class ProductionOrdersController {
       createDto,
       req.user,
     );
+  }
+
+  @Get(':id/pre-secondary-packaging-checks')
+  async findPreSecondaryPackagingChecks(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderPreSecondaryPackagingChecksService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/pre-secondary-packaging-checks')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      preSecondaryPackagingCheckImageUploadFields,
+      preSecondaryPackagingCheckImageUploadOptions,
+    ),
+  )
+  async createPreSecondaryPackagingCheck(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderPreSecondaryPackagingCheckDto,
+    @UploadedFiles()
+    uploadedFiles: PreSecondaryPackagingCheckUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    const uploadedImages =
+      getUploadedPreSecondaryPackagingCheckImages(uploadedFiles);
+
+    if (uploadedImages.length > MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT) {
+      await removeUploadedPreSecondaryPackagingCheckImages(uploadedImages);
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT} files per check`,
+      );
+    }
+
+    try {
+      return await this.productionOrderPreSecondaryPackagingChecksService.create(
+        id,
+        createDto,
+        req.user,
+        getPreSecondaryPackagingCheckImagePaths(uploadedImages),
+      );
+    } catch (error) {
+      await removeUploadedPreSecondaryPackagingCheckImages(uploadedImages);
+      throw error;
+    }
   }
 
   @Get(':id/density-checks')

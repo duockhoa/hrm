@@ -15,6 +15,7 @@ import { ProductionOrderEnvironmentChecksService } from './production-order-envi
 import { ProductionOrderHygieneChecksService } from './production-order-hygiene-checks.service';
 import { ProductionOrderLineClearanceChecksService } from './production-order-line-clearance-checks.service';
 import { ProductionOrderSecondaryPackagingChecksService } from './production-order-secondary-packaging-checks.service';
+import { ProductionOrderPreSecondaryPackagingChecksService } from './production-order-pre-secondary-packaging-checks.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { FeaturesModule } from '../features/features.module';
 import { ProductionOrderDensityChecksService } from './production-order-density-checks.service';
@@ -66,6 +67,7 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
     ProductionOrderHygieneChecksService,
     ProductionOrderLineClearanceChecksService,
     ProductionOrderSecondaryPackagingChecksService,
+    ProductionOrderPreSecondaryPackagingChecksService,
     ProductionOrderFinishedProductSummariesService,
     ProductionOrderDensityChecksService,
     ProductionOrderFriabilityChecksService,

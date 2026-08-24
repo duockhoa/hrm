@@ -3959,6 +3959,153 @@ PATCH /production-orders/secondary-packaging-checks/:checkId
 DELETE /production-orders/secondary-packaging-checks/:checkId
 ```
 
+## Production Order Pre-Secondary Packaging Checks
+
+Tất cả API trong nhóm này cần `Auth: Bearer`. Nhóm API dùng để kiểm tra bán thành phẩm trước khi đóng gói bao bì cấp 2. Mỗi bản ghi thuộc một lệnh sản xuất và có thể có nhiều ảnh kiểm tra.
+
+### Lấy danh sách kiểm tra theo lệnh sản xuất
+
+```http
+GET /production-orders/:id/pre-secondary-packaging-checks
+```
+
+Response sắp xếp theo `created_at` mới nhất trước. Mỗi bản ghi trả kèm `createdBy` và mảng `images`:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "requirement": "Bán thành phẩm sạch, khô và không biến dạng trước khi đóng hộp.",
+    "quantity_checked": 100,
+    "quantity_passed": 98,
+    "created_by_id": 7,
+    "created_at": "2026-08-24T08:00:00.000Z",
+    "updated_at": "2026-08-24T08:00:00.000Z",
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    },
+    "images": [
+      {
+        "id": 12,
+        "check_id": 1,
+        "image_path": "/production-orders/pre-secondary-packaging-checks/images/kiem-tra-a1b2c3.jpg",
+        "created_at": "2026-08-24T08:00:00.000Z"
+      }
+    ]
+  }
+]
+```
+
+### Lấy một bản ghi theo ID
+
+```http
+GET /production-orders/pre-secondary-packaging-checks/:checkId
+```
+
+### Tạo bản ghi kiểm tra
+
+Không có ảnh, gửi JSON:
+
+```http
+POST /production-orders/:id/pre-secondary-packaging-checks
+Content-Type: application/json
+```
+
+```json
+{
+  "requirement": "Bán thành phẩm sạch, khô và không biến dạng trước khi đóng hộp.",
+  "quantity_checked": 100,
+  "quantity_passed": 98
+}
+```
+
+Nếu có ảnh, gửi `multipart/form-data`:
+
+```text
+requirement=Bán thành phẩm sạch, khô và không biến dạng trước khi đóng hộp.
+quantity_checked=100
+quantity_passed=98
+images=<file>
+images=<file>
+```
+
+Quy tắc:
+
+- `requirement`, `quantity_checked`, `quantity_passed` là bắt buộc.
+- `quantity_checked` là số nguyên lớn hơn `0`; `quantity_passed` là số nguyên từ `0` đến `quantity_checked`.
+- `created_by_id` tự lấy từ user đăng nhập và `created_at` tự lấy tại thời điểm tạo; frontend không gửi hai field này.
+- Field upload ảnh hỗ trợ `images` (khuyến nghị) hoặc `image`.
+- Tối đa 10 ảnh trên một bản ghi. Mỗi ảnh chỉ nhận JPG, PNG, WEBP hoặc GIF, tối đa 20 MB.
+
+Lỗi thường gặp:
+
+- `404 Production order not found`
+- `400 requirement is required`
+- `400 quantity_checked must be greater than 0`
+- `400 quantity_passed must be less than or equal to quantity_checked`
+- `400 images cannot exceed 10 files per check`
+- `401 Authenticated user not found`
+
+### Cập nhật bản ghi kiểm tra
+
+```http
+PATCH /production-orders/pre-secondary-packaging-checks/:checkId
+Content-Type: application/json
+```
+
+Chỉ gửi các field cần đổi:
+
+```json
+{
+  "quantity_checked": 120,
+  "quantity_passed": 117
+}
+```
+
+Có thể cập nhật `requirement`, `quantity_checked`, `quantity_passed`. Sau cập nhật, `quantity_passed` vẫn phải nằm trong khoảng từ `0` đến `quantity_checked`. Không cập nhật `created_by_id` hoặc `created_at`.
+
+### Thêm ảnh vào bản ghi kiểm tra
+
+```http
+POST /production-orders/pre-secondary-packaging-checks/:checkId/images
+Content-Type: multipart/form-data
+```
+
+```text
+images=<file>
+images=<file>
+```
+
+Field upload hỗ trợ `images` hoặc `image`. Tổng số ảnh của bản ghi, gồm cả ảnh cũ, không được quá 10.
+
+### Xóa một ảnh kiểm tra
+
+```http
+DELETE /production-orders/pre-secondary-packaging-checks/images/:imageId
+```
+
+API xóa record ảnh và file vật lý tương ứng.
+
+### Xem ảnh kiểm tra
+
+```http
+GET /production-orders/pre-secondary-packaging-checks/images/:filename
+```
+
+### Xóa bản ghi kiểm tra
+
+```http
+DELETE /production-orders/pre-secondary-packaging-checks/:checkId
+```
+
+API xóa bản ghi, toàn bộ record ảnh phụ thuộc và các file ảnh tương ứng.
+
 ## Production Order Density Checks
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

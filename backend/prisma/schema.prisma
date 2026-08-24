@@ -35,6 +35,7 @@ model Users {
   createdProductionOrderHygieneChecks                   ProductionOrderHygieneChecks[]                        @relation("ProductionOrderHygieneCheckCreator")
   createdProductionOrderLineClearanceChecks             ProductionOrderLineClearanceChecks[]                  @relation("ProductionOrderLineClearanceCheckCreator")
   checkedProductionOrderSecondaryPackagingChecks        ProductionOrderSecondaryPackagingChecks[]             @relation("ProductionOrderSecondaryPackagingCheckInspector")
+  createdProductionOrderPreSecondaryPackagingChecks     ProductionOrderPreSecondaryPackagingChecks[]          @relation("ProductionOrderPreSecondaryPackagingCheckCreator")
   createdSecondaryPackagingStageRequirements            SecondaryPackagingStageRequirements[]                 @relation("SecondaryPackagingStageRequirementCreator")
   createdProductionOrderFinishedProductSummaries        ProductionOrderFinishedProductSummaries[]             @relation("ProductionOrderFinishedProductSummaryCreator")
   createdProductionOrderDensityChecks                   ProductionOrderDensityChecks[]                        @relation("ProductionOrderDensityCheckCreator")
@@ -727,6 +728,7 @@ model ProductionOrders {
   lineClearanceChecks                  ProductionOrderLineClearanceChecks[]                  @relation("LineClearanceCurrentOrder")
   lineClearanceChecksAsPreviousOrder   ProductionOrderLineClearanceChecks[]                  @relation("LineClearancePreviousOrder")
   secondaryPackagingChecks             ProductionOrderSecondaryPackagingChecks[]
+  preSecondaryPackagingChecks          ProductionOrderPreSecondaryPackagingChecks[]
   finishedProductSummaries             ProductionOrderFinishedProductSummaries[]
   densityChecks                        ProductionOrderDensityChecks[]
   samplingRecords                      ProductionOrderSamplingRecords[]
@@ -1173,6 +1175,35 @@ model ProductionOrderSecondaryPackagingChecks {
   @@index([production_order_id], map: "po_secondary_packaging_checks_po_id_fkey")
   @@index([checked_by_id], map: "po_secondary_packaging_checks_checked_by_id_fkey")
   @@map("production_order_secondary_packaging_checks")
+}
+
+model ProductionOrderPreSecondaryPackagingChecks {
+  id                  Int                                               @id @default(autoincrement())
+  production_order_id Int
+  productionOrder     ProductionOrders                                  @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_pre_secondary_packaging_checks_po_id_fkey")
+  requirement         String                                            @db.Text
+  quantity_checked    Int
+  quantity_passed     Int
+  created_by_id       Int
+  createdBy           Users                                             @relation("ProductionOrderPreSecondaryPackagingCheckCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "po_pre_secondary_packaging_checks_created_by_id_fkey")
+  images              ProductionOrderPreSecondaryPackagingCheckImages[]
+  created_at          DateTime                                          @default(now())
+  updated_at          DateTime                                          @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_pre_secondary_packaging_checks_po_id_fkey")
+  @@index([created_by_id], map: "po_pre_secondary_packaging_checks_created_by_id_fkey")
+  @@map("production_order_pre_secondary_packaging_checks")
+}
+
+model ProductionOrderPreSecondaryPackagingCheckImages {
+  id         Int                                        @id @default(autoincrement())
+  check_id   Int
+  check      ProductionOrderPreSecondaryPackagingChecks @relation(fields: [check_id], references: [id], onDelete: Cascade, map: "po_pre_secondary_packaging_check_images_check_id_fkey")
+  image_path String                                     @db.Text
+  created_at DateTime                                   @default(now())
+
+  @@index([check_id], map: "po_pre_secondary_packaging_check_images_check_id_fkey")
+  @@map("production_order_pre_secondary_packaging_check_images")
 }
 
 model ProductionOrderFinishedProductSummaries {
