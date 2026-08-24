@@ -24,6 +24,7 @@ describe('ItemsController', () => {
     delete: jest.Mock;
   };
   let mixingActivityTemplatesService: {
+    findAll: jest.Mock;
     findById: jest.Mock;
     findAllByItem: jest.Mock;
     create: jest.Mock;
@@ -68,6 +69,7 @@ describe('ItemsController', () => {
       delete: jest.fn(),
     };
     mixingActivityTemplatesService = {
+      findAll: jest.fn(),
       findById: jest.fn(),
       findAllByItem: jest.fn(),
       create: jest.fn(),
@@ -146,6 +148,22 @@ describe('ItemsController', () => {
 
     await expect(controller.findItemByCode('TP00001')).resolves.toBe(item);
     expect(itemsService.findItemByCode).toHaveBeenCalledWith('TP00001');
+  });
+
+  it('gets all mixing activity templates with their items', async () => {
+    const templates = [
+      {
+        id: 1,
+        item_code: 'TP00001',
+        item: { item_code: 'TP00001', item_name: 'Sản phẩm A' },
+      },
+    ];
+    mixingActivityTemplatesService.findAll.mockResolvedValue(templates);
+
+    await expect(controller.findAllMixingActivityTemplates()).resolves.toBe(
+      templates,
+    );
+    expect(mixingActivityTemplatesService.findAll).toHaveBeenCalledTimes(1);
   });
 
   it('updates item registration_id', async () => {

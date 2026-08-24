@@ -1053,6 +1053,46 @@ Tất cả API trong nhóm này cần `Auth: Bearer`.
 
 `mixing_activity_templates` là bảng biểu mẫu theo dõi hoạt động pha của item, không phải phiếu hoạt động pha thực tế. Một item có thể có nhiều template. Backend tự lấy `created_by_id` từ user đăng nhập; client không gửi `created_by_id`, `created_at` hoặc `updated_at`.
 
+### Lấy tất cả template phiếu pha
+
+```http
+GET /items/mixing-activity-templates
+```
+
+Response trả toàn bộ template và thông tin item tương ứng trong trường `item`, cùng người tạo trong `createdBy`. Danh sách được sắp xếp theo `item_code` tăng dần, sau đó `version` và `id` giảm dần.
+
+Ví dụ response:
+
+```json
+[
+  {
+    "id": 1,
+    "item_code": "TP00001",
+    "version": 2,
+    "batch_size": "100.000",
+    "unit_of_measure": "kg",
+    "description": "Biểu mẫu pha lô 100 kg",
+    "item": {
+      "item_code": "TP00001",
+      "item_name": "Sản phẩm A",
+      "unit": "Hộp",
+      "dk_code": "DK-001",
+      "registration_id": 583,
+      "created_at": "2026-08-24T08:00:00.000Z",
+      "update_at": "2026-08-24T08:00:00.000Z"
+    },
+    "createdBy": {
+      "id": 7,
+      "username": "qa.staff",
+      "name": "Nguyễn Văn A",
+      "email": "qa@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
+
 ### Lấy danh sách template của item
 
 ```http

@@ -21,12 +21,30 @@ const creatorSelect = {
 };
 
 const mixingActivityTemplateInclude = {
+  item: {
+    select: {
+      item_code: true,
+      item_name: true,
+      unit: true,
+      dk_code: true,
+      registration_id: true,
+      created_at: true,
+      update_at: true,
+    },
+  },
   createdBy: { select: creatorSelect },
 } satisfies Prisma.MixingActivityTemplatesInclude;
 
 @Injectable()
 export class MixingActivityTemplatesService {
   constructor(private readonly prismaService: PrismaService) {}
+
+  async findAll() {
+    return this.prismaService.mixingActivityTemplates.findMany({
+      include: mixingActivityTemplateInclude,
+      orderBy: [{ item_code: 'asc' }, { version: 'desc' }, { id: 'desc' }],
+    });
+  }
 
   async findAllByItem(itemCode: string) {
     const normalizedItemCode = this.normalizeItemCode(itemCode);

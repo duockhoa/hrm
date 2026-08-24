@@ -75,6 +75,11 @@ export class ItemsController {
     return this.itemEquipmentService.delete(itemEquipmentId);
   }
 
+  @Get('mixing-activity-templates')
+  async findAllMixingActivityTemplates() {
+    return this.mixingActivityTemplatesService.findAll();
+  }
+
   @Get('mixing-activity-templates/:templateId')
   async findMixingActivityTemplateById(
     @Param('templateId', ParseIntPipe) templateId: number,
