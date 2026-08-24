@@ -2233,16 +2233,32 @@ Body:
 
 ```json
 {
-  "mixing_activity_template_id": 1
+  "mixing_activity_template_id": 1,
+  "description": "Phiếu pha lô sản xuất buổi sáng"
 }
 ```
 
-Template phải thuộc cùng item với production order. Response trả toàn bộ snapshot theo thứ tự giai đoạn, bước và thông số.
+`description` không bắt buộc; gửi `null` hoặc chuỗi rỗng để lưu là `null`. Template phải thuộc cùng item với production order. Response trả toàn bộ snapshot theo thứ tự giai đoạn, bước và thông số.
 
 ```http
 GET /production-orders/:id/mixing-records
 GET /production-orders/mixing-records/:recordId
 ```
+
+### Sửa mô tả phiếu pha
+
+```http
+PATCH /production-orders/mixing-records/:recordId
+Content-Type: application/json
+```
+
+```json
+{
+  "description": "Đã điều chỉnh theo lệnh sản xuất PO-20260824-01"
+}
+```
+
+Chỉ hỗ trợ cập nhật trường `description`. Gửi `null` hoặc chuỗi rỗng để xóa mô tả. Response trả toàn bộ phiếu pha sau cập nhật, gồm các giai đoạn, bước và thông số.
 
 Mỗi phiếu pha có hai nhóm thông tin phê duyệt độc lập:
 

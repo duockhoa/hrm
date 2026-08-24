@@ -28,6 +28,7 @@ import { CreateProductionOrderMixingRecordStageDto } from './dto/create-producti
 import { CreateProductionOrderMixingRecordStepDto } from './dto/create-production-order-mixing-record-step.dto';
 import { UpdateProductionOrderMixingRecordParameterDto } from './dto/update-production-order-mixing-record-parameter.dto';
 import { UpdateProductionOrderMixingRecordParameterResultDto } from './dto/update-production-order-mixing-record-parameter-result.dto';
+import { UpdateProductionOrderMixingRecordDto } from './dto/update-production-order-mixing-record.dto';
 import { UpdateProductionOrderMixingRecordStageDto } from './dto/update-production-order-mixing-record-stage.dto';
 import { UpdateProductionOrderMixingRecordStepDto } from './dto/update-production-order-mixing-record-step.dto';
 import {
@@ -47,6 +48,14 @@ export class ProductionOrderMixingRecordsController {
   @Get('mixing-records/:recordId')
   async findById(@Param('recordId', ParseIntPipe) recordId: number) {
     return this.productionOrderMixingRecordsService.findById(recordId);
+  }
+
+  @Patch('mixing-records/:recordId')
+  async update(
+    @Param('recordId', ParseIntPipe) recordId: number,
+    @Body() dto: UpdateProductionOrderMixingRecordDto,
+  ) {
+    return this.productionOrderMixingRecordsService.update(recordId, dto);
   }
 
   @Delete('mixing-records/:recordId')

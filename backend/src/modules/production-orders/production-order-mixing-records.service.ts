@@ -13,6 +13,7 @@ import { CreateProductionOrderMixingRecordStageDto } from './dto/create-producti
 import { CreateProductionOrderMixingRecordStepDto } from './dto/create-production-order-mixing-record-step.dto';
 import { UpdateProductionOrderMixingRecordParameterDto } from './dto/update-production-order-mixing-record-parameter.dto';
 import { UpdateProductionOrderMixingRecordParameterResultDto } from './dto/update-production-order-mixing-record-parameter-result.dto';
+import { UpdateProductionOrderMixingRecordDto } from './dto/update-production-order-mixing-record.dto';
 import { UpdateProductionOrderMixingRecordStageDto } from './dto/update-production-order-mixing-record-stage.dto';
 import { UpdateProductionOrderMixingRecordStepDto } from './dto/update-production-order-mixing-record-step.dto';
 import {
@@ -136,6 +137,7 @@ export class ProductionOrderMixingRecordsService {
         production_order_id: productionOrderId,
         mixing_activity_template_id: template.id,
         template_version: String(template.version),
+        description: this.normalizeOptionalText(dto?.description, 'description'),
         created_by_id: this.normalizeUserId(user),
         stages: {
           create: template.stages.map((stage) => ({
@@ -171,6 +173,21 @@ export class ProductionOrderMixingRecordsService {
 
     return this.prismaService.productionOrderMixingRecords.delete({
       where: { id },
+      include: mixingRecordInclude,
+    });
+  }
+
+  async update(id: number, dto: UpdateProductionOrderMixingRecordDto) {
+    if (!dto || !('description' in dto)) {
+      throw new BadRequestException('description is required');
+    }
+
+    await this.findById(id);
+    return this.prismaService.productionOrderMixingRecords.update({
+      where: { id },
+      data: {
+        description: this.normalizeOptionalText(dto.description, 'description'),
+      },
       include: mixingRecordInclude,
     });
   }
