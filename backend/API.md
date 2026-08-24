@@ -2272,11 +2272,12 @@ Content-Type: application/json
 
 ```json
 {
-  "result_value": 22.5
+  "result_value": 22.5,
+  "note": "Đạt yêu cầu, đã kiểm tra bằng nhiệt kế đã hiệu chuẩn"
 }
 ```
 
-`result_value` được kiểm tra theo `data_type` snapshot của thông số. Có thể gửi thêm `result_image_path` là đường dẫn/URL ảnh kết quả. Gửi `null` hoặc chuỗi rỗng cho `result_image_path` để bỏ ảnh; gửi `null` hoặc chuỗi rỗng cho `result_value` để xóa kết quả, người nhập và thời điểm nhập. Khi có kết quả, backend tự lưu `recorded_by_id` và `recorded_at`.
+`result_value` được kiểm tra theo `data_type` snapshot của thông số. Có thể gửi thêm `note` để lưu ghi chú cho lần nhập thông số và `result_image_path` là đường dẫn/URL ảnh kết quả. `note` có thể được gửi riêng mà không cần `result_value`. Gửi `null` hoặc chuỗi rỗng cho `note` hoặc `result_image_path` để xóa trường tương ứng; gửi `null` hoặc chuỗi rỗng cho `result_value` để xóa kết quả, người nhập và thời điểm nhập. Khi có kết quả, backend tự lưu `recorded_by_id` và `recorded_at`.
 
 Để upload ảnh thật, dùng `multipart/form-data` với field tên `image`:
 
@@ -2309,6 +2310,7 @@ Nếu đã có ảnh từ hệ thống khác, vẫn có thể ghi đường dẫ
 ```json
 {
   "result_value": 22.5,
+  "note": "Kết quả được xác nhận sau khi đo lại",
   "result_image_path": "/uploads/mixing-results/temperature-22-5.jpg"
 }
 ```

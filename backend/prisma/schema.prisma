@@ -834,6 +834,7 @@ model ProductionOrderMixingRecordParameters {
   requirement                            String                           @db.Text
   parameter_order                        Int
   result_value                           String?                          @db.Text
+  note                                   String?                          @db.Text
   result_image_path                      String?                          @db.Text
   recorded_by_id                         Int?
   recordedBy                             Users?                           @relation("ProductionOrderMixingRecordParameterRecorder", fields: [recorded_by_id], references: [id], onDelete: SetNull, map: "po_mixing_record_parameters_recorder_fkey")

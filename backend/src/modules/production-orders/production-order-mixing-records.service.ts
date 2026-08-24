@@ -443,9 +443,14 @@ export class ProductionOrderMixingRecordsService {
     dto: UpdateProductionOrderMixingRecordParameterResultDto,
     user?: AuthenticatedUser,
   ) {
-    if (!dto || (!('result_value' in dto) && !('result_image_path' in dto))) {
+    if (
+      !dto ||
+      (!('result_value' in dto) &&
+        !('note' in dto) &&
+        !('result_image_path' in dto))
+    ) {
       throw new BadRequestException(
-        'result_value or result_image_path is required',
+        'result_value, note or result_image_path is required',
       );
     }
 
@@ -487,6 +492,10 @@ export class ProductionOrderMixingRecordsService {
         dto.result_image_path,
         'result_image_path',
       );
+    }
+
+    if ('note' in dto) {
+      data.note = this.normalizeOptionalText(dto.note, 'note');
     }
 
     const updated =
