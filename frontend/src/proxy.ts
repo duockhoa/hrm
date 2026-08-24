@@ -24,42 +24,37 @@ export default async function proxy(request: NextRequest) {
   const hasRefreshToken = Boolean(refreshToken);
   const isLoggedIn = hasAccessToken && hasRefreshToken;
   const { pathname } = request.nextUrl;
+  const isAuthPath = authPaths.includes(pathname);
   const isProtectedPath = protectedPaths.some((path) =>
     path === "/" ? pathname === "/" : pathname.startsWith(path),
   );
 
-  if (isLoggedIn && authPaths.includes(pathname)) {
-    return NextResponse.redirect(new URL("/", request.url));
+  // Refresh before any redirect. An expired access-token cookie can disappear
+  // while the refresh-token cookie is still valid, including on `/login`.
+  const needsAccessTokenRefresh =
+    hasRefreshToken && (!hasAccessToken || isAccessTokenExpired(accessToken));
+  if (needsAccessTokenRefresh) {
+    const refreshResponse = await refreshAccessToken(request, refreshToken);
+    if (refreshResponse) {
+      return refreshResponse;
+    }
+
+    if (isProtectedPath || isAuthPath) {
+      return redirectToLoginAndClearAuthCookies(request);
+    }
   }
-  /*
-    if (pathname === "/") {
+
+  if (pathname === "/") {
     const target = isLoggedIn ? "/home" : "/login";
     return NextResponse.redirect(new URL(target, request.url));
   }
 
-  if (isLoggedIn && authPaths.includes(pathname)) {
+  if (isLoggedIn && isAuthPath) {
     return NextResponse.redirect(new URL("/home", request.url));
   }
-  */
 
   if (!isLoggedIn && isProtectedPath) {
-    if (!hasAccessToken && hasRefreshToken && backendBaseUrl) {
-      const refreshResponse = await refreshAccessToken(request, refreshToken);
-      if (refreshResponse) {
-        return refreshResponse;
-      }
-    }
     return redirectToLoginAndClearAuthCookies(request);
-  }
-
-  if (isLoggedIn && isProtectedPath) {
-    if (isAccessTokenExpired(accessToken) && hasRefreshToken) {
-      const refreshResponse = await refreshAccessToken(request, refreshToken);
-      if (refreshResponse) {
-        return refreshResponse;
-      }
-      return redirectToLoginAndClearAuthCookies(request);
-    }
   }
 
   return NextResponse.next();
