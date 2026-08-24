@@ -44,13 +44,8 @@ export default async function proxy(request: NextRequest) {
     }
   }
 
-  if (pathname === "/") {
-    const target = isLoggedIn ? "/home" : "/login";
-    return NextResponse.redirect(new URL(target, request.url));
-  }
-
   if (isLoggedIn && isAuthPath) {
-    return NextResponse.redirect(new URL("/home", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   if (!isLoggedIn && isProtectedPath) {
