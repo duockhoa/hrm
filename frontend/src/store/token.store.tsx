@@ -79,21 +79,29 @@ export const TokenProvider = ({
   children: React.ReactNode;
   initalToken: { accessToken: string | null; refreshToken: string | null };
 }) => {
-  const [accessToken, setAccessToken] = useState<string | null>(
-    initalToken.accessToken
-  );
-  const [refreshToken, setRefreshToken] = useState<string | null>(
-    initalToken.refreshToken
-  );
+  const [tokens, setTokensState] = useState<TokenCache>(() => {
+    const initialTokens = {
+      accessToken: initalToken.accessToken,
+      refreshToken: initalToken.refreshToken,
+    };
+
+    // sessionStorage is scoped to one browser tab, while the initial tokens
+    // come from cookies on the server. Initialize the cache before children
+    // can issue their first API request.
+    if (typeof window !== "undefined") {
+      setTokenCache(initialTokens.accessToken, initialTokens.refreshToken);
+    }
+    return initialTokens;
+  });
+  const { accessToken, refreshToken } = tokens;
+
   const setTokens = (accessToken: string, refreshToken: string) => {
     setTokenCache(accessToken, refreshToken);
-    setAccessToken(accessToken);
-    setRefreshToken(refreshToken);
+    setTokensState({ accessToken, refreshToken });
   };
   const clearTokens = () => {
     clearTokenCache();
-    setAccessToken(null);
-    setRefreshToken(null);
+    setTokensState({ accessToken: null, refreshToken: null });
   };
 
   useEffect(() => {

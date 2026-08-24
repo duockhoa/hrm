@@ -63,6 +63,13 @@ const redirectToLogin = async () => {
   }
 };
 
+const isInvalidSessionError = (error: unknown) => {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+  return error.response?.status === 401 || error.response?.status === 403;
+};
+
 axiosClient.interceptors.request.use((config) => {
   const { accessToken } = getTokenCache();
   if (accessToken) {
@@ -86,8 +93,10 @@ axiosClient.interceptors.response.use(
     const url = originalRequest.url ?? "";
     const isAuthEndpoint = authEndpointPaths.some((path) => url.includes(path));
 
+    // A timeout, network error, or CORS error says nothing about whether the
+    // current session is valid. Preserve tokens and let the caller show a
+    // retry/error state instead of forcing a logout.
     if (!error.response && !isAuthEndpoint) {
-      await redirectToLogin();
       return Promise.reject(error);
     }
 
@@ -140,7 +149,11 @@ axiosClient.interceptors.response.use(
       return axiosClient(originalRequest);
     } catch (refreshError) {
       notifyRefreshFailure(refreshError);
-      await redirectToLogin();
+      // Only a definite authentication failure invalidates the local session.
+      // Temporary backend/network failures must not log the user out.
+      if (isInvalidSessionError(refreshError)) {
+        await redirectToLogin();
+      }
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
