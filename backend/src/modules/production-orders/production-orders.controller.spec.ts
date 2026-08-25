@@ -37,6 +37,8 @@ import { ProductionOrderFactoryReleaseReviewsService } from './production-order-
 import { ProductionOrderHygieneChecksService } from './production-order-hygiene-checks.service';
 import { ProductionOrderLineClearanceChecksService } from './production-order-line-clearance-checks.service';
 import { ProductionOrderSecondaryPackagingChecksService } from './production-order-secondary-packaging-checks.service';
+import { ProductionOrderPreSecondaryPackagingChecksService } from './production-order-pre-secondary-packaging-checks.service';
+import { ProductionOrderPostSecondaryPackagingSummariesService } from './production-order-post-secondary-packaging-summaries.service';
 import { ProductionOrderDocumentControlsService } from './production-order-document-controls.service';
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
@@ -100,6 +102,16 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
+  };
+  let productionOrderPreSecondaryPackagingChecksService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+    addImages: jest.Mock;
+    deleteImage: jest.Mock;
+    findImageFile: jest.Mock;
   };
   let productionOrderFinishedProductSummariesService: {
     findById: jest.Mock;
@@ -256,6 +268,23 @@ describe('ProductionOrdersController', () => {
     update: jest.Mock;
     delete: jest.Mock;
   };
+  let productionOrderPostSecondaryPackagingSummariesService: {
+    findById: jest.Mock;
+    findAllByProductionOrder: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+    findPendingProcessItems: jest.Mock;
+    createPendingProcessItem: jest.Mock;
+    findPendingProcessItemById: jest.Mock;
+    updatePendingProcessItem: jest.Mock;
+    deletePendingProcessItem: jest.Mock;
+    findPendingCancellationItems: jest.Mock;
+    createPendingCancellationItem: jest.Mock;
+    findPendingCancellationItemById: jest.Mock;
+    updatePendingCancellationItem: jest.Mock;
+    deletePendingCancellationItem: jest.Mock;
+  };
   let productionOrderMaterialSummariesService: {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
@@ -388,6 +417,16 @@ describe('ProductionOrdersController', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+    };
+    productionOrderPreSecondaryPackagingChecksService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      addImages: jest.fn(),
+      deleteImage: jest.fn(),
+      findImageFile: jest.fn(),
     };
     productionOrderFinishedProductSummariesService = {
       findById: jest.fn(),
@@ -544,6 +583,23 @@ describe('ProductionOrdersController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
+    productionOrderPostSecondaryPackagingSummariesService = {
+      findById: jest.fn(),
+      findAllByProductionOrder: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findPendingProcessItems: jest.fn(),
+      createPendingProcessItem: jest.fn(),
+      findPendingProcessItemById: jest.fn(),
+      updatePendingProcessItem: jest.fn(),
+      deletePendingProcessItem: jest.fn(),
+      findPendingCancellationItems: jest.fn(),
+      createPendingCancellationItem: jest.fn(),
+      findPendingCancellationItemById: jest.fn(),
+      updatePendingCancellationItem: jest.fn(),
+      deletePendingCancellationItem: jest.fn(),
+    };
     productionOrderMaterialSummariesService = {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
@@ -655,6 +711,10 @@ describe('ProductionOrdersController', () => {
           useValue: productionOrderSecondaryPackagingChecksService,
         },
         {
+          provide: ProductionOrderPreSecondaryPackagingChecksService,
+          useValue: productionOrderPreSecondaryPackagingChecksService,
+        },
+        {
           provide: ProductionOrderFinishedProductSummariesService,
           useValue: productionOrderFinishedProductSummariesService,
         },
@@ -737,6 +797,10 @@ describe('ProductionOrdersController', () => {
         {
           provide: ProductionOrderSemiFinishedProductSummariesService,
           useValue: productionOrderSemiFinishedProductSummariesService,
+        },
+        {
+          provide: ProductionOrderPostSecondaryPackagingSummariesService,
+          useValue: productionOrderPostSecondaryPackagingSummariesService,
         },
         {
           provide: ProductionOrderMaterialSummariesService,

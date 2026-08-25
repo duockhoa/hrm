@@ -6119,6 +6119,79 @@ Lỗi thường gặp:
 
 - `404 Semi-finished product summary not found`
 
+## Production Order Post-Secondary Packaging Summaries
+
+Tất cả API trong nhóm này cần `Auth: Bearer`. Một lệnh đóng gói cấp 2 có nhiều bản tổng kết. Mỗi bản tổng kết liên kết duy nhất với một lệnh sản xuất bán thành phẩm qua `semi_finished_product_order_id`; lệnh này phải khác `:id` và không thể dùng lại cho bản tổng kết khác.
+
+### Bản tổng kết
+
+```http
+GET  /production-orders/:id/post-secondary-packaging-summaries
+POST /production-orders/:id/post-secondary-packaging-summaries
+GET  /production-orders/post-secondary-packaging-summaries/:summaryId
+PATCH /production-orders/post-secondary-packaging-summaries/:summaryId
+DELETE /production-orders/post-secondary-packaging-summaries/:summaryId
+```
+
+Body tạo mới:
+
+```json
+{
+  "semi_finished_product_order_id": 2030,
+  "received_bag_count": 12,
+  "remaining_quantity": "3.5",
+  "remaining_reason": "Chờ kiểm nghiệm"
+}
+```
+
+- `semi_finished_product_order_id`, `received_bag_count`, `remaining_quantity` là bắt buộc.
+- `received_bag_count` là số nguyên không âm.
+- Các trường số lượng lưu `DECIMAL(12, 3)`, nhận số hoặc chuỗi số, tối đa 3 chữ số sau dấu phẩy.
+- `remaining_reason` không bắt buộc; gửi `null` hoặc chuỗi rỗng để xóa khi cập nhật.
+- `created_by_id` lấy từ người dùng đăng nhập. Response trả về người nhập, lệnh sản xuất bán thành phẩm (kèm item), danh sách chờ xử lý và chờ hủy.
+
+### Dòng chờ xử lý
+
+```http
+GET    /production-orders/post-secondary-packaging-summaries/:summaryId/pending-process-items
+POST   /production-orders/post-secondary-packaging-summaries/:summaryId/pending-process-items
+GET    /production-orders/post-secondary-packaging-pending-process-items/:itemId
+PATCH  /production-orders/post-secondary-packaging-pending-process-items/:itemId
+DELETE /production-orders/post-secondary-packaging-pending-process-items/:itemId
+```
+
+Body tạo mới hoặc cập nhật:
+
+```json
+{
+  "pending_quantity": "2.5",
+  "pending_reason": "Chờ QA đánh giá",
+  "processing_plan": "Kiểm nghiệm lại"
+}
+```
+
+### Dòng chờ hủy
+
+```http
+GET    /production-orders/post-secondary-packaging-summaries/:summaryId/pending-cancellation-items
+POST   /production-orders/post-secondary-packaging-summaries/:summaryId/pending-cancellation-items
+GET    /production-orders/post-secondary-packaging-pending-cancellation-items/:itemId
+PATCH  /production-orders/post-secondary-packaging-pending-cancellation-items/:itemId
+DELETE /production-orders/post-secondary-packaging-pending-cancellation-items/:itemId
+```
+
+Body tạo mới hoặc cập nhật:
+
+```json
+{
+  "cancellation_quantity": "1",
+  "cancellation_reason": "Không đạt chỉ tiêu cảm quan",
+  "cancellation_plan": "Lập biên bản hủy"
+}
+```
+
+`pending_reason` và `cancellation_reason` là bắt buộc. `processing_plan` và `cancellation_plan` không bắt buộc; gửi `null` hoặc chuỗi rỗng để xóa khi cập nhật. Xóa bản tổng kết sẽ xóa dây chuyền các dòng chờ xử lý và chờ hủy.
+
 ## Production Order Material Summaries
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.

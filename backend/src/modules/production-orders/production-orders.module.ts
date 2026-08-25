@@ -36,6 +36,7 @@ import { ProductionOrderFiltrationChecksService } from './production-order-filtr
 import { ProductionOrderSemiFinishedGrossWeightChecksService } from './production-order-semi-finished-gross-weight-checks.service';
 import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-order-semi-finished-net-weight-checks.service';
 import { ProductionOrderSemiFinishedProductSummariesService } from './production-order-semi-finished-product-summaries.service';
+import { ProductionOrderPostSecondaryPackagingSummariesService } from './production-order-post-secondary-packaging-summaries.service';
 import { ProductionOrderMaterialSummariesService } from './production-order-material-summaries.service';
 import { ProductionOrderMaterialProcessSummariesService } from './production-order-material-process-summaries.service';
 import { ProductionOrderLeakTightnessChecksService } from './production-order-leak-tightness-checks.service';
@@ -87,6 +88,7 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
     ProductionOrderSemiFinishedGrossWeightChecksService,
     ProductionOrderSemiFinishedNetWeightChecksService,
     ProductionOrderSemiFinishedProductSummariesService,
+    ProductionOrderPostSecondaryPackagingSummariesService,
     ProductionOrderMaterialSummariesService,
     ProductionOrderMaterialProcessSummariesService,
     ProductionOrderLeakTightnessChecksService,

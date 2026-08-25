@@ -114,6 +114,13 @@ import { ProductionOrderSemiFinishedNetWeightChecksService } from './production-
 import { CreateProductionOrderSemiFinishedProductSummaryDto } from './dto/create-production-order-semi-finished-product-summary.dto';
 import { UpdateProductionOrderSemiFinishedProductSummaryDto } from './dto/update-production-order-semi-finished-product-summary.dto';
 import { ProductionOrderSemiFinishedProductSummariesService } from './production-order-semi-finished-product-summaries.service';
+import { CreateProductionOrderPostSecondaryPackagingSummaryDto } from './dto/create-production-order-post-secondary-packaging-summary.dto';
+import { UpdateProductionOrderPostSecondaryPackagingSummaryDto } from './dto/update-production-order-post-secondary-packaging-summary.dto';
+import { CreateProductionOrderPostSecondaryPackagingPendingProcessItemDto } from './dto/create-production-order-post-secondary-packaging-pending-process-item.dto';
+import { UpdateProductionOrderPostSecondaryPackagingPendingProcessItemDto } from './dto/update-production-order-post-secondary-packaging-pending-process-item.dto';
+import { CreateProductionOrderPostSecondaryPackagingPendingCancellationItemDto } from './dto/create-production-order-post-secondary-packaging-pending-cancellation-item.dto';
+import { UpdateProductionOrderPostSecondaryPackagingPendingCancellationItemDto } from './dto/update-production-order-post-secondary-packaging-pending-cancellation-item.dto';
+import { ProductionOrderPostSecondaryPackagingSummariesService } from './production-order-post-secondary-packaging-summaries.service';
 import { CreateProductionOrderMaterialSummaryDto } from './dto/create-production-order-material-summary.dto';
 import { UpdateProductionOrderMaterialSummaryDto } from './dto/update-production-order-material-summary.dto';
 import { ProductionOrderMaterialSummariesService } from './production-order-material-summaries.service';
@@ -375,6 +382,7 @@ export class ProductionOrdersController {
     private readonly productionOrderSemiFinishedGrossWeightChecksService: ProductionOrderSemiFinishedGrossWeightChecksService,
     private readonly productionOrderSemiFinishedNetWeightChecksService: ProductionOrderSemiFinishedNetWeightChecksService,
     private readonly productionOrderSemiFinishedProductSummariesService: ProductionOrderSemiFinishedProductSummariesService,
+    private readonly productionOrderPostSecondaryPackagingSummariesService: ProductionOrderPostSecondaryPackagingSummariesService,
     private readonly productionOrderMaterialSummariesService: ProductionOrderMaterialSummariesService,
     private readonly productionOrderMaterialProcessSummariesService: ProductionOrderMaterialProcessSummariesService,
     private readonly productionOrderLeakTightnessChecksService: ProductionOrderLeakTightnessChecksService,
@@ -1051,6 +1059,95 @@ export class ProductionOrdersController {
     );
   }
 
+  @Get('post-secondary-packaging-summaries/:summaryId')
+  async findPostSecondaryPackagingSummaryById(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.findById(
+      summaryId,
+    );
+  }
+
+  @Patch('post-secondary-packaging-summaries/:summaryId')
+  async updatePostSecondaryPackagingSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Body() updateDto: UpdateProductionOrderPostSecondaryPackagingSummaryDto,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.update(
+      summaryId,
+      updateDto,
+    );
+  }
+
+  @Delete('post-secondary-packaging-summaries/:summaryId')
+  async deletePostSecondaryPackagingSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.delete(
+      summaryId,
+    );
+  }
+
+  @Get('post-secondary-packaging-pending-process-items/:itemId')
+  async findPostSecondaryPackagingPendingProcessItemById(
+    @Param('itemId', ParseIntPipe) itemId: number,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.findPendingProcessItemById(
+      itemId,
+    );
+  }
+
+  @Patch('post-secondary-packaging-pending-process-items/:itemId')
+  async updatePostSecondaryPackagingPendingProcessItem(
+    @Param('itemId', ParseIntPipe) itemId: number,
+    @Body()
+    updateDto: UpdateProductionOrderPostSecondaryPackagingPendingProcessItemDto,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.updatePendingProcessItem(
+      itemId,
+      updateDto,
+    );
+  }
+
+  @Delete('post-secondary-packaging-pending-process-items/:itemId')
+  async deletePostSecondaryPackagingPendingProcessItem(
+    @Param('itemId', ParseIntPipe) itemId: number,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.deletePendingProcessItem(
+      itemId,
+    );
+  }
+
+  @Get('post-secondary-packaging-pending-cancellation-items/:itemId')
+  async findPostSecondaryPackagingPendingCancellationItemById(
+    @Param('itemId', ParseIntPipe) itemId: number,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.findPendingCancellationItemById(
+      itemId,
+    );
+  }
+
+  @Patch('post-secondary-packaging-pending-cancellation-items/:itemId')
+  async updatePostSecondaryPackagingPendingCancellationItem(
+    @Param('itemId', ParseIntPipe) itemId: number,
+    @Body()
+    updateDto: UpdateProductionOrderPostSecondaryPackagingPendingCancellationItemDto,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.updatePendingCancellationItem(
+      itemId,
+      updateDto,
+    );
+  }
+
+  @Delete('post-secondary-packaging-pending-cancellation-items/:itemId')
+  async deletePostSecondaryPackagingPendingCancellationItem(
+    @Param('itemId', ParseIntPipe) itemId: number,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.deletePendingCancellationItem(
+      itemId,
+    );
+  }
+
   @Get('material-summaries/:summaryId')
   async findMaterialSummaryById(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1243,11 +1340,10 @@ export class ProductionOrdersController {
     @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const imageFile =
-      await this.productionOrderDateChecksService.findImageFile(
-        filename,
-        original === 'true',
-      );
+    const imageFile = await this.productionOrderDateChecksService.findImageFile(
+      filename,
+      original === 'true',
+    );
 
     if (!imageFile) {
       throw new NotFoundException('Date check image not found');
@@ -1268,11 +1364,10 @@ export class ProductionOrdersController {
     @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const file =
-      await this.productionOrderAttachmentsService.findFile(
-        filename,
-        original === 'true',
-      );
+    const file = await this.productionOrderAttachmentsService.findFile(
+      filename,
+      original === 'true',
+    );
 
     if (!file) {
       throw new NotFoundException('Production order attachment file not found');
@@ -2411,6 +2506,78 @@ export class ProductionOrdersController {
   ) {
     return this.productionOrderSemiFinishedProductSummariesService.create(
       id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/post-secondary-packaging-summaries')
+  async findPostSecondaryPackagingSummaries(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.findAllByProductionOrder(
+      id,
+    );
+  }
+
+  @Post(':id/post-secondary-packaging-summaries')
+  async createPostSecondaryPackagingSummary(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createDto: CreateProductionOrderPostSecondaryPackagingSummaryDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.create(
+      id,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get('post-secondary-packaging-summaries/:summaryId/pending-process-items')
+  async findPostSecondaryPackagingPendingProcessItems(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.findPendingProcessItems(
+      summaryId,
+    );
+  }
+
+  @Post('post-secondary-packaging-summaries/:summaryId/pending-process-items')
+  async createPostSecondaryPackagingPendingProcessItem(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Body()
+    createDto: CreateProductionOrderPostSecondaryPackagingPendingProcessItemDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.createPendingProcessItem(
+      summaryId,
+      createDto,
+      req.user,
+    );
+  }
+
+  @Get(
+    'post-secondary-packaging-summaries/:summaryId/pending-cancellation-items',
+  )
+  async findPostSecondaryPackagingPendingCancellationItems(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.findPendingCancellationItems(
+      summaryId,
+    );
+  }
+
+  @Post(
+    'post-secondary-packaging-summaries/:summaryId/pending-cancellation-items',
+  )
+  async createPostSecondaryPackagingPendingCancellationItem(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Body()
+    createDto: CreateProductionOrderPostSecondaryPackagingPendingCancellationItemDto,
+    @Request() req: any,
+  ) {
+    return this.productionOrderPostSecondaryPackagingSummariesService.createPendingCancellationItem(
+      summaryId,
       createDto,
       req.user,
     );

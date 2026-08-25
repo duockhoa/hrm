@@ -8,98 +8,101 @@ datasource db {
 }
 
 model Users {
-  id                                                    Int                                                   @id @default(autoincrement())
-  username                                              String                                                @unique
+  id                                                    Int                                                             @id @default(autoincrement())
+  username                                              String                                                          @unique
   password                                              String
   name                                                  String
-  email                                                 String?                                               @unique
-  created_at                                            DateTime                                              @default(now())
-  updated_at                                            DateTime                                              @default(now()) @updatedAt
+  email                                                 String?                                                         @unique
+  created_at                                            DateTime                                                        @default(now())
+  updated_at                                            DateTime                                                        @default(now()) @updatedAt
   avatar                                                String?
   deleted_at                                            DateTime?
   department                                            String?
   position                                              String?
-  status                                                String                                                @default("active")
-  companyLeaderOf                                       Company?                                              @relation("CompanyLeader")
+  status                                                String                                                          @default("active")
+  companyLeaderOf                                       Company?                                                        @relation("CompanyLeader")
   contracts                                             Contracts[]
-  team_lead_departments                                 Departments[]                                         @relation("Departments_team_lead_user")
+  team_lead_departments                                 Departments[]                                                   @relation("Departments_team_lead_user")
   passwordResetOTPs                                     PasswordResetOTPs[]
   tokens                                                Tokens[]
   profile                                               UserProfiles?
   userRoles                                             UserRoles[]
-  departmentObj                                         Departments?                                          @relation("DepartmentUsers", fields: [department], references: [name])
-  approvedProductionOrderDeviations                     ProductionOrderDeviations[]                           @relation("ProductionOrderDeviationApprover")
-  reportedProductionOrderDeviations                     ProductionOrderDeviations[]                           @relation("ProductionOrderDeviationReporter")
+  departmentObj                                         Departments?                                                    @relation("DepartmentUsers", fields: [department], references: [name])
+  approvedProductionOrderDeviations                     ProductionOrderDeviations[]                                     @relation("ProductionOrderDeviationApprover")
+  reportedProductionOrderDeviations                     ProductionOrderDeviations[]                                     @relation("ProductionOrderDeviationReporter")
   productionOrderSamplingRequests                       ProductionOrderSamplingRequests[]
-  createdProductionOrderEnvironmentChecks               ProductionOrderEnvironmentChecks[]                    @relation("ProductionOrderEnvironmentCheckCreator")
-  createdProductionOrderHygieneChecks                   ProductionOrderHygieneChecks[]                        @relation("ProductionOrderHygieneCheckCreator")
-  createdProductionOrderLineClearanceChecks             ProductionOrderLineClearanceChecks[]                  @relation("ProductionOrderLineClearanceCheckCreator")
-  checkedProductionOrderSecondaryPackagingChecks        ProductionOrderSecondaryPackagingChecks[]             @relation("ProductionOrderSecondaryPackagingCheckInspector")
-  createdProductionOrderPreSecondaryPackagingChecks     ProductionOrderPreSecondaryPackagingChecks[]          @relation("ProductionOrderPreSecondaryPackagingCheckCreator")
-  createdSecondaryPackagingStageRequirements            SecondaryPackagingStageRequirements[]                 @relation("SecondaryPackagingStageRequirementCreator")
-  createdProductionOrderFinishedProductSummaries        ProductionOrderFinishedProductSummaries[]             @relation("ProductionOrderFinishedProductSummaryCreator")
-  createdProductionOrderDensityChecks                   ProductionOrderDensityChecks[]                        @relation("ProductionOrderDensityCheckCreator")
-  createdProductionOrderSamplingRecords                 ProductionOrderSamplingRecords[]                      @relation("ProductionOrderSamplingRecordCreator")
-  createdProductionOrderFriabilityChecks                ProductionOrderFriabilityChecks[]                     @relation("ProductionOrderFriabilityCheckCreator")
-  createdProductionOrderSprayDoseChecks                 ProductionOrderSprayDoseChecks[]                      @relation("ProductionOrderSprayDoseCheckCreator")
-  createdProductionOrderPostHomogenizationGranuleChecks ProductionOrderPostHomogenizationGranuleChecks[]      @relation("ProductionOrderPostHomogenizationGranuleCheckCreator")
-  createdProductionOrderDisintegrationChecks            ProductionOrderDisintegrationChecks[]                 @relation("ProductionOrderDisintegrationCheckCreator")
-  createdProductionOrderHardCapsuleLeakageChecks        ProductionOrderHardCapsuleLeakageChecks[]             @relation("ProductionOrderHardCapsuleLeakageCheckCreator")
-  createdProductionOrderVolumeChecks                    ProductionOrderVolumeChecks[]                         @relation("ProductionOrderVolumeCheckCreator")
-  createdProductionOrderShellWeightChecks               ProductionOrderShellWeightChecks[]                    @relation("ProductionOrderShellWeightCheckCreator")
-  createdProductionOrderTenShellWeightChecks            ProductionOrderTenShellWeightChecks[]                 @relation("ProductionOrderTenShellWeightCheckCreator")
-  createdProductionOrderVialInspectionChecks            ProductionOrderVialInspectionChecks[]                 @relation("ProductionOrderVialInspectionCheckCreator")
-  createdProductionOrderCylinderCalibrations            ProductionOrderCylinderCalibrations[]                 @relation("ProductionOrderCylinderCalibrationCreator")
-  createdProductionOrderSensoryChecks                   ProductionOrderSensoryChecks[]                        @relation("ProductionOrderSensoryCheckCreator")
-  createdProductionOrderSensoryCheckImages              ProductionOrderSensoryCheckImages[]                   @relation("ProductionOrderSensoryCheckImageCreator")
-  createdProductionOrderDateChecks                      ProductionOrderDateChecks[]                           @relation("ProductionOrderDateCheckCreator")
-  approvedProductionOrderDateChecks                     ProductionOrderDateChecks[]                           @relation("ProductionOrderDateCheckApprover")
-  createdProductionOrderDateCheckImages                 ProductionOrderDateCheckImages[]                      @relation("ProductionOrderDateCheckImageCreator")
-  enteredProductionOrderAttachments                     ProductionOrderAttachments[]                          @relation("ProductionOrderAttachmentEnteredBy")
-  approvedProductionOrderAttachments                    ProductionOrderAttachments[]                          @relation("ProductionOrderAttachmentApprover")
-  createdProductionWorkshopPressureDifferentials        ProductionWorkshopPressureDifferentials[]             @relation("ProductionWorkshopPressureDifferentialCreator")
-  cleanedProductionWorkshopCleaningChecklists           ProductionWorkshopCleaningChecklists[]                @relation("ProductionWorkshopCleaningChecklistCleaner")
-  createdProductionOrderDisinfectantPreparations        ProductionOrderDisinfectantPreparations[]             @relation("ProductionOrderDisinfectantPreparationCreator")
-  createdProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]             @relation("ProductionOrderSteamSterilizationCheckCreator")
-  checkedProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]             @relation("ProductionOrderSteamSterilizationCheckChecker")
-  createdProductionOrderSemiFinishedGrossWeightChecks   ProductionOrderSemiFinishedProductGrossWeightChecks[] @relation("ProductionOrderSemiFinishedGrossWeightCheckCreator")
-  createdProductionOrderSemiFinishedNetWeightChecks     ProductionOrderSemiFinishedProductNetWeightChecks[]   @relation("ProductionOrderSemiFinishedNetWeightCheckCreator")
-  createdProductionOrderSemiFinishedProductSummaries    ProductionOrderSemiFinishedProductSummaries[]         @relation("ProductionOrderSemiFinishedProductSummaryCreator")
-  summarizedProductionOrderMaterialSummaries            ProductionOrderMaterialSummaries[]                    @relation("ProductionOrderMaterialSummarySummarizer")
-  createdProductionOrderMaterialSummaries               ProductionOrderMaterialSummaries[]                    @relation("ProductionOrderMaterialSummaryCreator")
-  createdProductionOrderMaterialProcessSummaries        ProductionOrderMaterialProcessSummaries[]             @relation("ProductionOrderMaterialProcessSummaryCreator")
-  createdProductionOrderLeakTightnessChecks             ProductionOrderLeakTightnessChecks[]                  @relation("ProductionOrderLeakTightnessCheckCreator")
-  createdProductionOrderHardnessChecks                  ProductionOrderHardnessChecks[]                       @relation("ProductionOrderHardnessCheckCreator")
-  createdProductionOrderTabletThicknessChecks           ProductionOrderTabletThicknessChecks[]                @relation("ProductionOrderTabletThicknessCheckCreator")
-  createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                 @relation("ProductionOrderTenUnitSensoryCheckCreator")
-  checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]        @relation("ProductionOrderPostPreparationSolutionCheckChecker")
-  approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                @relation("ProductionOrderFactoryReleaseReviewApprover")
-  issuedProductionOrderBatchRecordControls              ProductionOrderDocumentControls[]                     @relation("ProductionOrderBatchRecordIssuer")
-  receivedProductionOrderBatchRecordControls            ProductionOrderDocumentControls[]                     @relation("ProductionOrderBatchRecordReceiver")
-  receivedProductionOrderTestCertificateControls        ProductionOrderDocumentControls[]                     @relation("ProductionOrderTestCertificateReceiver")
-  receivedProductionOrderWarehouseReleaseControls       ProductionOrderDocumentControls[]                     @relation("ProductionOrderWarehouseReleaseReceiver")
-  updatedProductionSpecifications                       ProductionSpecifications[]                            @relation("ProductionSpecificationUpdater")
-  createdEquipment                                      Equipment[]                                           @relation("EquipmentCreator")
-  createdEquipmentParameters                            EquipmentParameters[]                                 @relation("EquipmentParameterCreator")
-  createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                          @relation("EquipmentMonitoringRecordCreator")
-  createdEquipmentMonitoringRecordImages                EquipmentMonitoringRecordImages[]                     @relation("EquipmentMonitoringRecordImageCreator")
-  createdFilterCatalogs                                 FilterCatalogs[]                                      @relation("FilterCatalogCreator")
-  createdDosageForms                                    DosageForms[]                                         @relation("DosageFormCreator")
-  createdCleaningObjects                                CleaningObjects[]                                     @relation("CleaningObjectCreator")
-  createdCleaningRequirements                           CleaningRequirements[]                                @relation("CleaningRequirementCreator")
-  createdItemEquipment                                  ItemEquipment[]                                       @relation("ItemEquipmentCreator")
-  createdMixingActivityTemplates                        MixingActivityTemplates[]                             @relation("MixingActivityTemplateCreator")
-  createdMixingActivityTemplateStages                   MixingActivityTemplateStages[]                        @relation("MixingActivityTemplateStageCreator")
-  createdMixingActivityTemplateStageSteps               MixingActivityTemplateStageSteps[]                    @relation("MixingActivityTemplateStageStepCreator")
-  createdMixingActivityTemplateStageStepParameters      MixingActivityTemplateStageStepParameters[]           @relation("MixingActivityTemplateStageStepParameterCreator")
-  createdProductionOrderMixingRecords                   ProductionOrderMixingRecords[]                        @relation("ProductionOrderMixingRecordCreator")
-  qaStaffApprovedProductionOrderMixingRecords           ProductionOrderMixingRecords[]                        @relation("ProductionOrderMixingRecordQaStaffApprover")
-  qaManagerApprovedProductionOrderMixingRecords         ProductionOrderMixingRecords[]                        @relation("ProductionOrderMixingRecordQaManagerApprover")
-  recordedProductionOrderMixingRecordParameters         ProductionOrderMixingRecordParameters[]               @relation("ProductionOrderMixingRecordParameterRecorder")
-  createdPrimaryPackagingConfirmations                  ProductionOrderPrimaryPackagingConfirmations[]        @relation("ProductionOrderPrimaryPackagingConfirmationCreator")
-  sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckSterilizer")
-  filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckFilterer")
-  inspectedProductionOrderFiltrationChecks              ProductionOrderFiltrationChecks[]                     @relation("ProductionOrderFiltrationCheckInspector")
+  createdProductionOrderEnvironmentChecks               ProductionOrderEnvironmentChecks[]                              @relation("ProductionOrderEnvironmentCheckCreator")
+  createdProductionOrderHygieneChecks                   ProductionOrderHygieneChecks[]                                  @relation("ProductionOrderHygieneCheckCreator")
+  createdProductionOrderLineClearanceChecks             ProductionOrderLineClearanceChecks[]                            @relation("ProductionOrderLineClearanceCheckCreator")
+  checkedProductionOrderSecondaryPackagingChecks        ProductionOrderSecondaryPackagingChecks[]                       @relation("ProductionOrderSecondaryPackagingCheckInspector")
+  createdProductionOrderPreSecondaryPackagingChecks     ProductionOrderPreSecondaryPackagingChecks[]                    @relation("ProductionOrderPreSecondaryPackagingCheckCreator")
+  createdSecondaryPackagingStageRequirements            SecondaryPackagingStageRequirements[]                           @relation("SecondaryPackagingStageRequirementCreator")
+  createdProductionOrderFinishedProductSummaries        ProductionOrderFinishedProductSummaries[]                       @relation("ProductionOrderFinishedProductSummaryCreator")
+  createdProductionOrderDensityChecks                   ProductionOrderDensityChecks[]                                  @relation("ProductionOrderDensityCheckCreator")
+  createdProductionOrderSamplingRecords                 ProductionOrderSamplingRecords[]                                @relation("ProductionOrderSamplingRecordCreator")
+  createdProductionOrderFriabilityChecks                ProductionOrderFriabilityChecks[]                               @relation("ProductionOrderFriabilityCheckCreator")
+  createdProductionOrderSprayDoseChecks                 ProductionOrderSprayDoseChecks[]                                @relation("ProductionOrderSprayDoseCheckCreator")
+  createdProductionOrderPostHomogenizationGranuleChecks ProductionOrderPostHomogenizationGranuleChecks[]                @relation("ProductionOrderPostHomogenizationGranuleCheckCreator")
+  createdProductionOrderDisintegrationChecks            ProductionOrderDisintegrationChecks[]                           @relation("ProductionOrderDisintegrationCheckCreator")
+  createdProductionOrderHardCapsuleLeakageChecks        ProductionOrderHardCapsuleLeakageChecks[]                       @relation("ProductionOrderHardCapsuleLeakageCheckCreator")
+  createdProductionOrderVolumeChecks                    ProductionOrderVolumeChecks[]                                   @relation("ProductionOrderVolumeCheckCreator")
+  createdProductionOrderShellWeightChecks               ProductionOrderShellWeightChecks[]                              @relation("ProductionOrderShellWeightCheckCreator")
+  createdProductionOrderTenShellWeightChecks            ProductionOrderTenShellWeightChecks[]                           @relation("ProductionOrderTenShellWeightCheckCreator")
+  createdProductionOrderVialInspectionChecks            ProductionOrderVialInspectionChecks[]                           @relation("ProductionOrderVialInspectionCheckCreator")
+  createdProductionOrderCylinderCalibrations            ProductionOrderCylinderCalibrations[]                           @relation("ProductionOrderCylinderCalibrationCreator")
+  createdProductionOrderSensoryChecks                   ProductionOrderSensoryChecks[]                                  @relation("ProductionOrderSensoryCheckCreator")
+  createdProductionOrderSensoryCheckImages              ProductionOrderSensoryCheckImages[]                             @relation("ProductionOrderSensoryCheckImageCreator")
+  createdProductionOrderDateChecks                      ProductionOrderDateChecks[]                                     @relation("ProductionOrderDateCheckCreator")
+  approvedProductionOrderDateChecks                     ProductionOrderDateChecks[]                                     @relation("ProductionOrderDateCheckApprover")
+  createdProductionOrderDateCheckImages                 ProductionOrderDateCheckImages[]                                @relation("ProductionOrderDateCheckImageCreator")
+  enteredProductionOrderAttachments                     ProductionOrderAttachments[]                                    @relation("ProductionOrderAttachmentEnteredBy")
+  approvedProductionOrderAttachments                    ProductionOrderAttachments[]                                    @relation("ProductionOrderAttachmentApprover")
+  createdProductionWorkshopPressureDifferentials        ProductionWorkshopPressureDifferentials[]                       @relation("ProductionWorkshopPressureDifferentialCreator")
+  cleanedProductionWorkshopCleaningChecklists           ProductionWorkshopCleaningChecklists[]                          @relation("ProductionWorkshopCleaningChecklistCleaner")
+  createdProductionOrderDisinfectantPreparations        ProductionOrderDisinfectantPreparations[]                       @relation("ProductionOrderDisinfectantPreparationCreator")
+  createdProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]                       @relation("ProductionOrderSteamSterilizationCheckCreator")
+  checkedProductionOrderSteamSterilizationChecks        ProductionOrderSteamSterilizationChecks[]                       @relation("ProductionOrderSteamSterilizationCheckChecker")
+  createdProductionOrderSemiFinishedGrossWeightChecks   ProductionOrderSemiFinishedProductGrossWeightChecks[]           @relation("ProductionOrderSemiFinishedGrossWeightCheckCreator")
+  createdProductionOrderSemiFinishedNetWeightChecks     ProductionOrderSemiFinishedProductNetWeightChecks[]             @relation("ProductionOrderSemiFinishedNetWeightCheckCreator")
+  createdProductionOrderSemiFinishedProductSummaries    ProductionOrderSemiFinishedProductSummaries[]                   @relation("ProductionOrderSemiFinishedProductSummaryCreator")
+  createdPostSecondaryPackagingSummaries                ProductionOrderPostSecondaryPackagingSummaries[]                @relation("PostSecondaryPackagingSummaryCreator")
+  createdPostSecondaryPackagingPendingProcessItems      ProductionOrderPostSecondaryPackagingPendingProcessItems[]      @relation("PostSecondaryPackagingPendingProcessCreator")
+  createdPostSecondaryPackagingPendingCancellationItems ProductionOrderPostSecondaryPackagingPendingCancellationItems[] @relation("PostSecondaryPackagingPendingCancellationCreator")
+  summarizedProductionOrderMaterialSummaries            ProductionOrderMaterialSummaries[]                              @relation("ProductionOrderMaterialSummarySummarizer")
+  createdProductionOrderMaterialSummaries               ProductionOrderMaterialSummaries[]                              @relation("ProductionOrderMaterialSummaryCreator")
+  createdProductionOrderMaterialProcessSummaries        ProductionOrderMaterialProcessSummaries[]                       @relation("ProductionOrderMaterialProcessSummaryCreator")
+  createdProductionOrderLeakTightnessChecks             ProductionOrderLeakTightnessChecks[]                            @relation("ProductionOrderLeakTightnessCheckCreator")
+  createdProductionOrderHardnessChecks                  ProductionOrderHardnessChecks[]                                 @relation("ProductionOrderHardnessCheckCreator")
+  createdProductionOrderTabletThicknessChecks           ProductionOrderTabletThicknessChecks[]                          @relation("ProductionOrderTabletThicknessCheckCreator")
+  createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                           @relation("ProductionOrderTenUnitSensoryCheckCreator")
+  checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]                  @relation("ProductionOrderPostPreparationSolutionCheckChecker")
+  approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                          @relation("ProductionOrderFactoryReleaseReviewApprover")
+  issuedProductionOrderBatchRecordControls              ProductionOrderDocumentControls[]                               @relation("ProductionOrderBatchRecordIssuer")
+  receivedProductionOrderBatchRecordControls            ProductionOrderDocumentControls[]                               @relation("ProductionOrderBatchRecordReceiver")
+  receivedProductionOrderTestCertificateControls        ProductionOrderDocumentControls[]                               @relation("ProductionOrderTestCertificateReceiver")
+  receivedProductionOrderWarehouseReleaseControls       ProductionOrderDocumentControls[]                               @relation("ProductionOrderWarehouseReleaseReceiver")
+  updatedProductionSpecifications                       ProductionSpecifications[]                                      @relation("ProductionSpecificationUpdater")
+  createdEquipment                                      Equipment[]                                                     @relation("EquipmentCreator")
+  createdEquipmentParameters                            EquipmentParameters[]                                           @relation("EquipmentParameterCreator")
+  createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                                    @relation("EquipmentMonitoringRecordCreator")
+  createdEquipmentMonitoringRecordImages                EquipmentMonitoringRecordImages[]                               @relation("EquipmentMonitoringRecordImageCreator")
+  createdFilterCatalogs                                 FilterCatalogs[]                                                @relation("FilterCatalogCreator")
+  createdDosageForms                                    DosageForms[]                                                   @relation("DosageFormCreator")
+  createdCleaningObjects                                CleaningObjects[]                                               @relation("CleaningObjectCreator")
+  createdCleaningRequirements                           CleaningRequirements[]                                          @relation("CleaningRequirementCreator")
+  createdItemEquipment                                  ItemEquipment[]                                                 @relation("ItemEquipmentCreator")
+  createdMixingActivityTemplates                        MixingActivityTemplates[]                                       @relation("MixingActivityTemplateCreator")
+  createdMixingActivityTemplateStages                   MixingActivityTemplateStages[]                                  @relation("MixingActivityTemplateStageCreator")
+  createdMixingActivityTemplateStageSteps               MixingActivityTemplateStageSteps[]                              @relation("MixingActivityTemplateStageStepCreator")
+  createdMixingActivityTemplateStageStepParameters      MixingActivityTemplateStageStepParameters[]                     @relation("MixingActivityTemplateStageStepParameterCreator")
+  createdProductionOrderMixingRecords                   ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordCreator")
+  qaStaffApprovedProductionOrderMixingRecords           ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordQaStaffApprover")
+  qaManagerApprovedProductionOrderMixingRecords         ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordQaManagerApprover")
+  recordedProductionOrderMixingRecordParameters         ProductionOrderMixingRecordParameters[]                         @relation("ProductionOrderMixingRecordParameterRecorder")
+  createdPrimaryPackagingConfirmations                  ProductionOrderPrimaryPackagingConfirmations[]                  @relation("ProductionOrderPrimaryPackagingConfirmationCreator")
+  sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                               @relation("ProductionOrderFiltrationCheckSterilizer")
+  filteredProductionOrderFiltrationChecks               ProductionOrderFiltrationChecks[]                               @relation("ProductionOrderFiltrationCheckFilterer")
+  inspectedProductionOrderFiltrationChecks              ProductionOrderFiltrationChecks[]                               @relation("ProductionOrderFiltrationCheckInspector")
   userApplications                                      UserApplications[]
   loginSessions                                         UserLoginSessions[]
 
@@ -702,69 +705,71 @@ model ProductionWorkshopCleaningChecklists {
 }
 
 model ProductionOrders {
-  id                                   Int                                                   @id
-  item_code                            String
-  item                                 Items                                                 @relation(fields: [item_code], references: [item_code])
-  status                               String
-  type                                 String
-  planned_quatity                      Int
-  creation_date                        DateTime
-  origin                               String?
-  warehouse                            String?
-  unit                                 String
-  start_date                           DateTime
-  description                          String
-  date_manufacture                     String?
-  expire_date                          String?
-  lot_no                               String
-  packing_specification                String?
-  production_order_code                String?
-  remarks                              String?                                               @db.Text
-  internal_notes                       String?                                               @db.Text
-  deviations                           ProductionOrderDeviations[]
-  samplingRequests                     ProductionOrderSamplingRequests[]
-  environmentChecks                    ProductionOrderEnvironmentChecks[]
-  hygieneChecks                        ProductionOrderHygieneChecks[]
-  lineClearanceChecks                  ProductionOrderLineClearanceChecks[]                  @relation("LineClearanceCurrentOrder")
-  lineClearanceChecksAsPreviousOrder   ProductionOrderLineClearanceChecks[]                  @relation("LineClearancePreviousOrder")
-  secondaryPackagingChecks             ProductionOrderSecondaryPackagingChecks[]
-  preSecondaryPackagingChecks          ProductionOrderPreSecondaryPackagingChecks[]
-  finishedProductSummaries             ProductionOrderFinishedProductSummaries[]
-  densityChecks                        ProductionOrderDensityChecks[]
-  samplingRecords                      ProductionOrderSamplingRecords[]
-  friabilityChecks                     ProductionOrderFriabilityChecks[]
-  sprayDoseChecks                      ProductionOrderSprayDoseChecks[]
-  postHomogenizationGranuleChecks      ProductionOrderPostHomogenizationGranuleChecks[]
-  disintegrationChecks                 ProductionOrderDisintegrationChecks[]
-  hardCapsuleLeakageChecks             ProductionOrderHardCapsuleLeakageChecks[]
-  volumeChecks                         ProductionOrderVolumeChecks[]
-  shellWeightChecks                    ProductionOrderShellWeightChecks[]
-  tenShellWeightCheck                  ProductionOrderTenShellWeightChecks?
-  semiFinishedProductGrossWeightChecks ProductionOrderSemiFinishedProductGrossWeightChecks[]
-  semiFinishedProductNetWeightChecks   ProductionOrderSemiFinishedProductNetWeightChecks[]
-  semiFinishedProductSummaries         ProductionOrderSemiFinishedProductSummaries[]
-  materialSummaries                    ProductionOrderMaterialSummaries[]
-  materialProcessSummaries             ProductionOrderMaterialProcessSummaries[]
-  leakTightnessChecks                  ProductionOrderLeakTightnessChecks[]
-  hardnessChecks                       ProductionOrderHardnessChecks[]
-  tabletThicknessChecks                ProductionOrderTabletThicknessChecks[]
-  tenUnitSensoryChecks                 ProductionOrderTenUnitSensoryChecks[]
-  vialInspectionChecks                 ProductionOrderVialInspectionChecks[]
-  cylinderCalibration                  ProductionOrderCylinderCalibrations?
-  sensoryChecks                        ProductionOrderSensoryChecks[]
-  dateChecks                           ProductionOrderDateChecks[]
-  disinfectantPreparations             ProductionOrderDisinfectantPreparations[]
-  steamSterilizationChecks             ProductionOrderSteamSterilizationChecks[]
-  postPreparationSolutionChecks        ProductionOrderPostPreparationSolutionChecks[]
-  filtrationChecks                     ProductionOrderFiltrationChecks[]
-  factoryReleaseReviews                ProductionOrderFactoryReleaseReviews[]
-  equipmentMonitoringRecords           EquipmentMonitoringRecords[]
-  documentControl                      ProductionOrderDocumentControls?
-  productionGuide                      ProductionOrderProductionGuides?
-  primaryPackagingConfirmations        ProductionOrderPrimaryPackagingConfirmations[]
-  attachments                          ProductionOrderAttachments[]
-  registrationNumber                   ProductionOrderRegistrationNumbers?
-  mixingRecords                        ProductionOrderMixingRecords[]
+  id                                               Int                                                   @id
+  item_code                                        String
+  item                                             Items                                                 @relation(fields: [item_code], references: [item_code])
+  status                                           String
+  type                                             String
+  planned_quatity                                  Int
+  creation_date                                    DateTime
+  origin                                           String?
+  warehouse                                        String?
+  unit                                             String
+  start_date                                       DateTime
+  description                                      String
+  date_manufacture                                 String?
+  expire_date                                      String?
+  lot_no                                           String
+  packing_specification                            String?
+  production_order_code                            String?
+  remarks                                          String?                                               @db.Text
+  internal_notes                                   String?                                               @db.Text
+  deviations                                       ProductionOrderDeviations[]
+  samplingRequests                                 ProductionOrderSamplingRequests[]
+  environmentChecks                                ProductionOrderEnvironmentChecks[]
+  hygieneChecks                                    ProductionOrderHygieneChecks[]
+  lineClearanceChecks                              ProductionOrderLineClearanceChecks[]                  @relation("LineClearanceCurrentOrder")
+  lineClearanceChecksAsPreviousOrder               ProductionOrderLineClearanceChecks[]                  @relation("LineClearancePreviousOrder")
+  secondaryPackagingChecks                         ProductionOrderSecondaryPackagingChecks[]
+  preSecondaryPackagingChecks                      ProductionOrderPreSecondaryPackagingChecks[]
+  finishedProductSummaries                         ProductionOrderFinishedProductSummaries[]
+  densityChecks                                    ProductionOrderDensityChecks[]
+  samplingRecords                                  ProductionOrderSamplingRecords[]
+  friabilityChecks                                 ProductionOrderFriabilityChecks[]
+  sprayDoseChecks                                  ProductionOrderSprayDoseChecks[]
+  postHomogenizationGranuleChecks                  ProductionOrderPostHomogenizationGranuleChecks[]
+  disintegrationChecks                             ProductionOrderDisintegrationChecks[]
+  hardCapsuleLeakageChecks                         ProductionOrderHardCapsuleLeakageChecks[]
+  volumeChecks                                     ProductionOrderVolumeChecks[]
+  shellWeightChecks                                ProductionOrderShellWeightChecks[]
+  tenShellWeightCheck                              ProductionOrderTenShellWeightChecks?
+  semiFinishedProductGrossWeightChecks             ProductionOrderSemiFinishedProductGrossWeightChecks[]
+  semiFinishedProductNetWeightChecks               ProductionOrderSemiFinishedProductNetWeightChecks[]
+  semiFinishedProductSummaries                     ProductionOrderSemiFinishedProductSummaries[]
+  postSecondaryPackagingSummaries                  ProductionOrderPostSecondaryPackagingSummaries[]      @relation("PostSecondaryPackagingSummaryProductionOrder")
+  postSecondaryPackagingSemiFinishedProductSummary ProductionOrderPostSecondaryPackagingSummaries?       @relation("PostSecondaryPackagingSummarySemiFinishedProductOrder")
+  materialSummaries                                ProductionOrderMaterialSummaries[]
+  materialProcessSummaries                         ProductionOrderMaterialProcessSummaries[]
+  leakTightnessChecks                              ProductionOrderLeakTightnessChecks[]
+  hardnessChecks                                   ProductionOrderHardnessChecks[]
+  tabletThicknessChecks                            ProductionOrderTabletThicknessChecks[]
+  tenUnitSensoryChecks                             ProductionOrderTenUnitSensoryChecks[]
+  vialInspectionChecks                             ProductionOrderVialInspectionChecks[]
+  cylinderCalibration                              ProductionOrderCylinderCalibrations?
+  sensoryChecks                                    ProductionOrderSensoryChecks[]
+  dateChecks                                       ProductionOrderDateChecks[]
+  disinfectantPreparations                         ProductionOrderDisinfectantPreparations[]
+  steamSterilizationChecks                         ProductionOrderSteamSterilizationChecks[]
+  postPreparationSolutionChecks                    ProductionOrderPostPreparationSolutionChecks[]
+  filtrationChecks                                 ProductionOrderFiltrationChecks[]
+  factoryReleaseReviews                            ProductionOrderFactoryReleaseReviews[]
+  equipmentMonitoringRecords                       EquipmentMonitoringRecords[]
+  documentControl                                  ProductionOrderDocumentControls?
+  productionGuide                                  ProductionOrderProductionGuides?
+  primaryPackagingConfirmations                    ProductionOrderPrimaryPackagingConfirmations[]
+  attachments                                      ProductionOrderAttachments[]
+  registrationNumber                               ProductionOrderRegistrationNumbers?
+  mixingRecords                                    ProductionOrderMixingRecords[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
@@ -1602,6 +1607,61 @@ model ProductionOrderSemiFinishedProductSummaries {
   @@index([production_order_id], map: "po_semi_finished_summary_po_idx")
   @@index([created_by_id], map: "po_semi_finished_summary_user_idx")
   @@map("production_order_semi_finished_product_summaries")
+}
+
+model ProductionOrderPostSecondaryPackagingSummaries {
+  id                             Int                                                             @id @default(autoincrement())
+  production_order_id            Int
+  productionOrder                ProductionOrders                                                @relation("PostSecondaryPackagingSummaryProductionOrder", fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_post_secondary_summary_production_order_id_fkey")
+  semi_finished_product_order_id Int                                                             @unique(map: "po_post_secondary_summary_semi_finished_order_id_key")
+  semiFinishedProductOrder       ProductionOrders                                                @relation("PostSecondaryPackagingSummarySemiFinishedProductOrder", fields: [semi_finished_product_order_id], references: [id], onDelete: Restrict, map: "po_post_secondary_summary_semi_finished_order_id_fkey")
+  received_bag_count             Int
+  remaining_quantity             Decimal                                                         @db.Decimal(12, 3)
+  remaining_reason               String?                                                         @db.Text
+  created_by_id                  Int
+  createdBy                      Users                                                           @relation("PostSecondaryPackagingSummaryCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "po_post_secondary_summary_created_by_id_fkey")
+  pendingProcessItems            ProductionOrderPostSecondaryPackagingPendingProcessItems[]
+  pendingCancellationItems       ProductionOrderPostSecondaryPackagingPendingCancellationItems[]
+  created_at                     DateTime                                                        @default(now())
+  updated_at                     DateTime                                                        @default(now()) @updatedAt
+
+  @@index([production_order_id], map: "po_post_secondary_summary_production_order_id_idx")
+  @@index([created_by_id], map: "po_post_secondary_summary_created_by_id_idx")
+  @@map("production_order_post_secondary_packaging_summaries")
+}
+
+model ProductionOrderPostSecondaryPackagingPendingProcessItems {
+  id               Int                                            @id @default(autoincrement())
+  summary_id       Int
+  summary          ProductionOrderPostSecondaryPackagingSummaries @relation(fields: [summary_id], references: [id], onDelete: Cascade, map: "po_post_secondary_pending_process_summary_id_fkey")
+  pending_quantity Decimal                                        @db.Decimal(12, 3)
+  pending_reason   String                                         @db.Text
+  processing_plan  String?                                        @db.Text
+  created_by_id    Int
+  createdBy        Users                                          @relation("PostSecondaryPackagingPendingProcessCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "po_post_secondary_pending_process_created_by_id_fkey")
+  created_at       DateTime                                       @default(now())
+  updated_at       DateTime                                       @default(now()) @updatedAt
+
+  @@index([summary_id], map: "po_post_secondary_pending_process_summary_id_idx")
+  @@index([created_by_id], map: "po_post_secondary_pending_process_created_by_id_idx")
+  @@map("production_order_post_secondary_pending_process_items")
+}
+
+model ProductionOrderPostSecondaryPackagingPendingCancellationItems {
+  id                    Int                                            @id @default(autoincrement())
+  summary_id            Int
+  summary               ProductionOrderPostSecondaryPackagingSummaries @relation(fields: [summary_id], references: [id], onDelete: Cascade, map: "po_post_secondary_pending_cancellation_summary_id_fkey")
+  cancellation_quantity Decimal                                        @db.Decimal(12, 3)
+  cancellation_reason   String                                         @db.Text
+  cancellation_plan     String?                                        @db.Text
+  created_by_id         Int
+  createdBy             Users                                          @relation("PostSecondaryPackagingPendingCancellationCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "po_post_secondary_pending_cancellation_created_by_id_fkey")
+  created_at            DateTime                                       @default(now())
+  updated_at            DateTime                                       @default(now()) @updatedAt
+
+  @@index([summary_id], map: "po_post_secondary_pending_cancellation_summary_id_idx")
+  @@index([created_by_id], map: "po_post_secondary_pending_cancellation_created_by_id_idx")
+  @@map("production_order_post_secondary_pending_cancellation_items")
 }
 
 model ProductionOrderMaterialSummaries {
