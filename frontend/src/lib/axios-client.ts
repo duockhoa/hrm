@@ -13,7 +13,7 @@ const axiosClient = axios.create({
     "Content-Type": "application/json",
   },
   withCredentials: false,
-  timeout: 12000,
+  timeout: 120000,
 });
 
 const refreshClient = axios.create({
@@ -22,7 +22,7 @@ const refreshClient = axios.create({
     "Content-Type": "application/json",
   },
   withCredentials: false,
-  timeout: 12000,
+  timeout: 120000,
 });
 
 const authEndpointPaths = [
