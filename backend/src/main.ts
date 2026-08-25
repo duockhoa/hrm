@@ -1,5 +1,7 @@
 import 'dotenv/config';
+import { mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -10,7 +12,17 @@ import { enrichOpenApiDocument } from './swagger/enrich-openapi-document';
 async function bootstrap() {
   ensureProductionOrderDeviationUploadDir();
 
+  // Uploaded files are public without adding an /uploads prefix to the URL.
+  // Directory listings remain disabled.
+  const uploadsDirectory = join(process.cwd(), 'uploads');
+  mkdirSync(uploadsDirectory, { recursive: true });
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useStaticAssets(uploadsDirectory, {
+    prefix: '/',
+    index: false,
+    redirect: false,
+  });
   app.enableCors({
     exposedHeaders: ['Content-Disposition'],
   });
