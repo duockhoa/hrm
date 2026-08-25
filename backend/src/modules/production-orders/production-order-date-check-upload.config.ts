@@ -2,8 +2,12 @@ import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
 import { stat, unlink } from 'fs/promises';
-import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
+import {
+  removeImageAndThumbnail,
+  resolvePreferredImageFile,
+  thumbnailDiskStorage,
+} from '../../common/utils/image-thumbnail.util';
 
 type DateCheckUploadFileMetadata = Pick<
   Express.Multer.File,
@@ -152,15 +156,20 @@ const isAllowedRequestFile = (file: Express.Multer.File) =>
   REQUEST_FILE_MIME_TYPES_BY_EXTENSION.has(getRequestFileExtension(file));
 
 export const productionOrderDateCheckUploadOptions = {
-  storage: diskStorage({
-    destination: (_req, file, callback) => {
-      ensureProductionOrderDateCheckUploadDirs();
-      callback(null, getUploadDestination(file.fieldname));
+  storage: thumbnailDiskStorage(
+    {
+      destination: (_req, file, callback) => {
+        ensureProductionOrderDateCheckUploadDirs();
+        callback(null, getUploadDestination(file.fieldname));
+      },
+      filename: (_req, file, callback) => {
+        callback(null, getDateCheckUploadStoredFilename(file));
+      },
     },
-    filename: (_req, file, callback) => {
-      callback(null, getDateCheckUploadStoredFilename(file));
+    {
+      shouldCreateThumbnail: (file) => file.fieldname !== 'request_file',
     },
-  }),
+  ),
   fileFilter: (_req, file, callback) => {
     if (file.fieldname === 'request_file') {
       if (!isAllowedRequestFile(file)) {
@@ -301,12 +310,17 @@ export const getDateCheckRequestFileLookupPaths = (filename: string) => {
     : [];
 };
 
-export const resolveDateCheckImageFile = (filename: string) =>
-  resolveStoredFile(
+export const resolveDateCheckImageFile = async (filename: string) => {
+  const imageFile = await resolveStoredFile(
     filename,
     PRODUCTION_ORDER_DATE_CHECK_IMAGE_UPLOAD_DIR,
     IMAGE_MIME_TYPES_BY_EXTENSION,
   );
+
+  return imageFile
+    ? resolvePreferredImageFile(imageFile.filePath, imageFile.contentType)
+    : null;
+};
 
 export const resolveDateCheckRequestFile = (filename: string) =>
   resolveStoredFile(
@@ -319,6 +333,11 @@ export const removeUploadedDateCheckFile = async (
   file?: Express.Multer.File,
 ) => {
   if (!file?.path) {
+    return;
+  }
+
+  if (file.destination === PRODUCTION_ORDER_DATE_CHECK_IMAGE_UPLOAD_DIR) {
+    await removeImageAndThumbnail(file.path);
     return;
   }
 
@@ -362,12 +381,25 @@ export const removeStoredDateCheckRequestFile = (
     PRODUCTION_ORDER_DATE_CHECK_REQUEST_FILE_UPLOAD_DIR,
   );
 
-export const removeStoredDateCheckImage = (imagePath?: string | null) =>
-  removeStoredFile(
+const removeStoredDateCheckImageFile = async (imagePath?: string | null) => {
+  const filename = getStoredFilename(
     imagePath,
     PRODUCTION_ORDER_DATE_CHECK_IMAGE_ROUTE,
-    PRODUCTION_ORDER_DATE_CHECK_IMAGE_UPLOAD_DIR,
   );
+  const filePath = filename
+    ? getResolvedFilePath(
+        filename,
+        PRODUCTION_ORDER_DATE_CHECK_IMAGE_UPLOAD_DIR,
+      )
+    : null;
+
+  if (filePath) {
+    await removeImageAndThumbnail(filePath);
+  }
+};
+
+export const removeStoredDateCheckImage = (imagePath?: string | null) =>
+  removeStoredDateCheckImageFile(imagePath);
 
 export const removeStoredDateCheckImages = async (
   imagePaths?: Array<string | null | undefined>,

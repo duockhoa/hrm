@@ -1,9 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
-import { stat, unlink } from 'fs/promises';
-import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
+import {
+  removeImageAndThumbnail,
+  resolvePreferredImageFile,
+  thumbnailDiskStorage,
+} from '../../common/utils/image-thumbnail.util';
 
 type PostPreparationSolutionCheckUploadFileMetadata = Pick<
   Express.Multer.File,
@@ -90,7 +93,7 @@ export const getPostPreparationSolutionCheckUploadStoredFilename = (
   `${getOriginalNameSegment(file.originalname)}-${randomUUID()}${getStoredExtension(file)}`;
 
 export const productionOrderPostPreparationSolutionCheckImageUploadOptions = {
-  storage: diskStorage({
+  storage: thumbnailDiskStorage({
     destination: (_req, _file, callback) => {
       ensureProductionOrderPostPreparationSolutionCheckUploadDirs();
       callback(
@@ -188,17 +191,7 @@ export const resolvePostPreparationSolutionCheckImageFile = async (
     return null;
   }
 
-  const fileStat = await stat(filePath).catch(() => null);
-
-  if (!fileStat?.isFile()) {
-    return null;
-  }
-
-  return {
-    contentType,
-    filePath,
-    size: fileStat.size,
-  };
+  return resolvePreferredImageFile(filePath, contentType);
 };
 
 export const removeUploadedPostPreparationSolutionCheckImage = async (
@@ -208,7 +201,7 @@ export const removeUploadedPostPreparationSolutionCheckImage = async (
     return;
   }
 
-  await unlink(file.path).catch(() => undefined);
+  await removeImageAndThumbnail(file.path);
 };
 
 export const removePostPreparationSolutionCheckImageByPath = async (
@@ -231,5 +224,5 @@ export const removePostPreparationSolutionCheckImageByPath = async (
     return;
   }
 
-  await unlink(filePath).catch(() => undefined);
+  await removeImageAndThumbnail(filePath);
 };

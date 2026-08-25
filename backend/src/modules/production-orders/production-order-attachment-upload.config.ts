@@ -1,9 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
-import { stat, unlink } from 'fs/promises';
-import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
+import {
+  removeImageAndThumbnail,
+  resolvePreferredImageFile,
+  thumbnailDiskStorage,
+} from '../../common/utils/image-thumbnail.util';
 
 const PRODUCTION_ORDER_ATTACHMENT_UPLOAD_DIR = join(
   process.cwd(),
@@ -57,7 +60,7 @@ const getStoredFilename = (file: Express.Multer.File) => {
 };
 
 export const productionOrderAttachmentUploadOptions = {
-  storage: diskStorage({
+  storage: thumbnailDiskStorage({
     destination: (_request, _file, callback) => {
       ensureUploadDirectory();
       callback(null, PRODUCTION_ORDER_ATTACHMENT_UPLOAD_DIR);
@@ -126,6 +129,7 @@ const getResolvedFilePath = (filename: string) => {
 
 export const resolveProductionOrderAttachmentFile = async (
   filename: string,
+  contentType: string,
 ) => {
   const filePath = getResolvedFilePath(filename);
 
@@ -133,12 +137,7 @@ export const resolveProductionOrderAttachmentFile = async (
     return null;
   }
 
-  try {
-    const fileStat = await stat(filePath);
-    return fileStat.isFile() ? { filePath, size: fileStat.size } : null;
-  } catch {
-    return null;
-  }
+  return resolvePreferredImageFile(filePath, contentType);
 };
 
 export const removeStoredProductionOrderAttachmentFile = async (
@@ -155,13 +154,7 @@ export const removeStoredProductionOrderAttachmentFile = async (
     return;
   }
 
-  try {
-    await unlink(resolvedFilePath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error;
-    }
-  }
+  await removeImageAndThumbnail(resolvedFilePath);
 };
 
 export const removeUploadedProductionOrderAttachmentFiles = async (

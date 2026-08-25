@@ -1,9 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
-import { stat, unlink } from 'fs/promises';
-import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
+import {
+  removeImageAndThumbnail,
+  resolvePreferredImageFile,
+  thumbnailDiskStorage,
+} from '../../common/utils/image-thumbnail.util';
 
 const LEGACY_PRODUCTION_ORDER_DEVIATION_UPLOAD_ROUTE =
   '/uploads/production-order-deviations';
@@ -40,7 +43,7 @@ const STORED_DEVIATION_IMAGE_ROUTES = [
 export const MAX_DEVIATION_IMAGE_COUNT = 10;
 
 export const productionOrderDeviationImageUploadOptions = {
-  storage: diskStorage({
+  storage: thumbnailDiskStorage({
     destination: (_req, _file, callback) => {
       ensureProductionOrderDeviationUploadDir();
       callback(null, PRODUCTION_ORDER_DEVIATION_UPLOAD_DIR);
@@ -176,17 +179,7 @@ export const resolveDeviationImageFile = async (filename: string) => {
     return null;
   }
 
-  const fileStat = await stat(filePath).catch(() => null);
-
-  if (!fileStat?.isFile()) {
-    return null;
-  }
-
-  return {
-    contentType,
-    filePath,
-    size: fileStat.size,
-  };
+  return resolvePreferredImageFile(filePath, contentType);
 };
 
 export const removeUploadedDeviationImage = async (
@@ -196,7 +189,7 @@ export const removeUploadedDeviationImage = async (
     return;
   }
 
-  await unlink(file.path).catch(() => undefined);
+  await removeImageAndThumbnail(file.path);
 };
 
 export const removeUploadedDeviationImages = async (
@@ -220,7 +213,7 @@ export const removeStoredDeviationImage = async (imagePath?: string | null) => {
     return;
   }
 
-  await unlink(filePath).catch(() => undefined);
+  await removeImageAndThumbnail(filePath);
 };
 
 export const removeStoredDeviationImages = async (

@@ -1,9 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
-import { stat, unlink } from 'fs/promises';
-import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
+import {
+  removeImageAndThumbnail,
+  resolvePreferredImageFile,
+  thumbnailDiskStorage,
+} from '../../common/utils/image-thumbnail.util';
 
 type UploadFileMetadata = Pick<
   Express.Multer.File,
@@ -94,7 +97,7 @@ const getResolvedFilePath = (filename: string) => {
 };
 
 export const equipmentMonitoringRecordImageUploadOptions = {
-  storage: diskStorage({
+  storage: thumbnailDiskStorage({
     destination: (_req, _file, callback) => {
       mkdirSync(EQUIPMENT_MONITORING_RECORD_IMAGE_UPLOAD_DIR, {
         recursive: true,
@@ -143,25 +146,18 @@ export const resolveEquipmentMonitoringRecordImageFile = async (
     return null;
   }
 
-  const fileStat = await stat(filePath).catch(() => null);
-  if (!fileStat?.isFile()) {
-    return null;
-  }
-
-  return {
+  return resolvePreferredImageFile(
     filePath,
-    size: fileStat.size,
-    contentType:
-      IMAGE_MIME_TYPES_BY_EXTENSION.get(extname(filename).toLowerCase()) ??
+    IMAGE_MIME_TYPES_BY_EXTENSION.get(extname(filename).toLowerCase()) ??
       'application/octet-stream',
-  };
+  );
 };
 
 export const removeUploadedEquipmentMonitoringRecordImages = async (
   files?: Express.Multer.File[],
 ) => {
   await Promise.all(
-    files?.map((file) => unlink(file.path).catch(() => undefined)) ?? [],
+    files?.map((file) => removeImageAndThumbnail(file.path)) ?? [],
   );
 };
 
@@ -174,6 +170,6 @@ export const removeStoredEquipmentMonitoringRecordImage = async (
 
   const filePath = getResolvedFilePath(basename(imagePath));
   if (filePath) {
-    await unlink(filePath).catch(() => undefined);
+    await removeImageAndThumbnail(filePath);
   }
 };

@@ -1,9 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
-import { stat, unlink } from 'fs/promises';
-import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
+import {
+  removeImageAndThumbnail,
+  resolvePreferredImageFile,
+  thumbnailDiskStorage,
+} from '../../common/utils/image-thumbnail.util';
 
 type SensoryCheckUploadFileMetadata = Pick<
   Express.Multer.File,
@@ -91,7 +94,7 @@ export const getSensoryCheckUploadStoredFilename = (
   `${getOriginalNameSegment(file.originalname)}-${randomUUID()}${getStoredExtension(file)}`;
 
 export const productionOrderSensoryCheckImageUploadOptions = {
-  storage: diskStorage({
+  storage: thumbnailDiskStorage({
     destination: (_req, _file, callback) => {
       ensureProductionOrderSensoryCheckUploadDirs();
       callback(null, PRODUCTION_ORDER_SENSORY_CHECK_IMAGE_UPLOAD_DIR);
@@ -183,17 +186,7 @@ export const resolveSensoryCheckImageFile = async (filename: string) => {
     return null;
   }
 
-  const fileStat = await stat(filePath).catch(() => null);
-
-  if (!fileStat?.isFile()) {
-    return null;
-  }
-
-  return {
-    contentType,
-    filePath,
-    size: fileStat.size,
-  };
+  return resolvePreferredImageFile(filePath, contentType);
 };
 
 export const removeUploadedSensoryCheckImage = async (
@@ -203,7 +196,7 @@ export const removeUploadedSensoryCheckImage = async (
     return;
   }
 
-  await unlink(file.path).catch(() => undefined);
+  await removeImageAndThumbnail(file.path);
 };
 
 export const removeUploadedSensoryCheckImages = async (
@@ -231,7 +224,7 @@ export const removeSensoryCheckImageByPath = async (
     return;
   }
 
-  await unlink(filePath).catch(() => undefined);
+  await removeImageAndThumbnail(filePath);
 };
 
 export const removeSensoryCheckImagesByPath = async (

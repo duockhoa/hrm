@@ -249,8 +249,7 @@ export class ProductionOrderAttachmentsService {
       return null;
     }
 
-    const storedFile = await resolveProductionOrderAttachmentFile(filename);
-    return storedFile ? { ...storedFile, contentType: file.mime_type } : null;
+    return resolveProductionOrderAttachmentFile(filename, file.mime_type);
   }
 
   private async ensureProductionOrderExists(productionOrderId: number) {

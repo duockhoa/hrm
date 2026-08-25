@@ -1,9 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
-import { stat, unlink } from 'fs/promises';
-import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
+import {
+  removeImageAndThumbnail,
+  resolvePreferredImageFile,
+  thumbnailDiskStorage,
+} from '../../common/utils/image-thumbnail.util';
 
 type SteamSterilizationCheckUploadFileMetadata = Pick<
   Express.Multer.File,
@@ -89,7 +92,7 @@ export const getSteamSterilizationCheckUploadStoredFilename = (
   `${getOriginalNameSegment(file.originalname)}-${randomUUID()}${getStoredExtension(file)}`;
 
 export const productionOrderSteamSterilizationCheckImageUploadOptions = {
-  storage: diskStorage({
+  storage: thumbnailDiskStorage({
     destination: (_req, _file, callback) => {
       ensureProductionOrderSteamSterilizationCheckUploadDirs();
       callback(
@@ -199,17 +202,7 @@ export const resolveSteamSterilizationCheckImageFile = async (
     return null;
   }
 
-  const fileStat = await stat(filePath).catch(() => null);
-
-  if (!fileStat?.isFile()) {
-    return null;
-  }
-
-  return {
-    contentType,
-    filePath,
-    size: fileStat.size,
-  };
+  return resolvePreferredImageFile(filePath, contentType);
 };
 
 export const removeUploadedSteamSterilizationCheckImage = async (
@@ -219,7 +212,7 @@ export const removeUploadedSteamSterilizationCheckImage = async (
     return;
   }
 
-  await unlink(file.path).catch(() => undefined);
+  await removeImageAndThumbnail(file.path);
 };
 
 export const removeUploadedSteamSterilizationCheckImages = async (
@@ -246,7 +239,7 @@ export const removeStoredSteamSterilizationCheckImage = async (
     return;
   }
 
-  await unlink(filePath).catch(() => undefined);
+  await removeImageAndThumbnail(filePath);
 };
 
 export const removeStoredSteamSterilizationCheckImages = async (

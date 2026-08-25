@@ -1,9 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
-import { stat, unlink } from 'fs/promises';
-import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
+import {
+  removeImageAndThumbnail,
+  resolvePreferredImageFile,
+  thumbnailDiskStorage,
+} from '../../common/utils/image-thumbnail.util';
 
 type PostHomogenizationGranuleCheckUploadFileMetadata = Pick<
   Express.Multer.File,
@@ -93,7 +96,7 @@ export const getPostHomogenizationGranuleCheckUploadStoredFilename = (
   `${getOriginalNameSegment(file.originalname)}-${randomUUID()}${getStoredExtension(file)}`;
 
 export const productionOrderPostHomogenizationGranuleCheckImageUploadOptions = {
-  storage: diskStorage({
+  storage: thumbnailDiskStorage({
     destination: (_req, _file, callback) => {
       ensureProductionOrderPostHomogenizationGranuleCheckUploadDirs();
       callback(
@@ -194,17 +197,7 @@ export const resolvePostHomogenizationGranuleCheckImageFile = async (
     return null;
   }
 
-  const fileStat = await stat(filePath).catch(() => null);
-
-  if (!fileStat?.isFile()) {
-    return null;
-  }
-
-  return {
-    contentType,
-    filePath,
-    size: fileStat.size,
-  };
+  return resolvePreferredImageFile(filePath, contentType);
 };
 
 export const removeUploadedPostHomogenizationGranuleCheckImage = async (
@@ -214,7 +207,7 @@ export const removeUploadedPostHomogenizationGranuleCheckImage = async (
     return;
   }
 
-  await unlink(file.path).catch(() => undefined);
+  await removeImageAndThumbnail(file.path);
 };
 
 export const removePostHomogenizationGranuleCheckImageByPath = async (
@@ -237,5 +230,5 @@ export const removePostHomogenizationGranuleCheckImageByPath = async (
     return;
   }
 
-  await unlink(filePath).catch(() => undefined);
+  await removeImageAndThumbnail(filePath);
 };

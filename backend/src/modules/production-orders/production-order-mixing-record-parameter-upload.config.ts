@@ -1,9 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
-import { stat, unlink } from 'fs/promises';
-import { diskStorage } from 'multer';
 import { basename, extname, join, resolve, sep } from 'path';
+import {
+  removeImageAndThumbnail,
+  resolvePreferredImageFile,
+  thumbnailDiskStorage,
+} from '../../common/utils/image-thumbnail.util';
 
 type MixingRecordParameterUploadFileMetadata = Pick<
   Express.Multer.File,
@@ -66,7 +69,7 @@ const getStoredFilename = (file: MixingRecordParameterUploadFileMetadata) => {
 };
 
 export const productionOrderMixingRecordParameterImageUploadOptions = {
-  storage: diskStorage({
+  storage: thumbnailDiskStorage({
     destination: (_req, _file, callback) => {
       mkdirSync(UPLOAD_DIR, { recursive: true });
       callback(null, UPLOAD_DIR);
@@ -117,22 +120,17 @@ export const resolveProductionOrderMixingRecordParameterImageFile = async (
   const filePath = getResolvedFilePath(filename);
   if (!filePath) return null;
 
-  const fileStat = await stat(filePath).catch(() => null);
-  if (!fileStat?.isFile()) return null;
-
-  return {
+  return resolvePreferredImageFile(
     filePath,
-    size: fileStat.size,
-    contentType:
-      IMAGE_MIME_TYPES_BY_EXTENSION.get(extname(filename).toLowerCase()) ??
+    IMAGE_MIME_TYPES_BY_EXTENSION.get(extname(filename).toLowerCase()) ??
       'application/octet-stream',
-  };
+  );
 };
 
 export const removeUploadedProductionOrderMixingRecordParameterImage = async (
   file?: Express.Multer.File,
 ) => {
-  if (file?.path) await unlink(file.path).catch(() => undefined);
+  if (file?.path) await removeImageAndThumbnail(file.path);
 };
 
 export const removeProductionOrderMixingRecordParameterImageByPath = async (
@@ -149,5 +147,5 @@ export const removeProductionOrderMixingRecordParameterImageByPath = async (
     PRODUCTION_ORDER_MIXING_RECORD_PARAMETER_IMAGE_ROUTE.length + 1,
   );
   const filePath = getResolvedFilePath(filename);
-  if (filePath) await unlink(filePath).catch(() => undefined);
+  if (filePath) await removeImageAndThumbnail(filePath);
 };

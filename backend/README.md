@@ -64,6 +64,26 @@ SAP_REJECT_UNAUTHORIZED=false
 self-signed SAP certificates. Use `true` when the SAP certificate chain is
 trusted by the backend runtime.
 
+## Image thumbnails
+
+New local image uploads keep the original file and create a WebP thumbnail with
+a maximum width or height of 640 pixels. Image endpoints prefer the thumbnail
+and fall back to the original file when a thumbnail is unavailable.
+
+Generate missing thumbnails for images already stored under `uploads/`:
+
+```bash
+npm run thumbnails:generate
+```
+
+Use `--dry-run` to preview the files or `--force` to regenerate existing
+thumbnails:
+
+```bash
+npm run thumbnails:generate -- --dry-run
+npm run thumbnails:generate -- --force
+```
+
 ## Run tests
 
 ```bash
