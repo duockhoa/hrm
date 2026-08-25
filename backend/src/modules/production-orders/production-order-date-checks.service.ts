@@ -111,7 +111,7 @@ export class ProductionOrderDateChecksService {
     });
   }
 
-  async findImageFile(filename: string) {
+  async findImageFile(filename: string, original = false) {
     const imagePaths = getDateCheckImageLookupPaths(filename);
 
     if (imagePaths.length === 0) {
@@ -134,7 +134,7 @@ export class ProductionOrderDateChecksService {
       return null;
     }
 
-    return resolveDateCheckImageFile(filename);
+    return resolveDateCheckImageFile(filename, original);
   }
 
   async findRequestFile(filename: string) {

@@ -143,7 +143,7 @@ export class EquipmentMonitoringRecordsService {
     return record;
   }
 
-  async findImageFile(filename: string) {
+  async findImageFile(filename: string, original = false) {
     const imagePaths = getEquipmentMonitoringRecordImageLookupPaths(filename);
 
     if (imagePaths.length === 0) {
@@ -159,7 +159,9 @@ export class EquipmentMonitoringRecordsService {
         select: { id: true },
       });
 
-    return image ? resolveEquipmentMonitoringRecordImageFile(filename) : null;
+    return image
+      ? resolveEquipmentMonitoringRecordImageFile(filename, original)
+      : null;
   }
 
   async create(

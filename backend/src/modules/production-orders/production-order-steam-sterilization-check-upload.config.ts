@@ -192,6 +192,7 @@ export const getSteamSterilizationCheckImageLookupPaths = (
 
 export const resolveSteamSterilizationCheckImageFile = async (
   filename: string,
+  original = false,
 ) => {
   const filePath = getResolvedFilePath(filename);
   const contentType =
@@ -202,7 +203,9 @@ export const resolveSteamSterilizationCheckImageFile = async (
     return null;
   }
 
-  return resolvePreferredImageFile(filePath, contentType);
+  return resolvePreferredImageFile(filePath, contentType, {
+    preferThumbnail: !original,
+  });
 };
 
 export const removeUploadedSteamSterilizationCheckImage = async (

@@ -187,6 +187,7 @@ export const getPostHomogenizationGranuleCheckImageLookupPaths = (
 
 export const resolvePostHomogenizationGranuleCheckImageFile = async (
   filename: string,
+  original = false,
 ) => {
   const filePath = getResolvedFilePath(filename);
   const contentType =
@@ -197,7 +198,9 @@ export const resolvePostHomogenizationGranuleCheckImageFile = async (
     return null;
   }
 
-  return resolvePreferredImageFile(filePath, contentType);
+  return resolvePreferredImageFile(filePath, contentType, {
+    preferThumbnail: !original,
+  });
 };
 
 export const removeUploadedPostHomogenizationGranuleCheckImage = async (

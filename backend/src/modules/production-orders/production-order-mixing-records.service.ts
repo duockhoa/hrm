@@ -567,8 +567,8 @@ export class ProductionOrderMixingRecordsService {
     return updated;
   }
 
-  async findParameterImageFile(filename: string) {
-    return resolveProductionOrderMixingRecordParameterImageFile(filename);
+  async findParameterImageFile(filename: string, original = false) {
+    return resolveProductionOrderMixingRecordParameterImageFile(filename, original);
   }
 
   private async ensureMixingRecordExists(recordId: number) {

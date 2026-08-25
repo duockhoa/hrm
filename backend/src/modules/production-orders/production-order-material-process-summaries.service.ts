@@ -64,7 +64,7 @@ export class ProductionOrderMaterialProcessSummariesService {
     });
   }
 
-  async findImageFile(filename: string) {
+  async findImageFile(filename: string, original = false) {
     const imagePaths = getMaterialProcessSummaryImageLookupPaths(filename);
     if (imagePaths.length === 0) return null;
 
@@ -75,7 +75,9 @@ export class ProductionOrderMaterialProcessSummariesService {
           select: { id: true },
         },
       );
-    return summary ? resolveMaterialProcessSummaryImageFile(filename) : null;
+    return summary
+      ? resolveMaterialProcessSummaryImageFile(filename, original)
+      : null;
   }
 
   async create(

@@ -87,7 +87,7 @@ export class ProductionOrderSteamSterilizationChecksService {
     });
   }
 
-  async findImageFile(filename: string) {
+  async findImageFile(filename: string, original = false) {
     const imagePaths = getSteamSterilizationCheckImageLookupPaths(filename);
 
     if (imagePaths.length === 0) {
@@ -126,7 +126,7 @@ export class ProductionOrderSteamSterilizationChecksService {
       return null;
     }
 
-    return resolveSteamSterilizationCheckImageFile(filename);
+    return resolveSteamSterilizationCheckImageFile(filename, original);
   }
 
   async create(

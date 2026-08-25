@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Request,
   Res,
   StreamableFile,
@@ -201,11 +202,13 @@ export class ProductionOrderMixingRecordsController {
   @Get('mixing-record-parameters/images/:filename')
   async getParameterImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const image =
       await this.productionOrderMixingRecordsService.findParameterImageFile(
         filename,
+        original === 'true',
       );
     if (!image) {
       throw new NotFoundException(

@@ -67,7 +67,7 @@ export class ProductionOrderPreSecondaryPackagingChecksService {
     );
   }
 
-  async findImageFile(filename: string) {
+  async findImageFile(filename: string, original = false) {
     const imagePaths = getPreSecondaryPackagingCheckImageLookupPaths(filename);
     if (imagePaths.length === 0) return null;
 
@@ -78,7 +78,9 @@ export class ProductionOrderPreSecondaryPackagingChecksService {
           select: { id: true },
         },
       );
-    return image ? resolvePreSecondaryPackagingCheckImageFile(filename) : null;
+    return image
+      ? resolvePreSecondaryPackagingCheckImageFile(filename, original)
+      : null;
   }
 
   async create(

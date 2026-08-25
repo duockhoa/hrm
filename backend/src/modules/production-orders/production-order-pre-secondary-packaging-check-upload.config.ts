@@ -128,6 +128,7 @@ export const getPreSecondaryPackagingCheckImageLookupPaths = (
 
 export const resolvePreSecondaryPackagingCheckImageFile = async (
   filename: string,
+  original = false,
 ) => {
   const filePath = getResolvedFilePath(filename);
   if (!filePath) return null;
@@ -136,6 +137,7 @@ export const resolvePreSecondaryPackagingCheckImageFile = async (
     filePath,
     mimeTypesByExtension.get(extname(filename).toLowerCase()) ??
       'application/octet-stream',
+    { preferThumbnail: !original },
   );
 };
 

@@ -152,6 +152,7 @@ export const getMaterialProcessSummaryImageLookupPaths = (filename: string) => {
 
 export const resolveMaterialProcessSummaryImageFile = async (
   filename: string,
+  original = false,
 ) => {
   const filePath = getResolvedFilePath(filename);
   if (!filePath) return null;
@@ -160,6 +161,7 @@ export const resolveMaterialProcessSummaryImageFile = async (
     filePath,
     IMAGE_MIME_TYPES_BY_EXTENSION.get(extname(filename).toLowerCase()) ??
       'application/octet-stream',
+    { preferThumbnail: !original },
   );
 };
 

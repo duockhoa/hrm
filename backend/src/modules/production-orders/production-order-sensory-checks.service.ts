@@ -125,7 +125,7 @@ export class ProductionOrderSensoryChecksService {
     });
   }
 
-  async findImageFile(filename: string) {
+  async findImageFile(filename: string, original = false) {
     const imagePaths = getSensoryCheckImageLookupPaths(filename);
 
     if (imagePaths.length === 0) {
@@ -148,7 +148,7 @@ export class ProductionOrderSensoryChecksService {
       return null;
     }
 
-    return resolveSensoryCheckImageFile(filename);
+    return resolveSensoryCheckImageFile(filename, original);
   }
 
   async create(

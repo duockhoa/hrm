@@ -78,7 +78,7 @@ export class ProductionOrderPostPreparationSolutionChecksService {
     );
   }
 
-  async findImageFile(filename: string) {
+  async findImageFile(filename: string, original = false) {
     const imagePaths =
       getPostPreparationSolutionCheckImageLookupPaths(filename);
 
@@ -103,7 +103,7 @@ export class ProductionOrderPostPreparationSolutionChecksService {
       return null;
     }
 
-    return resolvePostPreparationSolutionCheckImageFile(filename);
+    return resolvePostPreparationSolutionCheckImageFile(filename, original);
   }
 
   async create(

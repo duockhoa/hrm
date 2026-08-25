@@ -79,10 +79,14 @@ export class EquipmentController {
   @Get('monitoring-records/images/:filename')
   async getMonitoringRecordImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const imageFile =
-      await this.equipmentMonitoringRecordsService.findImageFile(filename);
+      await this.equipmentMonitoringRecordsService.findImageFile(
+        filename,
+        original === 'true',
+      );
 
     if (!imageFile) {
       throw new NotFoundException(

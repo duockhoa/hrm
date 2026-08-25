@@ -238,7 +238,7 @@ export class ProductionOrderAttachmentsService {
     return file;
   }
 
-  async findFile(filename: string) {
+  async findFile(filename: string, original = false) {
     const filePath = `/production-orders/attachments/files/${filename}`;
     const file =
       await this.prismaService.productionOrderAttachmentFiles.findFirst({
@@ -249,7 +249,11 @@ export class ProductionOrderAttachmentsService {
       return null;
     }
 
-    return resolveProductionOrderAttachmentFile(filename, file.mime_type);
+    return resolveProductionOrderAttachmentFile(
+      filename,
+      file.mime_type,
+      original,
+    );
   }
 
   private async ensureProductionOrderExists(productionOrderId: number) {

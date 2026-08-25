@@ -60,6 +60,15 @@ describe('image thumbnail utilities', () => {
 
     expect(preferred?.filePath).toBe(thumbnailPath);
     expect(preferred?.contentType).toBe('image/webp');
+
+    const originalFile = await resolvePreferredImageFile(
+      imagePath,
+      'image/jpeg',
+      { preferThumbnail: false },
+    );
+
+    expect(originalFile?.filePath).toBe(imagePath);
+    expect(originalFile?.contentType).toBe('image/jpeg');
   });
 
   it('removes the original image and its thumbnail together', async () => {

@@ -57,10 +57,14 @@ export class ProductionOrderDeviationsController {
   @Get('images/:filename')
   async getDeviationImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const imageFile =
-      await this.productionOrderDeviationsService.findImageFile(filename);
+      await this.productionOrderDeviationsService.findImageFile(
+        filename,
+        original === 'true',
+      );
 
     if (!imageFile) {
       throw new NotFoundException('Deviation image not found');

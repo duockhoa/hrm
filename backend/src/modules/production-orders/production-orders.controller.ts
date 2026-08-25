@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Request,
   Res,
   StreamableFile,
@@ -1239,10 +1240,14 @@ export class ProductionOrdersController {
   @Get('date-checks/images/:filename')
   async getDateCheckImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const imageFile =
-      await this.productionOrderDateChecksService.findImageFile(filename);
+      await this.productionOrderDateChecksService.findImageFile(
+        filename,
+        original === 'true',
+      );
 
     if (!imageFile) {
       throw new NotFoundException('Date check image not found');
@@ -1260,10 +1265,14 @@ export class ProductionOrdersController {
   @Get('attachments/files/:filename')
   async getProductionOrderAttachmentFile(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const file =
-      await this.productionOrderAttachmentsService.findFile(filename);
+      await this.productionOrderAttachmentsService.findFile(
+        filename,
+        original === 'true',
+      );
 
     if (!file) {
       throw new NotFoundException('Production order attachment file not found');
@@ -1302,10 +1311,14 @@ export class ProductionOrdersController {
   @Get('sensory-checks/images/:filename')
   async getSensoryCheckImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const imageFile =
-      await this.productionOrderSensoryChecksService.findImageFile(filename);
+      await this.productionOrderSensoryChecksService.findImageFile(
+        filename,
+        original === 'true',
+      );
 
     if (!imageFile) {
       throw new NotFoundException('Sensory check image not found');
@@ -1323,11 +1336,13 @@ export class ProductionOrdersController {
   @Get('pre-secondary-packaging-checks/images/:filename')
   async getPreSecondaryPackagingCheckImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const imageFile =
       await this.productionOrderPreSecondaryPackagingChecksService.findImageFile(
         filename,
+        original === 'true',
       );
 
     if (!imageFile) {
@@ -1348,11 +1363,13 @@ export class ProductionOrdersController {
   @Get('material-process-summaries/images/:filename')
   async getMaterialProcessSummaryImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const imageFile =
       await this.productionOrderMaterialProcessSummariesService.findImageFile(
         filename,
+        original === 'true',
       );
 
     if (!imageFile) {
@@ -1371,11 +1388,13 @@ export class ProductionOrdersController {
   @Get('post-homogenization-granule-checks/images/:filename')
   async getPostHomogenizationGranuleCheckImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const imageFile =
       await this.productionOrderPostHomogenizationGranuleChecksService.findImageFile(
         filename,
+        original === 'true',
       );
 
     if (!imageFile) {
@@ -1396,11 +1415,13 @@ export class ProductionOrdersController {
   @Get('post-preparation-solution-checks/images/:filename')
   async getPostPreparationSolutionCheckImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const imageFile =
       await this.productionOrderPostPreparationSolutionChecksService.findImageFile(
         filename,
+        original === 'true',
       );
 
     if (!imageFile) {
@@ -1421,11 +1442,13 @@ export class ProductionOrdersController {
   @Get('steam-sterilization-checks/images/:filename')
   async getSteamSterilizationCheckImage(
     @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const imageFile =
       await this.productionOrderSteamSterilizationChecksService.findImageFile(
         filename,
+        original === 'true',
       );
 
     if (!imageFile) {

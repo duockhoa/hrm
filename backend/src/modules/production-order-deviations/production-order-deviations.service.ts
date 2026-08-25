@@ -81,7 +81,7 @@ export class ProductionOrderDeviationsService {
     );
   }
 
-  async findImageFile(filename: string) {
+  async findImageFile(filename: string, original = false) {
     const imagePaths = getDeviationImageLookupPaths(filename);
 
     if (imagePaths.length === 0) {
@@ -110,7 +110,7 @@ export class ProductionOrderDeviationsService {
       return null;
     }
 
-    return resolveDeviationImageFile(filename);
+    return resolveDeviationImageFile(filename, original);
   }
 
   async findById(id: number) {

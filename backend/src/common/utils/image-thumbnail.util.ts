@@ -31,6 +31,10 @@ type CreateImageThumbnailOptions = {
   tolerateCorruptInput?: boolean;
 };
 
+type ResolveImageFileOptions = {
+  preferThumbnail?: boolean;
+};
+
 export type ResolvedImageFile = {
   contentType: string;
   filePath: string;
@@ -88,16 +92,21 @@ export const removeImageAndThumbnail = async (originalPath: string) => {
 export const resolvePreferredImageFile = async (
   originalPath: string,
   originalContentType: string,
+  options: ResolveImageFileOptions = {},
 ): Promise<ResolvedImageFile | null> => {
-  const thumbnailPath = getImageThumbnailPath(originalPath);
-  const thumbnailStat = await stat(thumbnailPath).catch(() => null);
+  const preferThumbnail = options.preferThumbnail ?? true;
 
-  if (thumbnailStat?.isFile()) {
-    return {
-      contentType: 'image/webp',
-      filePath: thumbnailPath,
-      size: thumbnailStat.size,
-    };
+  if (preferThumbnail) {
+    const thumbnailPath = getImageThumbnailPath(originalPath);
+    const thumbnailStat = await stat(thumbnailPath).catch(() => null);
+
+    if (thumbnailStat?.isFile()) {
+      return {
+        contentType: 'image/webp',
+        filePath: thumbnailPath,
+        size: thumbnailStat.size,
+      };
+    }
   }
 
   const originalStat = await stat(originalPath).catch(() => null);

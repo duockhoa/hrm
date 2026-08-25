@@ -96,7 +96,7 @@ export class ProductionOrderPostHomogenizationGranuleChecksService {
     );
   }
 
-  async findImageFile(filename: string) {
+  async findImageFile(filename: string, original = false) {
     const imagePaths =
       getPostHomogenizationGranuleCheckImageLookupPaths(filename);
 
@@ -122,7 +122,7 @@ export class ProductionOrderPostHomogenizationGranuleChecksService {
       return null;
     }
 
-    return resolvePostHomogenizationGranuleCheckImageFile(filename);
+    return resolvePostHomogenizationGranuleCheckImageFile(filename, original);
   }
 
   async create(

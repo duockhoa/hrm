@@ -310,7 +310,10 @@ export const getDateCheckRequestFileLookupPaths = (filename: string) => {
     : [];
 };
 
-export const resolveDateCheckImageFile = async (filename: string) => {
+export const resolveDateCheckImageFile = async (
+  filename: string,
+  original = false,
+) => {
   const imageFile = await resolveStoredFile(
     filename,
     PRODUCTION_ORDER_DATE_CHECK_IMAGE_UPLOAD_DIR,
@@ -318,7 +321,9 @@ export const resolveDateCheckImageFile = async (filename: string) => {
   );
 
   return imageFile
-    ? resolvePreferredImageFile(imageFile.filePath, imageFile.contentType)
+    ? resolvePreferredImageFile(imageFile.filePath, imageFile.contentType, {
+        preferThumbnail: !original,
+      })
     : null;
 };
 

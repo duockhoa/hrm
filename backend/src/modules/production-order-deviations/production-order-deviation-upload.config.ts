@@ -171,7 +171,10 @@ export const getAuthenticatedDeviationImagePaths = (
     ?.map((imagePath) => getAuthenticatedDeviationImagePath(imagePath))
     .filter((imagePath): imagePath is string => Boolean(imagePath)) ?? [];
 
-export const resolveDeviationImageFile = async (filename: string) => {
+export const resolveDeviationImageFile = async (
+  filename: string,
+  original = false,
+) => {
   const filePath = getDeviationImageFilePath(filename);
   const contentType = getDeviationImageContentType(filename);
 
@@ -179,7 +182,9 @@ export const resolveDeviationImageFile = async (filename: string) => {
     return null;
   }
 
-  return resolvePreferredImageFile(filePath, contentType);
+  return resolvePreferredImageFile(filePath, contentType, {
+    preferThumbnail: !original,
+  });
 };
 
 export const removeUploadedDeviationImage = async (

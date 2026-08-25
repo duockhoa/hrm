@@ -176,7 +176,10 @@ export const getSensoryCheckImageLookupPaths = (filename: string) => {
     : [];
 };
 
-export const resolveSensoryCheckImageFile = async (filename: string) => {
+export const resolveSensoryCheckImageFile = async (
+  filename: string,
+  original = false,
+) => {
   const filePath = getResolvedFilePath(filename);
   const contentType =
     IMAGE_MIME_TYPES_BY_EXTENSION.get(extname(filename).toLowerCase()) ??
@@ -186,7 +189,9 @@ export const resolveSensoryCheckImageFile = async (filename: string) => {
     return null;
   }
 
-  return resolvePreferredImageFile(filePath, contentType);
+  return resolvePreferredImageFile(filePath, contentType, {
+    preferThumbnail: !original,
+  });
 };
 
 export const removeUploadedSensoryCheckImage = async (

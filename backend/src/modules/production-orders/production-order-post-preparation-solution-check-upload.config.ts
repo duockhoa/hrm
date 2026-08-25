@@ -181,6 +181,7 @@ export const getPostPreparationSolutionCheckImageLookupPaths = (
 
 export const resolvePostPreparationSolutionCheckImageFile = async (
   filename: string,
+  original = false,
 ) => {
   const filePath = getResolvedFilePath(filename);
   const contentType =
@@ -191,7 +192,9 @@ export const resolvePostPreparationSolutionCheckImageFile = async (
     return null;
   }
 
-  return resolvePreferredImageFile(filePath, contentType);
+  return resolvePreferredImageFile(filePath, contentType, {
+    preferThumbnail: !original,
+  });
 };
 
 export const removeUploadedPostPreparationSolutionCheckImage = async (

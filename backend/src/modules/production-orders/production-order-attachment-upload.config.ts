@@ -130,6 +130,7 @@ const getResolvedFilePath = (filename: string) => {
 export const resolveProductionOrderAttachmentFile = async (
   filename: string,
   contentType: string,
+  original = false,
 ) => {
   const filePath = getResolvedFilePath(filename);
 
@@ -137,7 +138,9 @@ export const resolveProductionOrderAttachmentFile = async (
     return null;
   }
 
-  return resolvePreferredImageFile(filePath, contentType);
+  return resolvePreferredImageFile(filePath, contentType, {
+    preferThumbnail: !original,
+  });
 };
 
 export const removeStoredProductionOrderAttachmentFile = async (
