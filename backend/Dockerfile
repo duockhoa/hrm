@@ -36,4 +36,4 @@ RUN mkdir uploads && chown -R node:node /app
 
 USER node
 EXPOSE 3012 50000
-CMD ["node", "dist/src/main"]
+CMD ["node", "dist/main"]
