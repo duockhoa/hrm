@@ -76,12 +76,12 @@ export class ProductionOrderMixingRecordsController {
     );
   }
 
-  @Patch('mixing-records/:recordId/qa-manager-approval')
-  async approveByQaManager(
+  @Patch('mixing-records/:recordId/ipc-staff-approval')
+  async approveByIpcStaff(
     @Param('recordId', ParseIntPipe) recordId: number,
     @Request() req: any,
   ) {
-    return this.productionOrderMixingRecordsService.approveByQaManager(
+    return this.productionOrderMixingRecordsService.approveByIpcStaff(
       recordId,
       req.user,
     );

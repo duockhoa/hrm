@@ -46,7 +46,7 @@ const userSelect = {
 const mixingRecordInclude = {
   createdBy: { select: userSelect },
   qaStaffApprovedBy: { select: userSelect },
-  qaManagerApprovedBy: { select: userSelect },
+  ipcStaffApprovedBy: { select: userSelect },
   stages: {
     orderBy: [{ stage_order: 'asc' }, { id: 'asc' }],
     include: {
@@ -205,14 +205,14 @@ export class ProductionOrderMixingRecordsService {
     });
   }
 
-  async approveByQaManager(id: number, user?: AuthenticatedUser) {
+  async approveByIpcStaff(id: number, user?: AuthenticatedUser) {
     await this.ensureMixingRecordExists(id);
 
     return this.prismaService.productionOrderMixingRecords.update({
       where: { id },
       data: {
-        qa_manager_approved_by_id: this.normalizeUserId(user),
-        qa_manager_approved_at: new Date(),
+        ipc_staff_approved_by_id: this.normalizeUserId(user),
+        ipc_staff_approved_at: new Date(),
       },
       include: mixingRecordInclude,
     });

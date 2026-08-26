@@ -97,7 +97,7 @@ model Users {
   createdMixingActivityTemplateStageStepParameters      MixingActivityTemplateStageStepParameters[]                     @relation("MixingActivityTemplateStageStepParameterCreator")
   createdProductionOrderMixingRecords                   ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordCreator")
   qaStaffApprovedProductionOrderMixingRecords           ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordQaStaffApprover")
-  qaManagerApprovedProductionOrderMixingRecords         ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordQaManagerApprover")
+  ipcStaffApprovedProductionOrderMixingRecords          ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordIpcStaffApprover")
   recordedProductionOrderMixingRecordParameters         ProductionOrderMixingRecordParameters[]                         @relation("ProductionOrderMixingRecordParameterRecorder")
   createdPrimaryPackagingConfirmations                  ProductionOrderPrimaryPackagingConfirmations[]                  @relation("ProductionOrderPrimaryPackagingConfirmationCreator")
   sterilizedProductionOrderFiltrationChecks             ProductionOrderFiltrationChecks[]                               @relation("ProductionOrderFiltrationCheckSterilizer")
@@ -787,9 +787,9 @@ model ProductionOrderMixingRecords {
   qa_staff_approved_by_id     Int?
   qaStaffApprovedBy           Users?                              @relation("ProductionOrderMixingRecordQaStaffApprover", fields: [qa_staff_approved_by_id], references: [id], onDelete: SetNull, map: "po_mixing_records_qa_staff_approved_by_fkey")
   qa_staff_approved_at        DateTime?
-  qa_manager_approved_by_id   Int?
-  qaManagerApprovedBy         Users?                              @relation("ProductionOrderMixingRecordQaManagerApprover", fields: [qa_manager_approved_by_id], references: [id], onDelete: SetNull, map: "po_mixing_records_qa_manager_approved_by_fkey")
-  qa_manager_approved_at      DateTime?
+  ipc_staff_approved_by_id    Int?
+  ipcStaffApprovedBy          Users?                              @relation("ProductionOrderMixingRecordIpcStaffApprover", fields: [ipc_staff_approved_by_id], references: [id], onDelete: SetNull, map: "po_mixing_records_ipc_staff_approved_by_fkey")
+  ipc_staff_approved_at       DateTime?
   stages                      ProductionOrderMixingRecordStages[]
   created_at                  DateTime                            @default(now())
   updated_at                  DateTime                            @default(now()) @updatedAt
@@ -797,7 +797,7 @@ model ProductionOrderMixingRecords {
   @@index([production_order_id], map: "po_mixing_records_order_id_idx")
   @@index([created_by_id], map: "po_mixing_records_created_by_idx")
   @@index([qa_staff_approved_by_id], map: "po_mixing_records_qa_staff_approved_by_idx")
-  @@index([qa_manager_approved_by_id], map: "po_mixing_records_qa_manager_approved_by_idx")
+  @@index([ipc_staff_approved_by_id], map: "po_mixing_records_ipc_staff_approved_by_idx")
   @@map("production_order_mixing_records")
 }
 

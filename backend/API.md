@@ -2263,7 +2263,7 @@ Chỉ hỗ trợ cập nhật trường `description`. Gửi `null` hoặc chu�
 Mỗi phiếu pha có hai nhóm thông tin phê duyệt độc lập:
 
 - `qa_staff_approved_by_id`, `qa_staff_approved_at`, `qaStaffApprovedBy`: phê duyệt của nhân viên QA.
-- `qa_manager_approved_by_id`, `qa_manager_approved_at`, `qaManagerApprovedBy`: phê duyệt của trưởng phòng QA.
+- `ipc_staff_approved_by_id`, `ipc_staff_approved_at`, `ipcStaffApprovedBy`: phê duyệt của nhân viên IPC.
 
 Ký duyệt nhân viên QA (không cần body):
 
@@ -2271,10 +2271,10 @@ Ký duyệt nhân viên QA (không cần body):
 PATCH /production-orders/mixing-records/:recordId/qa-staff-approval
 ```
 
-Ký duyệt trưởng phòng QA (không cần body):
+Ký duyệt nhân viên IPC (không cần body):
 
 ```http
-PATCH /production-orders/mixing-records/:recordId/qa-manager-approval
+PATCH /production-orders/mixing-records/:recordId/ipc-staff-approval
 ```
 
 Cả hai API tự lấy người dùng đăng nhập để lưu vào trường `*_approved_by_id`, đồng thời tự ghi `*_approved_at` theo thời điểm gọi API. Gọi lại sẽ cập nhật chữ ký và thời điểm phê duyệt của nhóm tương ứng.
