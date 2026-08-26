@@ -12,7 +12,6 @@ import {
   Search,
   ShieldCheck,
   Trash2,
-  UserRoundCog,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,9 +38,7 @@ import {
   applicationsService,
   permissionsService,
   rolesService,
-  usersService,
 } from "@/services/index.service";
-import useUsersStore from "@/store/users.store";
 
 type Permission = {
   id: number;
@@ -57,10 +54,6 @@ type Role = {
   rolePermissions?: Array<{ permissions?: Permission }>;
 };
 
-type UserRole = {
-  roles?: Role;
-};
-
 type Application = {
   id: number;
   key: string;
@@ -70,7 +63,7 @@ type Application = {
   is_active: boolean;
 };
 
-type SettingTab = "roles" | "permissions" | "applications" | "users";
+type SettingTab = "roles" | "permissions" | "applications";
 
 const tabs: Array<{
   id: SettingTab;
@@ -96,12 +89,6 @@ const tabs: Array<{
     description: "Tạo ứng dụng và bật tắt trạng thái truy cập.",
     icon: AppWindow,
   },
-  {
-    id: "users",
-    title: "Phân quyền người dùng",
-    description: "Gán vai trò và ứng dụng cho từng nhân sự.",
-    icon: UserRoundCog,
-  },
 ];
 
 const getRolePermissionIds = (role?: Role) =>
@@ -110,14 +97,6 @@ const getRolePermissionIds = (role?: Role) =>
       ?.map((rolePermission) => rolePermission.permissions?.id)
       .filter((id): id is number => typeof id === "number") ?? [],
   );
-
-const getUserRoleIds = (userRoles?: UserRole[]) =>
-  userRoles
-    ?.map((userRole) => userRole.roles?.id)
-    .filter((id): id is number => typeof id === "number") ?? [];
-
-const getApplicationIds = (applications?: Application[]) =>
-  applications?.map((application) => application.id) ?? [];
 
 const matchesKeyword = (values: Array<unknown>, keyword: string) => {
   const normalizedKeyword = keyword.trim().toLowerCase();
@@ -133,27 +112,17 @@ const matchesKeyword = (values: Array<unknown>, keyword: string) => {
 };
 
 export default function SettingPage() {
-  const { users } = useUsersStore();
   const [activeTab, setActiveTab] = useState<SettingTab>("roles");
   const [permissionSearch, setPermissionSearch] = useState("");
   const [applicationSearch, setApplicationSearch] = useState("");
-  const [userSearch, setUserSearch] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>(
     [],
   );
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [selectedUserRoleIds, setSelectedUserRoleIds] = useState<number[]>([]);
-  const [selectedUserApplicationIds, setSelectedUserApplicationIds] = useState<
-    number[]
-  >([]);
   const [isAddRoleOpen, setIsAddRoleOpen] = useState(false);
   const [isAddPermissionOpen, setIsAddPermissionOpen] = useState(false);
   const [isAddApplicationOpen, setIsAddApplicationOpen] = useState(false);
   const [isSavingRolePermissions, setIsSavingRolePermissions] = useState(false);
-  const [isSavingUserRoles, setIsSavingUserRoles] = useState(false);
-  const [isSavingUserApplications, setIsSavingUserApplications] =
-    useState(false);
 
   const { data: roles = [], isLoading: rolesLoading } = useSWR<Role[]>(
     API_ROUTES.roles.base,
@@ -167,33 +136,9 @@ export default function SettingPage() {
   >(API_ROUTES.applications.base, () =>
     applicationsService.fetcherApplications(true),
   );
-  const { data: userRoles = [], isLoading: userRolesLoading } = useSWR<
-    UserRole[]
-  >(
-    selectedUserId ? `${API_ROUTES.users.base}/${selectedUserId}/roles` : null,
-    () => usersService.fetcherUserRoles(Number(selectedUserId)),
-  );
-  const { data: userApplications = [], isLoading: userApplicationsLoading } =
-    useSWR<Application[]>(
-      selectedUserId
-        ? `${API_ROUTES.users.base}/${selectedUserId}/applications`
-        : null,
-      () => usersService.fetcherUserApplications(Number(selectedUserId)),
-    );
-
-  const activeApplications = useMemo(
-    () => applications.filter((application) => application.is_active),
-    [applications],
-  );
-
   const selectedRole = useMemo(
     () => roles.find((role) => role.id === selectedRoleId),
     [roles, selectedRoleId],
-  );
-
-  const selectedUser = useMemo(
-    () => users.find((user) => Number(user.id) === selectedUserId),
-    [selectedUserId, users],
   );
 
   const filteredPermissions = useMemo(
@@ -205,17 +150,6 @@ export default function SettingPage() {
         ),
       ),
     [permissionSearch, permissions],
-  );
-
-  const filteredUsers = useMemo(
-    () =>
-      users.filter((user) =>
-        matchesKeyword(
-          [user.id, user.name, user.username, user.department, user.position],
-          userSearch,
-        ),
-      ),
-    [userSearch, users],
   );
 
   const filteredApplications = useMemo(
@@ -244,20 +178,6 @@ export default function SettingPage() {
     setSelectedPermissionIds(Array.from(getRolePermissionIds(selectedRole)));
   }, [selectedRole]);
 
-  useEffect(() => {
-    if (!selectedUserId && users.length > 0) {
-      setSelectedUserId(Number(users[0].id));
-    }
-  }, [selectedUserId, users]);
-
-  useEffect(() => {
-    setSelectedUserRoleIds(getUserRoleIds(userRoles));
-  }, [userRoles]);
-
-  useEffect(() => {
-    setSelectedUserApplicationIds(getApplicationIds(userApplications));
-  }, [userApplications]);
-
   const refreshAuthorizationData = async () => {
     await Promise.all([
       mutate(API_ROUTES.roles.base),
@@ -273,21 +193,6 @@ export default function SettingPage() {
     );
   };
 
-  const toggleUserRole = (roleId: number) => {
-    setSelectedUserRoleIds((current) =>
-      current.includes(roleId)
-        ? current.filter((id) => id !== roleId)
-        : [...current, roleId],
-    );
-  };
-
-  const toggleUserApplication = (applicationId: number) => {
-    setSelectedUserApplicationIds((current) =>
-      current.includes(applicationId)
-        ? current.filter((id) => id !== applicationId)
-        : [...current, applicationId],
-    );
-  };
 
   const handleCreateRole = async (data: {
     name: string;
@@ -406,9 +311,6 @@ export default function SettingPage() {
         is_active: !application.is_active,
       });
       await mutate(API_ROUTES.applications.base);
-      if (selectedUserId) {
-        await mutate(`${API_ROUTES.users.base}/${selectedUserId}/applications`);
-      }
       toast.success(
         application.is_active ? "Đã tắt ứng dụng." : "Đã bật ứng dụng.",
       );
@@ -425,9 +327,6 @@ export default function SettingPage() {
     try {
       await applicationsService.deleteApplication(applicationId);
       await mutate(API_ROUTES.applications.base);
-      if (selectedUserId) {
-        await mutate(`${API_ROUTES.users.base}/${selectedUserId}/applications`);
-      }
       toast.success("Đã xóa ứng dụng.");
     } catch {
       toast.error("Không thể xóa ứng dụng.");
@@ -454,42 +353,6 @@ export default function SettingPage() {
     }
   };
 
-  const handleSaveUserRoles = async () => {
-    if (!selectedUserId) {
-      return;
-    }
-
-    setIsSavingUserRoles(true);
-    try {
-      await usersService.syncUserRoles(selectedUserId, selectedUserRoleIds);
-      await mutate(`${API_ROUTES.users.base}/${selectedUserId}/roles`);
-      toast.success("Đã cập nhật vai trò cho nhân sự.");
-    } catch {
-      toast.error("Không thể cập nhật vai trò cho nhân sự.");
-    } finally {
-      setIsSavingUserRoles(false);
-    }
-  };
-
-  const handleSaveUserApplications = async () => {
-    if (!selectedUserId) {
-      return;
-    }
-
-    setIsSavingUserApplications(true);
-    try {
-      await usersService.syncUserApplications(
-        selectedUserId,
-        selectedUserApplicationIds,
-      );
-      await mutate(`${API_ROUTES.users.base}/${selectedUserId}/applications`);
-      toast.success("Đã cập nhật ứng dụng cho nhân sự.");
-    } catch {
-      toast.error("Không thể cập nhật ứng dụng cho nhân sự.");
-    } finally {
-      setIsSavingUserApplications(false);
-    }
-  };
 
   const renderRolesTab = () => (
     <div className="flex h-full min-h-0 flex-col">
@@ -872,229 +735,12 @@ export default function SettingPage() {
     </div>
   );
 
-  const renderUsersTab = () => (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-col gap-3 border-b border-gray-200 p-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            Phân quyền người dùng
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Chọn nhân sự ở danh sách bên trái, sau đó gán vai trò và ứng dụng.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            onClick={handleSaveUserRoles}
-            disabled={!selectedUserId || isSavingUserRoles}
-          >
-            {isSavingUserRoles ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Save />
-            )}
-            Lưu vai trò
-          </Button>
-          <Button
-            onClick={handleSaveUserApplications}
-            disabled={!selectedUserId || isSavingUserApplications}
-          >
-            {isSavingUserApplications ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Save />
-            )}
-            Lưu ứng dụng
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_520px]">
-        <div className="flex min-h-0 flex-col border-r border-gray-200">
-          <div className="relative border-b border-gray-200 p-4">
-            <Search className="pointer-events-none absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              value={userSearch}
-              onChange={(event) => setUserSearch(event.target.value)}
-              placeholder="Tìm theo tên, mã nhân sự, phòng ban hoặc chức vụ"
-              className="pl-9"
-            />
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-20">ID</TableHead>
-                  <TableHead>Nhân sự</TableHead>
-                  <TableHead>Phòng ban</TableHead>
-                  <TableHead>Chức vụ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-gray-500">
-                      Chưa có nhân sự phù hợp.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredUsers.map((user) => (
-                    <TableRow
-                      key={user.id}
-                      onClick={() => setSelectedUserId(Number(user.id))}
-                      className={`cursor-pointer ${
-                        Number(user.id) === selectedUserId ? "bg-blue-50" : ""
-                      }`}
-                    >
-                      <TableCell className="text-gray-500">{user.id}</TableCell>
-                      <TableCell>
-                        <div className="font-medium text-gray-900">
-                          {user.name || user.username || `User #${user.id}`}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {user.email || user.username || "-"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-gray-600">
-                        {user.department || "-"}
-                      </TableCell>
-                      <TableCell className="text-gray-600">
-                        {user.position || "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-
-        <div className="flex min-h-0 flex-col">
-          <div className="border-b border-gray-200 p-4">
-            <h3 className="truncate text-base font-semibold text-gray-900">
-              {selectedUser?.name || "Chưa chọn nhân sự"}
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {selectedUserRoleIds.length} vai trò,{" "}
-              {selectedUserApplicationIds.length} ứng dụng đang được gán.
-            </p>
-          </div>
-
-          <div className="grid min-h-0 flex-1 grid-rows-2">
-            <div className="min-h-0 overflow-auto border-b border-gray-200 p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h4 className="text-sm font-semibold text-gray-900">Vai trò</h4>
-                <Badge variant="secondary">{selectedUserRoleIds.length}</Badge>
-              </div>
-              {userRolesLoading ? (
-                <p className="text-sm text-gray-500">
-                  Đang tải vai trò của nhân sự...
-                </p>
-              ) : roles.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  Chưa có vai trò nào để gán.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {roles.map((role) => {
-                    const checked = selectedUserRoleIds.includes(role.id);
-
-                    return (
-                      <label
-                        key={role.id}
-                        className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 ${
-                          checked
-                            ? "border-blue-300 bg-blue-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleUserRole(role.id)}
-                          className="mt-1 h-4 w-4"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-gray-900">
-                            {role.name}
-                          </span>
-                          <span className="mt-1 block text-xs text-gray-500">
-                            {role.description || "Không có mô tả"}
-                          </span>
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="min-h-0 overflow-auto p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h4 className="text-sm font-semibold text-gray-900">
-                  Ứng dụng được truy cập
-                </h4>
-                <Badge variant="secondary">
-                  {selectedUserApplicationIds.length}
-                </Badge>
-              </div>
-              {userApplicationsLoading || applicationsLoading ? (
-                <p className="text-sm text-gray-500">
-                  Đang tải ứng dụng của nhân sự...
-                </p>
-              ) : activeApplications.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  Chưa có ứng dụng active để gán.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {activeApplications.map((application) => {
-                    const checked = selectedUserApplicationIds.includes(
-                      application.id,
-                    );
-
-                    return (
-                      <label
-                        key={application.id}
-                        className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 ${
-                          checked
-                            ? "border-blue-300 bg-blue-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleUserApplication(application.id)}
-                          className="mt-1 h-4 w-4"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-gray-900">
-                            {application.name}
-                          </span>
-                          <span className="mt-1 block break-words text-xs text-gray-500">
-                            {application.key}
-                          </span>
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md">
       <div className="shrink-0 border-b border-gray-200 px-4 py-3">
         <h1 className="text-xl font-semibold text-gray-900">Cài đặt</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Quản lý vai trò, quyền truy cập và phân quyền người dùng.
+          Quản lý vai trò, quyền truy cập và ứng dụng.
         </p>
       </div>
 
@@ -1139,7 +785,6 @@ export default function SettingPage() {
           {activeTab === "roles" && renderRolesTab()}
           {activeTab === "permissions" && renderPermissionsTab()}
           {activeTab === "applications" && renderApplicationsTab()}
-          {activeTab === "users" && renderUsersTab()}
         </main>
       </div>
     </div>

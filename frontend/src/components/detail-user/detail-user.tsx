@@ -1,10 +1,4 @@
-import OpenFormButton from "../button-open-form/button-open-form";
 import FieldDisplay from "../field-display/field-display";
-import { AiFillDelete } from "react-icons/ai";
-import { FaRegPaperPlane } from "react-icons/fa";
-import { FaPaperPlane } from "react-icons/fa";
-import { FaFileContract } from "react-icons/fa";
-import AddContactForm from "../form-add-contract/form-add-contact";
 import { Skeleton } from "../ui/skeleton";
 
 function UserDetailSkeleton() {
@@ -12,11 +6,6 @@ function UserDetailSkeleton() {
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
       <Skeleton className="mx-auto h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
-      <div className="flex justify-center gap-2">
-        <Skeleton className="h-9 w-32" />
-        <Skeleton className="h-9 w-32" />
-        <Skeleton className="h-9 w-32" />
-      </div>
       <div className="mt-4 space-y-3">
         {Array.from({ length: 7 }).map((_, index) => (
           <div key={index} className="flex w-full justify-start gap-4">
@@ -40,17 +29,6 @@ export default function UserDetail({ user }: { user: any }) {
         {user?.name} - {user?.position} - {user?.department}
       </h1>
       <div className="border-t-1 border-gray-300 p-y-2"></div>
-      <div>
-        <div className="">
-          <OpenFormButton
-            name="Thêm hợp đồng"
-            icon={<FaFileContract />}
-            form={<AddContactForm user_id={user?.id} />}
-          />
-          <OpenFormButton name="Thêm hợp đồng" icon={<FaRegPaperPlane />} />
-          <OpenFormButton name="Thêm hợp đồng" icon={<FaPaperPlane />} />
-        </div>
-      </div>
       <div className="gap-4">
         <FieldDisplay lable="Mã nhân viên" value={user?.username} />
         <FieldDisplay lable="Họ và tên" value={user?.department} />

@@ -22,6 +22,21 @@ const syncUserRoles = async (userId: number, roleIds: number[]) => {
   return response.data;
 };
 
+const addUserRole = async (userId: number, roleId: number) => {
+  const response = await axiosClient.post(
+    `${API_ROUTES.users.base}/${userId}/roles`,
+    { roleId },
+  );
+  return response.data;
+};
+
+const removeUserRole = async (userId: number, roleId: number) => {
+  const response = await axiosClient.delete(
+    `${API_ROUTES.users.base}/${userId}/roles/${roleId}`,
+  );
+  return response.data;
+};
+
 const fetcherUserApplications = async (userId: number) => {
   const response = await axiosClient.get(
     `${API_ROUTES.users.base}/${userId}/applications`,
@@ -44,6 +59,8 @@ export default {
   fetcherUsers,
   fetcherUserRoles,
   syncUserRoles,
+  addUserRole,
+  removeUserRole,
   fetcherUserApplications,
   syncUserApplications,
 };
