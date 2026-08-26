@@ -4041,7 +4041,7 @@ Quy tắc:
 - `quantity_checked` là số nguyên lớn hơn `0`; `quantity_passed` là số nguyên từ `0` đến `quantity_checked`.
 - `created_by_id` tự lấy từ user đăng nhập và `created_at` tự lấy tại thời điểm tạo; frontend không gửi hai field này.
 - Field upload ảnh hỗ trợ `images` (khuyến nghị) hoặc `image`.
-- Tối đa 10 ảnh trên một bản ghi. Mỗi ảnh chỉ nhận JPG, PNG, WEBP hoặc GIF, tối đa 20 MB.
+- Tối đa 70 ảnh trên một bản ghi. Mỗi ảnh chỉ nhận JPG, PNG, WEBP hoặc GIF, tối đa 20 MB.
 
 Lỗi thường gặp:
 
@@ -4049,7 +4049,7 @@ Lỗi thường gặp:
 - `400 requirement is required`
 - `400 quantity_checked must be greater than 0`
 - `400 quantity_passed must be less than or equal to quantity_checked`
-- `400 images cannot exceed 10 files per check`
+- `400 images cannot exceed 70 files per check`
 - `401 Authenticated user not found`
 
 ### Cập nhật bản ghi kiểm tra
@@ -4082,7 +4082,7 @@ images=<file>
 images=<file>
 ```
 
-Field upload hỗ trợ `images` hoặc `image`. Tổng số ảnh của bản ghi, gồm cả ảnh cũ, không được quá 10.
+Field upload hỗ trợ `images` hoặc `image`. Tổng số ảnh của bản ghi, gồm cả ảnh cũ, không được quá 70.
 
 ### Xóa một ảnh kiểm tra
 

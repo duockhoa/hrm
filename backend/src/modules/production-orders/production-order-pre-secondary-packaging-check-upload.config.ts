@@ -23,7 +23,7 @@ const uploadDirectory = join(
   'images',
 );
 
-export const MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT = 10;
+export const MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT = 70;
 const MAX_IMAGE_SIZE_IN_BYTES = 20 * 1024 * 1024;
 
 const extensionsByMimeType = new Map([
