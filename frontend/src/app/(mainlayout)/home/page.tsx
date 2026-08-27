@@ -1,8 +1,8 @@
 "use client";
 import useUsersStore from "@/store/users.store";
 import useSearchStore from "@/store/search.store";
-import ItemUser from "@/components/item-user/item-user";
-import ListUserHeader from "@/components/header-list-user/header-list-user";
+import ItemUser from "@/components/users/item-user";
+import ListUserHeader from "@/components/users/header-list-user";
 import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
 import {
   restoreScrollableChainPosition,
@@ -22,8 +22,8 @@ export default function HomePage() {
     ? pathname.split("/")[2]
     : null;
   const searchScopePath = getSearchScopePath(pathname);
-  const searchKeyword = useSearchStore((state) =>
-    state.searchByPath[searchScopePath] ?? "",
+  const searchKeyword = useSearchStore(
+    (state) => state.searchByPath[searchScopePath] ?? "",
   );
   const isSearching = searchKeyword.trim().length > 0;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -66,12 +66,12 @@ export default function HomePage() {
           ))
         ) : filteredUsers.length > 0 ? (
           filteredUsers.map((user) => (
-              <ItemUser
-                key={user.id}
-                user={user}
-                isActive={String(user.id) === activeUserId}
-                onClick={() => handleClick(user.id)}
-              />
+            <ItemUser
+              key={user.id}
+              user={user}
+              isActive={String(user.id) === activeUserId}
+              onClick={() => handleClick(user.id)}
+            />
           ))
         ) : (
           <p className="p-4 text-center text-sm text-gray-500">

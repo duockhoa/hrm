@@ -1,8 +1,8 @@
 "use client";
 import useUserStore from "@/store/user.store";
-import UpdateAvatar from "@/components/update-avatar/aupdate-avatar";
-import FieldDisplay from "@/components/field-display/field-display";
-import ChangePassword from "@/components/form-change-password/form-change-password";
+import UpdateAvatar from "@/components/users/update-avatar";
+import FieldDisplay from "@/components/common/field-display";
+import ChangePassword from "@/components/users/form-change-password";
 
 export default function Profile() {
   const { user } = useUserStore();

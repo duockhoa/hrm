@@ -1,8 +1,8 @@
 "use client";
 
-import ApplicationDetail from "@/components/applications/detail-application";
-import ApplicationDetailHeader from "@/components/applications/header-application-detail";
-import ApplicationUsersInline from "@/components/applications/inline-application-users";
+import RoleDetail from "@/components/roles/detail-role";
+import RoleDetailHeader from "@/components/roles/header-role-detail";
+import RolePermissionsInline from "@/components/roles/inline-role-permissions";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -10,27 +10,26 @@ import {
 } from "@/components/ui/resizable";
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
-import { applicationsService } from "@/services/index.service";
-import type { Application } from "@/types/application";
+import { rolesService } from "@/services/index.service";
+import type { Role } from "@/types/role";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
-import ApplicationsPage from "../page";
+import RolesPage from "../page";
 
-export default function ApplicationDetailPage() {
+export default function RoleDetailPage() {
   const params = useParams<{ id: string }>();
-  const applicationId = Number(params.id);
+  const roleId = Number(params.id);
   const isMobile = useMobile();
-  const { data: application, error } = useSWR<Application>(
-    Number.isInteger(applicationId)
-      ? `${API_ROUTES.applications.base}/${applicationId}`
-      : null,
-    () => applicationsService.fetcherApplicationById(applicationId),
+  const roleKey = `${API_ROUTES.roles.base}/${roleId}`;
+  const { data: role, error } = useSWR<Role>(
+    Number.isInteger(roleId) ? roleKey : null,
+    () => rolesService.fetcherRoleById(roleId),
   );
 
   if (error) {
     return (
       <div className="h-full rounded-lg bg-white p-4 shadow-md">
-        Không thể tải thông tin ứng dụng.
+        Không thể tải thông tin vai trò.
       </div>
     );
   }
@@ -44,7 +43,7 @@ export default function ApplicationDetailPage() {
             minSize={30}
             className="min-h-0 min-w-100 overflow-hidden"
           >
-            <ApplicationsPage />
+            <RolesPage />
           </ResizablePanel>
         )}
         {!isMobile && <ResizableHandle />}
@@ -52,12 +51,10 @@ export default function ApplicationDetailPage() {
           defaultSize={isMobile ? 100 : 70}
           className="overflow-auto p-4"
         >
-          <ApplicationDetailHeader application={application} />
+          <RoleDetailHeader role={role} />
           <div className="mt-4 flex flex-col items-center gap-4 rounded">
-            <ApplicationDetail application={application} />
-            {application?.id && (
-              <ApplicationUsersInline applicationId={application.id} />
-            )}
+            <RoleDetail role={role} />
+            {role?.id && <RolePermissionsInline roleId={role.id} />}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

@@ -5,7 +5,7 @@ import useUsersStore from "@/store/users.store";
 import useDepartmentStore from "@/store/department.store";
 import useCompanyStore from "@/store/companies.store";
 import useSWR from "swr";
-import Header from "@/components/header/header";
+import Header from "@/components/layout/header";
 import {
   departmentsService,
   usersService,

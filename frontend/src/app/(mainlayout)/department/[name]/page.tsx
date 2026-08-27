@@ -1,5 +1,5 @@
 "use client";
-import DetailDepartmentHeader from "@/components/header-detail-department/header-detail-department";
+import DetailDepartmentHeader from "@/components/departments/header-detail-department";
 import { useParams } from "next/navigation";
 import {
   ResizablePanelGroup,
@@ -9,8 +9,8 @@ import {
 import DepartmentPage from "../page";
 import useMobile from "@/hooks/use-mobile";
 import useSWR from "swr";
-import DetailDepartment from "@/components/detail-department/detail-department";
-import DepartmentMembersInline from "@/components/inline-department-members/inline-department-members";
+import DetailDepartment from "@/components/departments/detail-department";
+import DepartmentMembersInline from "@/components/departments/inline-department-members";
 import { departmentsService } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
 export default function DetailDepartmentPage() {

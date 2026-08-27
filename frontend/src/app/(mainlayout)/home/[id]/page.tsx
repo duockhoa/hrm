@@ -1,5 +1,5 @@
 "use client";
-import DetailUserHeader from "@/components/header-detail-user/header-detail-user";
+import DetailUserHeader from "@/components/users/header-detail-user";
 import { useParams } from "next/navigation";
 import {
   ResizablePanelGroup,
@@ -9,18 +9,17 @@ import {
 import HomePage from "../page";
 import useMobile from "@/hooks/use-mobile";
 import useSWR from "swr";
-import UserDetail from "@/components/detail-user/detail-user";
-import UserRolesInline from "@/components/inline-user-roles/inline-user-roles";
-import UserApplicationsInline from "@/components/inline-user-applications/inline-user-applications";
+import UserDetail from "@/components/users/detail-user";
+import UserRolesInline from "@/components/users/inline-user-roles";
+import UserApplicationsInline from "@/components/users/inline-user-applications";
 import { userService } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
 export default function DetailUserPage() {
   const params: any = useParams();
   const isMobile = useMobile();
 
-  const { data, error } = useSWR(
-    `${API_ROUTES.users.base}/${params.id}`,
-    () => userService.fetcherUserById(params.id),
+  const { data, error } = useSWR(`${API_ROUTES.users.base}/${params.id}`, () =>
+    userService.fetcherUserById(params.id),
   );
   if (error) {
     return <div>Error loading user data.</div>;

@@ -10,8 +10,8 @@ import {
   UserCog,
 } from "lucide-react";
 import useSWR from "swr";
-import HeaderApps from "@/components/header-apps/header-apps";
-import ItemApp from "@/components/item-app/item-app";
+import HeaderApps from "@/components/applications/header-apps";
+import ItemApp from "@/components/applications/item-app";
 import { API_ROUTES } from "@/lib/api-routes";
 import { userService, usersService } from "@/services/index.service";
 import useUserStore from "@/store/user.store";

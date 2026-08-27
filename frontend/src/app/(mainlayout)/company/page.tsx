@@ -1,9 +1,9 @@
 "use client";
-import HeaderListCompany from "@/components/header-list-company/header-list-company";
+import HeaderListCompany from "@/components/companies/header-list-company";
 import useCompanyStore from "@/store/companies.store";
 import useSearchStore from "@/store/search.store";
 import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
-import ItemCompany from "@/components/item-company/item-company";
+import ItemCompany from "@/components/companies/item-company";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
@@ -34,8 +34,8 @@ export default function Company() {
   const { companies, companiesLoading } = useCompanyStore();
   const pathname = usePathname();
   const searchScopePath = getSearchScopePath(pathname);
-  const searchKeyword = useSearchStore((state) =>
-    state.searchByPath[searchScopePath] ?? "",
+  const searchKeyword = useSearchStore(
+    (state) => state.searchByPath[searchScopePath] ?? "",
   );
   const isSearching = searchKeyword.trim().length > 0;
   const filteredCompanies = useMemo(() => {

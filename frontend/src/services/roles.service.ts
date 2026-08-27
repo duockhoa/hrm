@@ -6,6 +6,11 @@ const fetcherRoles = async () => {
   return response.data;
 };
 
+const fetcherRoleById = async (id: number) => {
+  const response = await axiosClient.get(`${API_ROUTES.roles.base}/${id}`);
+  return response.data;
+};
+
 const createRole = async (data: { name: string; description?: string }) => {
   const response = await axiosClient.post(API_ROUTES.roles.base, data);
   return response.data;
@@ -37,6 +42,7 @@ const syncRolePermissions = async (roleId: number, permissionIds: number[]) => {
 
 const rolesService = {
   fetcherRoles,
+  fetcherRoleById,
   createRole,
   updateRole,
   deleteRole,

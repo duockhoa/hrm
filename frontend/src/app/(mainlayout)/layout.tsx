@@ -1,10 +1,15 @@
 "use client";
-import Header from "@/components/header/header";
-import Sidebar from "@/components/sidebar/sidebar";
+import Header from "@/components/layout/header";
+import Sidebar from "@/components/layout/sidebar";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useMobile from "@/hooks/use-mobile";
 import { useEffect } from "react";
-import { MdApps, MdPerson, MdWork, MdBusiness } from "react-icons/md";
+import {
+  MdAdminPanelSettings,
+  MdApps,
+  MdBusiness,
+  MdPerson,
+} from "react-icons/md";
 import useUsersStore from "@/store/users.store";
 import useDepartmentStore from "@/store/department.store";
 import useCompanyStore from "@/store/companies.store";
@@ -15,7 +20,7 @@ import {
   companiesService,
 } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
-import ApplicationAccessGuard from "@/components/application-access-guard/application-access-guard";
+import ApplicationAccessGuard from "@/components/applications/application-access-guard";
 const data = [
   {
     id: "1",
@@ -43,9 +48,9 @@ const data = [
   },
   {
     id: "5",
-    name: "Quản lý hợp đồng",
-    icon: <MdWork />,
-    url: "/contract",
+    name: "Vai trò",
+    icon: <MdAdminPanelSettings />,
+    url: "/roles",
   },
 ];
 

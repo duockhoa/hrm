@@ -1,5 +1,5 @@
 "use client";
-import HeaderListDepartment from "@/components/header-department-list/header-list-department";
+import HeaderListDepartment from "@/components/departments/header-list-department";
 import useDepartmentStore from "@/store/department.store";
 import useSearchStore from "@/store/search.store";
 import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
 
-import ItemDepartment from "@/components/item-department/item-department";
+import ItemDepartment from "@/components/departments/item-department";
 
 const DEPARTMENT_LIST_SCROLL_KEY = "departmentListScroll";
 
@@ -57,8 +57,8 @@ export default function DepartmentPage() {
     ? pathname.split("/")[2]
     : null;
   const searchScopePath = getSearchScopePath(pathname);
-  const searchKeyword = useSearchStore((state) =>
-    state.searchByPath[searchScopePath] ?? "",
+  const searchKeyword = useSearchStore(
+    (state) => state.searchByPath[searchScopePath] ?? "",
   );
   const isSearching = searchKeyword.trim().length > 0;
   const filteredDepartments = useMemo(() => {
