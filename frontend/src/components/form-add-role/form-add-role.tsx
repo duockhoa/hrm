@@ -5,22 +5,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type AddRoleFormProps = {
-  onSubmit: (data: { name: string; description: string }) => Promise<void>;
+  onSubmit: (data: {
+    name: string;
+    description: string;
+  }) => Promise<boolean | void>;
   onClose?: () => void;
+  initialData?: {
+    name: string;
+    description?: string | null;
+  };
+  submitLabel?: string;
 };
 
-export default function AddRoleForm({ onSubmit, onClose }: AddRoleFormProps) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+export default function AddRoleForm({
+  onSubmit,
+  onClose,
+  initialData,
+  submitLabel = "Lưu",
+}: AddRoleFormProps) {
+  const [name, setName] = useState(initialData?.name ?? "");
+  const [description, setDescription] = useState(
+    initialData?.description ?? "",
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const resetForm = () => {
+    setName(initialData?.name ?? "");
+    setDescription(initialData?.description ?? "");
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      await onSubmit({ name, description });
-      setName("");
-      setDescription("");
+      const shouldClose = await onSubmit({ name, description });
+      if (shouldClose === false) {
+        return;
+      }
+      resetForm();
       onClose?.();
     } finally {
       setIsSubmitting(false);
@@ -56,16 +78,13 @@ export default function AddRoleForm({ onSubmit, onClose }: AddRoleFormProps) {
 
         <div className="mt-4 flex justify-end">
           <Button type="submit" disabled={isSubmitting}>
-            Lưu
+            {submitLabel}
           </Button>
           <Button
             type="button"
             variant="outline"
             className="ml-2"
-            onClick={() => {
-              setName("");
-              setDescription("");
-            }}
+            onClick={resetForm}
             disabled={isSubmitting}
           >
             Đặt lại

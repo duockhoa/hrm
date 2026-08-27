@@ -7,6 +7,7 @@ import {
   AppWindow,
   ListChecks,
   Loader2,
+  Pencil,
   PlusIcon,
   Save,
   Search,
@@ -122,6 +123,12 @@ export default function SettingPage() {
   const [isAddRoleOpen, setIsAddRoleOpen] = useState(false);
   const [isAddPermissionOpen, setIsAddPermissionOpen] = useState(false);
   const [isAddApplicationOpen, setIsAddApplicationOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [editingPermission, setEditingPermission] = useState<Permission | null>(
+    null,
+  );
+  const [editingApplication, setEditingApplication] =
+    useState<Application | null>(null);
   const [isSavingRolePermissions, setIsSavingRolePermissions] = useState(false);
 
   const { data: roles = [], isLoading: rolesLoading } = useSWR<Role[]>(
@@ -193,7 +200,6 @@ export default function SettingPage() {
     );
   };
 
-
   const handleCreateRole = async (data: {
     name: string;
     description: string;
@@ -201,7 +207,7 @@ export default function SettingPage() {
     const name = data.name.trim();
     if (!name) {
       toast.error("Vui lòng nhập tên vai trò.");
-      return;
+      return false;
     }
 
     try {
@@ -212,8 +218,10 @@ export default function SettingPage() {
       setSelectedRoleId(role.id);
       await mutate(API_ROUTES.roles.base);
       toast.success("Đã tạo vai trò.");
+      return true;
     } catch {
       toast.error("Không thể tạo vai trò.");
+      return false;
     }
   };
 
@@ -224,7 +232,7 @@ export default function SettingPage() {
     const name = data.name.trim();
     if (!name) {
       toast.error("Vui lòng nhập mã quyền.");
-      return;
+      return false;
     }
 
     try {
@@ -234,8 +242,66 @@ export default function SettingPage() {
       });
       await mutate(API_ROUTES.permissions.base);
       toast.success("Đã tạo quyền.");
+      return true;
     } catch {
       toast.error("Không thể tạo quyền.");
+      return false;
+    }
+  };
+
+  const handleUpdateRole = async (data: {
+    name: string;
+    description: string;
+  }) => {
+    if (!editingRole) {
+      return false;
+    }
+
+    const name = data.name.trim();
+    if (!name) {
+      toast.error("Vui lòng nhập tên vai trò.");
+      return false;
+    }
+
+    try {
+      await rolesService.updateRole(editingRole.id, {
+        name,
+        description: data.description.trim(),
+      });
+      await mutate(API_ROUTES.roles.base);
+      toast.success("Đã cập nhật vai trò.");
+      return true;
+    } catch {
+      toast.error("Không thể cập nhật vai trò.");
+      return false;
+    }
+  };
+
+  const handleUpdatePermission = async (data: {
+    name: string;
+    description: string;
+  }) => {
+    if (!editingPermission) {
+      return false;
+    }
+
+    const name = data.name.trim();
+    if (!name) {
+      toast.error("Vui lòng nhập mã quyền.");
+      return false;
+    }
+
+    try {
+      await permissionsService.updatePermission(editingPermission.id, {
+        name,
+        description: data.description.trim(),
+      });
+      await refreshAuthorizationData();
+      toast.success("Đã cập nhật quyền.");
+      return true;
+    } catch {
+      toast.error("Không thể cập nhật quyền.");
+      return false;
     }
   };
 
@@ -282,12 +348,12 @@ export default function SettingPage() {
 
     if (!key || !name) {
       toast.error("Vui lòng nhập key và tên ứng dụng.");
-      return;
+      return false;
     }
 
     if (!Number.isInteger(defaultOrder)) {
       toast.error("Thứ tự phải là số nguyên.");
-      return;
+      return false;
     }
 
     try {
@@ -300,8 +366,10 @@ export default function SettingPage() {
       });
       await mutate(API_ROUTES.applications.base);
       toast.success("Đã tạo ứng dụng.");
+      return true;
     } catch {
       toast.error("Không thể tạo ứng dụng.");
+      return false;
     }
   };
 
@@ -316,6 +384,46 @@ export default function SettingPage() {
       );
     } catch {
       toast.error("Không thể cập nhật trạng thái ứng dụng.");
+    }
+  };
+
+  const handleUpdateApplication = async (data: {
+    key: string;
+    name: string;
+    description: string;
+    default_order: string;
+  }) => {
+    if (!editingApplication) {
+      return false;
+    }
+
+    const key = data.key.trim();
+    const name = data.name.trim();
+    const defaultOrder = Number(data.default_order || 0);
+
+    if (!key || !name) {
+      toast.error("Vui lòng nhập key và tên ứng dụng.");
+      return false;
+    }
+
+    if (!Number.isInteger(defaultOrder)) {
+      toast.error("Thứ tự phải là số nguyên.");
+      return false;
+    }
+
+    try {
+      await applicationsService.updateApplication(editingApplication.id, {
+        key,
+        name,
+        description: data.description.trim(),
+        default_order: defaultOrder,
+      });
+      await mutate(API_ROUTES.applications.base);
+      toast.success("Đã cập nhật ứng dụng.");
+      return true;
+    } catch {
+      toast.error("Không thể cập nhật ứng dụng.");
+      return false;
     }
   };
 
@@ -353,7 +461,6 @@ export default function SettingPage() {
     }
   };
 
-
   const renderRolesTab = () => (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-col gap-3 border-b border-gray-200 p-4 lg:flex-row lg:items-start lg:justify-between">
@@ -383,6 +490,29 @@ export default function SettingPage() {
                   onSubmit={handleCreateRole}
                   onClose={() => setIsAddRoleOpen(false)}
                 />
+              </DialogContent>
+            </Dialog>
+            <Dialog
+              open={Boolean(editingRole)}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setEditingRole(null);
+                }
+              }}
+            >
+              <DialogContent className="max-w-lg">
+                <DialogTitle className="mb-4 text-center text-lg font-semibold">
+                  SỬA VAI TRÒ
+                </DialogTitle>
+                {editingRole && (
+                  <AddRoleForm
+                    key={editingRole.id}
+                    initialData={editingRole}
+                    submitLabel="Cập nhật"
+                    onSubmit={handleUpdateRole}
+                    onClose={() => setEditingRole(null)}
+                  />
+                )}
               </DialogContent>
             </Dialog>
           </div>
@@ -431,16 +561,32 @@ export default function SettingPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <button
-                          type="button"
-                          className="inline-flex text-red-500 hover:text-red-700"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleDeleteRole(role.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            type="button"
+                            title="Sửa vai trò"
+                            aria-label={`Sửa vai trò ${role.name}`}
+                            className="inline-flex text-blue-600 hover:text-blue-800"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setEditingRole(role);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Xóa vai trò"
+                            aria-label={`Xóa vai trò ${role.name}`}
+                            className="inline-flex text-red-500 hover:text-red-700"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeleteRole(role.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -562,6 +708,29 @@ export default function SettingPage() {
             />
           </DialogContent>
         </Dialog>
+        <Dialog
+          open={Boolean(editingPermission)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingPermission(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-lg">
+            <DialogTitle className="mb-4 text-center text-lg font-semibold">
+              SỬA QUYỀN
+            </DialogTitle>
+            {editingPermission && (
+              <AddPermissionForm
+                key={editingPermission.id}
+                initialData={editingPermission}
+                submitLabel="Cập nhật"
+                onSubmit={handleUpdatePermission}
+                onClose={() => setEditingPermission(null)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
@@ -606,13 +775,26 @@ export default function SettingPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <button
-                      type="button"
-                      className="inline-flex text-red-500 hover:text-red-700"
-                      onClick={() => handleDeletePermission(permission.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        title="Sửa quyền"
+                        aria-label={`Sửa quyền ${permission.name}`}
+                        className="inline-flex text-blue-600 hover:text-blue-800"
+                        onClick={() => setEditingPermission(permission)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Xóa quyền"
+                        aria-label={`Xóa quyền ${permission.name}`}
+                        className="inline-flex text-red-500 hover:text-red-700"
+                        onClick={() => handleDeletePermission(permission.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -662,6 +844,34 @@ export default function SettingPage() {
               onSubmit={handleCreateApplication}
               onClose={() => setIsAddApplicationOpen(false)}
             />
+          </DialogContent>
+        </Dialog>
+        <Dialog
+          open={Boolean(editingApplication)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingApplication(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-lg">
+            <DialogTitle className="mb-4 text-center text-lg font-semibold">
+              SỬA ỨNG DỤNG
+            </DialogTitle>
+            {editingApplication && (
+              <AddApplicationForm
+                key={editingApplication.id}
+                initialData={{
+                  key: editingApplication.key,
+                  name: editingApplication.name,
+                  description: editingApplication.description ?? "",
+                  default_order: String(editingApplication.default_order),
+                }}
+                submitLabel="Cập nhật"
+                onSubmit={handleUpdateApplication}
+                onClose={() => setEditingApplication(null)}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -718,13 +928,26 @@ export default function SettingPage() {
                     </button>
                   </TableCell>
                   <TableCell className="text-right">
-                    <button
-                      type="button"
-                      className="inline-flex text-red-500 hover:text-red-700"
-                      onClick={() => handleDeleteApplication(application.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        title="Sửa ứng dụng"
+                        aria-label={`Sửa ứng dụng ${application.name}`}
+                        className="inline-flex text-blue-600 hover:text-blue-800"
+                        onClick={() => setEditingApplication(application)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Xóa ứng dụng"
+                        aria-label={`Xóa ứng dụng ${application.name}`}
+                        className="inline-flex text-red-500 hover:text-red-700"
+                        onClick={() => handleDeleteApplication(application.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

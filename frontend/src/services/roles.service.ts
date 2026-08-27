@@ -11,15 +11,23 @@ const createRole = async (data: { name: string; description?: string }) => {
   return response.data;
 };
 
+const updateRole = async (
+  id: number,
+  data: { name?: string; description?: string },
+) => {
+  const response = await axiosClient.put(
+    `${API_ROUTES.roles.base}/${id}`,
+    data,
+  );
+  return response.data;
+};
+
 const deleteRole = async (id: number) => {
   const response = await axiosClient.delete(`${API_ROUTES.roles.base}/${id}`);
   return response.data;
 };
 
-const syncRolePermissions = async (
-  roleId: number,
-  permissionIds: number[],
-) => {
+const syncRolePermissions = async (roleId: number, permissionIds: number[]) => {
   const response = await axiosClient.put(
     `${API_ROUTES.roles.base}/${roleId}/permissions`,
     { permissionIds },
@@ -27,9 +35,12 @@ const syncRolePermissions = async (
   return response.data;
 };
 
-export default {
+const rolesService = {
   fetcherRoles,
   createRole,
+  updateRole,
   deleteRole,
   syncRolePermissions,
 };
+
+export default rolesService;

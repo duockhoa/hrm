@@ -14,6 +14,17 @@ const createPermission = async (data: {
   return response.data;
 };
 
+const updatePermission = async (
+  id: number,
+  data: { name?: string; description?: string },
+) => {
+  const response = await axiosClient.put(
+    `${API_ROUTES.permissions.base}/${id}`,
+    data,
+  );
+  return response.data;
+};
+
 const deletePermission = async (id: number) => {
   const response = await axiosClient.delete(
     `${API_ROUTES.permissions.base}/${id}`,
@@ -21,8 +32,11 @@ const deletePermission = async (id: number) => {
   return response.data;
 };
 
-export default {
+const permissionsService = {
   fetcherPermissions,
   createPermission,
+  updatePermission,
   deletePermission,
 };
+
+export default permissionsService;

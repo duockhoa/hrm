@@ -12,8 +12,10 @@ type AddApplicationFormData = {
 };
 
 type AddApplicationFormProps = {
-  onSubmit: (data: AddApplicationFormData) => Promise<void>;
+  onSubmit: (data: AddApplicationFormData) => Promise<boolean | void>;
   onClose?: () => void;
+  initialData?: Partial<AddApplicationFormData>;
+  submitLabel?: string;
 };
 
 const initialFormData: AddApplicationFormData = {
@@ -26,9 +28,15 @@ const initialFormData: AddApplicationFormData = {
 export default function AddApplicationForm({
   onSubmit,
   onClose,
+  initialData,
+  submitLabel = "Lưu",
 }: AddApplicationFormProps) {
+  const getInitialFormData = (): AddApplicationFormData => ({
+    ...initialFormData,
+    ...initialData,
+  });
   const [formData, setFormData] =
-    useState<AddApplicationFormData>(initialFormData);
+    useState<AddApplicationFormData>(getInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateField = (field: keyof AddApplicationFormData, value: string) => {
@@ -39,14 +47,17 @@ export default function AddApplicationForm({
   };
 
   const resetForm = () => {
-    setFormData(initialFormData);
+    setFormData(getInitialFormData());
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      const shouldClose = await onSubmit(formData);
+      if (shouldClose === false) {
+        return;
+      }
       resetForm();
       onClose?.();
     } finally {
@@ -110,7 +121,7 @@ export default function AddApplicationForm({
 
         <div className="mt-4 flex justify-end">
           <Button type="submit" disabled={isSubmitting}>
-            Lưu
+            {submitLabel}
           </Button>
           <Button
             type="button"

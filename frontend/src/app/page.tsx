@@ -142,16 +142,9 @@ export default function Home() {
   }, []);
 
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredApps = APPS.filter((app) => {
-    if (
-      ACCESS_CONTROLLED_APP_KEYS.has(app.key) &&
-      !allowedApplicationKeys.has(app.key)
-    ) {
-      return false;
-    }
-
-    return app.name.toLowerCase().includes(normalizedSearch);
-  });
+  const filteredApps = APPS.filter((app) =>
+    app.name.toLowerCase().includes(normalizedSearch),
+  );
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#031125] text-white">
@@ -190,6 +183,9 @@ export default function Home() {
             <div className="mt-10 grid w-full max-w-4xl grid-cols-3 place-items-center gap-x-2 gap-y-8 sm:grid-cols-3 md:mt-12 md:grid-cols-5 md:gap-x-10">
               {filteredApps.map((app) => {
                 const Icon = app.icon;
+                const hasAccess =
+                  !ACCESS_CONTROLLED_APP_KEYS.has(app.key) ||
+                  allowedApplicationKeys.has(app.key);
 
                 return (
                   <ItemApp
@@ -198,6 +194,7 @@ export default function Home() {
                     name={app.name}
                     external={app.external}
                     tileClassName={app.tileClassName}
+                    disabled={!hasAccess}
                     icon={
                       <Icon className="size-10 text-white" strokeWidth={2.4} />
                     }
