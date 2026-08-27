@@ -10,6 +10,7 @@ import { ApplicationsService } from './applications.service';
 describe('ApplicationsService', () => {
   let service: ApplicationsService;
   let prismaService: {
+    $transaction: jest.Mock;
     applications: {
       findMany: jest.Mock;
       findUnique: jest.Mock;
@@ -17,16 +18,31 @@ describe('ApplicationsService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    users: {
+      findMany: jest.Mock;
+    };
+    userApplications: {
+      deleteMany: jest.Mock;
+      createMany: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
     prismaService = {
+      $transaction: jest.fn((callback) => callback(prismaService)),
       applications: {
         findMany: jest.fn(),
         findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
         delete: jest.fn(),
+      },
+      users: {
+        findMany: jest.fn(),
+      },
+      userApplications: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
       },
     };
 
@@ -140,5 +156,41 @@ describe('ApplicationsService', () => {
     prismaService.applications.findUnique.mockResolvedValue(null);
 
     await expect(service.findById(1)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('gets users assigned to an application', async () => {
+    const users = [{ id: 2, username: '002', name: 'Nguyen Van A' }];
+    prismaService.applications.findUnique.mockResolvedValue({ id: 1 });
+    prismaService.users.findMany.mockResolvedValue(users);
+
+    await expect(service.findUsers(1)).resolves.toBe(users);
+    expect(prismaService.users.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userApplications: { some: { application_id: 1 } },
+        },
+      }),
+    );
+  });
+
+  it('replaces the users assigned to an application', async () => {
+    const users = [{ id: 2 }, { id: 3 }];
+    prismaService.applications.findUnique.mockResolvedValue({ id: 1 });
+    prismaService.users.findMany
+      .mockResolvedValueOnce(users)
+      .mockResolvedValueOnce(users);
+    prismaService.userApplications.deleteMany.mockResolvedValue({ count: 1 });
+    prismaService.userApplications.createMany.mockResolvedValue({ count: 2 });
+
+    await expect(service.syncUsers(1, [2, 3, 3])).resolves.toBe(users);
+    expect(prismaService.userApplications.deleteMany).toHaveBeenCalledWith({
+      where: { application_id: 1 },
+    });
+    expect(prismaService.userApplications.createMany).toHaveBeenCalledWith({
+      data: [
+        { application_id: 1, user_id: 2 },
+        { application_id: 1, user_id: 3 },
+      ],
+    });
   });
 });

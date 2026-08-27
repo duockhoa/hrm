@@ -33,6 +33,7 @@ import { CleaningRequirementsModule } from './modules/cleaning-requirements/clea
 import { SecondaryPackagingStageRequirementsModule } from './modules/secondary-packaging-stage-requirements/secondary-packaging-stage-requirements.module';
 import { DosageFormsModule } from './modules/dosage-forms/dosage-forms.module';
 import { UserLoginSessionsModule } from './modules/user-login-sessions/user-login-sessions.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { UserLoginSessionsModule } from './modules/user-login-sessions/user-logi
     SecondaryPackagingStageRequirementsModule,
     DosageFormsModule,
     UserLoginSessionsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

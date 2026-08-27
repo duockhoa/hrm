@@ -23,6 +23,12 @@ describe('ApplicationsController', () => {
     expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findById)).toEqual([
       APPLICATION_PERMISSIONS.READ,
     ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findUsers)).toEqual([
+      APPLICATION_PERMISSIONS.READ,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.syncUsers)).toEqual([
+      APPLICATION_PERMISSIONS.UPDATE,
+    ]);
     expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.create)).toEqual([
       APPLICATION_PERMISSIONS.CREATE,
     ]);

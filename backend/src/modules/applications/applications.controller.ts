@@ -19,6 +19,7 @@ import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { ApplicationsService } from './applications.service';
 import { APPLICATION_PERMISSIONS } from './applications.permissions';
 import { CreateApplicationDto } from './dto/create-application.dto';
+import { SyncApplicationUsersDto } from './dto/sync-application-users.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 
 @UseGuards(jwtAuthGuard, PermissionsGuard)
@@ -39,6 +40,21 @@ export class ApplicationsController {
     includeInactive = true,
   ) {
     return this.applicationsService.findAll(includeInactive);
+  }
+
+  @Get(':id/users')
+  @Permissions(APPLICATION_PERMISSIONS.READ)
+  findUsers(@Param('id', ParseIntPipe) id: number) {
+    return this.applicationsService.findUsers(id);
+  }
+
+  @Patch(':id/users')
+  @Permissions(APPLICATION_PERMISSIONS.UPDATE)
+  syncUsers(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: SyncApplicationUsersDto,
+  ) {
+    return this.applicationsService.syncUsers(id, body.userIds);
   }
 
   @Get(':id')

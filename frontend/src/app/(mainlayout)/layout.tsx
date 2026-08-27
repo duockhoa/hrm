@@ -4,12 +4,7 @@ import Sidebar from "@/components/sidebar/sidebar";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useMobile from "@/hooks/use-mobile";
 import { useEffect } from "react";
-import {
-  MdPerson,
-  MdCalendarToday,
-  MdWork,
-  MdBusiness,
-} from "react-icons/md";
+import { MdApps, MdPerson, MdWork, MdBusiness } from "react-icons/md";
 import useUsersStore from "@/store/users.store";
 import useDepartmentStore from "@/store/department.store";
 import useCompanyStore from "@/store/companies.store";
@@ -42,9 +37,9 @@ const data = [
   },
   {
     id: "4",
-    name: "Quản lý ngày phép",
-    icon: <MdCalendarToday />,
-    url: "/leave",
+    name: "Ứng dụng",
+    icon: <MdApps />,
+    url: "/applications",
   },
   {
     id: "5",
@@ -88,8 +83,7 @@ function MainLayoutContent({
 
   const { setDepartments, setIsLoading: setDepartmentsLoading } =
     useDepartmentStore();
-  const { setCompanies, setIsLoading: setCompaniesLoading } =
-    useCompanyStore();
+  const { setCompanies, setIsLoading: setCompaniesLoading } = useCompanyStore();
 
   const { data: departments, isLoading: isDepartmentsLoading } = useSWR(
     API_ROUTES.departments.base,

@@ -105,6 +105,8 @@ model Users {
   inspectedProductionOrderFiltrationChecks              ProductionOrderFiltrationChecks[]                               @relation("ProductionOrderFiltrationCheckInspector")
   userApplications                                      UserApplications[]
   loginSessions                                         UserLoginSessions[]
+  receivedNotifications                                 Notifications[]                                                 @relation("NotificationRecipient")
+  createdNotifications                                  Notifications[]                                                 @relation("NotificationActor")
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
@@ -234,6 +236,29 @@ model UserLoginSessions {
   @@index([user_id, logout_at], map: "user_login_sessions_open_session_idx")
   @@index([token_id], map: "user_login_sessions_token_id_idx")
   @@map("user_login_sessions")
+}
+
+model Notifications {
+  id            Int       @id @default(autoincrement())
+  user_id       Int
+  actor_user_id Int?
+  title         String    @db.VarChar(255)
+  message       String    @db.Text
+  type          String    @default("system") @db.VarChar(50)
+  action_url    String?   @db.VarChar(2048)
+  metadata      Json?
+  is_read       Boolean   @default(false)
+  read_at       DateTime?
+  expires_at    DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now()) @updatedAt
+  user          Users     @relation("NotificationRecipient", fields: [user_id], references: [id], onDelete: Cascade)
+  actorUser     Users?    @relation("NotificationActor", fields: [actor_user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, is_read, created_at], map: "notifications_user_read_created_at_idx")
+  @@index([expires_at], map: "notifications_expires_at_idx")
+  @@index([actor_user_id], map: "notifications_actor_user_id_idx")
+  @@map("notifications")
 }
 
 model Roles {

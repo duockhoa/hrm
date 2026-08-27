@@ -32,6 +32,52 @@ export class ApplicationsService {
     return application;
   }
 
+  async findUsers(id: number) {
+    await this.findById(id);
+
+    return this.prismaService.users.findMany({
+      where: {
+        userApplications: {
+          some: { application_id: id },
+        },
+      },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        email: true,
+        avatar: true,
+        department: true,
+        position: true,
+        status: true,
+      },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async syncUsers(id: number, userIds: number[]) {
+    await this.findById(id);
+    const normalizedUserIds = this.normalizeIds(userIds, 'userIds');
+    await this.ensureUsersExist(normalizedUserIds);
+
+    await this.prismaService.$transaction(async (prisma) => {
+      await prisma.userApplications.deleteMany({
+        where: { application_id: id },
+      });
+
+      if (normalizedUserIds.length > 0) {
+        await prisma.userApplications.createMany({
+          data: normalizedUserIds.map((userId) => ({
+            application_id: id,
+            user_id: userId,
+          })),
+        });
+      }
+    });
+
+    return this.findUsers(id);
+  }
+
   async create(dto: CreateApplicationDto) {
     const data = this.buildCreateData(dto);
     await this.ensureKeyIsAvailable(data.key);
@@ -124,6 +170,48 @@ export class ApplicationsService {
     if (existing && existing.id !== currentId) {
       throw new ConflictException('Application key already exists');
     }
+  }
+
+  private async ensureUsersExist(userIds: number[]) {
+    if (userIds.length === 0) {
+      return;
+    }
+
+    const users = await this.prismaService.users.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true },
+    });
+    const existingUserIds = new Set(users.map((user) => user.id));
+    const missingUserIds = userIds.filter(
+      (userId) => !existingUserIds.has(userId),
+    );
+
+    if (missingUserIds.length > 0) {
+      throw new NotFoundException(
+        `Users not found: ${missingUserIds.join(', ')}`,
+      );
+    }
+  }
+
+  private normalizeIds(ids: number[], fieldName: string) {
+    if (!Array.isArray(ids)) {
+      throw new BadRequestException(`${fieldName} must be an array`);
+    }
+
+    return [
+      ...new Set(
+        ids.map((id) => {
+          const normalizedId = Number(id);
+          if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+            throw new BadRequestException(
+              `${fieldName} must contain positive integers`,
+            );
+          }
+
+          return normalizedId;
+        }),
+      ),
+    ];
   }
 
   private normalizeRequiredString(

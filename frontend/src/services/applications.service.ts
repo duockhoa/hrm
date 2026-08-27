@@ -16,6 +16,31 @@ const fetcherApplications = async (includeInactive = true) => {
   return response.data;
 };
 
+const fetcherApplicationById = async (applicationId: number) => {
+  const response = await axiosClient.get(
+    `${API_ROUTES.applications.base}/${applicationId}`,
+  );
+  return response.data;
+};
+
+const fetcherApplicationUsers = async (applicationId: number) => {
+  const response = await axiosClient.get(
+    `${API_ROUTES.applications.base}/${applicationId}/users`,
+  );
+  return response.data;
+};
+
+const syncApplicationUsers = async (
+  applicationId: number,
+  userIds: number[],
+) => {
+  const response = await axiosClient.patch(
+    `${API_ROUTES.applications.base}/${applicationId}/users`,
+    { userIds },
+  );
+  return response.data;
+};
+
 const createApplication = async (data: ApplicationPayload) => {
   const response = await axiosClient.post(API_ROUTES.applications.base, data);
   return response.data;
@@ -41,6 +66,9 @@ const deleteApplication = async (applicationId: number) => {
 
 export default {
   fetcherApplications,
+  fetcherApplicationById,
+  fetcherApplicationUsers,
+  syncApplicationUsers,
   createApplication,
   updateApplication,
   deleteApplication,
