@@ -1,15 +1,13 @@
 "use client";
 
+import PermissionListHeader from "@/components/permissions/header-permission-list";
 import AddPermissionForm from "@/components/permissions/form-add-permission";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -19,9 +17,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { API_ROUTES } from "@/lib/api-routes";
+import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
 import { permissionsService } from "@/services/index.service";
-import { Pencil, PlusIcon, Search, Trash2 } from "lucide-react";
+import useSearchStore from "@/store/search.store";
+import { Pencil, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import useSWR, { mutate } from "swr";
 
@@ -32,24 +33,14 @@ type Permission = {
   rolePermissions?: Array<unknown>;
 };
 
-const matchesKeyword = (values: Array<unknown>, keyword: string) => {
-  const normalizedKeyword = keyword.trim().toLowerCase();
-  if (!normalizedKeyword) {
-    return true;
-  }
-
-  return values.some((value) =>
-    String(value ?? "")
-      .toLowerCase()
-      .includes(normalizedKeyword),
-  );
-};
-
 export default function PermissionsPage() {
-  const [search, setSearch] = useState("");
-  const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingPermission, setEditingPermission] = useState<Permission | null>(
     null,
+  );
+  const pathname = usePathname();
+  const searchScopePath = getSearchScopePath(pathname);
+  const searchKeyword = useSearchStore(
+    (state) => state.searchByPath[searchScopePath] ?? "",
   );
   const { data: permissions = [], isLoading } = useSWR<Permission[]>(
     API_ROUTES.permissions.base,
@@ -58,34 +49,13 @@ export default function PermissionsPage() {
   const filteredPermissions = useMemo(
     () =>
       permissions.filter((permission) =>
-        matchesKeyword(
+        matchesSearchKeyword(
           [permission.id, permission.name, permission.description],
-          search,
+          searchKeyword,
         ),
       ),
-    [permissions, search],
+    [permissions, searchKeyword],
   );
-
-  const handleCreate = async (data: { name: string; description: string }) => {
-    const name = data.name.trim();
-    if (!name) {
-      toast.error("Vui lòng nhập mã quyền.");
-      return false;
-    }
-
-    try {
-      await permissionsService.createPermission({
-        name,
-        description: data.description.trim(),
-      });
-      await mutate(API_ROUTES.permissions.base);
-      toast.success("Đã tạo quyền.");
-      return true;
-    } catch {
-      toast.error("Không thể tạo quyền.");
-      return false;
-    }
-  };
 
   const handleUpdate = async (data: { name: string; description: string }) => {
     if (!editingPermission) {
@@ -127,40 +97,8 @@ export default function PermissionsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md">
-      <div className="shrink-0 border-b border-gray-200 px-4 py-3">
-        <h1 className="text-xl font-semibold text-gray-900">Phân quyền</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Quản lý danh sách quyền truy cập của hệ thống.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-3 border-b border-gray-200 p-4 xl:flex-row">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm theo ID, key quyền hoặc mô tả"
-            className="pl-9"
-          />
-        </div>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger asChild>
-            <Button className="cursor-pointer">
-              <PlusIcon />
-              Thêm quyền
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogTitle className="mb-4 text-center text-lg font-semibold">
-              THÊM QUYỀN MỚI
-            </DialogTitle>
-            <AddPermissionForm
-              onSubmit={handleCreate}
-              onClose={() => setIsAddOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+      <div className="shrink-0 p-2">
+        <PermissionListHeader />
         <Dialog
           open={Boolean(editingPermission)}
           onOpenChange={(open) => {
