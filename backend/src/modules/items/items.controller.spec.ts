@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { ItemEquipmentService } from './item-equipment.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
 import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
 import { MixingActivityTemplateStageStepParametersService } from './mixing-activity-template-stage-step-parameters.service';
 import { ItemsController } from './items.controller';
+import { ITEM_PERMISSIONS } from './items.permissions';
 import { ItemsService } from './items.service';
 
 describe('ItemsController', () => {
@@ -133,6 +135,66 @@ describe('ItemsController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('declares permission keys for item routes', () => {
+    const metadata = (method: keyof ItemsController) =>
+      Reflect.getMetadata(PERMISSIONS_KEY, controller[method]);
+
+    ['findAll', 'findFinishedProducts', 'findSemiFinishedProducts', 'findRawMaterials'].forEach(
+      (method) => expect(metadata(method as keyof ItemsController)).toEqual([ITEM_PERMISSIONS.LIST]),
+    );
+    [
+      'findItemEquipmentById',
+      'findAllMixingActivityTemplates',
+      'findMixingActivityTemplateById',
+      'findMixingActivityTemplateStageById',
+      'findMixingActivityTemplateStageStepById',
+      'findMixingActivityTemplateStageStepParameterById',
+      'findMixingActivityTemplateStages',
+      'findMixingActivityTemplateStageSteps',
+      'findMixingActivityTemplateStageStepParameters',
+      'findItemEquipment',
+      'findMixingActivityTemplates',
+      'findItemByCode',
+    ].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        ITEM_PERMISSIONS.READ,
+      ]),
+    );
+    [
+      'createMixingActivityTemplateStage',
+      'createMixingActivityTemplateStageStep',
+      'createMixingActivityTemplateStageStepParameter',
+      'createItemEquipment',
+      'createMixingActivityTemplate',
+    ].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        ITEM_PERMISSIONS.CREATE,
+      ]),
+    );
+    [
+      'updateMixingActivityTemplate',
+      'updateMixingActivityTemplateStage',
+      'updateMixingActivityTemplateStageStep',
+      'updateMixingActivityTemplateStageStepParameter',
+      'updateItem',
+    ].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        ITEM_PERMISSIONS.UPDATE,
+      ]),
+    );
+    [
+      'deleteItemEquipment',
+      'deleteMixingActivityTemplate',
+      'deleteMixingActivityTemplateStage',
+      'deleteMixingActivityTemplateStageStep',
+      'deleteMixingActivityTemplateStageStepParameter',
+    ].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        ITEM_PERMISSIONS.DELETE,
+      ]),
+    );
   });
 
   it('gets item detail by code', async () => {

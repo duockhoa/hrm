@@ -617,7 +617,15 @@ DELETE /departments/:name
 
 ## Applications
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `applications.list` | `GET /applications` |
+| `applications.read` | `GET /applications/:id` |
+| `applications.create` | `POST /applications` |
+| `applications.update` | `PATCH /applications/:id` |
+| `applications.delete` | `DELETE /applications/:id` |
 
 Nhóm API này quản trị danh sách ứng dụng để gán trực tiếp cho user qua `user_applications`.
 
@@ -901,7 +909,15 @@ Response:
 
 ## Items
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API item, thiết bị theo item và biểu mẫu hoạt động pha trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `items.list` | `GET /items`, `GET /items/finished-products`, `GET /items/semi-finished-products`, `GET /items/raw-materials` |
+| `items.read` | Các API `GET` chi tiết item, item-equipment và biểu mẫu hoạt động pha |
+| `items.create` | Các API `POST` item-equipment và biểu mẫu hoạt động pha |
+| `items.update` | Các API `PATCH` item và biểu mẫu hoạt động pha |
+| `items.delete` | Các API `DELETE` item-equipment và biểu mẫu hoạt động pha |
 
 ### Lấy danh sách item
 

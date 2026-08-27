@@ -10,6 +10,9 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { Permissions } from 'src/decorators/permissions.decorator';
+import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
 import { CreateMixingActivityTemplateDto } from './dto/create-mixing-activity-template.dto';
 import { CreateMixingActivityTemplateStageDto } from './dto/create-mixing-activity-template-stage.dto';
@@ -26,10 +29,9 @@ import { MixingActivityTemplateStagesService } from './mixing-activity-template-
 import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
 import { MixingActivityTemplateStageStepParametersService } from './mixing-activity-template-stage-step-parameters.service';
 import { ItemsService } from './items.service';
+import { ITEM_PERMISSIONS } from './items.permissions';
 
-import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
-
-@UseGuards(jwtAuthGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('items')
 export class ItemsController {
   constructor(
@@ -42,26 +44,31 @@ export class ItemsController {
   ) {}
 
   @Get()
+  @Permissions(ITEM_PERMISSIONS.LIST)
   async findAll() {
     return this.itemsService.findAll();
   }
 
   @Get('finished-products')
+  @Permissions(ITEM_PERMISSIONS.LIST)
   async findFinishedProducts() {
     return this.itemsService.findFinishedProducts();
   }
 
   @Get('semi-finished-products')
+  @Permissions(ITEM_PERMISSIONS.LIST)
   async findSemiFinishedProducts() {
     return this.itemsService.findSemiFinishedProducts();
   }
 
   @Get('raw-materials')
+  @Permissions(ITEM_PERMISSIONS.LIST)
   async findRawMaterials() {
     return this.itemsService.findRawMaterials();
   }
 
   @Get('equipment/:itemEquipmentId')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findItemEquipmentById(
     @Param('itemEquipmentId', ParseIntPipe) itemEquipmentId: number,
   ) {
@@ -69,6 +76,7 @@ export class ItemsController {
   }
 
   @Delete('equipment/:itemEquipmentId')
+  @Permissions(ITEM_PERMISSIONS.DELETE)
   async deleteItemEquipment(
     @Param('itemEquipmentId', ParseIntPipe) itemEquipmentId: number,
   ) {
@@ -76,11 +84,13 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-templates')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findAllMixingActivityTemplates() {
     return this.mixingActivityTemplatesService.findAll();
   }
 
   @Get('mixing-activity-templates/:templateId')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findMixingActivityTemplateById(
     @Param('templateId', ParseIntPipe) templateId: number,
   ) {
@@ -88,6 +98,7 @@ export class ItemsController {
   }
 
   @Patch('mixing-activity-templates/:templateId')
+  @Permissions(ITEM_PERMISSIONS.UPDATE)
   async updateMixingActivityTemplate(
     @Param('templateId', ParseIntPipe) templateId: number,
     @Body() updateDto: UpdateMixingActivityTemplateDto,
@@ -96,6 +107,7 @@ export class ItemsController {
   }
 
   @Delete('mixing-activity-templates/:templateId')
+  @Permissions(ITEM_PERMISSIONS.DELETE)
   async deleteMixingActivityTemplate(
     @Param('templateId', ParseIntPipe) templateId: number,
   ) {
@@ -103,6 +115,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stages/:stageId')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findMixingActivityTemplateStageById(
     @Param('stageId', ParseIntPipe) stageId: number,
   ) {
@@ -110,6 +123,7 @@ export class ItemsController {
   }
 
   @Patch('mixing-activity-template-stages/:stageId')
+  @Permissions(ITEM_PERMISSIONS.UPDATE)
   async updateMixingActivityTemplateStage(
     @Param('stageId', ParseIntPipe) stageId: number,
     @Body() updateDto: UpdateMixingActivityTemplateStageDto,
@@ -118,6 +132,7 @@ export class ItemsController {
   }
 
   @Delete('mixing-activity-template-stages/:stageId')
+  @Permissions(ITEM_PERMISSIONS.DELETE)
   async deleteMixingActivityTemplateStage(
     @Param('stageId', ParseIntPipe) stageId: number,
   ) {
@@ -125,6 +140,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stage-steps/:stepId')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findMixingActivityTemplateStageStepById(
     @Param('stepId', ParseIntPipe) stepId: number,
   ) {
@@ -132,6 +148,7 @@ export class ItemsController {
   }
 
   @Patch('mixing-activity-template-stage-steps/:stepId')
+  @Permissions(ITEM_PERMISSIONS.UPDATE)
   async updateMixingActivityTemplateStageStep(
     @Param('stepId', ParseIntPipe) stepId: number,
     @Body() updateDto: UpdateMixingActivityTemplateStageStepDto,
@@ -143,6 +160,7 @@ export class ItemsController {
   }
 
   @Delete('mixing-activity-template-stage-steps/:stepId')
+  @Permissions(ITEM_PERMISSIONS.DELETE)
   async deleteMixingActivityTemplateStageStep(
     @Param('stepId', ParseIntPipe) stepId: number,
   ) {
@@ -150,6 +168,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stage-step-parameters/:parameterId')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findMixingActivityTemplateStageStepParameterById(
     @Param('parameterId', ParseIntPipe) parameterId: number,
   ) {
@@ -159,6 +178,7 @@ export class ItemsController {
   }
 
   @Patch('mixing-activity-template-stage-step-parameters/:parameterId')
+  @Permissions(ITEM_PERMISSIONS.UPDATE)
   async updateMixingActivityTemplateStageStepParameter(
     @Param('parameterId', ParseIntPipe) parameterId: number,
     @Body() updateDto: UpdateMixingActivityTemplateStageStepParameterDto,
@@ -170,6 +190,7 @@ export class ItemsController {
   }
 
   @Delete('mixing-activity-template-stage-step-parameters/:parameterId')
+  @Permissions(ITEM_PERMISSIONS.DELETE)
   async deleteMixingActivityTemplateStageStepParameter(
     @Param('parameterId', ParseIntPipe) parameterId: number,
   ) {
@@ -179,6 +200,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-templates/:templateId/stages')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findMixingActivityTemplateStages(
     @Param('templateId', ParseIntPipe) templateId: number,
   ) {
@@ -188,6 +210,7 @@ export class ItemsController {
   }
 
   @Post('mixing-activity-templates/:templateId/stages')
+  @Permissions(ITEM_PERMISSIONS.CREATE)
   async createMixingActivityTemplateStage(
     @Param('templateId', ParseIntPipe) templateId: number,
     @Body() createDto: CreateMixingActivityTemplateStageDto,
@@ -201,6 +224,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stages/:stageId/steps')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findMixingActivityTemplateStageSteps(
     @Param('stageId', ParseIntPipe) stageId: number,
   ) {
@@ -208,6 +232,7 @@ export class ItemsController {
   }
 
   @Post('mixing-activity-template-stages/:stageId/steps')
+  @Permissions(ITEM_PERMISSIONS.CREATE)
   async createMixingActivityTemplateStageStep(
     @Param('stageId', ParseIntPipe) stageId: number,
     @Body() createDto: CreateMixingActivityTemplateStageStepDto,
@@ -221,6 +246,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stage-steps/:stepId/parameters')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findMixingActivityTemplateStageStepParameters(
     @Param('stepId', ParseIntPipe) stepId: number,
   ) {
@@ -230,6 +256,7 @@ export class ItemsController {
   }
 
   @Post('mixing-activity-template-stage-steps/:stepId/parameters')
+  @Permissions(ITEM_PERMISSIONS.CREATE)
   async createMixingActivityTemplateStageStepParameter(
     @Param('stepId', ParseIntPipe) stepId: number,
     @Body() createDto: CreateMixingActivityTemplateStageStepParameterDto,
@@ -243,16 +270,19 @@ export class ItemsController {
   }
 
   @Get(':item_code/equipment')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findItemEquipment(@Param('item_code') itemCode: string) {
     return this.itemEquipmentService.findAllByItem(itemCode);
   }
 
   @Get(':item_code/mixing-activity-templates')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findMixingActivityTemplates(@Param('item_code') itemCode: string) {
     return this.mixingActivityTemplatesService.findAllByItem(itemCode);
   }
 
   @Post(':item_code/equipment')
+  @Permissions(ITEM_PERMISSIONS.CREATE)
   async createItemEquipment(
     @Param('item_code') itemCode: string,
     @Body() createDto: CreateItemEquipmentDto,
@@ -262,6 +292,7 @@ export class ItemsController {
   }
 
   @Post(':item_code/mixing-activity-templates')
+  @Permissions(ITEM_PERMISSIONS.CREATE)
   async createMixingActivityTemplate(
     @Param('item_code') itemCode: string,
     @Body() createDto: CreateMixingActivityTemplateDto,
@@ -275,11 +306,13 @@ export class ItemsController {
   }
 
   @Get(':item_code')
+  @Permissions(ITEM_PERMISSIONS.READ)
   async findItemByCode(@Param('item_code') item_code: string) {
     return this.itemsService.findItemByCode(item_code);
   }
 
   @Patch(':item_code')
+  @Permissions(ITEM_PERMISSIONS.UPDATE)
   async updateItem(
     @Param('item_code') item_code: string,
     @Body() updateItemDto: UpdateItemDto,
