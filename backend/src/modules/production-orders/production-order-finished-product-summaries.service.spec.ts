@@ -69,12 +69,46 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
   });
 
   it('gets all finished product summaries', async () => {
-    const summaries = [{ id: 2, production_order_id: 2032 }];
+    const summaries = [
+      {
+        id: 2,
+        production_order_id: 2032,
+        productionOrder: {
+          id: 2032,
+          samplingRequests: [
+            {
+              id: 15,
+              status: 'sent',
+              google_doc_url: 'https://docs.google.com/document/d/abc',
+              sent_at: new Date('2026-08-27T08:00:00.000Z'),
+              location: 'Kho thành phẩm',
+              sender: { id: 7, name: 'Binh' },
+            },
+          ],
+        },
+      },
+    ];
     prismaService.productionOrderFinishedProductSummaries.findMany.mockResolvedValue(
       summaries,
     );
 
-    await expect(service.findAll()).resolves.toBe(summaries);
+    await expect(service.findAll()).resolves.toEqual([
+      {
+        id: 2,
+        production_order_id: 2032,
+        productionOrder: {
+          id: 2032,
+          pyclm: {
+            isSent: true,
+            status: 'sent',
+            googleDocUrl: 'https://docs.google.com/document/d/abc',
+            sentAt: new Date('2026-08-27T08:00:00.000Z'),
+            location: 'Kho thành phẩm',
+            sender: { id: 7, name: 'Binh' },
+          },
+        },
+      },
+    ]);
     expect(
       prismaService.productionOrderFinishedProductSummaries.findMany,
     ).toHaveBeenCalledWith(
@@ -85,12 +119,33 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
   });
 
   it('gets a finished product summary by id', async () => {
-    const summary = { id: 1, production_order_id: 2031 };
+    const summary = {
+      id: 1,
+      production_order_id: 2031,
+      productionOrder: {
+        id: 2031,
+        samplingRequests: [],
+      },
+    };
     prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
       summary,
     );
 
-    await expect(service.findById(1)).resolves.toBe(summary);
+    await expect(service.findById(1)).resolves.toEqual({
+      id: 1,
+      production_order_id: 2031,
+      productionOrder: {
+        id: 2031,
+        pyclm: {
+          isSent: false,
+          status: null,
+          googleDocUrl: null,
+          sentAt: null,
+          location: null,
+          sender: null,
+        },
+      },
+    });
     expect(
       prismaService.productionOrderFinishedProductSummaries.findUnique,
     ).toHaveBeenCalledWith(

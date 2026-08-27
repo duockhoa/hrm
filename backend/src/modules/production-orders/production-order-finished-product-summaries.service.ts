@@ -21,6 +21,15 @@ const finishedProductSummaryCreatorSelect = {
   position: true,
 };
 
+const pyclmSenderSelect = {
+  id: true,
+  username: true,
+  name: true,
+  email: true,
+  department: true,
+  position: true,
+};
+
 const finishedProductSummaryInclude = {
   createdBy: {
     select: finishedProductSummaryCreatorSelect,
@@ -48,6 +57,22 @@ const finishedProductSummaryListInclude = {
           unit: true,
         },
       },
+      samplingRequests: {
+        orderBy: {
+          sent_at: 'desc',
+        },
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          google_doc_url: true,
+          sent_at: true,
+          location: true,
+          sender: {
+            select: pyclmSenderSelect,
+          },
+        },
+      },
     },
   },
 } satisfies Prisma.ProductionOrderFinishedProductSummariesInclude;
@@ -57,16 +82,39 @@ export class ProductionOrderFinishedProductSummariesService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async findAll() {
-    return this.prismaService.productionOrderFinishedProductSummaries.findMany({
-      include: finishedProductSummaryListInclude,
-      orderBy: [
+    const summaries =
+      await this.prismaService.productionOrderFinishedProductSummaries.findMany(
         {
-          created_at: 'desc',
+          include: finishedProductSummaryListInclude,
+          orderBy: [
+            {
+              created_at: 'desc',
+            },
+            {
+              id: 'desc',
+            },
+          ],
         },
-        {
-          id: 'desc',
+      );
+
+    return summaries.map((summary) => {
+      const { samplingRequests, ...productionOrder } = summary.productionOrder;
+      const latestSamplingRequest = samplingRequests[0] ?? null;
+
+      return {
+        ...summary,
+        productionOrder: {
+          ...productionOrder,
+          pyclm: {
+            isSent: latestSamplingRequest?.status === 'sent',
+            status: latestSamplingRequest?.status ?? null,
+            googleDocUrl: latestSamplingRequest?.google_doc_url ?? null,
+            sentAt: latestSamplingRequest?.sent_at ?? null,
+            location: latestSamplingRequest?.location ?? null,
+            sender: latestSamplingRequest?.sender ?? null,
+          },
         },
-      ],
+      };
     });
   }
 
@@ -77,7 +125,7 @@ export class ProductionOrderFinishedProductSummariesService {
           where: {
             id: summaryId,
           },
-          include: finishedProductSummaryInclude,
+          include: finishedProductSummaryListInclude,
         },
       );
 
@@ -85,7 +133,23 @@ export class ProductionOrderFinishedProductSummariesService {
       throw new NotFoundException('Finished product summary not found');
     }
 
-    return summary;
+    const { samplingRequests, ...productionOrder } = summary.productionOrder;
+    const latestSamplingRequest = samplingRequests[0] ?? null;
+
+    return {
+      ...summary,
+      productionOrder: {
+        ...productionOrder,
+        pyclm: {
+          isSent: latestSamplingRequest?.status === 'sent',
+          status: latestSamplingRequest?.status ?? null,
+          googleDocUrl: latestSamplingRequest?.google_doc_url ?? null,
+          sentAt: latestSamplingRequest?.sent_at ?? null,
+          location: latestSamplingRequest?.location ?? null,
+          sender: latestSamplingRequest?.sender ?? null,
+        },
+      },
+    };
   }
 
   async findAllByProductionOrder(productionOrderId: number) {
