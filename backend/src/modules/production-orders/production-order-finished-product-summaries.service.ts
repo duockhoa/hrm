@@ -27,9 +27,48 @@ const finishedProductSummaryInclude = {
   },
 } satisfies Prisma.ProductionOrderFinishedProductSummariesInclude;
 
+const finishedProductSummaryListInclude = {
+  ...finishedProductSummaryInclude,
+  productionOrder: {
+    select: {
+      id: true,
+      item_code: true,
+      production_order_code: true,
+      status: true,
+      type: true,
+      planned_quatity: true,
+      unit: true,
+      lot_no: true,
+      date_manufacture: true,
+      expire_date: true,
+      item: {
+        select: {
+          item_code: true,
+          item_name: true,
+          unit: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.ProductionOrderFinishedProductSummariesInclude;
+
 @Injectable()
 export class ProductionOrderFinishedProductSummariesService {
   constructor(private readonly prismaService: PrismaService) {}
+
+  async findAll() {
+    return this.prismaService.productionOrderFinishedProductSummaries.findMany({
+      include: finishedProductSummaryListInclude,
+      orderBy: [
+        {
+          created_at: 'desc',
+        },
+        {
+          id: 'desc',
+        },
+      ],
+    });
+  }
 
   async findById(summaryId: number) {
     const summary =

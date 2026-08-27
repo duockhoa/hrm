@@ -117,6 +117,7 @@ describe('ProductionOrdersController', () => {
     findImageFile: jest.Mock;
   };
   let productionOrderFinishedProductSummariesService: {
+    findAll: jest.Mock;
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -432,6 +433,7 @@ describe('ProductionOrdersController', () => {
       findImageFile: jest.fn(),
     };
     productionOrderFinishedProductSummariesService = {
+      findAll: jest.fn(),
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
@@ -871,6 +873,7 @@ describe('ProductionOrdersController', () => {
       'findAll',
       'findFinishedProducts',
       'findSemiFinishedProducts',
+      'findAllFinishedProductSummaries',
     ]);
     const readPostRoutes = new Set([
       'exportProductionOrderLines',
@@ -2932,6 +2935,20 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderFinishedProductSummariesService.findAllByProductionOrder,
     ).toHaveBeenCalledWith(2031);
+  });
+
+  it('gets all finished product summaries', async () => {
+    const summaries = [{ id: 1, production_order_id: 2031 }];
+    productionOrderFinishedProductSummariesService.findAll.mockResolvedValue(
+      summaries,
+    );
+
+    await expect(controller.findAllFinishedProductSummaries()).resolves.toBe(
+      summaries,
+    );
+    expect(
+      productionOrderFinishedProductSummariesService.findAll,
+    ).toHaveBeenCalledTimes(1);
   });
 
   it('gets a finished product summary by id', async () => {

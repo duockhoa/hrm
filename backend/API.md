@@ -2301,7 +2301,7 @@ Tất cả API lệnh sản xuất và tài nguyên con trong nhóm này cần `
 
 | Key quyền | API được phép gọi |
 | --- | --- |
-| `production-orders.list` | `GET /production-orders`, `GET /production-orders/finished-products`, `GET /production-orders/semi-finished-products` |
+| `production-orders.list` | `GET /production-orders`, `GET /production-orders/finished-products`, `GET /production-orders/semi-finished-products`, `GET /production-orders/finished-product-summaries` |
 | `production-orders.read` | Các API `GET` chi tiết, file, ảnh, dữ liệu con và các API xuất file |
 | `production-orders.create` | Các API `POST` tạo dữ liệu con hoặc tải file/ảnh lên |
 | `production-orders.update` | Các API `PATCH` cập nhật, phê duyệt hoặc xác nhận |
@@ -7735,6 +7735,56 @@ Lỗi thường gặp:
 ## Production Order Finished Product Summary
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
+
+### Lấy tất cả tổng kết thành phẩm
+
+```http
+GET /production-orders/finished-product-summaries
+```
+
+Cần quyền `production-orders.list`. Response trả về toàn bộ bản tổng kết, sắp xếp bản mới nhất trước, kèm lệnh sản xuất, sản phẩm và người tạo.
+
+Response mẫu:
+
+```json
+[
+  {
+    "id": 1,
+    "production_order_id": 2031,
+    "package_count": 12,
+    "boxes_per_package": 24,
+    "loose_box_count": 3,
+    "created_by_id": 7,
+    "created_at": "2026-06-12T08:10:00.000Z",
+    "updated_at": "2026-06-12T08:10:00.000Z",
+    "productionOrder": {
+      "id": 2031,
+      "item_code": "TP00001",
+      "production_order_code": "LSX-2031",
+      "status": "Released",
+      "type": "Standard",
+      "planned_quatity": 1000,
+      "unit": "Hộp",
+      "lot_no": "LO-20260612",
+      "date_manufacture": "2026-06-12",
+      "expire_date": "2028-06-12",
+      "item": {
+        "item_code": "TP00001",
+        "item_name": "Thành phẩm mẫu",
+        "unit": "Hộp"
+      }
+    },
+    "createdBy": {
+      "id": 7,
+      "username": "binh",
+      "name": "Binh",
+      "email": "binh@example.com",
+      "department": "QA",
+      "position": "Staff"
+    }
+  }
+]
+```
 
 ### Lấy danh sách tổng kết thành phẩm của lệnh sản xuất
 

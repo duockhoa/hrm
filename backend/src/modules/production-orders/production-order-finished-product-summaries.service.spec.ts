@@ -68,6 +68,22 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     );
   });
 
+  it('gets all finished product summaries', async () => {
+    const summaries = [{ id: 2, production_order_id: 2032 }];
+    prismaService.productionOrderFinishedProductSummaries.findMany.mockResolvedValue(
+      summaries,
+    );
+
+    await expect(service.findAll()).resolves.toBe(summaries);
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      }),
+    );
+  });
+
   it('gets a finished product summary by id', async () => {
     const summary = { id: 1, production_order_id: 2031 };
     prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(

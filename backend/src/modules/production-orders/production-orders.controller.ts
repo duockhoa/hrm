@@ -416,6 +416,12 @@ export class ProductionOrdersController {
     return this.productionOrdersService.findSemiFinishedProducts();
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)
+  @Get('finished-product-summaries')
+  async findAllFinishedProductSummaries() {
+    return this.productionOrderFinishedProductSummariesService.findAll();
+  }
+
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('finished-product-summaries/:summaryId')
   async findFinishedProductSummaryById(
