@@ -481,7 +481,15 @@ avatar=<file>
 
 ## Companies
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `companies.list` | `GET /companies` |
+| `companies.read` | `GET /companies/:id` |
+| `companies.create` | `POST /companies` |
+| `companies.update` | `PUT /companies/:id` |
+| `companies.delete` | `DELETE /companies/:id` |
 
 ### Lấy danh sách công ty
 
