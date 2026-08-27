@@ -530,7 +530,15 @@ DELETE /companies/:id
 
 ## Departments
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `departments.list` | `GET /departments` |
+| `departments.read` | `GET /departments/:name` |
+| `departments.create` | `POST /departments` |
+| `departments.update` | `PUT /departments/:name` |
+| `departments.delete` | `DELETE /departments/:name` |
 
 ### Lấy danh sách phòng ban
 
