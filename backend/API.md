@@ -36,9 +36,17 @@ Có thể thay đổi port bằng biến môi trường `SWAGGER_PORT`. Swagger 
 
 ## Cleaning Objects và Cleaning Requirements
 
-Tất cả endpoint bên dưới yêu cầu `Auth: Bearer`. Trường `created_by_id` được lấy tự động từ access token và không cần (cũng không nên) gửi từ client.
+Tất cả endpoint bên dưới yêu cầu `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`. Trường `created_by_id` được lấy tự động từ access token và không cần (cũng không nên) gửi từ client.
 
 ### Cleaning objects
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `cleaning-objects.list` | `GET /cleaning-objects` |
+| `cleaning-objects.read` | `GET /cleaning-objects/:id`, `GET /cleaning-objects/qr/:qrCode` |
+| `cleaning-objects.create` | `POST /cleaning-objects` |
+| `cleaning-objects.update` | `PATCH /cleaning-objects/:id` |
+| `cleaning-objects.delete` | `DELETE /cleaning-objects/:id` |
 
 ```http
 GET    /cleaning-objects
@@ -61,6 +69,14 @@ Body tạo/cập nhật:
 `qr_code` là duy nhất. API chi tiết đối tượng trả kèm `cleaningRequirements`; API danh sách trả kèm `cleaning_requirements_count`. Xóa đối tượng sẽ xóa các yêu cầu thuộc đối tượng đó.
 
 ### Cleaning requirements
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `cleaning-requirements.list` | `GET /cleaning-requirements` |
+| `cleaning-requirements.read` | `GET /cleaning-requirements/:id` |
+| `cleaning-requirements.create` | `POST /cleaning-requirements` |
+| `cleaning-requirements.update` | `PATCH /cleaning-requirements/:id` |
+| `cleaning-requirements.delete` | `DELETE /cleaning-requirements/:id` |
 
 ```http
 GET    /cleaning-requirements
@@ -1898,7 +1914,15 @@ Lỗi thường gặp:
 
 ## Features
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `features.list` | `GET /features` |
+| `features.read` | `GET /features/:id`, `GET /features/key/:key`, `GET /features/items/:item_code...` |
+| `features.create` | `POST /features`, `POST /features/items/:item_code` |
+| `features.update` | `PUT /features/:id`, `PUT /features/items/:item_code/:feature_id` |
+| `features.delete` | `DELETE /features/:id`, `DELETE /features/items/:item_code/:feature_id` |
 
 `features` là danh mục action/view chuẩn của hệ thống; `item_features` là liên kết xác định item nào được bật từng feature. Một feature có thể được dùng cho nhiều item.
 
@@ -3906,7 +3930,15 @@ DELETE /production-orders/line-clearance-checks/:checkId
 
 ## Secondary Packaging Stage Requirements
 
-Tất cả API trong nhóm này cần `Auth: Bearer`. Đây là danh mục yêu cầu dùng chung cho các giai đoạn đóng gói bao bì cấp 2.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`. Đây là danh mục yêu cầu dùng chung cho các giai đoạn đóng gói bao bì cấp 2.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `secondary-packaging-stage-requirements.list` | `GET /secondary-packaging-stage-requirements` |
+| `secondary-packaging-stage-requirements.read` | `GET /secondary-packaging-stage-requirements/:id` |
+| `secondary-packaging-stage-requirements.create` | `POST /secondary-packaging-stage-requirements` |
+| `secondary-packaging-stage-requirements.update` | `PATCH /secondary-packaging-stage-requirements/:id` |
+| `secondary-packaging-stage-requirements.delete` | `DELETE /secondary-packaging-stage-requirements/:id` |
 
 ```http
 GET /secondary-packaging-stage-requirements
@@ -7755,7 +7787,15 @@ Lỗi thường gặp:
 
 ## Production Order Deviations
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `production-order-deviations.list` | `GET /production-order-deviations` |
+| `production-order-deviations.read` | `GET /production-order-deviations/:id`, `GET /production-order-deviations/images/:filename` |
+| `production-order-deviations.create` | `POST /production-order-deviations` |
+| `production-order-deviations.update` | `PUT /production-order-deviations/:id` |
+| `production-order-deviations.delete` | `DELETE /production-order-deviations/:id` |
 
 ### Lấy danh sách sai lệch
 
@@ -7874,7 +7914,15 @@ Response: file ảnh.
 
 ## Production Specifications
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `production-specifications.list` | `GET /production-specifications` |
+| `production-specifications.read` | `GET /production-specifications/:item_code` |
+| `production-specifications.create` | `POST /production-specifications` |
+| `production-specifications.update` | `PUT /production-specifications/:item_code` |
+| `production-specifications.delete` | `DELETE /production-specifications/:item_code` |
 
 ### Lấy danh sách specification
 
@@ -8206,7 +8254,15 @@ DELETE /product-lines/:id
 
 ## Production Workshops
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API xưởng, chênh áp và checklist vệ sinh trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `production-workshops.list` | `GET /production-workshops` |
+| `production-workshops.read` | Các API `GET` chi tiết xưởng, chênh áp và checklist vệ sinh |
+| `production-workshops.create` | Các API `POST` xưởng, chênh áp và checklist vệ sinh |
+| `production-workshops.update` | Các API `PUT` xưởng, chênh áp và checklist vệ sinh |
+| `production-workshops.delete` | Các API `DELETE` xưởng, chênh áp và checklist vệ sinh |
 
 ### Lấy danh sách xưởng
 
@@ -8485,7 +8541,15 @@ Quy tắc:
 
 ## Filter Catalogs
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `filter-catalogs.list` | `GET /filter-catalogs` |
+| `filter-catalogs.read` | `GET /filter-catalogs/:id` |
+| `filter-catalogs.create` | `POST /filter-catalogs` |
+| `filter-catalogs.update` | `PATCH /filter-catalogs/:id` |
+| `filter-catalogs.delete` | `DELETE /filter-catalogs/:id` |
 
 ### Lấy danh sách danh mục lọc
 
@@ -8619,7 +8683,15 @@ Lỗi thường gặp:
 
 ## Dosage Forms
 
-Tất cả API trong nhóm này cần `Auth: Bearer`. Trường `created_by_id` được lấy tự động từ access token và không nhận từ body.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`. Trường `created_by_id` được lấy tự động từ access token và không nhận từ body.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `dosage-forms.list` | `GET /dosage-forms` |
+| `dosage-forms.read` | `GET /dosage-forms/:id` |
+| `dosage-forms.create` | `POST /dosage-forms` |
+| `dosage-forms.update` | `PATCH /dosage-forms/:id` |
+| `dosage-forms.delete` | `DELETE /dosage-forms/:id` |
 
 ### Lấy danh sách dạng bào chế
 

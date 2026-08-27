@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { FeaturesController } from './features.controller';
+import { FEATURE_PERMISSIONS } from './features.permissions';
 import { FeaturesService } from './features.service';
 
 describe('FeaturesController', () => {
@@ -48,6 +50,42 @@ describe('FeaturesController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('declares permission keys for feature routes', () => {
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findAll)).toEqual([
+      FEATURE_PERMISSIONS.LIST,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findByItemCode)).toEqual([
+      FEATURE_PERMISSIONS.READ,
+    ]);
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.findConfigByItemCode),
+    ).toEqual([FEATURE_PERMISSIONS.READ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findByKey)).toEqual([
+      FEATURE_PERMISSIONS.READ,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findById)).toEqual([
+      FEATURE_PERMISSIONS.READ,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.create)).toEqual([
+      FEATURE_PERMISSIONS.CREATE,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.update)).toEqual([
+      FEATURE_PERMISSIONS.UPDATE,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.delete)).toEqual([
+      FEATURE_PERMISSIONS.DELETE,
+    ]);
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.upsertItemFeature),
+    ).toEqual([FEATURE_PERMISSIONS.CREATE]);
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.updateItemFeature),
+    ).toEqual([FEATURE_PERMISSIONS.UPDATE]);
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.deleteItemFeature),
+    ).toEqual([FEATURE_PERMISSIONS.DELETE]);
   });
 
   it('gets all features', async () => {

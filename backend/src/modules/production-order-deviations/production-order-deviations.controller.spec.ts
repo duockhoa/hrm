@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { ProductionOrderDeviationsController } from './production-order-deviations.controller';
+import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from './production-order-deviations.permissions';
 import { ProductionOrderDeviationsService } from './production-order-deviations.service';
 
 describe('ProductionOrderDeviationsController', () => {
@@ -40,6 +42,27 @@ describe('ProductionOrderDeviationsController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('declares permission keys for production-order deviation routes', () => {
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findAll)).toEqual([
+      PRODUCTION_ORDER_DEVIATION_PERMISSIONS.LIST,
+    ]);
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.getDeviationImage),
+    ).toEqual([PRODUCTION_ORDER_DEVIATION_PERMISSIONS.READ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findById)).toEqual([
+      PRODUCTION_ORDER_DEVIATION_PERMISSIONS.READ,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.create)).toEqual([
+      PRODUCTION_ORDER_DEVIATION_PERMISSIONS.CREATE,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.update)).toEqual([
+      PRODUCTION_ORDER_DEVIATION_PERMISSIONS.UPDATE,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.delete)).toEqual([
+      PRODUCTION_ORDER_DEVIATION_PERMISSIONS.DELETE,
+    ]);
   });
 
   it('passes production order id query to service when listing', async () => {

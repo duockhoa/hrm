@@ -18,7 +18,9 @@ import {
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { createReadStream } from 'fs';
+import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
 import type { Response } from 'express';
 import { CreateProductionOrderDeviationDto } from './dto/create-production-order-deviation.dto';
 import { UpdateProductionOrderDeviationDto } from './dto/update-production-order-deviation.dto';
@@ -28,6 +30,7 @@ import {
   productionOrderDeviationImageUploadOptions,
   removeUploadedDeviationImages,
 } from './production-order-deviation-upload.config';
+import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from './production-order-deviations.permissions';
 import { ProductionOrderDeviationsService } from './production-order-deviations.service';
 
 type DeviationImageUploadFields = {
@@ -42,7 +45,7 @@ const getUploadedDeviationImages = (
   ...(uploadedFiles?.deviation_image ?? []),
 ];
 
-@UseGuards(jwtAuthGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('production-order-deviations')
 export class ProductionOrderDeviationsController {
   constructor(
@@ -50,11 +53,13 @@ export class ProductionOrderDeviationsController {
   ) {}
 
   @Get()
+  @Permissions(PRODUCTION_ORDER_DEVIATION_PERMISSIONS.LIST)
   async findAll(@Query('production_order_id') productionOrderId?: string) {
     return this.productionOrderDeviationsService.findAll(productionOrderId);
   }
 
   @Get('images/:filename')
+  @Permissions(PRODUCTION_ORDER_DEVIATION_PERMISSIONS.READ)
   async getDeviationImage(
     @Param('filename') filename: string,
     @Query('original') original: string | undefined,
@@ -80,11 +85,13 @@ export class ProductionOrderDeviationsController {
   }
 
   @Get(':id')
+  @Permissions(PRODUCTION_ORDER_DEVIATION_PERMISSIONS.READ)
   async findById(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderDeviationsService.findById(id);
   }
 
   @Post()
+  @Permissions(PRODUCTION_ORDER_DEVIATION_PERMISSIONS.CREATE)
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -129,6 +136,7 @@ export class ProductionOrderDeviationsController {
   }
 
   @Put(':id')
+  @Permissions(PRODUCTION_ORDER_DEVIATION_PERMISSIONS.UPDATE)
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -174,6 +182,7 @@ export class ProductionOrderDeviationsController {
   }
 
   @Delete(':id')
+  @Permissions(PRODUCTION_ORDER_DEVIATION_PERMISSIONS.DELETE)
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderDeviationsService.delete(id);
   }
