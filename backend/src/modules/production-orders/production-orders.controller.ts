@@ -25,6 +25,8 @@ import {
 } from '@nestjs/platform-express';
 import { createReadStream } from 'fs';
 import type { Response } from 'express';
+import { Permissions } from 'src/decorators/permissions.decorator';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { ProductionOrdersService } from './production-orders.service';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import type { ExportProductionOrderLinesDto } from './dto/export-production-order-lines.dto';
@@ -145,6 +147,7 @@ import { UpdateProductionOrderPrimaryPackagingConfirmationDto } from './dto/upda
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
 import { ProductionOrderAttachmentsService } from './production-order-attachments.service';
+import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 import { CreateProductionOrderAttachmentDto } from './dto/create-production-order-attachment.dto';
 import { UpdateProductionOrderAttachmentDto } from './dto/update-production-order-attachment.dto';
 import { ApproveProductionOrderAttachmentDto } from './dto/approve-production-order-attachment.dto';
@@ -348,7 +351,7 @@ const encodeContentDispositionFilename = (filename: string) =>
     (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 
-@UseGuards(jwtAuthGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('production-orders')
 export class ProductionOrdersController {
   constructor(
@@ -395,21 +398,25 @@ export class ProductionOrdersController {
     private readonly productionOrderAttachmentsService: ProductionOrderAttachmentsService,
   ) {}
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)
   @Get()
   async findAll() {
     return this.productionOrdersService.findAll();
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)
   @Get('finished-products')
   async findFinishedProducts() {
     return this.productionOrdersService.findFinishedProducts();
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)
   @Get('semi-finished-products')
   async findSemiFinishedProducts() {
     return this.productionOrdersService.findSemiFinishedProducts();
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('finished-product-summaries/:summaryId')
   async findFinishedProductSummaryById(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -419,6 +426,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('environment-checks/:checkId')
   async findEnvironmentCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -426,6 +434,7 @@ export class ProductionOrdersController {
     return this.productionOrderEnvironmentChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('environment-checks/:checkId')
   async updateEnvironmentCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -437,6 +446,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('environment-checks/:checkId')
   async deleteEnvironmentCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -444,11 +454,13 @@ export class ProductionOrdersController {
     return this.productionOrderEnvironmentChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('hygiene-checks/:checkId')
   async findHygieneCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderHygieneChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('hygiene-checks/:checkId')
   async updateHygieneCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -457,11 +469,13 @@ export class ProductionOrdersController {
     return this.productionOrderHygieneChecksService.update(checkId, updateDto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('hygiene-checks/:checkId')
   async deleteHygieneCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderHygieneChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('line-clearance-checks/:checkId')
   async findLineClearanceCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -469,6 +483,7 @@ export class ProductionOrdersController {
     return this.productionOrderLineClearanceChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('line-clearance-checks/:checkId')
   async updateLineClearanceCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -480,6 +495,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('line-clearance-checks/:checkId')
   async deleteLineClearanceCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -487,6 +503,7 @@ export class ProductionOrdersController {
     return this.productionOrderLineClearanceChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('secondary-packaging-checks/:checkId')
   async findSecondaryPackagingCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -496,6 +513,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('secondary-packaging-checks/:checkId')
   async updateSecondaryPackagingCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -507,6 +525,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('secondary-packaging-checks/:checkId')
   async deleteSecondaryPackagingCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -514,6 +533,7 @@ export class ProductionOrdersController {
     return this.productionOrderSecondaryPackagingChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('pre-secondary-packaging-checks/:checkId')
   async findPreSecondaryPackagingCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -523,6 +543,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('pre-secondary-packaging-checks/:checkId')
   async updatePreSecondaryPackagingCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -534,6 +555,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post('pre-secondary-packaging-checks/:checkId/images')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -567,6 +589,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('pre-secondary-packaging-checks/images/:imageId')
   async deletePreSecondaryPackagingCheckImage(
     @Param('imageId', ParseIntPipe) imageId: number,
@@ -576,6 +599,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('pre-secondary-packaging-checks/:checkId')
   async deletePreSecondaryPackagingCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -585,6 +609,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('factory-release-reviews/:reviewId')
   async findFactoryReleaseReviewById(
     @Param('reviewId', ParseIntPipe) reviewId: number,
@@ -592,6 +617,7 @@ export class ProductionOrdersController {
     return this.productionOrderFactoryReleaseReviewsService.findById(reviewId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('factory-release-reviews/:reviewId')
   async updateFactoryReleaseReview(
     @Param('reviewId', ParseIntPipe) reviewId: number,
@@ -603,6 +629,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('factory-release-reviews/:reviewId')
   async deleteFactoryReleaseReview(
     @Param('reviewId', ParseIntPipe) reviewId: number,
@@ -610,6 +637,7 @@ export class ProductionOrdersController {
     return this.productionOrderFactoryReleaseReviewsService.delete(reviewId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('primary-packaging-confirmations/:confirmationId')
   async findPrimaryPackagingConfirmationById(
     @Param('confirmationId', ParseIntPipe) confirmationId: number,
@@ -619,6 +647,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('primary-packaging-confirmations/:confirmationId')
   async updatePrimaryPackagingConfirmation(
     @Param('confirmationId', ParseIntPipe) confirmationId: number,
@@ -630,6 +659,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('primary-packaging-confirmations/:confirmationId')
   async deletePrimaryPackagingConfirmation(
     @Param('confirmationId', ParseIntPipe) confirmationId: number,
@@ -639,11 +669,13 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('density-checks/:checkId')
   async findDensityCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDensityChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('density-checks/:checkId')
   async updateDensityCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -652,11 +684,13 @@ export class ProductionOrdersController {
     return this.productionOrderDensityChecksService.update(checkId, updateDto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('density-checks/:checkId')
   async deleteDensityCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDensityChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('sampling-records/:recordId')
   async findSamplingRecordById(
     @Param('recordId', ParseIntPipe) recordId: number,
@@ -664,6 +698,7 @@ export class ProductionOrdersController {
     return this.productionOrderSamplingRecordsService.findById(recordId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('sampling-records/:recordId')
   async updateSamplingRecord(
     @Param('recordId', ParseIntPipe) recordId: number,
@@ -675,6 +710,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('sampling-records/:recordId')
   async deleteSamplingRecord(
     @Param('recordId', ParseIntPipe) recordId: number,
@@ -682,6 +718,7 @@ export class ProductionOrdersController {
     return this.productionOrderSamplingRecordsService.delete(recordId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('disinfectant-preparations/:preparationId')
   async findDisinfectantPreparationById(
     @Param('preparationId', ParseIntPipe) preparationId: number,
@@ -691,6 +728,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('disinfectant-preparations/:preparationId')
   async updateDisinfectantPreparation(
     @Param('preparationId', ParseIntPipe) preparationId: number,
@@ -702,6 +740,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('disinfectant-preparations/:preparationId')
   async deleteDisinfectantPreparation(
     @Param('preparationId', ParseIntPipe) preparationId: number,
@@ -711,6 +750,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('friability-checks/:checkId')
   async findFriabilityCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -718,6 +758,7 @@ export class ProductionOrdersController {
     return this.productionOrderFriabilityChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('friability-checks/:checkId')
   async updateFriabilityCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -729,11 +770,13 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('friability-checks/:checkId')
   async deleteFriabilityCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderFriabilityChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('spray-dose-checks/:checkId')
   async findSprayDoseCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -741,6 +784,7 @@ export class ProductionOrdersController {
     return this.productionOrderSprayDoseChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('spray-dose-checks/:checkId')
   async updateSprayDoseCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -752,11 +796,13 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('spray-dose-checks/:checkId')
   async deleteSprayDoseCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderSprayDoseChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('post-homogenization-granule-checks/:checkId')
   async findPostHomogenizationGranuleCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -766,6 +812,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('post-homogenization-granule-checks/:checkId')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -812,6 +859,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('post-homogenization-granule-checks/:checkId')
   async deletePostHomogenizationGranuleCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -821,6 +869,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('post-preparation-solution-checks/:checkId')
   async findPostPreparationSolutionCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -830,6 +879,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('post-preparation-solution-checks/:checkId')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -863,6 +913,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('post-preparation-solution-checks/:checkId')
   async deletePostPreparationSolutionCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -872,6 +923,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('disintegration-checks/:checkId')
   async findDisintegrationCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -879,6 +931,7 @@ export class ProductionOrdersController {
     return this.productionOrderDisintegrationChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('disintegration-checks/:checkId')
   async updateDisintegrationCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -890,6 +943,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('disintegration-checks/:checkId')
   async deleteDisintegrationCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -897,6 +951,7 @@ export class ProductionOrdersController {
     return this.productionOrderDisintegrationChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('hard-capsule-leakage-checks/:checkId')
   async findHardCapsuleLeakageCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -906,6 +961,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('hard-capsule-leakage-checks/:checkId')
   async updateHardCapsuleLeakageCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -917,6 +973,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('hard-capsule-leakage-checks/:checkId')
   async deleteHardCapsuleLeakageCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -924,11 +981,13 @@ export class ProductionOrdersController {
     return this.productionOrderHardCapsuleLeakageChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('volume-checks/:checkId')
   async findVolumeCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderVolumeChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('volume-checks/:checkId')
   async updateVolumeCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -937,11 +996,13 @@ export class ProductionOrdersController {
     return this.productionOrderVolumeChecksService.update(checkId, updateDto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('volume-checks/:checkId')
   async deleteVolumeCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderVolumeChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('shell-weight-checks/:checkId')
   async findShellWeightCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -949,6 +1010,7 @@ export class ProductionOrdersController {
     return this.productionOrderShellWeightChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('shell-weight-checks/:checkId')
   async updateShellWeightCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -960,6 +1022,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('shell-weight-checks/:checkId')
   async deleteShellWeightCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -967,6 +1030,7 @@ export class ProductionOrdersController {
     return this.productionOrderShellWeightChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('ten-shell-weight-checks/:checkId')
   async findTenShellWeightCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -974,6 +1038,7 @@ export class ProductionOrdersController {
     return this.productionOrderTenShellWeightChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('ten-shell-weight-checks/:checkId')
   async updateTenShellWeightCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -985,6 +1050,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('ten-shell-weight-checks/:checkId')
   async deleteTenShellWeightCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -992,6 +1058,7 @@ export class ProductionOrdersController {
     return this.productionOrderTenShellWeightChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('semi-finished-gross-weight-checks/:checkId')
   async findSemiFinishedGrossWeightCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1001,6 +1068,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('semi-finished-gross-weight-checks/:checkId')
   async updateSemiFinishedGrossWeightCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1012,6 +1080,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('semi-finished-gross-weight-checks/:checkId')
   async deleteSemiFinishedGrossWeightCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1021,6 +1090,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('semi-finished-net-weight-checks/:checkId')
   async findSemiFinishedNetWeightCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1030,6 +1100,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('semi-finished-product-summaries/:summaryId')
   async findSemiFinishedProductSummaryById(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1039,6 +1110,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('semi-finished-product-summaries/:summaryId')
   async updateSemiFinishedProductSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1050,6 +1122,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('semi-finished-product-summaries/:summaryId')
   async deleteSemiFinishedProductSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1059,6 +1132,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('post-secondary-packaging-summaries/:summaryId')
   async findPostSecondaryPackagingSummaryById(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1068,6 +1142,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('post-secondary-packaging-summaries/:summaryId')
   async updatePostSecondaryPackagingSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1079,6 +1154,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('post-secondary-packaging-summaries/:summaryId')
   async deletePostSecondaryPackagingSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1088,6 +1164,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('post-secondary-packaging-pending-process-items/:itemId')
   async findPostSecondaryPackagingPendingProcessItemById(
     @Param('itemId', ParseIntPipe) itemId: number,
@@ -1097,6 +1174,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('post-secondary-packaging-pending-process-items/:itemId')
   async updatePostSecondaryPackagingPendingProcessItem(
     @Param('itemId', ParseIntPipe) itemId: number,
@@ -1109,6 +1187,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('post-secondary-packaging-pending-process-items/:itemId')
   async deletePostSecondaryPackagingPendingProcessItem(
     @Param('itemId', ParseIntPipe) itemId: number,
@@ -1118,6 +1197,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('post-secondary-packaging-pending-cancellation-items/:itemId')
   async findPostSecondaryPackagingPendingCancellationItemById(
     @Param('itemId', ParseIntPipe) itemId: number,
@@ -1127,6 +1207,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('post-secondary-packaging-pending-cancellation-items/:itemId')
   async updatePostSecondaryPackagingPendingCancellationItem(
     @Param('itemId', ParseIntPipe) itemId: number,
@@ -1139,6 +1220,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('post-secondary-packaging-pending-cancellation-items/:itemId')
   async deletePostSecondaryPackagingPendingCancellationItem(
     @Param('itemId', ParseIntPipe) itemId: number,
@@ -1148,6 +1230,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('material-summaries/:summaryId')
   async findMaterialSummaryById(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1155,6 +1238,7 @@ export class ProductionOrdersController {
     return this.productionOrderMaterialSummariesService.findById(summaryId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('material-summaries/:summaryId')
   async updateMaterialSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1166,6 +1250,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('material-summaries/:summaryId')
   async deleteMaterialSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1173,6 +1258,7 @@ export class ProductionOrdersController {
     return this.productionOrderMaterialSummariesService.delete(summaryId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('material-process-summaries/:summaryId')
   async findMaterialProcessSummaryById(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1182,6 +1268,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('material-process-summaries/:summaryId')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -1212,6 +1299,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('material-process-summaries/:summaryId')
   async deleteMaterialProcessSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1221,6 +1309,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('semi-finished-net-weight-checks/:checkId')
   async updateSemiFinishedNetWeightCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1232,6 +1321,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('semi-finished-net-weight-checks/:checkId')
   async deleteSemiFinishedNetWeightCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1241,6 +1331,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('leak-tightness-checks/:checkId')
   async findLeakTightnessCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1248,6 +1339,7 @@ export class ProductionOrdersController {
     return this.productionOrderLeakTightnessChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('leak-tightness-checks/:checkId')
   async updateLeakTightnessCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1259,6 +1351,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('leak-tightness-checks/:checkId')
   async deleteLeakTightnessCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1266,11 +1359,13 @@ export class ProductionOrdersController {
     return this.productionOrderLeakTightnessChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('hardness-checks/:checkId')
   async findHardnessCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderHardnessChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('hardness-checks/:checkId')
   async updateHardnessCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1279,11 +1374,13 @@ export class ProductionOrdersController {
     return this.productionOrderHardnessChecksService.update(checkId, updateDto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('hardness-checks/:checkId')
   async deleteHardnessCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderHardnessChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('tablet-thickness-checks/:checkId')
   async findTabletThicknessCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1291,6 +1388,7 @@ export class ProductionOrdersController {
     return this.productionOrderTabletThicknessChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('tablet-thickness-checks/:checkId')
   async updateTabletThicknessCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1302,6 +1400,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('tablet-thickness-checks/:checkId')
   async deleteTabletThicknessCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1309,6 +1408,7 @@ export class ProductionOrdersController {
     return this.productionOrderTabletThicknessChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('vial-inspection-checks/:checkId')
   async findVialInspectionCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1316,6 +1416,7 @@ export class ProductionOrdersController {
     return this.productionOrderVialInspectionChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('vial-inspection-checks/:checkId')
   async updateVialInspectionCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1327,6 +1428,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('vial-inspection-checks/:checkId')
   async deleteVialInspectionCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1334,6 +1436,7 @@ export class ProductionOrdersController {
     return this.productionOrderVialInspectionChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('date-checks/images/:filename')
   async getDateCheckImage(
     @Param('filename') filename: string,
@@ -1358,6 +1461,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('attachments/files/:filename')
   async getProductionOrderAttachmentFile(
     @Param('filename') filename: string,
@@ -1382,6 +1486,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(file.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('date-checks/request-files/:filename')
   async getDateCheckRequestFile(
     @Param('filename') filename: string,
@@ -1403,6 +1508,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(requestFile.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('sensory-checks/images/:filename')
   async getSensoryCheckImage(
     @Param('filename') filename: string,
@@ -1428,6 +1534,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('pre-secondary-packaging-checks/images/:filename')
   async getPreSecondaryPackagingCheckImage(
     @Param('filename') filename: string,
@@ -1455,6 +1562,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('material-process-summaries/images/:filename')
   async getMaterialProcessSummaryImage(
     @Param('filename') filename: string,
@@ -1480,6 +1588,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('post-homogenization-granule-checks/images/:filename')
   async getPostHomogenizationGranuleCheckImage(
     @Param('filename') filename: string,
@@ -1507,6 +1616,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('post-preparation-solution-checks/images/:filename')
   async getPostPreparationSolutionCheckImage(
     @Param('filename') filename: string,
@@ -1534,6 +1644,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('steam-sterilization-checks/images/:filename')
   async getSteamSterilizationCheckImage(
     @Param('filename') filename: string,
@@ -1559,11 +1670,13 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('sensory-checks/:checkId')
   async findSensoryCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderSensoryChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('sensory-checks/:checkId')
   async updateSensoryCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1572,6 +1685,7 @@ export class ProductionOrdersController {
     return this.productionOrderSensoryChecksService.update(checkId, updateDto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post('sensory-checks/:checkId/images')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -1605,6 +1719,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('sensory-checks/images/:imageId')
   async deleteSensoryCheckImage(
     @Param('imageId', ParseIntPipe) imageId: number,
@@ -1612,11 +1727,13 @@ export class ProductionOrdersController {
     return this.productionOrderSensoryChecksService.deleteImage(imageId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('sensory-checks/:checkId')
   async deleteSensoryCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderSensoryChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('ten-unit-sensory-checks/:checkId')
   async findTenUnitSensoryCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1624,6 +1741,7 @@ export class ProductionOrdersController {
     return this.productionOrderTenUnitSensoryChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('ten-unit-sensory-checks/:checkId')
   async updateTenUnitSensoryCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1635,6 +1753,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('ten-unit-sensory-checks/:checkId')
   async deleteTenUnitSensoryCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1642,6 +1761,7 @@ export class ProductionOrdersController {
     return this.productionOrderTenUnitSensoryChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('steam-sterilization-checks/:checkId')
   async findSteamSterilizationCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1651,6 +1771,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('steam-sterilization-checks/:checkId')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -1679,6 +1800,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('steam-sterilization-checks/:checkId')
   async deleteSteamSterilizationCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1686,6 +1808,7 @@ export class ProductionOrdersController {
     return this.productionOrderSteamSterilizationChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('filtration-checks/:checkId')
   async findFiltrationCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1693,6 +1816,7 @@ export class ProductionOrdersController {
     return this.productionOrderFiltrationChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('filtration-checks/:checkId')
   async updateFiltrationCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1704,16 +1828,19 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('filtration-checks/:checkId')
   async deleteFiltrationCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderFiltrationChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('date-checks/:checkId')
   async findDateCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDateChecksService.findById(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('date-checks/:checkId')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -1744,6 +1871,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('date-checks/:checkId/approval')
   async approveDateCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1757,11 +1885,13 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('date-checks/:checkId')
   async deleteDateCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDateChecksService.delete(checkId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post('date-checks/:checkId/images')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -1795,11 +1925,13 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('date-checks/images/:imageId')
   async deleteDateCheckImage(@Param('imageId', ParseIntPipe) imageId: number) {
     return this.productionOrderDateChecksService.deleteImage(imageId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('attachments/:attachmentId')
   async findProductionOrderAttachmentById(
     @Param('attachmentId', ParseIntPipe) attachmentId: number,
@@ -1807,6 +1939,7 @@ export class ProductionOrdersController {
     return this.productionOrderAttachmentsService.findById(attachmentId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('attachments/:attachmentId')
   async updateProductionOrderAttachment(
     @Param('attachmentId', ParseIntPipe) attachmentId: number,
@@ -1818,6 +1951,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('attachments/:attachmentId/approval')
   async approveProductionOrderAttachment(
     @Param('attachmentId', ParseIntPipe) attachmentId: number,
@@ -1831,6 +1965,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post('attachments/:attachmentId/files')
   @UseInterceptors(
     FilesInterceptor(
@@ -1854,6 +1989,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('attachments/files/:fileId')
   async deleteProductionOrderAttachmentFile(
     @Param('fileId', ParseIntPipe) fileId: number,
@@ -1861,6 +1997,7 @@ export class ProductionOrdersController {
     return this.productionOrderAttachmentsService.deleteFile(fileId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('attachments/:attachmentId')
   async deleteProductionOrderAttachment(
     @Param('attachmentId', ParseIntPipe) attachmentId: number,
@@ -1868,6 +2005,7 @@ export class ProductionOrdersController {
     return this.productionOrderAttachmentsService.delete(attachmentId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/export')
   async exportProductionOrder(
     @Param('id', ParseIntPipe) id: number,
@@ -1889,11 +2027,13 @@ export class ProductionOrdersController {
     return new StreamableFile(exportedFile.buffer);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id')
   async findProductionOrderById(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderById(id);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/production-guide')
   async findProductionGuide(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderProductionGuidesService.findByProductionOrder(
@@ -1901,6 +2041,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/production-guide/file')
   async downloadProductionGuide(
     @Param('id', ParseIntPipe) id: number,
@@ -1925,6 +2066,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(file.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/production-guide')
   @UseInterceptors(
     FileInterceptor('file', productionOrderProductionGuideUploadOptions),
@@ -1945,16 +2087,19 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete(':id/production-guide')
   async deleteProductionGuide(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderProductionGuidesService.delete(id);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/production-order-lines')
   async findProductionOrderLines(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderLines(id);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/document-control')
   async findDocumentControl(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderDocumentControlsService.findByProductionOrder(
@@ -1962,6 +2107,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch(':id/document-control/issue-batch-record')
   async issueBatchRecord(
     @Param('id', ParseIntPipe) id: number,
@@ -1973,6 +2119,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch(':id/document-control/receive-batch-record')
   async receiveBatchRecord(
     @Param('id', ParseIntPipe) id: number,
@@ -1984,6 +2131,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch(':id/document-control/receive-test-certificate')
   async receiveTestCertificate(
     @Param('id', ParseIntPipe) id: number,
@@ -1995,6 +2143,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch(':id/document-control/receive-warehouse-release')
   async receiveWarehouseRelease(
     @Param('id', ParseIntPipe) id: number,
@@ -2006,6 +2155,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/sampling-requests')
   async findSamplingRequests(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderSamplingRequestsService.findAllByProductionOrder(
@@ -2013,6 +2163,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/sampling-requests')
   async createSamplingRequest(
     @Param('id', ParseIntPipe) id: number,
@@ -2026,6 +2177,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/sampling-records')
   async findSamplingRecords(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderSamplingRecordsService.findAllByProductionOrder(
@@ -2033,6 +2185,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/sampling-records')
   async createSamplingRecord(
     @Param('id', ParseIntPipe) id: number,
@@ -2046,6 +2199,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/disinfectant-preparations')
   async findDisinfectantPreparations(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderDisinfectantPreparationsService.findAllByProductionOrder(
@@ -2053,6 +2207,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/disinfectant-preparations')
   async createDisinfectantPreparation(
     @Param('id', ParseIntPipe) id: number,
@@ -2066,6 +2221,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/environment-checks')
   async findEnvironmentChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderEnvironmentChecksService.findAllByProductionOrder(
@@ -2073,6 +2229,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/environment-checks')
   async createEnvironmentCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2086,6 +2243,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/hygiene-checks')
   async findHygieneChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderHygieneChecksService.findAllByProductionOrder(
@@ -2093,6 +2251,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/hygiene-checks')
   async createHygieneCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2106,6 +2265,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/line-clearance-checks')
   async findLineClearanceChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderLineClearanceChecksService.findAllByProductionOrder(
@@ -2113,6 +2273,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/line-clearance-checks')
   async createLineClearanceCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2126,6 +2287,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/secondary-packaging-checks')
   async findSecondaryPackagingChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderSecondaryPackagingChecksService.findAllByProductionOrder(
@@ -2133,6 +2295,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/secondary-packaging-checks')
   async createSecondaryPackagingCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2146,6 +2309,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/pre-secondary-packaging-checks')
   async findPreSecondaryPackagingChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderPreSecondaryPackagingChecksService.findAllByProductionOrder(
@@ -2153,6 +2317,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/pre-secondary-packaging-checks')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -2190,6 +2355,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/density-checks')
   async findDensityChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderDensityChecksService.findAllByProductionOrder(
@@ -2197,6 +2363,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/density-checks')
   async createDensityCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2210,6 +2377,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/friability-checks')
   async findFriabilityChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderFriabilityChecksService.findAllByProductionOrder(
@@ -2217,6 +2385,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/friability-checks')
   async createFriabilityCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2230,6 +2399,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/spray-dose-checks')
   async findSprayDoseChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderSprayDoseChecksService.findAllByProductionOrder(
@@ -2237,6 +2407,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/spray-dose-checks')
   async createSprayDoseCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2250,6 +2421,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/post-homogenization-granule-checks')
   async findPostHomogenizationGranuleChecks(
     @Param('id', ParseIntPipe) id: number,
@@ -2259,6 +2431,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/post-homogenization-granule-checks')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -2307,6 +2480,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/post-preparation-solution-checks')
   async findPostPreparationSolutionChecks(
     @Param('id', ParseIntPipe) id: number,
@@ -2316,6 +2490,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/post-preparation-solution-checks')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -2349,6 +2524,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/disintegration-checks')
   async findDisintegrationChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderDisintegrationChecksService.findAllByProductionOrder(
@@ -2356,6 +2532,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/disintegration-checks')
   async createDisintegrationCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2369,6 +2546,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/hard-capsule-leakage-checks')
   async findHardCapsuleLeakageChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderHardCapsuleLeakageChecksService.findAllByProductionOrder(
@@ -2376,6 +2554,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/hard-capsule-leakage-checks')
   async createHardCapsuleLeakageCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2389,11 +2568,13 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/volume-checks')
   async findVolumeChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderVolumeChecksService.findAllByProductionOrder(id);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/volume-checks')
   async createVolumeCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2407,6 +2588,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/shell-weight-checks')
   async findShellWeightChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderShellWeightChecksService.findAllByProductionOrder(
@@ -2414,6 +2596,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/shell-weight-checks')
   async createShellWeightCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2427,6 +2610,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/ten-shell-weight-check')
   async findTenShellWeightCheck(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderTenShellWeightChecksService.findByProductionOrder(
@@ -2434,6 +2618,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/ten-shell-weight-check')
   async upsertTenShellWeightCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2447,6 +2632,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/semi-finished-gross-weight-checks')
   async findSemiFinishedGrossWeightChecks(
     @Param('id', ParseIntPipe) id: number,
@@ -2456,6 +2642,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/semi-finished-gross-weight-checks')
   async createSemiFinishedGrossWeightCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2469,6 +2656,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/semi-finished-net-weight-checks')
   async findSemiFinishedNetWeightChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderSemiFinishedNetWeightChecksService.findAllByProductionOrder(
@@ -2476,6 +2664,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/semi-finished-net-weight-checks')
   async createSemiFinishedNetWeightCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2489,6 +2678,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/semi-finished-product-summaries')
   async findSemiFinishedProductSummaries(
     @Param('id', ParseIntPipe) id: number,
@@ -2498,6 +2688,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/semi-finished-product-summaries')
   async createSemiFinishedProductSummary(
     @Param('id', ParseIntPipe) id: number,
@@ -2511,6 +2702,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/post-secondary-packaging-summaries')
   async findPostSecondaryPackagingSummaries(
     @Param('id', ParseIntPipe) id: number,
@@ -2520,6 +2712,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/post-secondary-packaging-summaries')
   async createPostSecondaryPackagingSummary(
     @Param('id', ParseIntPipe) id: number,
@@ -2533,6 +2726,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('post-secondary-packaging-summaries/:summaryId/pending-process-items')
   async findPostSecondaryPackagingPendingProcessItems(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -2542,6 +2736,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post('post-secondary-packaging-summaries/:summaryId/pending-process-items')
   async createPostSecondaryPackagingPendingProcessItem(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -2556,6 +2751,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(
     'post-secondary-packaging-summaries/:summaryId/pending-cancellation-items',
   )
@@ -2567,6 +2763,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(
     'post-secondary-packaging-summaries/:summaryId/pending-cancellation-items',
   )
@@ -2583,6 +2780,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/material-summaries')
   async findMaterialSummaries(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderMaterialSummariesService.findAllByProductionOrder(
@@ -2590,6 +2788,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/material-summaries')
   async createMaterialSummary(
     @Param('id', ParseIntPipe) id: number,
@@ -2603,6 +2802,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/material-process-summaries')
   async findMaterialProcessSummaries(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderMaterialProcessSummariesService.findAllByProductionOrder(
@@ -2610,6 +2810,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/material-process-summaries')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -2642,6 +2843,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/leak-tightness-checks')
   async findLeakTightnessChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderLeakTightnessChecksService.findAllByProductionOrder(
@@ -2649,6 +2851,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/leak-tightness-checks')
   async createLeakTightnessCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2662,6 +2865,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/hardness-checks')
   async findHardnessChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderHardnessChecksService.findAllByProductionOrder(
@@ -2669,6 +2873,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/hardness-checks')
   async createHardnessCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2682,6 +2887,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/tablet-thickness-checks')
   async findTabletThicknessChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderTabletThicknessChecksService.findAllByProductionOrder(
@@ -2689,6 +2895,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/tablet-thickness-checks')
   async createTabletThicknessCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2702,6 +2909,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/vial-inspection-checks')
   async findVialInspectionChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderVialInspectionChecksService.findAllByProductionOrder(
@@ -2709,6 +2917,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/vial-inspection-checks')
   async createVialInspectionCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2722,6 +2931,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/cylinder-calibration')
   async findCylinderCalibration(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderCylinderCalibrationsService.findByProductionOrder(
@@ -2729,6 +2939,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/cylinder-calibration')
   async upsertCylinderCalibration(
     @Param('id', ParseIntPipe) id: number,
@@ -2742,6 +2953,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch(':id/cylinder-calibration')
   async updateCylinderCalibration(
     @Param('id', ParseIntPipe) id: number,
@@ -2753,11 +2965,13 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete(':id/cylinder-calibration')
   async deleteCylinderCalibration(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderCylinderCalibrationsService.delete(id);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/sensory-checks')
   async findSensoryChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderSensoryChecksService.findAllByProductionOrder(
@@ -2765,6 +2979,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/sensory-checks')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -2802,6 +3017,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/steam-sterilization-checks')
   async findSteamSterilizationChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderSteamSterilizationChecksService.findAllByProductionOrder(
@@ -2809,6 +3025,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/steam-sterilization-checks')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -2839,6 +3056,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/filtration-checks')
   async findFiltrationChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderFiltrationChecksService.findAllByProductionOrder(
@@ -2846,6 +3064,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/filtration-checks')
   async createFiltrationCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2854,6 +3073,7 @@ export class ProductionOrdersController {
     return this.productionOrderFiltrationChecksService.create(id, createDto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/ten-unit-sensory-checks')
   async findTenUnitSensoryChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderTenUnitSensoryChecksService.findAllByProductionOrder(
@@ -2861,6 +3081,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/ten-unit-sensory-checks')
   async createTenUnitSensoryCheck(
     @Param('id', ParseIntPipe) id: number,
@@ -2874,16 +3095,19 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/date-checks')
   async findDateChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderDateChecksService.findAllByProductionOrder(id);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/attachments')
   async findProductionOrderAttachments(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderAttachmentsService.findAllByProductionOrder(id);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/attachments')
   @UseInterceptors(
     FilesInterceptor(
@@ -2911,6 +3135,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/date-checks')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -2943,6 +3168,7 @@ export class ProductionOrdersController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/finished-product-summaries')
   async findFinishedProductSummaries(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderFinishedProductSummariesService.findAllByProductionOrder(
@@ -2950,6 +3176,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/finished-product-summaries')
   async createFinishedProductSummary(
     @Param('id', ParseIntPipe) id: number,
@@ -2963,6 +3190,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/factory-release-reviews')
   async findFactoryReleaseReviews(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderFactoryReleaseReviewsService.findAllByProductionOrder(
@@ -2970,6 +3198,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/primary-packaging-confirmations')
   async findPrimaryPackagingConfirmations(
     @Param('id', ParseIntPipe) id: number,
@@ -2979,6 +3208,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/primary-packaging-confirmations')
   async createPrimaryPackagingConfirmation(
     @Param('id', ParseIntPipe) id: number,
@@ -2992,6 +3222,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/factory-release-reviews')
   async createFactoryReleaseReview(
     @Param('id', ParseIntPipe) id: number,
@@ -3003,6 +3234,7 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Post(':id/production-order-lines/export')
   async exportProductionOrderLines(
     @Param('id', ParseIntPipe) id: number,
@@ -3028,6 +3260,7 @@ export class ProductionOrdersController {
     return new StreamableFile(exportedFile.buffer);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Post(':id/production-order-lines/weighing-ticket/export')
   async exportWeighingTicket(
     @Param('id', ParseIntPipe) id: number,
@@ -3053,6 +3286,7 @@ export class ProductionOrdersController {
     return new StreamableFile(exportedFile.buffer);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Post(':id/production-order-lines/post-weighing-material-check/export')
   async exportPostWeighingMaterialCheck(
     @Param('id', ParseIntPipe) id: number,

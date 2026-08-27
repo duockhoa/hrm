@@ -2274,6 +2274,16 @@ Lỗi thường gặp:
 
 ## Production Orders
 
+Tất cả API lệnh sản xuất và tài nguyên con trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `production-orders.list` | `GET /production-orders`, `GET /production-orders/finished-products`, `GET /production-orders/semi-finished-products` |
+| `production-orders.read` | Các API `GET` chi tiết, file, ảnh, dữ liệu con và các API xuất file |
+| `production-orders.create` | Các API `POST` tạo dữ liệu con hoặc tải file/ảnh lên |
+| `production-orders.update` | Các API `PATCH` cập nhật, phê duyệt hoặc xác nhận |
+| `production-orders.delete` | Các API `DELETE`; xóa phiếu pha cũng chấp nhận quyền chuyên biệt `production-orders.mixing-records.delete` |
+
 ### Phiếu pha theo template
 
 Tất cả API bên dưới cần `Auth: Bearer`. Mỗi production order có thể có nhiều phiếu pha thực tế. Khi tạo, backend sao chép toàn bộ giai đoạn, bước, thông số, kiểu dữ liệu, đơn vị tính và yêu cầu từ template vào phiếu pha; do đó sửa hoặc xóa template sau này không ảnh hưởng dữ liệu phiếu đã tạo.

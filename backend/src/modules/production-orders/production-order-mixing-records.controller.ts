@@ -37,6 +37,7 @@ import {
   removeUploadedProductionOrderMixingRecordParameterImage,
 } from './production-order-mixing-record-parameter-upload.config';
 import { PRODUCTION_ORDER_MIXING_RECORD_PERMISSIONS } from './production-order-mixing-records.permissions';
+import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 import { ProductionOrderMixingRecordsService } from './production-order-mixing-records.service';
 
 @UseGuards(jwtAuthGuard, PermissionsGuard)
@@ -46,11 +47,13 @@ export class ProductionOrderMixingRecordsController {
     private readonly productionOrderMixingRecordsService: ProductionOrderMixingRecordsService,
   ) {}
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('mixing-records/:recordId')
   async findById(@Param('recordId', ParseIntPipe) recordId: number) {
     return this.productionOrderMixingRecordsService.findById(recordId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('mixing-records/:recordId')
   async update(
     @Param('recordId', ParseIntPipe) recordId: number,
@@ -60,11 +63,15 @@ export class ProductionOrderMixingRecordsController {
   }
 
   @Delete('mixing-records/:recordId')
-  @Permissions(PRODUCTION_ORDER_MIXING_RECORD_PERMISSIONS.DELETE)
+  @Permissions(
+    PRODUCTION_ORDER_MIXING_RECORD_PERMISSIONS.DELETE,
+    PRODUCTION_ORDER_PERMISSIONS.DELETE,
+  )
   async delete(@Param('recordId', ParseIntPipe) recordId: number) {
     return this.productionOrderMixingRecordsService.delete(recordId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('mixing-records/:recordId/qa-staff-approval')
   async approveByQaStaff(
     @Param('recordId', ParseIntPipe) recordId: number,
@@ -76,6 +83,7 @@ export class ProductionOrderMixingRecordsController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('mixing-records/:recordId/ipc-staff-approval')
   async approveByIpcStaff(
     @Param('recordId', ParseIntPipe) recordId: number,
@@ -87,6 +95,7 @@ export class ProductionOrderMixingRecordsController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post('mixing-records/:recordId/stages')
   async createStage(
     @Param('recordId', ParseIntPipe) recordId: number,
@@ -95,6 +104,7 @@ export class ProductionOrderMixingRecordsController {
     return this.productionOrderMixingRecordsService.createStage(recordId, dto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('mixing-record-stages/:stageId')
   async updateStage(
     @Param('stageId', ParseIntPipe) stageId: number,
@@ -103,11 +113,13 @@ export class ProductionOrderMixingRecordsController {
     return this.productionOrderMixingRecordsService.updateStage(stageId, dto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('mixing-record-stages/:stageId')
   async deleteStage(@Param('stageId', ParseIntPipe) stageId: number) {
     return this.productionOrderMixingRecordsService.deleteStage(stageId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post('mixing-record-stages/:stageId/steps')
   async createStep(
     @Param('stageId', ParseIntPipe) stageId: number,
@@ -116,6 +128,7 @@ export class ProductionOrderMixingRecordsController {
     return this.productionOrderMixingRecordsService.createStep(stageId, dto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('mixing-record-steps/:stepId')
   async updateStep(
     @Param('stepId', ParseIntPipe) stepId: number,
@@ -124,11 +137,13 @@ export class ProductionOrderMixingRecordsController {
     return this.productionOrderMixingRecordsService.updateStep(stepId, dto);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('mixing-record-steps/:stepId')
   async deleteStep(@Param('stepId', ParseIntPipe) stepId: number) {
     return this.productionOrderMixingRecordsService.deleteStep(stepId);
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post('mixing-record-steps/:stepId/parameters')
   async createParameter(
     @Param('stepId', ParseIntPipe) stepId: number,
@@ -140,6 +155,7 @@ export class ProductionOrderMixingRecordsController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('mixing-record-parameters/:parameterId')
   async updateParameter(
     @Param('parameterId', ParseIntPipe) parameterId: number,
@@ -151,6 +167,7 @@ export class ProductionOrderMixingRecordsController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('mixing-record-parameters/:parameterId')
   async deleteParameter(
     @Param('parameterId', ParseIntPipe) parameterId: number,
@@ -160,6 +177,7 @@ export class ProductionOrderMixingRecordsController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
   @Patch('mixing-record-parameters/:parameterId/result')
   async updateParameterResult(
     @Param('parameterId', ParseIntPipe) parameterId: number,
@@ -173,6 +191,7 @@ export class ProductionOrderMixingRecordsController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post('mixing-record-parameters/:parameterId/image')
   @UseInterceptors(
     FileInterceptor(
@@ -199,6 +218,7 @@ export class ProductionOrderMixingRecordsController {
     }
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('mixing-record-parameters/images/:filename')
   async getParameterImage(
     @Param('filename') filename: string,
@@ -224,6 +244,7 @@ export class ProductionOrderMixingRecordsController {
     return new StreamableFile(createReadStream(image.filePath));
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id/mixing-records')
   async findAllByProductionOrder(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderMixingRecordsService.findAllByProductionOrder(
@@ -231,6 +252,7 @@ export class ProductionOrderMixingRecordsController {
     );
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
   @Post(':id/mixing-records')
   async create(
     @Param('id', ParseIntPipe) id: number,

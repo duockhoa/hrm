@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { StreamableFile } from '@nestjs/common';
+import { RequestMethod, StreamableFile } from '@nestjs/common';
+import { METHOD_METADATA } from '@nestjs/common/constants';
+import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { ProductionOrdersController } from './production-orders.controller';
 import { ProductionOrdersService } from './production-orders.service';
 import type { Response } from 'express';
@@ -43,6 +45,7 @@ import { ProductionOrderDocumentControlsService } from './production-order-docum
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
 import { ProductionOrderAttachmentsService } from './production-order-attachments.service';
+import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 
 describe('ProductionOrdersController', () => {
   let controller: ProductionOrdersController;
@@ -852,6 +855,52 @@ describe('ProductionOrdersController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('declares permission keys for every production-order route', () => {
+    const prototype = ProductionOrdersController.prototype;
+    const routeNames = Object.getOwnPropertyNames(prototype).filter(
+      (name) =>
+        name !== 'constructor' &&
+        Reflect.hasMetadata(
+          METHOD_METADATA,
+          prototype[name as keyof ProductionOrdersController],
+        ),
+    );
+    const listRoutes = new Set([
+      'findAll',
+      'findFinishedProducts',
+      'findSemiFinishedProducts',
+    ]);
+    const readPostRoutes = new Set([
+      'exportProductionOrderLines',
+      'exportWeighingTicket',
+      'exportPostWeighingMaterialCheck',
+    ]);
+
+    expect(routeNames.length).toBeGreaterThan(0);
+
+    routeNames.forEach((name) => {
+      const handler = prototype[name as keyof ProductionOrdersController];
+      const requestMethod = Reflect.getMetadata(METHOD_METADATA, handler);
+      const expectedPermission =
+        requestMethod === RequestMethod.GET
+          ? listRoutes.has(name)
+            ? PRODUCTION_ORDER_PERMISSIONS.LIST
+            : PRODUCTION_ORDER_PERMISSIONS.READ
+          : requestMethod === RequestMethod.POST
+            ? readPostRoutes.has(name)
+              ? PRODUCTION_ORDER_PERMISSIONS.READ
+              : PRODUCTION_ORDER_PERMISSIONS.CREATE
+            : requestMethod === RequestMethod.PATCH ||
+                requestMethod === RequestMethod.PUT
+              ? PRODUCTION_ORDER_PERMISSIONS.UPDATE
+              : PRODUCTION_ORDER_PERMISSIONS.DELETE;
+
+      expect(Reflect.getMetadata(PERMISSIONS_KEY, handler)).toEqual([
+        expectedPermission,
+      ]);
+    });
   });
 
   it('gets production orders with TP item codes', async () => {
