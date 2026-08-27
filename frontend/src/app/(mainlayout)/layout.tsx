@@ -8,6 +8,8 @@ import {
   MdAdminPanelSettings,
   MdApps,
   MdBusiness,
+  MdHistory,
+  MdKey,
   MdPerson,
 } from "react-icons/md";
 import useUsersStore from "@/store/users.store";
@@ -51,6 +53,18 @@ const data = [
     name: "Vai trò",
     icon: <MdAdminPanelSettings />,
     url: "/roles",
+  },
+  {
+    id: "6",
+    name: "Phân quyền",
+    icon: <MdKey />,
+    url: "/setting",
+  },
+  {
+    id: "7",
+    name: "Lịch sử đăng nhập",
+    icon: <MdHistory />,
+    url: "/login-history",
   },
 ];
 

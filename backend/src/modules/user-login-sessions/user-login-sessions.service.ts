@@ -24,6 +24,30 @@ export class UserLoginSessionsService {
       where.logout_at = { not: null };
     }
 
+    const keyword = query.keyword?.trim();
+    if (keyword) {
+      where.user = {
+        OR: [
+          { name: { contains: keyword } },
+          { username: { contains: keyword } },
+          { email: { contains: keyword } },
+        ],
+      };
+    }
+
+    if (query.login_from || query.login_to) {
+      const loginAt: Prisma.DateTimeFilter = {};
+      if (query.login_from) {
+        loginAt.gte = new Date(query.login_from);
+      }
+      if (query.login_to) {
+        const endOfDay = new Date(query.login_to);
+        endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+        loginAt.lt = endOfDay;
+      }
+      where.login_at = loginAt;
+    }
+
     const [data, total] = await this.prisma.$transaction([
       this.prisma.userLoginSessions.findMany({
         where,

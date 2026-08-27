@@ -6,6 +6,7 @@ import companiesService from "./companies.service";
 import rolesService from "./roles.service";
 import permissionsService from "./permissions.service";
 import applicationsService from "./applications.service";
+import userLoginSessionsService from "./user-login-sessions.service";
 
 export {
   userService,
@@ -15,4 +16,5 @@ export {
   rolesService,
   permissionsService,
   applicationsService,
+  userLoginSessionsService,
 };

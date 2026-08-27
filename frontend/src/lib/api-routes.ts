@@ -35,6 +35,10 @@ const PERMISSIONS = {
   base: "/permissions",
 };
 
+const USER_LOGIN_SESSIONS = {
+  base: "/user-login-sessions",
+};
+
 const APPLICATIONS = {
   base: "/applications",
 };
@@ -47,5 +51,6 @@ export const API_ROUTES = {
   companies: COMPANY,
   roles: ROLES,
   permissions: PERMISSIONS,
+  userLoginSessions: USER_LOGIN_SESSIONS,
   applications: APPLICATIONS,
 };

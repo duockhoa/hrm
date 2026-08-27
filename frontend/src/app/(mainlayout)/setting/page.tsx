@@ -45,7 +45,7 @@ const matchesKeyword = (values: Array<unknown>, keyword: string) => {
   );
 };
 
-export default function SettingPage() {
+export default function PermissionsPage() {
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingPermission, setEditingPermission] = useState<Permission | null>(
@@ -128,7 +128,7 @@ export default function SettingPage() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md">
       <div className="shrink-0 border-b border-gray-200 px-4 py-3">
-        <h1 className="text-xl font-semibold text-gray-900">Cài đặt</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Phân quyền</h1>
         <p className="mt-1 text-sm text-gray-500">
           Quản lý danh sách quyền truy cập của hệ thống.
         </p>

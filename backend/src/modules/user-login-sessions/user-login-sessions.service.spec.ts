@@ -45,4 +45,33 @@ describe('UserLoginSessionsService', () => {
       }),
     );
   });
+
+  it('filters sessions by user keyword and inclusive login date range', async () => {
+    prisma.userLoginSessions.findMany.mockResolvedValue([]);
+    prisma.userLoginSessions.count.mockResolvedValue(0);
+
+    await service.findAll({
+      keyword: 'An',
+      login_from: '2026-08-01',
+      login_to: '2026-08-31',
+    });
+
+    expect(prisma.userLoginSessions.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          user: {
+            OR: [
+              { name: { contains: 'An' } },
+              { username: { contains: 'An' } },
+              { email: { contains: 'An' } },
+            ],
+          },
+          login_at: {
+            gte: new Date('2026-08-01'),
+            lt: new Date('2026-09-01'),
+          },
+        },
+      }),
+    );
+  });
 });
