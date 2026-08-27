@@ -20,7 +20,9 @@ import {
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { createReadStream } from 'fs';
 import type { Response } from 'express';
+import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateEquipmentMonitoringRecordDto } from './dto/create-equipment-monitoring-record.dto';
 import { CreateEquipmentParameterDto } from './dto/create-equipment-parameter.dto';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
@@ -30,6 +32,7 @@ import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentMonitoringRecordsService } from './equipment-monitoring-records.service';
 import { EquipmentParametersService } from './equipment-parameters.service';
 import { EquipmentService } from './equipment.service';
+import { EQUIPMENT_PERMISSIONS } from './equipment.permissions';
 import {
   equipmentMonitoringRecordImageUploadOptions,
   getEquipmentMonitoringRecordImagePaths,
@@ -51,7 +54,7 @@ const getUploadedEquipmentMonitoringRecordImages = (
   uploadedFiles?: EquipmentMonitoringRecordImageUploadFields,
 ) => [...(uploadedFiles?.images ?? []), ...(uploadedFiles?.image ?? [])];
 
-@UseGuards(jwtAuthGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('equipment')
 export class EquipmentController {
   constructor(
@@ -61,11 +64,13 @@ export class EquipmentController {
   ) {}
 
   @Get()
+  @Permissions(EQUIPMENT_PERMISSIONS.LIST)
   async findAll() {
     return this.equipmentService.findAll();
   }
 
   @Get('monitoring-records')
+  @Permissions(EQUIPMENT_PERMISSIONS.READ)
   async findMonitoringRecords(
     @Query()
     query: {
@@ -77,6 +82,7 @@ export class EquipmentController {
   }
 
   @Get('monitoring-records/images/:filename')
+  @Permissions(EQUIPMENT_PERMISSIONS.READ)
   async getMonitoringRecordImage(
     @Param('filename') filename: string,
     @Query('original') original: string | undefined,
@@ -104,6 +110,7 @@ export class EquipmentController {
   }
 
   @Get('monitoring-records/:recordId')
+  @Permissions(EQUIPMENT_PERMISSIONS.READ)
   async findMonitoringRecordById(
     @Param('recordId', ParseIntPipe) recordId: number,
   ) {
@@ -111,6 +118,7 @@ export class EquipmentController {
   }
 
   @Post('monitoring-records')
+  @Permissions(EQUIPMENT_PERMISSIONS.CREATE)
   async createMonitoringRecord(
     @Body() createDto: CreateEquipmentMonitoringRecordDto,
     @Request() req: any,
@@ -119,6 +127,7 @@ export class EquipmentController {
   }
 
   @Patch('monitoring-records/:recordId')
+  @Permissions(EQUIPMENT_PERMISSIONS.UPDATE)
   async updateMonitoringRecord(
     @Param('recordId', ParseIntPipe) recordId: number,
     @Body() updateDto: UpdateEquipmentMonitoringRecordDto,
@@ -127,6 +136,7 @@ export class EquipmentController {
   }
 
   @Delete('monitoring-records/images/:imageId')
+  @Permissions(EQUIPMENT_PERMISSIONS.DELETE)
   async deleteMonitoringRecordImage(
     @Param('imageId', ParseIntPipe) imageId: number,
   ) {
@@ -134,6 +144,7 @@ export class EquipmentController {
   }
 
   @Delete('monitoring-records/:recordId')
+  @Permissions(EQUIPMENT_PERMISSIONS.DELETE)
   async deleteMonitoringRecord(
     @Param('recordId', ParseIntPipe) recordId: number,
   ) {
@@ -141,6 +152,7 @@ export class EquipmentController {
   }
 
   @Post('monitoring-records/:recordId/images')
+  @Permissions(EQUIPMENT_PERMISSIONS.CREATE)
   @UseInterceptors(
     FileFieldsInterceptor(
       equipmentMonitoringRecordImageUploadFields,
@@ -176,6 +188,7 @@ export class EquipmentController {
   }
 
   @Get('parameters/:parameterId')
+  @Permissions(EQUIPMENT_PERMISSIONS.READ)
   async findParameterById(
     @Param('parameterId', ParseIntPipe) parameterId: number,
   ) {
@@ -183,6 +196,7 @@ export class EquipmentController {
   }
 
   @Patch('parameters/:parameterId')
+  @Permissions(EQUIPMENT_PERMISSIONS.UPDATE)
   async updateParameter(
     @Param('parameterId', ParseIntPipe) parameterId: number,
     @Body() updateDto: UpdateEquipmentParameterDto,
@@ -191,6 +205,7 @@ export class EquipmentController {
   }
 
   @Delete('parameters/:parameterId')
+  @Permissions(EQUIPMENT_PERMISSIONS.DELETE)
   async deleteParameter(
     @Param('parameterId', ParseIntPipe) parameterId: number,
   ) {
@@ -198,11 +213,13 @@ export class EquipmentController {
   }
 
   @Get(':id/parameters')
+  @Permissions(EQUIPMENT_PERMISSIONS.READ)
   async findParameters(@Param('id', ParseIntPipe) id: number) {
     return this.equipmentParametersService.findAllByEquipment(id);
   }
 
   @Post(':id/parameters')
+  @Permissions(EQUIPMENT_PERMISSIONS.CREATE)
   async createParameter(
     @Param('id', ParseIntPipe) id: number,
     @Body() createDto: CreateEquipmentParameterDto,
@@ -212,16 +229,19 @@ export class EquipmentController {
   }
 
   @Get(':id')
+  @Permissions(EQUIPMENT_PERMISSIONS.READ)
   async findById(@Param('id', ParseIntPipe) id: number) {
     return this.equipmentService.findById(id);
   }
 
   @Post()
+  @Permissions(EQUIPMENT_PERMISSIONS.CREATE)
   async create(@Body() createDto: CreateEquipmentDto, @Request() req: any) {
     return this.equipmentService.create(createDto, req.user);
   }
 
   @Patch(':id')
+  @Permissions(EQUIPMENT_PERMISSIONS.UPDATE)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateEquipmentDto,
@@ -230,6 +250,7 @@ export class EquipmentController {
   }
 
   @Delete(':id')
+  @Permissions(EQUIPMENT_PERMISSIONS.DELETE)
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.equipmentService.delete(id);
   }

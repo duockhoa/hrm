@@ -694,7 +694,15 @@ Lỗi thường gặp:
 
 ## Permissions
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `permissions.list` | `GET /permissions` |
+| `permissions.read` | `GET /permissions/:id` |
+| `permissions.create` | `POST /permissions` |
+| `permissions.update` | `PUT /permissions/:id` |
+| `permissions.delete` | `DELETE /permissions/:id` |
 
 Các API này chỉ quản trị danh sách permission, chưa tự gắn permission vào API nghiệp vụ.
 
@@ -750,9 +758,16 @@ DELETE /permissions/:id
 
 ## Roles
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
 
-Các API này quản trị role và quan hệ role-permission, chưa yêu cầu permission cụ thể để gọi.
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `roles.list` | `GET /roles` |
+| `roles.read` | `GET /roles/:id` |
+| `roles.create` | `POST /roles` |
+| `roles.update` | `PUT /roles/:id` |
+| `roles.delete` | `DELETE /roles/:id` |
+| `roles.permissions.assign` | Các API thêm, đồng bộ hoặc gỡ permission của role |
 
 ### Lấy danh sách role
 
@@ -871,7 +886,7 @@ DELETE /roles/:roleId/remove-permission/:permissionId
 
 ## Registration Numbers
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission `registration-numbers.list`; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
 
 Sync số đăng ký dùng tài khoản service để tự lấy token, không cấu hình token trực tiếp:
 
@@ -1425,7 +1440,15 @@ Lỗi thường gặp:
 
 ## Equipment
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API thiết bị, thông số, nhật ký giám sát và ảnh trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+
+| Key quyền | API được phép gọi |
+| --- | --- |
+| `equipment.list` | `GET /equipment` |
+| `equipment.read` | Các API `GET` chi tiết thiết bị, thông số, nhật ký và ảnh |
+| `equipment.create` | Các API `POST` tạo thiết bị, thông số, nhật ký hoặc thêm ảnh |
+| `equipment.update` | Các API `PATCH` cập nhật thiết bị, thông số hoặc nhật ký |
+| `equipment.delete` | Các API `DELETE` thiết bị, thông số, nhật ký hoặc ảnh |
 
 Nhóm API này lưu danh sách thiết bị. Backend lấy `created_by_id` từ user đăng nhập; body không cần gửi thông tin người tạo.
 

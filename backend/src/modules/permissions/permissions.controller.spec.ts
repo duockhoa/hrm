@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { PermissionsController } from './permissions.controller';
+import { PERMISSION_MANAGEMENT_PERMISSIONS } from './permissions.permissions';
 import { PermissionsService } from './permissions.service';
 
 describe('PermissionsController', () => {
@@ -36,6 +38,24 @@ describe('PermissionsController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('declares permission keys for permission management routes', () => {
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findAll)).toEqual([
+      PERMISSION_MANAGEMENT_PERMISSIONS.LIST,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findById)).toEqual([
+      PERMISSION_MANAGEMENT_PERMISSIONS.READ,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.create)).toEqual([
+      PERMISSION_MANAGEMENT_PERMISSIONS.CREATE,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.update)).toEqual([
+      PERMISSION_MANAGEMENT_PERMISSIONS.UPDATE,
+    ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.delete)).toEqual([
+      PERMISSION_MANAGEMENT_PERMISSIONS.DELETE,
+    ]);
   });
 
   it('delegates findAll to the service', () => {
