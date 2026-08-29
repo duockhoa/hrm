@@ -2011,7 +2011,7 @@ export class ProductionOrdersController {
     return this.productionOrderAttachmentsService.delete(attachmentId);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT)
   @Get(':id/export')
   async exportProductionOrder(
     @Param('id', ParseIntPipe) id: number,
@@ -3240,7 +3240,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT_WAREHOUSE_RELEASE)
   @Post(':id/production-order-lines/export')
   async exportProductionOrderLines(
     @Param('id', ParseIntPipe) id: number,

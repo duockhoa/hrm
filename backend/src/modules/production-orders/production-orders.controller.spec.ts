@@ -876,9 +876,15 @@ describe('ProductionOrdersController', () => {
       'findAllFinishedProductSummaries',
     ]);
     const readPostRoutes = new Set([
-      'exportProductionOrderLines',
       'exportWeighingTicket',
       'exportPostWeighingMaterialCheck',
+    ]);
+    const dedicatedPermissionRoutes = new Map([
+      ['exportProductionOrder', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
+      [
+        'exportProductionOrderLines',
+        PRODUCTION_ORDER_PERMISSIONS.EXPORT_WAREHOUSE_RELEASE,
+      ],
     ]);
 
     expect(routeNames.length).toBeGreaterThan(0);
@@ -887,7 +893,8 @@ describe('ProductionOrdersController', () => {
       const handler = prototype[name as keyof ProductionOrdersController];
       const requestMethod = Reflect.getMetadata(METHOD_METADATA, handler);
       const expectedPermission =
-        requestMethod === RequestMethod.GET
+        dedicatedPermissionRoutes.get(name) ??
+        (requestMethod === RequestMethod.GET
           ? listRoutes.has(name)
             ? PRODUCTION_ORDER_PERMISSIONS.LIST
             : PRODUCTION_ORDER_PERMISSIONS.READ
@@ -898,7 +905,7 @@ describe('ProductionOrdersController', () => {
             : requestMethod === RequestMethod.PATCH ||
                 requestMethod === RequestMethod.PUT
               ? PRODUCTION_ORDER_PERMISSIONS.UPDATE
-              : PRODUCTION_ORDER_PERMISSIONS.DELETE;
+              : PRODUCTION_ORDER_PERMISSIONS.DELETE);
 
       expect(Reflect.getMetadata(PERMISSIONS_KEY, handler)).toEqual([
         expectedPermission,

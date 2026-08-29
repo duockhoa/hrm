@@ -2302,7 +2302,9 @@ Tất cả API lệnh sản xuất và tài nguyên con trong nhóm này cần `
 | Key quyền                  | API được phép gọi                                                                                                                                                          |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `production-orders.list`   | `GET /production-orders`, `GET /production-orders/finished-products`, `GET /production-orders/semi-finished-products`, `GET /production-orders/finished-product-summaries` |
-| `production-orders.read`   | Các API `GET` chi tiết, file, ảnh, dữ liệu con và các API xuất file                                                                                                        |
+| `production-orders.read`   | Các API `GET` chi tiết, file, ảnh và dữ liệu con, trừ API xuất lệnh sản xuất                                                                                               |
+| `production-orders.export` | `GET /production-orders/:id/export` (xuất lệnh sản xuất)                                                                                                                   |
+| `production-orders.export-warehouse-release` | `POST /production-orders/:id/production-order-lines/export` (xuất phiếu xuất kho)                                                                                       |
 | `production-orders.create` | Các API `POST` tạo dữ liệu con hoặc tải file/ảnh lên                                                                                                                       |
 | `production-orders.update` | Các API `PATCH` cập nhật, phê duyệt hoặc xác nhận                                                                                                                          |
 | `production-orders.delete` | Các API `DELETE`; xóa phiếu pha cũng chấp nhận quyền chuyên biệt `production-orders.mixing-records.delete`                                                                 |
