@@ -52,40 +52,40 @@ describe('FeaturesController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('declares permission keys for feature routes', () => {
-    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findAll)).toEqual([
-      FEATURE_PERMISSIONS.LIST,
-    ]);
-    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findByItemCode)).toEqual([
-      FEATURE_PERMISSIONS.READ,
-    ]);
+  it('allows authenticated users to read features and requires one permission to manage them', () => {
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.findAll),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.findByItemCode),
+    ).toBeUndefined();
     expect(
       Reflect.getMetadata(PERMISSIONS_KEY, controller.findConfigByItemCode),
-    ).toEqual([FEATURE_PERMISSIONS.READ]);
-    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findByKey)).toEqual([
-      FEATURE_PERMISSIONS.READ,
-    ]);
-    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.findById)).toEqual([
-      FEATURE_PERMISSIONS.READ,
-    ]);
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.findByKey),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.findById),
+    ).toBeUndefined();
     expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.create)).toEqual([
-      FEATURE_PERMISSIONS.CREATE,
+      FEATURE_PERMISSIONS.MANAGE,
     ]);
     expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.update)).toEqual([
-      FEATURE_PERMISSIONS.UPDATE,
+      FEATURE_PERMISSIONS.MANAGE,
     ]);
     expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.delete)).toEqual([
-      FEATURE_PERMISSIONS.DELETE,
+      FEATURE_PERMISSIONS.MANAGE,
     ]);
     expect(
       Reflect.getMetadata(PERMISSIONS_KEY, controller.upsertItemFeature),
-    ).toEqual([FEATURE_PERMISSIONS.CREATE]);
+    ).toEqual([FEATURE_PERMISSIONS.MANAGE]);
     expect(
       Reflect.getMetadata(PERMISSIONS_KEY, controller.updateItemFeature),
-    ).toEqual([FEATURE_PERMISSIONS.UPDATE]);
+    ).toEqual([FEATURE_PERMISSIONS.MANAGE]);
     expect(
       Reflect.getMetadata(PERMISSIONS_KEY, controller.deleteItemFeature),
-    ).toEqual([FEATURE_PERMISSIONS.DELETE]);
+    ).toEqual([FEATURE_PERMISSIONS.MANAGE]);
   });
 
   it('gets all features', async () => {

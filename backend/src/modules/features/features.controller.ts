@@ -26,13 +26,11 @@ export class FeaturesController {
   constructor(private readonly featuresService: FeaturesService) {}
 
   @Get()
-  @Permissions(FEATURE_PERMISSIONS.LIST)
   async findAll() {
     return this.featuresService.findAll();
   }
 
   @Get('items/:item_code')
-  @Permissions(FEATURE_PERMISSIONS.READ)
   async findByItemCode(
     @Param('item_code') item_code: string,
     @Query('includeDisabled') includeDisabled?: string,
@@ -41,7 +39,6 @@ export class FeaturesController {
   }
 
   @Get('items/:item_code/config')
-  @Permissions(FEATURE_PERMISSIONS.READ)
   async findConfigByItemCode(
     @Param('item_code') item_code: string,
     @Query('includeDisabled') includeDisabled?: string,
@@ -53,25 +50,23 @@ export class FeaturesController {
   }
 
   @Get('key/:key')
-  @Permissions(FEATURE_PERMISSIONS.READ)
   async findByKey(@Param('key') key: string) {
     return this.featuresService.findByKey(key);
   }
 
   @Get(':id')
-  @Permissions(FEATURE_PERMISSIONS.READ)
   async findById(@Param('id', ParseIntPipe) id: number) {
     return this.featuresService.findById(id);
   }
 
   @Post()
-  @Permissions(FEATURE_PERMISSIONS.CREATE)
+  @Permissions(FEATURE_PERMISSIONS.MANAGE)
   async create(@Body() createFeatureDto: CreateFeatureDto) {
     return this.featuresService.create(createFeatureDto);
   }
 
   @Put(':id')
-  @Permissions(FEATURE_PERMISSIONS.UPDATE)
+  @Permissions(FEATURE_PERMISSIONS.MANAGE)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateFeatureDto: UpdateFeatureDto,
@@ -80,13 +75,13 @@ export class FeaturesController {
   }
 
   @Delete(':id')
-  @Permissions(FEATURE_PERMISSIONS.DELETE)
+  @Permissions(FEATURE_PERMISSIONS.MANAGE)
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.featuresService.delete(id);
   }
 
   @Post('items/:item_code')
-  @Permissions(FEATURE_PERMISSIONS.CREATE)
+  @Permissions(FEATURE_PERMISSIONS.MANAGE)
   async upsertItemFeature(
     @Param('item_code') item_code: string,
     @Body() createItemFeatureDto: CreateItemFeatureDto,
@@ -98,7 +93,7 @@ export class FeaturesController {
   }
 
   @Put('items/:item_code/:feature_id')
-  @Permissions(FEATURE_PERMISSIONS.UPDATE)
+  @Permissions(FEATURE_PERMISSIONS.MANAGE)
   async updateItemFeature(
     @Param('item_code') item_code: string,
     @Param('feature_id', ParseIntPipe) feature_id: number,
@@ -112,7 +107,7 @@ export class FeaturesController {
   }
 
   @Delete('items/:item_code/:feature_id')
-  @Permissions(FEATURE_PERMISSIONS.DELETE)
+  @Permissions(FEATURE_PERMISSIONS.MANAGE)
   async deleteItemFeature(
     @Param('item_code') item_code: string,
     @Param('feature_id', ParseIntPipe) feature_id: number,

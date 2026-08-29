@@ -1953,15 +1953,11 @@ Lỗi thường gặp:
 
 ## Features
 
-Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+Tất cả API trong nhóm này cần `Auth: Bearer`. Các API `GET` không yêu cầu quyền riêng; các thao tác thêm, sửa, xóa cần quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
 
-| Key quyền         | API được phép gọi                                                                  |
-| ----------------- | ---------------------------------------------------------------------------------- |
-| `features.list`   | `GET /features`                                                                    |
-| `features.read`   | `GET /features/:id`, `GET /features/key/:key`, `GET /features/items/:item_code...` |
-| `features.create` | `POST /features`, `POST /features/items/:item_code`                                |
-| `features.update` | `PUT /features/:id`, `PUT /features/items/:item_code/:feature_id`                  |
-| `features.delete` | `DELETE /features/:id`, `DELETE /features/items/:item_code/:feature_id`            |
+| Key quyền         | API được phép gọi                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------------- |
+| `features.manage` | `POST /features`, `PUT /features/:id`, `DELETE /features/:id`, và mọi API thay đổi item-feature |
 
 `features` là danh mục action/view chuẩn của hệ thống; `item_features` là liên kết xác định item nào được bật từng feature. Một feature có thể được dùng cho nhiều item.
 
