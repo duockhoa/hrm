@@ -885,6 +885,22 @@ describe('ProductionOrdersController', () => {
         'exportProductionOrderLines',
         PRODUCTION_ORDER_PERMISSIONS.EXPORT_WAREHOUSE_RELEASE,
       ],
+      [
+        'issueBatchRecord',
+        PRODUCTION_ORDER_PERMISSIONS.DOCUMENT_CONTROL_UPDATE,
+      ],
+      [
+        'receiveBatchRecord',
+        PRODUCTION_ORDER_PERMISSIONS.DOCUMENT_CONTROL_UPDATE,
+      ],
+      [
+        'receiveTestCertificate',
+        PRODUCTION_ORDER_PERMISSIONS.DOCUMENT_CONTROL_UPDATE,
+      ],
+      [
+        'receiveWarehouseRelease',
+        PRODUCTION_ORDER_PERMISSIONS.DOCUMENT_CONTROL_UPDATE,
+      ],
     ]);
 
     expect(routeNames.length).toBeGreaterThan(0);

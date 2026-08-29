@@ -2113,7 +2113,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DOCUMENT_CONTROL_UPDATE)
   @Patch(':id/document-control/issue-batch-record')
   async issueBatchRecord(
     @Param('id', ParseIntPipe) id: number,
@@ -2125,7 +2125,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DOCUMENT_CONTROL_UPDATE)
   @Patch(':id/document-control/receive-batch-record')
   async receiveBatchRecord(
     @Param('id', ParseIntPipe) id: number,
@@ -2137,7 +2137,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DOCUMENT_CONTROL_UPDATE)
   @Patch(':id/document-control/receive-test-certificate')
   async receiveTestCertificate(
     @Param('id', ParseIntPipe) id: number,
@@ -2149,7 +2149,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DOCUMENT_CONTROL_UPDATE)
   @Patch(':id/document-control/receive-warehouse-release')
   async receiveWarehouseRelease(
     @Param('id', ParseIntPipe) id: number,

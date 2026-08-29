@@ -2305,8 +2305,9 @@ Tất cả API lệnh sản xuất và tài nguyên con trong nhóm này cần `
 | `production-orders.read`   | Các API `GET` chi tiết, file, ảnh và dữ liệu con, trừ API xuất lệnh sản xuất                                                                                               |
 | `production-orders.export` | `GET /production-orders/:id/export` (xuất lệnh sản xuất)                                                                                                                   |
 | `production-orders.export-warehouse-release` | `POST /production-orders/:id/production-order-lines/export` (xuất phiếu xuất kho)                                                                                       |
+| `production-orders.document-control.update` | Cấp/nhận hồ sơ lô giấy, nhận phiếu xuất kho và phiếu kiểm nghiệm                                                                                                         |
 | `production-orders.create` | Các API `POST` tạo dữ liệu con hoặc tải file/ảnh lên                                                                                                                       |
-| `production-orders.update` | Các API `PATCH` cập nhật, phê duyệt hoặc xác nhận                                                                                                                          |
+| `production-orders.update` | Các API `PATCH` cập nhật, phê duyệt hoặc xác nhận, trừ bốn API quản lý chứng từ                                                                                            |
 | `production-orders.delete` | Các API `DELETE`; xóa phiếu pha cũng chấp nhận quyền chuyên biệt `production-orders.mixing-records.delete`                                                                 |
 
 ### Phiếu pha theo template
