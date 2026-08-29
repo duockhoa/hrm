@@ -45,6 +45,7 @@ import { ProductionOrderDocumentControlsService } from './production-order-docum
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
 import { ProductionOrderAttachmentsService } from './production-order-attachments.service';
+import { PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS } from './production-order-date-checks.permissions';
 import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 
 describe('ProductionOrdersController', () => {
@@ -901,6 +902,16 @@ describe('ProductionOrdersController', () => {
         'receiveWarehouseRelease',
         PRODUCTION_ORDER_PERMISSIONS.DOCUMENT_CONTROL_UPDATE,
       ],
+      ['getDateCheckImage', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ],
+      ['getDateCheckRequestFile', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ],
+      ['findDateCheckById', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ],
+      ['updateDateCheck', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.UPDATE],
+      ['approveDateCheck', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.UPDATE],
+      ['deleteDateCheck', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.DELETE],
+      ['addDateCheckImages', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.CREATE],
+      ['deleteDateCheckImage', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.DELETE],
+      ['findDateChecks', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ],
+      ['createDateCheck', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.CREATE],
     ]);
 
     expect(routeNames.length).toBeGreaterThan(0);

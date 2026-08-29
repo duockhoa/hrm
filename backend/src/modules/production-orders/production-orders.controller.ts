@@ -147,6 +147,7 @@ import { UpdateProductionOrderPrimaryPackagingConfirmationDto } from './dto/upda
 import { ProductionOrderPrimaryPackagingConfirmationsService } from './production-order-primary-packaging-confirmations.service';
 import { ProductionOrderProductionGuidesService } from './production-order-production-guides.service';
 import { ProductionOrderAttachmentsService } from './production-order-attachments.service';
+import { PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS } from './production-order-date-checks.permissions';
 import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 import { CreateProductionOrderAttachmentDto } from './dto/create-production-order-attachment.dto';
 import { UpdateProductionOrderAttachmentDto } from './dto/update-production-order-attachment.dto';
@@ -1442,7 +1443,7 @@ export class ProductionOrdersController {
     return this.productionOrderVialInspectionChecksService.delete(checkId);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ)
   @Get('date-checks/images/:filename')
   async getDateCheckImage(
     @Param('filename') filename: string,
@@ -1492,7 +1493,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(file.filePath));
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ)
   @Get('date-checks/request-files/:filename')
   async getDateCheckRequestFile(
     @Param('filename') filename: string,
@@ -1840,13 +1841,13 @@ export class ProductionOrdersController {
     return this.productionOrderFiltrationChecksService.delete(checkId);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ)
   @Get('date-checks/:checkId')
   async findDateCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDateChecksService.findById(checkId);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.UPDATE)
   @Patch('date-checks/:checkId')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -1877,7 +1878,7 @@ export class ProductionOrdersController {
     }
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.UPDATE)
   @Patch('date-checks/:checkId/approval')
   async approveDateCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1891,13 +1892,13 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.DELETE)
   @Delete('date-checks/:checkId')
   async deleteDateCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDateChecksService.delete(checkId);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.CREATE)
   @Post('date-checks/:checkId/images')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -1931,7 +1932,7 @@ export class ProductionOrdersController {
     }
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.DELETE)
   @Delete('date-checks/images/:imageId')
   async deleteDateCheckImage(@Param('imageId', ParseIntPipe) imageId: number) {
     return this.productionOrderDateChecksService.deleteImage(imageId);
@@ -3101,7 +3102,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ)
   @Get(':id/date-checks')
   async findDateChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderDateChecksService.findAllByProductionOrder(id);
@@ -3141,7 +3142,7 @@ export class ProductionOrdersController {
     }
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.CREATE)
   @Post(':id/date-checks')
   @UseInterceptors(
     FileFieldsInterceptor(

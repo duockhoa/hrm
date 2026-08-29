@@ -24,6 +24,7 @@ import { UpdateMixingActivityTemplateStageDto } from './dto/update-mixing-activi
 import { UpdateMixingActivityTemplateStageStepDto } from './dto/update-mixing-activity-template-stage-step.dto';
 import { UpdateMixingActivityTemplateStageStepParameterDto } from './dto/update-mixing-activity-template-stage-step-parameter.dto';
 import { ItemEquipmentService } from './item-equipment.service';
+import { MIXING_ACTIVITY_TEMPLATE_PERMISSIONS } from './mixing-activity-templates.permissions';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
 import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
@@ -84,13 +85,13 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-templates')
-  @Permissions(ITEM_PERMISSIONS.READ)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findAllMixingActivityTemplates() {
     return this.mixingActivityTemplatesService.findAll();
   }
 
   @Get('mixing-activity-templates/:templateId')
-  @Permissions(ITEM_PERMISSIONS.READ)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findMixingActivityTemplateById(
     @Param('templateId', ParseIntPipe) templateId: number,
   ) {
@@ -98,7 +99,7 @@ export class ItemsController {
   }
 
   @Patch('mixing-activity-templates/:templateId')
-  @Permissions(ITEM_PERMISSIONS.UPDATE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.UPDATE)
   async updateMixingActivityTemplate(
     @Param('templateId', ParseIntPipe) templateId: number,
     @Body() updateDto: UpdateMixingActivityTemplateDto,
@@ -107,7 +108,7 @@ export class ItemsController {
   }
 
   @Delete('mixing-activity-templates/:templateId')
-  @Permissions(ITEM_PERMISSIONS.DELETE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.DELETE)
   async deleteMixingActivityTemplate(
     @Param('templateId', ParseIntPipe) templateId: number,
   ) {
@@ -115,7 +116,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stages/:stageId')
-  @Permissions(ITEM_PERMISSIONS.READ)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findMixingActivityTemplateStageById(
     @Param('stageId', ParseIntPipe) stageId: number,
   ) {
@@ -123,7 +124,7 @@ export class ItemsController {
   }
 
   @Patch('mixing-activity-template-stages/:stageId')
-  @Permissions(ITEM_PERMISSIONS.UPDATE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.UPDATE)
   async updateMixingActivityTemplateStage(
     @Param('stageId', ParseIntPipe) stageId: number,
     @Body() updateDto: UpdateMixingActivityTemplateStageDto,
@@ -132,7 +133,7 @@ export class ItemsController {
   }
 
   @Delete('mixing-activity-template-stages/:stageId')
-  @Permissions(ITEM_PERMISSIONS.DELETE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.DELETE)
   async deleteMixingActivityTemplateStage(
     @Param('stageId', ParseIntPipe) stageId: number,
   ) {
@@ -140,7 +141,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stage-steps/:stepId')
-  @Permissions(ITEM_PERMISSIONS.READ)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findMixingActivityTemplateStageStepById(
     @Param('stepId', ParseIntPipe) stepId: number,
   ) {
@@ -148,7 +149,7 @@ export class ItemsController {
   }
 
   @Patch('mixing-activity-template-stage-steps/:stepId')
-  @Permissions(ITEM_PERMISSIONS.UPDATE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.UPDATE)
   async updateMixingActivityTemplateStageStep(
     @Param('stepId', ParseIntPipe) stepId: number,
     @Body() updateDto: UpdateMixingActivityTemplateStageStepDto,
@@ -160,7 +161,7 @@ export class ItemsController {
   }
 
   @Delete('mixing-activity-template-stage-steps/:stepId')
-  @Permissions(ITEM_PERMISSIONS.DELETE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.DELETE)
   async deleteMixingActivityTemplateStageStep(
     @Param('stepId', ParseIntPipe) stepId: number,
   ) {
@@ -168,7 +169,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stage-step-parameters/:parameterId')
-  @Permissions(ITEM_PERMISSIONS.READ)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findMixingActivityTemplateStageStepParameterById(
     @Param('parameterId', ParseIntPipe) parameterId: number,
   ) {
@@ -178,7 +179,7 @@ export class ItemsController {
   }
 
   @Patch('mixing-activity-template-stage-step-parameters/:parameterId')
-  @Permissions(ITEM_PERMISSIONS.UPDATE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.UPDATE)
   async updateMixingActivityTemplateStageStepParameter(
     @Param('parameterId', ParseIntPipe) parameterId: number,
     @Body() updateDto: UpdateMixingActivityTemplateStageStepParameterDto,
@@ -190,7 +191,7 @@ export class ItemsController {
   }
 
   @Delete('mixing-activity-template-stage-step-parameters/:parameterId')
-  @Permissions(ITEM_PERMISSIONS.DELETE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.DELETE)
   async deleteMixingActivityTemplateStageStepParameter(
     @Param('parameterId', ParseIntPipe) parameterId: number,
   ) {
@@ -200,7 +201,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-templates/:templateId/stages')
-  @Permissions(ITEM_PERMISSIONS.READ)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findMixingActivityTemplateStages(
     @Param('templateId', ParseIntPipe) templateId: number,
   ) {
@@ -210,7 +211,7 @@ export class ItemsController {
   }
 
   @Post('mixing-activity-templates/:templateId/stages')
-  @Permissions(ITEM_PERMISSIONS.CREATE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE)
   async createMixingActivityTemplateStage(
     @Param('templateId', ParseIntPipe) templateId: number,
     @Body() createDto: CreateMixingActivityTemplateStageDto,
@@ -224,7 +225,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stages/:stageId/steps')
-  @Permissions(ITEM_PERMISSIONS.READ)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findMixingActivityTemplateStageSteps(
     @Param('stageId', ParseIntPipe) stageId: number,
   ) {
@@ -232,7 +233,7 @@ export class ItemsController {
   }
 
   @Post('mixing-activity-template-stages/:stageId/steps')
-  @Permissions(ITEM_PERMISSIONS.CREATE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE)
   async createMixingActivityTemplateStageStep(
     @Param('stageId', ParseIntPipe) stageId: number,
     @Body() createDto: CreateMixingActivityTemplateStageStepDto,
@@ -246,7 +247,7 @@ export class ItemsController {
   }
 
   @Get('mixing-activity-template-stage-steps/:stepId/parameters')
-  @Permissions(ITEM_PERMISSIONS.READ)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findMixingActivityTemplateStageStepParameters(
     @Param('stepId', ParseIntPipe) stepId: number,
   ) {
@@ -256,7 +257,7 @@ export class ItemsController {
   }
 
   @Post('mixing-activity-template-stage-steps/:stepId/parameters')
-  @Permissions(ITEM_PERMISSIONS.CREATE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE)
   async createMixingActivityTemplateStageStepParameter(
     @Param('stepId', ParseIntPipe) stepId: number,
     @Body() createDto: CreateMixingActivityTemplateStageStepParameterDto,
@@ -276,7 +277,7 @@ export class ItemsController {
   }
 
   @Get(':item_code/mixing-activity-templates')
-  @Permissions(ITEM_PERMISSIONS.READ)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findMixingActivityTemplates(@Param('item_code') itemCode: string) {
     return this.mixingActivityTemplatesService.findAllByItem(itemCode);
   }
@@ -292,7 +293,7 @@ export class ItemsController {
   }
 
   @Post(':item_code/mixing-activity-templates')
-  @Permissions(ITEM_PERMISSIONS.CREATE)
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE)
   async createMixingActivityTemplate(
     @Param('item_code') itemCode: string,
     @Body() createDto: CreateMixingActivityTemplateDto,

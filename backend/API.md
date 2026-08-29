@@ -924,15 +924,26 @@ Response:
 
 ## Items
 
-Tất cả API item, thiết bị theo item và biểu mẫu hoạt động pha trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
+Tất cả API item và thiết bị theo item trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
 
 | Key quyền      | API được phép gọi                                                                                             |
 | -------------- | ------------------------------------------------------------------------------------------------------------- |
 | `items.list`   | `GET /items`, `GET /items/finished-products`, `GET /items/semi-finished-products`, `GET /items/raw-materials` |
-| `items.read`   | Các API `GET` chi tiết item, item-equipment và biểu mẫu hoạt động pha                                         |
-| `items.create` | Các API `POST` item-equipment và biểu mẫu hoạt động pha                                                       |
-| `items.update` | Các API `PATCH` item và biểu mẫu hoạt động pha                                                                |
-| `items.delete` | Các API `DELETE` item-equipment và biểu mẫu hoạt động pha                                                     |
+| `items.read`   | Các API `GET` chi tiết item và item-equipment                                                                 |
+| `items.create` | Các API `POST` item-equipment                                                                                 |
+| `items.update` | Các API `PATCH` item                                                                                          |
+| `items.delete` | Các API `DELETE` item-equipment                                                                               |
+
+### Mixing Activity Templates
+
+Các API template, stage, step và parameter cần `Auth: Bearer` cùng quyền riêng tương ứng.
+
+| Key quyền                          | API được phép gọi                                 |
+| ---------------------------------- | ------------------------------------------------- |
+| `mixing-activity-templates.read`   | Toàn bộ API `GET` của mixing activity template    |
+| `mixing-activity-templates.create` | Toàn bộ API `POST` của mixing activity template   |
+| `mixing-activity-templates.update` | Toàn bộ API `PATCH` của mixing activity template  |
+| `mixing-activity-templates.delete` | Toàn bộ API `DELETE` của mixing activity template |
 
 ### Lấy danh sách item
 
@@ -2298,13 +2309,13 @@ Tất cả API lệnh sản xuất và tài nguyên con trong nhóm này cần `
 | Key quyền                  | API được phép gọi                                                                                                                                                          |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `production-orders.list`   | `GET /production-orders`, `GET /production-orders/finished-products`, `GET /production-orders/semi-finished-products`, `GET /production-orders/finished-product-summaries` |
-| `production-orders.read`   | Các API `GET` chi tiết, file, ảnh và dữ liệu con, trừ API xuất lệnh sản xuất                                                                                               |
+| `production-orders.read`   | Các API `GET` chi tiết, file, ảnh và dữ liệu con, trừ API xuất lệnh sản xuất và theo dõi in date                                                                            |
 | `production-orders.export` | `GET /production-orders/:id/export` (xuất lệnh sản xuất)                                                                                                                   |
 | `production-orders.export-warehouse-release` | `POST /production-orders/:id/production-order-lines/export` (xuất phiếu xuất kho)                                                                                       |
 | `production-orders.document-control.update` | Cấp/nhận hồ sơ lô giấy, nhận phiếu xuất kho và phiếu kiểm nghiệm                                                                                                         |
-| `production-orders.create` | Các API `POST` tạo dữ liệu con hoặc tải file/ảnh lên                                                                                                                       |
-| `production-orders.update` | Các API `PATCH` cập nhật, phê duyệt hoặc xác nhận, trừ bốn API quản lý chứng từ                                                                                            |
-| `production-orders.delete` | Các API `DELETE`; xóa phiếu pha cũng chấp nhận quyền chuyên biệt `production-orders.mixing-records.delete`                                                                 |
+| `production-orders.create` | Các API `POST` tạo dữ liệu con hoặc tải file/ảnh lên, trừ theo dõi in date                                                                                                 |
+| `production-orders.update` | Các API `PATCH` cập nhật, phê duyệt hoặc xác nhận, trừ bốn API quản lý chứng từ và theo dõi in date                                                                        |
+| `production-orders.delete` | Các API `DELETE`, trừ theo dõi in date; xóa phiếu pha cũng chấp nhận quyền chuyên biệt `production-orders.mixing-records.delete`                                          |
 
 ### Phiếu pha theo template
 
@@ -7449,7 +7460,14 @@ Lỗi thường gặp:
 
 ## Production Order Date Checks
 
-Tất cả API trong nhóm này cần `Auth: Bearer`.
+Tất cả API trong nhóm này cần `Auth: Bearer` và permission riêng tương ứng.
+
+| Key quyền                                  | API được phép gọi                              |
+| ------------------------------------------ | ---------------------------------------------- |
+| `production-orders.date-checks.read`       | Toàn bộ API `GET` theo dõi in date             |
+| `production-orders.date-checks.create`     | Toàn bộ API `POST` theo dõi in date            |
+| `production-orders.date-checks.update`     | Toàn bộ API `PATCH` theo dõi in date, gồm duyệt |
+| `production-orders.date-checks.delete`     | Toàn bộ API `DELETE` theo dõi in date          |
 
 Nhóm API này dùng để tạo phiếu kiểm tra nội dung in date trên sản phẩm/bao bì thuộc một lệnh sản xuất. Nội dung yêu cầu in date nằm trong file `request_file`, DB chỉ lưu đường dẫn file.
 

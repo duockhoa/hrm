@@ -5,6 +5,7 @@ import { MixingActivityTemplatesService } from './mixing-activity-templates.serv
 import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
 import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
 import { MixingActivityTemplateStageStepParametersService } from './mixing-activity-template-stage-step-parameters.service';
+import { MIXING_ACTIVITY_TEMPLATE_PERMISSIONS } from './mixing-activity-templates.permissions';
 import { ItemsController } from './items.controller';
 import { ITEM_PERMISSIONS } from './items.permissions';
 import { ItemsService } from './items.service';
@@ -141,11 +142,39 @@ describe('ItemsController', () => {
     const metadata = (method: keyof ItemsController) =>
       Reflect.getMetadata(PERMISSIONS_KEY, controller[method]);
 
-    ['findAll', 'findFinishedProducts', 'findSemiFinishedProducts', 'findRawMaterials'].forEach(
-      (method) => expect(metadata(method as keyof ItemsController)).toEqual([ITEM_PERMISSIONS.LIST]),
-    );
     [
-      'findItemEquipmentById',
+      'findAll',
+      'findFinishedProducts',
+      'findSemiFinishedProducts',
+      'findRawMaterials',
+    ].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        ITEM_PERMISSIONS.LIST,
+      ]),
+    );
+    ['findItemEquipmentById', 'findItemEquipment', 'findItemByCode'].forEach(
+      (method) =>
+        expect(metadata(method as keyof ItemsController)).toEqual([
+          ITEM_PERMISSIONS.READ,
+        ]),
+    );
+    ['createItemEquipment'].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        ITEM_PERMISSIONS.CREATE,
+      ]),
+    );
+    ['updateItem'].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        ITEM_PERMISSIONS.UPDATE,
+      ]),
+    );
+    ['deleteItemEquipment'].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        ITEM_PERMISSIONS.DELETE,
+      ]),
+    );
+
+    [
       'findAllMixingActivityTemplates',
       'findMixingActivityTemplateById',
       'findMixingActivityTemplateStageById',
@@ -154,23 +183,20 @@ describe('ItemsController', () => {
       'findMixingActivityTemplateStages',
       'findMixingActivityTemplateStageSteps',
       'findMixingActivityTemplateStageStepParameters',
-      'findItemEquipment',
       'findMixingActivityTemplates',
-      'findItemByCode',
     ].forEach((method) =>
       expect(metadata(method as keyof ItemsController)).toEqual([
-        ITEM_PERMISSIONS.READ,
+        MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ,
       ]),
     );
     [
       'createMixingActivityTemplateStage',
       'createMixingActivityTemplateStageStep',
       'createMixingActivityTemplateStageStepParameter',
-      'createItemEquipment',
       'createMixingActivityTemplate',
     ].forEach((method) =>
       expect(metadata(method as keyof ItemsController)).toEqual([
-        ITEM_PERMISSIONS.CREATE,
+        MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE,
       ]),
     );
     [
@@ -178,21 +204,19 @@ describe('ItemsController', () => {
       'updateMixingActivityTemplateStage',
       'updateMixingActivityTemplateStageStep',
       'updateMixingActivityTemplateStageStepParameter',
-      'updateItem',
     ].forEach((method) =>
       expect(metadata(method as keyof ItemsController)).toEqual([
-        ITEM_PERMISSIONS.UPDATE,
+        MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.UPDATE,
       ]),
     );
     [
-      'deleteItemEquipment',
       'deleteMixingActivityTemplate',
       'deleteMixingActivityTemplateStage',
       'deleteMixingActivityTemplateStageStep',
       'deleteMixingActivityTemplateStageStepParameter',
     ].forEach((method) =>
       expect(metadata(method as keyof ItemsController)).toEqual([
-        ITEM_PERMISSIONS.DELETE,
+        MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.DELETE,
       ]),
     );
   });
