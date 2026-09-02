@@ -34,6 +34,29 @@ Có thể thay đổi port bằng biến môi trường `SWAGGER_PORT`. Swagger 
 - Response lỗi theo chuẩn NestJS, thường có `statusCode`, `message`, `error`.
 - Các API export trả về file binary, không trả JSON.
 
+## Data export cho Google Sheets
+
+Các endpoint trong nhóm này trả JSON, được thiết kế để Google Apps Script chủ động lấy dữ liệu. Chúng không dùng JWT người dùng; gửi API key riêng qua header sau:
+
+```http
+x-data-export-api-key: <DATA_EXPORT_API_KEY>
+```
+
+### Items
+
+```http
+GET /data-export/items?page=1&limit=500
+GET /data-export/items?updated_from=2026-09-01T00:00:00.000Z
+GET /data-export/items?include_deleted=true
+```
+
+- `page`: mặc định `1`.
+- `limit`: mặc định `500`, tối đa `10000`.
+- `updated_from`: chỉ lấy item có `update_at` từ thời điểm ISO 8601 này trở đi.
+- `include_deleted=true`: bao gồm item đã xóa mềm; hữu ích để đồng bộ trạng thái xóa sang Sheet.
+
+Response gồm `data` và `pagination`. Mỗi dòng `data` giữ cấu trúc quan hệ gốc: thông tin số đăng ký nằm trong object `registration` (hoặc `null` nếu item chưa liên kết số đăng ký).
+
 ## Cleaning Objects và Cleaning Requirements
 
 Tất cả endpoint bên dưới yêu cầu `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`. Trường `created_by_id` được lấy tự động từ access token và không cần (cũng không nên) gửi từ client.

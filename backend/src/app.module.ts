@@ -34,6 +34,7 @@ import { SecondaryPackagingStageRequirementsModule } from './modules/secondary-p
 import { DosageFormsModule } from './modules/dosage-forms/dosage-forms.module';
 import { UserLoginSessionsModule } from './modules/user-login-sessions/user-login-sessions.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { DataExportModule } from './modules/data-export/data-export.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     DosageFormsModule,
     UserLoginSessionsModule,
     NotificationsModule,
+    DataExportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
