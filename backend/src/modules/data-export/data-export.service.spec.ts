@@ -6,6 +6,10 @@ describe('DataExportService', () => {
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    productionOrderFinishedProductSummaries: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
   const service = new DataExportService(prisma as any);
@@ -91,6 +95,84 @@ describe('DataExportService', () => {
         where: { update_at: { gte: new Date('2026-01-01T00:00:00.000Z') } },
         skip: 100,
         take: 100,
+      }),
+    );
+  });
+
+  it('exports finished product summaries with their original relations', async () => {
+    prisma.productionOrderFinishedProductSummaries.count.mockReturnValue(
+      'count-query',
+    );
+    prisma.productionOrderFinishedProductSummaries.findMany.mockReturnValue(
+      'summaries-query',
+    );
+    prisma.$transaction.mockResolvedValue([
+      1,
+      [
+        {
+          id: 10,
+          production_order_id: 100,
+          package_count: 20,
+          boxes_per_package: 10,
+          loose_box_count: 3,
+          created_at: new Date('2026-01-01T00:00:00.000Z'),
+          updated_at: new Date('2026-01-02T00:00:00.000Z'),
+          createdBy: { id: 1, username: 'operator' },
+          productionOrder: {
+            id: 100,
+            production_order_code: 'LSX-001',
+            item: { item_code: 'TP001', item_name: 'Sản phẩm A' },
+            samplingRequests: [
+              {
+                id: 12,
+                status: 'sent',
+                google_doc_url: 'https://docs.google.com/document/d/example',
+              },
+            ],
+            documentControl: {
+              batch_record_issued_at: new Date('2026-01-03T00:00:00.000Z'),
+              batch_record_received_at: null,
+              test_certificate_received_at: null,
+            },
+            deviations: [
+              { id: 5, deviation_content: 'Sai lệch minh họa', images: [] },
+            ],
+          },
+        },
+      ],
+    ]);
+
+    await expect(
+      service.exportFinishedProductSummaries({ page: 1, limit: 10000 }),
+    ).resolves.toMatchObject({
+      data: [
+        expect.objectContaining({
+          id: 10,
+          createdBy: expect.objectContaining({ username: 'operator' }),
+          productionOrder: expect.objectContaining({
+            production_order_code: 'LSX-001',
+            samplingRequests: [
+              expect.objectContaining({ status: 'sent' }),
+            ],
+            documentControl: expect.objectContaining({
+              batch_record_issued_at: expect.any(Date),
+            }),
+            deviations: [
+              expect.objectContaining({ deviation_content: 'Sai lệch minh họa' }),
+            ],
+          }),
+        }),
+      ],
+      pagination: expect.objectContaining({ total: 1 }),
+    });
+
+    expect(
+      prisma.productionOrderFinishedProductSummaries.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip: 0,
+        take: 10000,
       }),
     );
   });

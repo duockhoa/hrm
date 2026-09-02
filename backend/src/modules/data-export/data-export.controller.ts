@@ -15,6 +15,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { DataExportApiKeyGuard } from './data-export-api-key.guard';
+import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
 import { DataExportService } from './data-export.service';
 
@@ -41,5 +42,17 @@ export class DataExportController {
   })
   exportItems(@Query() query: ExportItemsQueryDto) {
     return this.dataExportService.exportItems(query);
+  }
+
+  @Get('finished-product-summaries')
+  @ApiOperation({
+    summary: 'Xuất dữ liệu tổng kết thành phẩm cho Google Sheets',
+  })
+  @ApiOkResponse({ description: 'Danh sách tổng kết thành phẩm theo trang' })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportFinishedProductSummaries(
+    @Query() query: ExportFinishedProductSummariesQueryDto,
+  ) {
+    return this.dataExportService.exportFinishedProductSummaries(query);
   }
 }

@@ -57,6 +57,21 @@ GET /data-export/items?include_deleted=true
 
 Response gồm `data` và `pagination`. Mỗi dòng `data` giữ cấu trúc quan hệ gốc: thông tin số đăng ký nằm trong object `registration` (hoặc `null` nếu item chưa liên kết số đăng ký).
 
+### Tổng kết thành phẩm
+
+```http
+GET /data-export/finished-product-summaries?page=1&limit=10000
+GET /data-export/finished-product-summaries?updated_from=2026-09-01T00:00:00.000Z
+```
+
+Endpoint trả về bảng `production_order_finished_product_summaries`, sắp xếp theo `created_at` tăng dần. Mỗi bản ghi giữ quan hệ gốc `createdBy`, `productionOrder`, `productionOrder.item` và `productionOrder.item.registration`.
+
+Trong `productionOrder` có thêm:
+
+- `samplingRequests`: mảng chứa lần gửi PYCLM gần nhất, gồm trạng thái, thời điểm gửi, vị trí, link Google Docs và người gửi.
+- `documentControl`: thông tin cấp/nhận HSL giấy và nhận phiếu kiểm nghiệm. Các trường `batch_record_issued_at`, `batch_record_received_at`, `test_certificate_received_at` khác `null` tương ứng với đã cấp HSL, đã nhận HSL và đã nhận phiếu kiểm nghiệm.
+- `deviations`: danh sách sai lệch chưa xóa, kèm người báo cáo, người phê duyệt và ảnh sai lệch.
+
 ## Cleaning Objects và Cleaning Requirements
 
 Tất cả endpoint bên dưới yêu cầu `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`. Trường `created_by_id` được lấy tự động từ access token và không cần (cũng không nên) gửi từ client.
