@@ -7990,6 +7990,43 @@ Lỗi thường gặp:
 - `400 package_count must be a non-negative integer`
 - `401 Authenticated user not found`
 
+### Cập nhật tổng kết thành phẩm
+
+```http
+PATCH /production-orders/finished-product-summaries/:summaryId
+Content-Type: application/json
+```
+
+Chỉ gửi các trường cần sửa:
+
+```json
+{
+  "package_count": 14,
+  "loose_box_count": 5
+}
+```
+
+Các trường `package_count`, `boxes_per_package`, `loose_box_count` phải là số nguyên không âm; cần gửi ít nhất một trường. Cần quyền `production-orders.update`.
+
+Lỗi thường gặp:
+
+- `400 At least one field is required`
+- `400 package_count is required`
+- `400 package_count must be a non-negative integer`
+- `404 Finished product summary not found`
+
+### Xóa tổng kết thành phẩm
+
+```http
+DELETE /production-orders/finished-product-summaries/:summaryId
+```
+
+Cần quyền `production-orders.delete`. API trả về bản ghi vừa xóa.
+
+Lỗi thường gặp:
+
+- `404 Finished product summary not found`
+
 ## Production Order Deviations
 
 Tất cả API trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.

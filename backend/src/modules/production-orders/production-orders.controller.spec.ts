@@ -122,6 +122,8 @@ describe('ProductionOrdersController', () => {
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
   let productionOrderDensityChecksService: {
     findById: jest.Mock;
@@ -438,6 +440,8 @@ describe('ProductionOrdersController', () => {
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
     productionOrderDensityChecksService = {
       findById: jest.fn(),
@@ -3017,6 +3021,35 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderFinishedProductSummariesService.create,
     ).toHaveBeenCalledWith(2031, createDto, user);
+  });
+
+  it('updates a finished product summary', async () => {
+    const updateDto = { package_count: 14 };
+    const result = { id: 1, package_count: 14 };
+    productionOrderFinishedProductSummariesService.update.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.updateFinishedProductSummary(1, updateDto),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderFinishedProductSummariesService.update,
+    ).toHaveBeenCalledWith(1, updateDto);
+  });
+
+  it('deletes a finished product summary', async () => {
+    const result = { id: 1 };
+    productionOrderFinishedProductSummariesService.delete.mockResolvedValue(
+      result,
+    );
+
+    await expect(controller.deleteFinishedProductSummary(1)).resolves.toBe(
+      result,
+    );
+    expect(
+      productionOrderFinishedProductSummariesService.delete,
+    ).toHaveBeenCalledWith(1);
   });
 
   it('sets download headers and returns a streamable file when exporting production order lines', async () => {

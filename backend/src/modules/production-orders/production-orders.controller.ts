@@ -54,6 +54,7 @@ import { CreateProductionOrderPreSecondaryPackagingCheckDto } from './dto/create
 import { UpdateProductionOrderPreSecondaryPackagingCheckDto } from './dto/update-production-order-pre-secondary-packaging-check.dto';
 import { ProductionOrderPreSecondaryPackagingChecksService } from './production-order-pre-secondary-packaging-checks.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
+import { UpdateProductionOrderFinishedProductSummaryDto } from './dto/update-production-order-finished-product-summary.dto';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { CreateProductionOrderDensityCheckDto } from './dto/create-production-order-density-check.dto';
 import { UpdateProductionOrderDensityCheckDto } from './dto/update-production-order-density-check.dto';
@@ -431,6 +432,26 @@ export class ProductionOrdersController {
     return this.productionOrderFinishedProductSummariesService.findById(
       summaryId,
     );
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Patch('finished-product-summaries/:summaryId')
+  async updateFinishedProductSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Body() updateDto: UpdateProductionOrderFinishedProductSummaryDto,
+  ) {
+    return this.productionOrderFinishedProductSummariesService.update(
+      summaryId,
+      updateDto,
+    );
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
+  @Delete('finished-product-summaries/:summaryId')
+  async deleteFinishedProductSummary(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderFinishedProductSummariesService.delete(summaryId);
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)

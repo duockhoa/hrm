@@ -17,6 +17,8 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       findUnique: jest.Mock;
       findMany: jest.Mock;
       create: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
     };
   };
 
@@ -29,6 +31,8 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
         findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -227,6 +231,53 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     expect(
       prismaService.productionOrderFinishedProductSummaries.create,
     ).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates supplied finished product summary counts', async () => {
+    const updatedSummary = { id: 1, package_count: 14 };
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderFinishedProductSummaries.update.mockResolvedValue(
+      updatedSummary,
+    );
+
+    await expect(service.update(1, { package_count: ' 014 ' })).resolves.toBe(
+      updatedSummary,
+    );
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: { package_count: 14 },
+      }),
+    );
+  });
+
+  it('rejects an empty finished product summary update', async () => {
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+
+    await expect(service.update(1, {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('deletes a finished product summary', async () => {
+    const deletedSummary = { id: 1 };
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderFinishedProductSummaries.delete.mockResolvedValue(
+      deletedSummary,
+    );
+
+    await expect(service.delete(1)).resolves.toBe(deletedSummary);
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.delete,
+    ).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 1 } }));
   });
 
   it('throws BadRequestException when a count is not an integer', async () => {

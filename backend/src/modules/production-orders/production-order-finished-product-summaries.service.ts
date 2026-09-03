@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
+import { UpdateProductionOrderFinishedProductSummaryDto } from './dto/update-production-order-finished-product-summary.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -20,6 +21,12 @@ const finishedProductSummaryCreatorSelect = {
   department: true,
   position: true,
 };
+
+const FINISHED_PRODUCT_SUMMARY_COUNT_FIELDS = [
+  'package_count',
+  'boxes_per_package',
+  'loose_box_count',
+] as const;
 
 const pyclmSenderSelect = {
   id: true,
@@ -199,6 +206,54 @@ export class ProductionOrderFinishedProductSummariesService {
     });
   }
 
+  async update(
+    summaryId: number,
+    dto: UpdateProductionOrderFinishedProductSummaryDto,
+  ) {
+    await this.ensureSummaryExists(summaryId);
+
+    return this.prismaService.productionOrderFinishedProductSummaries.update({
+      where: {
+        id: summaryId,
+      },
+      data: this.normalizeUpdateData(dto),
+      include: finishedProductSummaryInclude,
+    });
+  }
+
+  async delete(summaryId: number) {
+    await this.ensureSummaryExists(summaryId);
+
+    return this.prismaService.productionOrderFinishedProductSummaries.delete({
+      where: {
+        id: summaryId,
+      },
+      include: finishedProductSummaryInclude,
+    });
+  }
+
+  private normalizeUpdateData(
+    dto: UpdateProductionOrderFinishedProductSummaryDto,
+  ) {
+    const updateDto = dto ?? {};
+    const data: Prisma.ProductionOrderFinishedProductSummariesUpdateInput = {};
+
+    for (const field of FINISHED_PRODUCT_SUMMARY_COUNT_FIELDS) {
+      if (field in updateDto) {
+        data[field] = this.normalizeRequiredNonNegativeInt(
+          updateDto[field],
+          field,
+        );
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('At least one field is required');
+    }
+
+    return data;
+  }
+
   private async ensureProductionOrderExists(productionOrderId: number) {
     const productionOrder =
       await this.prismaService.productionOrders.findUnique({
@@ -212,6 +267,24 @@ export class ProductionOrderFinishedProductSummariesService {
 
     if (!productionOrder) {
       throw new NotFoundException('Production order not found');
+    }
+  }
+
+  private async ensureSummaryExists(summaryId: number) {
+    const summary =
+      await this.prismaService.productionOrderFinishedProductSummaries.findUnique(
+        {
+          where: {
+            id: summaryId,
+          },
+          select: {
+            id: true,
+          },
+        },
+      );
+
+    if (!summary) {
+      throw new NotFoundException('Finished product summary not found');
     }
   }
 
