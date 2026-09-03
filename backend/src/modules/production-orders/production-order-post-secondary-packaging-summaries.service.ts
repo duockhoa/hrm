@@ -17,6 +17,7 @@ type AuthenticatedUser = { id?: number | string | null };
 
 const DECIMAL_PATTERN = /^\d+(?:\.\d{1,3})?$/;
 const DECIMAL_INTEGER_DIGITS = 9;
+const MAX_UNIT_LENGTH = 20;
 
 const creatorSelect = {
   id: true,
@@ -113,6 +114,7 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
               dto?.remaining_quantity,
               'remaining_quantity',
             ),
+            unit: this.normalizeOptionalUnit(dto?.unit),
             remaining_reason: this.normalizeOptionalText(
               dto?.remaining_reason,
               'remaining_reason',
@@ -163,6 +165,9 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
         updateDto.remaining_quantity,
         'remaining_quantity',
       );
+    }
+    if ('unit' in updateDto) {
+      data.unit = this.normalizeOptionalUnit(updateDto.unit);
     }
     if ('remaining_reason' in updateDto) {
       data.remaining_reason = this.normalizeOptionalText(
@@ -450,6 +455,18 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
       throw new BadRequestException(`${fieldName} must be a string`);
     }
     return value.trim();
+  }
+
+  private normalizeOptionalUnit(value: unknown) {
+    const unit = this.normalizeOptionalText(value, 'unit');
+
+    if (unit && unit.length > MAX_UNIT_LENGTH) {
+      throw new BadRequestException(
+        `unit must be at most ${MAX_UNIT_LENGTH} characters`,
+      );
+    }
+
+    return unit;
   }
 
   private ensureDifferentOrders(

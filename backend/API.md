@@ -6346,6 +6346,7 @@ Body tạo mới:
   "semi_finished_product_order_id": 2030,
   "received_bag_count": 12,
   "remaining_quantity": "3.5",
+  "unit": "kg",
   "remaining_reason": "Chờ kiểm nghiệm"
 }
 ```
@@ -6353,6 +6354,7 @@ Body tạo mới:
 - `semi_finished_product_order_id`, `received_bag_count`, `remaining_quantity` là bắt buộc.
 - `received_bag_count` là số nguyên không âm.
 - Các trường số lượng lưu `DECIMAL(12, 3)`, nhận số hoặc chuỗi số, tối đa 3 chữ số sau dấu phẩy.
+- `unit` không bắt buộc, tối đa 20 ký tự; ví dụ `kg`, `hộp`, `vỉ`. Gửi `null` hoặc chuỗi rỗng để xóa khi cập nhật.
 - `remaining_reason` không bắt buộc; gửi `null` hoặc chuỗi rỗng để xóa khi cập nhật.
 - `created_by_id` lấy từ người dùng đăng nhập. Response trả về người nhập, lệnh sản xuất bán thành phẩm (kèm item), danh sách chờ xử lý và chờ hủy.
 

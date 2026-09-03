@@ -1661,6 +1661,7 @@ model ProductionOrderPostSecondaryPackagingSummaries {
   semiFinishedProductOrder       ProductionOrders                                                @relation("PostSecondaryPackagingSummarySemiFinishedProductOrder", fields: [semi_finished_product_order_id], references: [id], onDelete: Restrict, map: "po_post_secondary_summary_semi_finished_order_id_fkey")
   received_bag_count             Int
   remaining_quantity             Decimal                                                         @db.Decimal(12, 3)
+  unit                           String?                                                         @db.VarChar(20)
   remaining_reason               String?                                                         @db.Text
   created_by_id                  Int
   createdBy                      Users                                                           @relation("PostSecondaryPackagingSummaryCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "po_post_secondary_summary_created_by_id_fkey")
