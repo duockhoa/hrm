@@ -6,6 +6,7 @@ import {
   Building2,
   ClipboardCheck,
   Clock3,
+  Wrench,
   Package,
   UserCog,
 } from "lucide-react";
@@ -35,7 +36,13 @@ type CurrentUser = {
   name?: string | null;
 };
 
-const ACCESS_CONTROLLED_APP_KEYS = new Set(["hsl", "hrm", "wms", "scb"]);
+const ACCESS_CONTROLLED_APP_KEYS = new Set([
+  "equipment",
+  "hsl",
+  "hrm",
+  "wms",
+  "scb",
+]);
 
 const APPS: AppLauncherItem[] = [
   {
@@ -71,6 +78,15 @@ const APPS: AppLauncherItem[] = [
     icon: UserCog,
     tileClassName:
       "bg-[linear-gradient(180deg,#267BFF_0%,#1B59CC_60%,#1243A5_100%)]",
+  },
+  {
+    key: "equipment",
+    name: "QUẢN LÝ THIẾT BỊ",
+    link: process.env.NEXT_PUBLIC_APP_EQUIPMENT_URL || "#",
+    icon: Wrench,
+    tileClassName:
+      "bg-[linear-gradient(180deg,#8B7CFF_0%,#6657D8_58%,#4638A7_100%)]",
+    external: true,
   },
 
   {
