@@ -182,6 +182,9 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
+    addImages: jest.Mock;
+    deleteImage: jest.Mock;
+    findImageFile: jest.Mock;
   };
   let productionOrderShellWeightChecksService: {
     findById: jest.Mock;
@@ -503,6 +506,9 @@ describe('ProductionOrdersController', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      addImages: jest.fn(),
+      deleteImage: jest.fn(),
+      findImageFile: jest.fn(),
     };
     productionOrderShellWeightChecksService = {
       findById: jest.fn(),
@@ -1956,6 +1962,31 @@ describe('ProductionOrdersController', () => {
 
     await expect(controller.deleteVolumeCheck(1)).resolves.toBe(result);
     expect(productionOrderVolumeChecksService.delete).toHaveBeenCalledWith(1);
+  });
+
+  it('adds images to a volume check using the authenticated user', async () => {
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, images: [] };
+    productionOrderVolumeChecksService.addImages.mockResolvedValue(result);
+
+    await expect(
+      controller.addVolumeCheckImages(1, undefined, { user }),
+    ).resolves.toBe(result);
+    expect(productionOrderVolumeChecksService.addImages).toHaveBeenCalledWith(
+      1,
+      [],
+      user,
+    );
+  });
+
+  it('deletes a volume check image', async () => {
+    const result = { id: 1 };
+    productionOrderVolumeChecksService.deleteImage.mockResolvedValue(result);
+
+    await expect(controller.deleteVolumeCheckImage(1)).resolves.toBe(result);
+    expect(productionOrderVolumeChecksService.deleteImage).toHaveBeenCalledWith(
+      1,
+    );
   });
 
   it('gets shell weight checks for a production order', async () => {

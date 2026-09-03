@@ -173,6 +173,12 @@ import {
   removeUploadedTenUnitSensoryCheckImages,
 } from './production-order-ten-unit-sensory-check-upload.config';
 import {
+  getVolumeCheckImagePaths,
+  MAX_VOLUME_CHECK_IMAGE_COUNT,
+  productionOrderVolumeCheckImageUploadOptions,
+  removeUploadedVolumeCheckImages,
+} from './production-order-volume-check-upload.config';
+import {
   getPreSecondaryPackagingCheckImagePaths,
   MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT,
   preSecondaryPackagingCheckImageUploadOptions,
@@ -221,6 +227,11 @@ type SensoryCheckUploadFields = {
 };
 
 type TenUnitSensoryCheckUploadFields = {
+  images?: Express.Multer.File[];
+  image?: Express.Multer.File[];
+};
+
+type VolumeCheckUploadFields = {
   images?: Express.Multer.File[];
   image?: Express.Multer.File[];
 };
@@ -299,6 +310,15 @@ const tenUnitSensoryCheckImageUploadFields = [
 
 const getUploadedTenUnitSensoryCheckImages = (
   uploadedFiles?: TenUnitSensoryCheckUploadFields,
+) => [...(uploadedFiles?.images ?? []), ...(uploadedFiles?.image ?? [])];
+
+const volumeCheckImageUploadFields = [
+  { name: 'images', maxCount: MAX_VOLUME_CHECK_IMAGE_COUNT },
+  { name: 'image', maxCount: MAX_VOLUME_CHECK_IMAGE_COUNT },
+];
+
+const getUploadedVolumeCheckImages = (
+  uploadedFiles?: VolumeCheckUploadFields,
 ) => [...(uploadedFiles?.images ?? []), ...(uploadedFiles?.image ?? [])];
 
 const getUploadedMaterialProcessSummaryImages = (
@@ -1032,6 +1052,32 @@ export class ProductionOrdersController {
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Get('volume-checks/images/:filename')
+  async getVolumeCheckImage(
+    @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.productionOrderVolumeChecksService.findImageFile(
+        filename,
+        original === 'true',
+      );
+
+    if (!imageFile) {
+      throw new NotFoundException('Volume check image not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('volume-checks/:checkId')
   async findVolumeCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderVolumeChecksService.findById(checkId);
@@ -1044,6 +1090,14 @@ export class ProductionOrdersController {
     @Body() updateDto: UpdateProductionOrderVolumeCheckDto,
   ) {
     return this.productionOrderVolumeChecksService.update(checkId, updateDto);
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
+  @Delete('volume-checks/images/:imageId')
+  async deleteVolumeCheckImage(
+    @Param('imageId', ParseIntPipe) imageId: number,
+  ) {
+    return this.productionOrderVolumeChecksService.deleteImage(imageId);
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
@@ -2704,6 +2758,40 @@ export class ProductionOrdersController {
       createDto,
       req.user,
     );
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Post('volume-checks/:checkId/images')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      volumeCheckImageUploadFields,
+      productionOrderVolumeCheckImageUploadOptions,
+    ),
+  )
+  async addVolumeCheckImages(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @UploadedFiles() uploadedFiles: VolumeCheckUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    const uploadedImages = getUploadedVolumeCheckImages(uploadedFiles);
+
+    if (uploadedImages.length > MAX_VOLUME_CHECK_IMAGE_COUNT) {
+      await removeUploadedVolumeCheckImages(uploadedImages);
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_VOLUME_CHECK_IMAGE_COUNT} files per volume check`,
+      );
+    }
+
+    try {
+      return await this.productionOrderVolumeChecksService.addImages(
+        checkId,
+        getVolumeCheckImagePaths(uploadedImages),
+        req.user,
+      );
+    } catch (error) {
+      await removeUploadedVolumeCheckImages(uploadedImages);
+      throw error;
+    }
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)

@@ -5242,7 +5242,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu kiểm tra thể tích cho tối đa 6 đơn vị của một lệnh sản xuất. Dùng được cho cả `gói` và `lọ`. Đây là bảng/API mới, độc lập với nhóm API cũ `Production Order Bottle Volume Checks`.
+Nhóm API này lưu kiểm tra thể tích cho tối đa 6 đơn vị của một lệnh sản xuất. Dùng được cho cả `gói` và `lọ`. Mỗi lần kiểm tra có thể có tối đa 10 ảnh. Đây là bảng/API mới, độc lập với nhóm API cũ `Production Order Bottle Volume Checks`.
 
 ### Lấy danh sách kiểm tra thể tích
 
@@ -5391,6 +5391,44 @@ API trả về bản ghi vừa xóa.
 Lỗi thường gặp:
 
 - `404 Volume check not found`
+
+### Thêm ảnh kiểm tra thể tích
+
+```http
+POST /production-orders/volume-checks/:checkId/images
+Content-Type: multipart/form-data
+```
+
+Gửi ảnh qua field `images` (nhiều file) hoặc `image`. Chấp nhận JPG, PNG, WEBP, GIF; tối đa 10 ảnh cho mỗi lần kiểm tra và tối đa 20 MB mỗi ảnh. Cần quyền `production-orders.create`.
+
+Response trả về bản ghi kiểm tra, kèm mảng `images` (gồm `id`, `image_path`, người tạo và thời gian tạo).
+
+Lỗi thường gặp:
+
+- `400 images are required`
+- `400 images cannot exceed 10 files per volume check`
+- `400 image must be a JPG, PNG, WEBP, or GIF image`
+- `404 Volume check not found`
+
+### Xem ảnh kiểm tra thể tích
+
+```http
+GET /production-orders/volume-checks/images/:filename
+```
+
+Thêm `?original=true` để nhận file gốc; nếu không có query này API ưu tiên ảnh thumbnail. Cần quyền `production-orders.read`.
+
+### Xóa ảnh kiểm tra thể tích
+
+```http
+DELETE /production-orders/volume-checks/images/:imageId
+```
+
+Cần quyền `production-orders.delete`. API xóa metadata và file ảnh/thumbnails.
+
+Lỗi thường gặp:
+
+- `404 Volume check image not found`
 
 ## Production Order Vial Inspection Checks
 

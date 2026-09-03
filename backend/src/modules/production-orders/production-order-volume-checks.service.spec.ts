@@ -21,6 +21,12 @@ describe('ProductionOrderVolumeChecksService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    productionOrderVolumeCheckImages: {
+      findUnique: jest.Mock;
+      findFirst: jest.Mock;
+      createMany: jest.Mock;
+      delete: jest.Mock;
+    };
   };
 
   const validDto = {
@@ -44,6 +50,12 @@ describe('ProductionOrderVolumeChecksService', () => {
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
+      },
+      productionOrderVolumeCheckImages: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        createMany: jest.fn(),
         delete: jest.fn(),
       },
     };
@@ -119,6 +131,7 @@ describe('ProductionOrderVolumeChecksService', () => {
           production_order_id: 2031,
           package_type: 'lo',
           requirement: 'The tich phai dat yeu cau',
+          dosage_form_stage: null,
           unit_1_volume: new Prisma.Decimal('10.01'),
           unit_2_volume: new Prisma.Decimal('10.02'),
           unit_3_volume: new Prisma.Decimal('9.98'),
@@ -156,6 +169,7 @@ describe('ProductionOrderVolumeChecksService', () => {
           production_order_id: 2031,
           package_type: null,
           requirement: null,
+          dosage_form_stage: null,
           unit_1_volume: new Prisma.Decimal('5.5'),
           unit_2_volume: null,
           unit_3_volume: null,
@@ -331,8 +345,12 @@ describe('ProductionOrderVolumeChecksService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('deletes a volume check', async () => {
-    const existingCheck = { id: 1, production_order_id: 2031 };
+  it('deletes a volume check and its images', async () => {
+    const existingCheck = {
+      id: 1,
+      production_order_id: 2031,
+      images: [],
+    };
     prismaService.productionOrderVolumeChecks.findUnique.mockResolvedValue(
       existingCheck,
     );
@@ -348,6 +366,46 @@ describe('ProductionOrderVolumeChecksService', () => {
         where: { id: 1 },
       }),
     );
+  });
+
+  it('adds images to a volume check', async () => {
+    const check = { id: 1, images: [] };
+    const result = { id: 1, images: [{ id: 2 }] };
+    prismaService.productionOrderVolumeChecks.findUnique
+      .mockResolvedValueOnce(check)
+      .mockResolvedValueOnce(result);
+
+    await expect(
+      service.addImages(1, ['/production-orders/volume-checks/images/a.jpg'], {
+        id: 7,
+      }),
+    ).resolves.toBe(result);
+    expect(
+      prismaService.productionOrderVolumeCheckImages.createMany,
+    ).toHaveBeenCalledWith({
+      data: [
+        {
+          volume_check_id: 1,
+          image_path: '/production-orders/volume-checks/images/a.jpg',
+          created_by_id: 7,
+        },
+      ],
+    });
+  });
+
+  it('deletes a volume check image', async () => {
+    const image = {
+      id: 2,
+      image_path: '/production-orders/volume-checks/images/a.jpg',
+    };
+    prismaService.productionOrderVolumeCheckImages.findUnique.mockResolvedValue(
+      image,
+    );
+
+    await expect(service.deleteImage(2)).resolves.toBe(image);
+    expect(
+      prismaService.productionOrderVolumeCheckImages.delete,
+    ).toHaveBeenCalledWith({ where: { id: 2 } });
   });
 
   it('throws UnauthorizedException when the authenticated user is missing', async () => {

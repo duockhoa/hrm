@@ -46,6 +46,7 @@ model Users {
   createdProductionOrderDisintegrationChecks            ProductionOrderDisintegrationChecks[]                           @relation("ProductionOrderDisintegrationCheckCreator")
   createdProductionOrderHardCapsuleLeakageChecks        ProductionOrderHardCapsuleLeakageChecks[]                       @relation("ProductionOrderHardCapsuleLeakageCheckCreator")
   createdProductionOrderVolumeChecks                    ProductionOrderVolumeChecks[]                                   @relation("ProductionOrderVolumeCheckCreator")
+  createdProductionOrderVolumeCheckImages               ProductionOrderVolumeCheckImages[]                              @relation("ProductionOrderVolumeCheckImageCreator")
   createdProductionOrderShellWeightChecks               ProductionOrderShellWeightChecks[]                              @relation("ProductionOrderShellWeightCheckCreator")
   createdProductionOrderTenShellWeightChecks            ProductionOrderTenShellWeightChecks[]                           @relation("ProductionOrderTenShellWeightCheckCreator")
   createdProductionOrderVialInspectionChecks            ProductionOrderVialInspectionChecks[]                           @relation("ProductionOrderVialInspectionCheckCreator")
@@ -1497,27 +1498,43 @@ model ProductionOrderHardCapsuleLeakageChecks {
 }
 
 model ProductionOrderVolumeChecks {
-  id                  Int              @id @default(autoincrement())
+  id                  Int                                @id @default(autoincrement())
   production_order_id Int
-  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_volume_checks_po_id_fkey")
-  package_type        String?          @db.VarChar(50)
-  requirement         String?          @db.Text
-  dosage_form_stage   String?          @db.VarChar(50)
-  unit_1_volume       Decimal          @db.Decimal(10, 2)
-  unit_2_volume       Decimal?         @db.Decimal(10, 2)
-  unit_3_volume       Decimal?         @db.Decimal(10, 2)
-  unit_4_volume       Decimal?         @db.Decimal(10, 2)
-  unit_5_volume       Decimal?         @db.Decimal(10, 2)
-  unit_6_volume       Decimal?         @db.Decimal(10, 2)
-  unit                String           @default("ml") @db.VarChar(10)
+  productionOrder     ProductionOrders                   @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_volume_checks_po_id_fkey")
+  package_type        String?                            @db.VarChar(50)
+  requirement         String?                            @db.Text
+  dosage_form_stage   String?                            @db.VarChar(50)
+  unit_1_volume       Decimal                            @db.Decimal(10, 2)
+  unit_2_volume       Decimal?                           @db.Decimal(10, 2)
+  unit_3_volume       Decimal?                           @db.Decimal(10, 2)
+  unit_4_volume       Decimal?                           @db.Decimal(10, 2)
+  unit_5_volume       Decimal?                           @db.Decimal(10, 2)
+  unit_6_volume       Decimal?                           @db.Decimal(10, 2)
+  unit                String                             @default("ml") @db.VarChar(10)
   created_by_id       Int
-  createdBy           Users            @relation("ProductionOrderVolumeCheckCreator", fields: [created_by_id], references: [id], map: "po_volume_checks_created_by_id_fkey")
-  created_at          DateTime         @default(now())
-  updated_at          DateTime         @default(now()) @updatedAt
+  createdBy           Users                              @relation("ProductionOrderVolumeCheckCreator", fields: [created_by_id], references: [id], map: "po_volume_checks_created_by_id_fkey")
+  created_at          DateTime                           @default(now())
+  updated_at          DateTime                           @default(now()) @updatedAt
+  images              ProductionOrderVolumeCheckImages[]
 
   @@index([production_order_id], map: "po_volume_checks_po_id_fkey")
   @@index([created_by_id], map: "po_volume_checks_created_by_id_fkey")
   @@map("production_order_volume_checks")
+}
+
+model ProductionOrderVolumeCheckImages {
+  id              Int                         @id @default(autoincrement())
+  volume_check_id Int
+  volumeCheck     ProductionOrderVolumeChecks @relation(fields: [volume_check_id], references: [id], onDelete: Cascade, map: "po_volume_check_images_check_id_fkey")
+  image_path      String                      @db.Text
+  created_by_id   Int
+  createdBy       Users                       @relation("ProductionOrderVolumeCheckImageCreator", fields: [created_by_id], references: [id], map: "po_volume_check_images_user_fkey")
+  created_at      DateTime                    @default(now())
+  updated_at      DateTime                    @default(now()) @updatedAt
+
+  @@index([volume_check_id], map: "po_volume_check_images_check_idx")
+  @@index([created_by_id], map: "po_volume_check_images_user_idx")
+  @@map("production_order_volume_check_images")
 }
 
 model ProductionOrderShellWeightChecks {

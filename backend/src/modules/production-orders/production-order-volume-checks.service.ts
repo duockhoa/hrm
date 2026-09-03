@@ -8,6 +8,12 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderVolumeCheckDto } from './dto/create-production-order-volume-check.dto';
 import { UpdateProductionOrderVolumeCheckDto } from './dto/update-production-order-volume-check.dto';
+import {
+  getVolumeCheckImageLookupPaths,
+  MAX_VOLUME_CHECK_IMAGE_COUNT,
+  removeVolumeCheckImagesByPath,
+  resolveVolumeCheckImageFile,
+} from './production-order-volume-check-upload.config';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -31,6 +37,14 @@ const volumeCheckCreatorSelect = {
 const volumeCheckInclude = {
   createdBy: {
     select: volumeCheckCreatorSelect,
+  },
+  images: {
+    include: {
+      createdBy: {
+        select: volumeCheckCreatorSelect,
+      },
+    },
+    orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
   },
 } satisfies Prisma.ProductionOrderVolumeChecksInclude;
 
@@ -97,6 +111,30 @@ export class ProductionOrderVolumeChecksService {
     });
   }
 
+  async findImageFile(filename: string, original = false) {
+    const imagePaths = getVolumeCheckImageLookupPaths(filename);
+
+    if (imagePaths.length === 0) {
+      return null;
+    }
+
+    const image =
+      await this.prismaService.productionOrderVolumeCheckImages.findFirst({
+        where: {
+          image_path: {
+            in: imagePaths,
+          },
+        },
+        select: { id: true },
+      });
+
+    if (!image) {
+      return null;
+    }
+
+    return resolveVolumeCheckImageFile(filename, original);
+  }
+
   async create(
     productionOrderId: number,
     dto: CreateProductionOrderVolumeCheckDto,
@@ -136,12 +174,85 @@ export class ProductionOrderVolumeChecksService {
   }
 
   async delete(checkId: number) {
-    await this.findValuesByIdOrThrow(checkId);
+    const check = await this.findCheckWithImagesOrThrow(checkId);
 
-    return this.prismaService.productionOrderVolumeChecks.delete({
-      where: { id: checkId },
-      include: volumeCheckInclude,
+    const deletedCheck =
+      await this.prismaService.productionOrderVolumeChecks.delete({
+        where: { id: checkId },
+        include: volumeCheckInclude,
+      });
+
+    await removeVolumeCheckImagesByPath(
+      check.images.map((image) => image.image_path),
+    );
+
+    return deletedCheck;
+  }
+
+  async addImages(
+    checkId: number,
+    imagePaths: string[],
+    user?: AuthenticatedUser,
+  ) {
+    if (imagePaths.length === 0) {
+      throw new BadRequestException('images are required');
+    }
+
+    const check = await this.findCheckWithImagesOrThrow(checkId);
+
+    if (
+      check.images.length + imagePaths.length >
+      MAX_VOLUME_CHECK_IMAGE_COUNT
+    ) {
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_VOLUME_CHECK_IMAGE_COUNT} files per volume check`,
+      );
+    }
+
+    const userId = this.normalizeUserId(user);
+
+    await this.prismaService.productionOrderVolumeCheckImages.createMany({
+      data: imagePaths.map((imagePath) => ({
+        volume_check_id: checkId,
+        image_path: imagePath,
+        created_by_id: userId,
+      })),
     });
+
+    return this.findById(checkId);
+  }
+
+  async deleteImage(imageId: number) {
+    const image =
+      await this.prismaService.productionOrderVolumeCheckImages.findUnique({
+        where: { id: imageId },
+      });
+
+    if (!image) {
+      throw new NotFoundException('Volume check image not found');
+    }
+
+    await this.prismaService.productionOrderVolumeCheckImages.delete({
+      where: { id: imageId },
+    });
+
+    await removeVolumeCheckImagesByPath([image.image_path]);
+
+    return image;
+  }
+
+  private async findCheckWithImagesOrThrow(checkId: number) {
+    const volumeCheck =
+      await this.prismaService.productionOrderVolumeChecks.findUnique({
+        where: { id: checkId },
+        include: { images: true },
+      });
+
+    if (!volumeCheck) {
+      throw new NotFoundException('Volume check not found');
+    }
+
+    return volumeCheck;
   }
 
   private async findValuesByIdOrThrow(checkId: number) {
