@@ -85,4 +85,31 @@ describe('ProductionOrderPostSecondaryPackagingSummariesService', () => {
       }),
     );
   });
+
+  it('allows a semi-finished production order to be reused by another summary', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2032 });
+    prismaService.productionOrderPostSecondaryPackagingSummaries.create.mockResolvedValue(
+      {
+        id: 2,
+        production_order_id: 2032,
+        semi_finished_product_order_id: 2030,
+      },
+    );
+
+    await expect(
+      service.create(
+        2032,
+        {
+          semi_finished_product_order_id: 2030,
+          received_bag_count: 8,
+          remaining_quantity: '1',
+        },
+        { id: 7 },
+      ),
+    ).resolves.toEqual({
+      id: 2,
+      production_order_id: 2032,
+      semi_finished_product_order_id: 2030,
+    });
+  });
 });

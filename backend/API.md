@@ -6327,7 +6327,42 @@ Lỗi thường gặp:
 
 ## Production Order Post-Secondary Packaging Summaries
 
-Tất cả API trong nhóm này cần `Auth: Bearer`. Một lệnh đóng gói cấp 2 có nhiều bản tổng kết. Mỗi bản tổng kết liên kết duy nhất với một lệnh sản xuất bán thành phẩm qua `semi_finished_product_order_id`; lệnh này phải khác `:id` và không thể dùng lại cho bản tổng kết khác.
+Tất cả API trong nhóm này cần `Auth: Bearer`. Một lệnh đóng gói cấp 2 có nhiều bản tổng kết. Mỗi bản tổng kết liên kết với một lệnh sản xuất bán thành phẩm qua `semi_finished_product_order_id`.
+
+### Quan hệ lô bán thành phẩm và lô thành phẩm
+
+Quan hệ hiện tại là **1–n**:
+
+```text
+1 lô/lệnh bán thành phẩm
+        │
+        ├── nhiều bản tổng kết của lô thành phẩm A
+        ├── nhiều bản tổng kết của lô thành phẩm B
+        └── nhiều bản tổng kết của lô thành phẩm C
+```
+
+- `production_order_id` lấy từ `:id` trên URL: lệnh sản xuất thành phẩm đang đóng gói cấp 2.
+- `semi_finished_product_order_id` là lệnh/lô bán thành phẩm nguồn được dùng để đóng gói.
+- Một `semi_finished_product_order_id` có thể xuất hiện trong nhiều bản tổng kết, kể cả khi các bản này thuộc các `production_order_id` thành phẩm khác nhau.
+- API không còn từ chối một lô bán thành phẩm chỉ vì lô đó đã được dùng ở một lệnh thành phẩm khác.
+- `semi_finished_product_order_id` vẫn phải khác `production_order_id`; không thể dùng chính lệnh thành phẩm đang xử lý làm lô bán thành phẩm nguồn.
+
+Ví dụ: cùng lô bán thành phẩm `2030` có thể được dùng cho các lô thành phẩm `3001` và `3002`:
+
+```http
+POST /production-orders/3001/post-secondary-packaging-summaries
+POST /production-orders/3002/post-secondary-packaging-summaries
+```
+
+```json
+{
+  "semi_finished_product_order_id": 2030,
+  "received_bag_count": 12,
+  "remaining_quantity": "3.5"
+}
+```
+
+Frontend không nên loại `2030` khỏi danh sách chọn chỉ vì lô này đã xuất hiện trong tổng kết của `3001`. Khi xem dữ liệu của một lô thành phẩm, dùng API danh sách theo `:id` để lấy riêng các bản tổng kết thuộc lô đó.
 
 ### Bản tổng kết
 

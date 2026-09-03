@@ -100,34 +100,29 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
       this.ensureProductionOrderExists(semiFinishedProductOrderId),
     ]);
 
-    try {
-      return await this.prismaService.productionOrderPostSecondaryPackagingSummaries.create(
-        {
-          data: {
-            production_order_id: productionOrderId,
-            semi_finished_product_order_id: semiFinishedProductOrderId,
-            received_bag_count: this.normalizeRequiredNonNegativeInt(
-              dto?.received_bag_count,
-              'received_bag_count',
-            ),
-            remaining_quantity: this.normalizeRequiredQuantity(
-              dto?.remaining_quantity,
-              'remaining_quantity',
-            ),
-            unit: this.normalizeOptionalUnit(dto?.unit),
-            remaining_reason: this.normalizeOptionalText(
-              dto?.remaining_reason,
-              'remaining_reason',
-            ),
-            created_by_id: this.normalizeUserId(user),
-          },
-          include: summaryInclude,
+    return this.prismaService.productionOrderPostSecondaryPackagingSummaries.create(
+      {
+        data: {
+          production_order_id: productionOrderId,
+          semi_finished_product_order_id: semiFinishedProductOrderId,
+          received_bag_count: this.normalizeRequiredNonNegativeInt(
+            dto?.received_bag_count,
+            'received_bag_count',
+          ),
+          remaining_quantity: this.normalizeRequiredQuantity(
+            dto?.remaining_quantity,
+            'remaining_quantity',
+          ),
+          unit: this.normalizeOptionalUnit(dto?.unit),
+          remaining_reason: this.normalizeOptionalText(
+            dto?.remaining_reason,
+            'remaining_reason',
+          ),
+          created_by_id: this.normalizeUserId(user),
         },
-      );
-    } catch (error) {
-      this.throwIfSemiFinishedOrderAlreadyLinked(error);
-      throw error;
-    }
+        include: summaryInclude,
+      },
+    );
   }
 
   async update(
@@ -178,18 +173,13 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
 
     this.ensureUpdateHasFields(data);
 
-    try {
-      return await this.prismaService.productionOrderPostSecondaryPackagingSummaries.update(
-        {
-          where: { id: summaryId },
-          data,
-          include: summaryInclude,
-        },
-      );
-    } catch (error) {
-      this.throwIfSemiFinishedOrderAlreadyLinked(error);
-      throw error;
-    }
+    return this.prismaService.productionOrderPostSecondaryPackagingSummaries.update(
+      {
+        where: { id: summaryId },
+        data,
+        include: summaryInclude,
+      },
+    );
   }
 
   async delete(summaryId: number) {
@@ -525,16 +515,5 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
       throw new UnauthorizedException('Authenticated user not found');
     }
     return userId;
-  }
-
-  private throwIfSemiFinishedOrderAlreadyLinked(error: unknown): never | void {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
-      throw new BadRequestException(
-        'Semi-finished product production order is already linked to another summary',
-      );
-    }
   }
 }

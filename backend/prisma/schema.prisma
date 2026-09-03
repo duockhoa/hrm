@@ -732,72 +732,72 @@ model ProductionWorkshopCleaningChecklists {
 }
 
 model ProductionOrders {
-  id                                               Int                                                   @id
-  item_code                                        String
-  item                                             Items                                                 @relation(fields: [item_code], references: [item_code])
-  status                                           String
-  type                                             String
-  planned_quatity                                  Int
-  creation_date                                    DateTime
-  origin                                           String?
-  warehouse                                        String?
-  unit                                             String
-  start_date                                       DateTime
-  description                                      String
-  date_manufacture                                 String?
-  expire_date                                      String?
-  lot_no                                           String
-  packing_specification                            String?
-  production_order_code                            String?
-  remarks                                          String?                                               @db.Text
-  internal_notes                                   String?                                               @db.Text
-  change_content                                   String?                                               @db.Text
-  deviations                                       ProductionOrderDeviations[]
-  samplingRequests                                 ProductionOrderSamplingRequests[]
-  environmentChecks                                ProductionOrderEnvironmentChecks[]
-  hygieneChecks                                    ProductionOrderHygieneChecks[]
-  lineClearanceChecks                              ProductionOrderLineClearanceChecks[]                  @relation("LineClearanceCurrentOrder")
-  lineClearanceChecksAsPreviousOrder               ProductionOrderLineClearanceChecks[]                  @relation("LineClearancePreviousOrder")
-  secondaryPackagingChecks                         ProductionOrderSecondaryPackagingChecks[]
-  preSecondaryPackagingChecks                      ProductionOrderPreSecondaryPackagingChecks[]
-  finishedProductSummaries                         ProductionOrderFinishedProductSummaries[]
-  densityChecks                                    ProductionOrderDensityChecks[]
-  samplingRecords                                  ProductionOrderSamplingRecords[]
-  friabilityChecks                                 ProductionOrderFriabilityChecks[]
-  sprayDoseChecks                                  ProductionOrderSprayDoseChecks[]
-  postHomogenizationGranuleChecks                  ProductionOrderPostHomogenizationGranuleChecks[]
-  disintegrationChecks                             ProductionOrderDisintegrationChecks[]
-  hardCapsuleLeakageChecks                         ProductionOrderHardCapsuleLeakageChecks[]
-  volumeChecks                                     ProductionOrderVolumeChecks[]
-  shellWeightChecks                                ProductionOrderShellWeightChecks[]
-  tenShellWeightCheck                              ProductionOrderTenShellWeightChecks?
-  semiFinishedProductGrossWeightChecks             ProductionOrderSemiFinishedProductGrossWeightChecks[]
-  semiFinishedProductNetWeightChecks               ProductionOrderSemiFinishedProductNetWeightChecks[]
-  semiFinishedProductSummaries                     ProductionOrderSemiFinishedProductSummaries[]
-  postSecondaryPackagingSummaries                  ProductionOrderPostSecondaryPackagingSummaries[]      @relation("PostSecondaryPackagingSummaryProductionOrder")
-  postSecondaryPackagingSemiFinishedProductSummary ProductionOrderPostSecondaryPackagingSummaries?       @relation("PostSecondaryPackagingSummarySemiFinishedProductOrder")
-  materialSummaries                                ProductionOrderMaterialSummaries[]
-  materialProcessSummaries                         ProductionOrderMaterialProcessSummaries[]
-  leakTightnessChecks                              ProductionOrderLeakTightnessChecks[]
-  hardnessChecks                                   ProductionOrderHardnessChecks[]
-  tabletThicknessChecks                            ProductionOrderTabletThicknessChecks[]
-  tenUnitSensoryChecks                             ProductionOrderTenUnitSensoryChecks[]
-  vialInspectionChecks                             ProductionOrderVialInspectionChecks[]
-  cylinderCalibration                              ProductionOrderCylinderCalibrations?
-  sensoryChecks                                    ProductionOrderSensoryChecks[]
-  dateChecks                                       ProductionOrderDateChecks[]
-  disinfectantPreparations                         ProductionOrderDisinfectantPreparations[]
-  steamSterilizationChecks                         ProductionOrderSteamSterilizationChecks[]
-  postPreparationSolutionChecks                    ProductionOrderPostPreparationSolutionChecks[]
-  filtrationChecks                                 ProductionOrderFiltrationChecks[]
-  factoryReleaseReviews                            ProductionOrderFactoryReleaseReviews[]
-  equipmentMonitoringRecords                       EquipmentMonitoringRecords[]
-  documentControl                                  ProductionOrderDocumentControls?
-  productionGuide                                  ProductionOrderProductionGuides?
-  primaryPackagingConfirmations                    ProductionOrderPrimaryPackagingConfirmations[]
-  attachments                                      ProductionOrderAttachments[]
-  registrationNumber                               ProductionOrderRegistrationNumbers?
-  mixingRecords                                    ProductionOrderMixingRecords[]
+  id                                            Int                                                   @id
+  item_code                                     String
+  item                                          Items                                                 @relation(fields: [item_code], references: [item_code])
+  status                                        String
+  type                                          String
+  planned_quatity                               Int
+  creation_date                                 DateTime
+  origin                                        String?
+  warehouse                                     String?
+  unit                                          String
+  start_date                                    DateTime
+  description                                   String
+  date_manufacture                              String?
+  expire_date                                   String?
+  lot_no                                        String
+  packing_specification                         String?
+  production_order_code                         String?
+  remarks                                       String?                                               @db.Text
+  internal_notes                                String?                                               @db.Text
+  change_content                                String?                                               @db.Text
+  deviations                                    ProductionOrderDeviations[]
+  samplingRequests                              ProductionOrderSamplingRequests[]
+  environmentChecks                             ProductionOrderEnvironmentChecks[]
+  hygieneChecks                                 ProductionOrderHygieneChecks[]
+  lineClearanceChecks                           ProductionOrderLineClearanceChecks[]                  @relation("LineClearanceCurrentOrder")
+  lineClearanceChecksAsPreviousOrder            ProductionOrderLineClearanceChecks[]                  @relation("LineClearancePreviousOrder")
+  secondaryPackagingChecks                      ProductionOrderSecondaryPackagingChecks[]
+  preSecondaryPackagingChecks                   ProductionOrderPreSecondaryPackagingChecks[]
+  finishedProductSummaries                      ProductionOrderFinishedProductSummaries[]
+  densityChecks                                 ProductionOrderDensityChecks[]
+  samplingRecords                               ProductionOrderSamplingRecords[]
+  friabilityChecks                              ProductionOrderFriabilityChecks[]
+  sprayDoseChecks                               ProductionOrderSprayDoseChecks[]
+  postHomogenizationGranuleChecks               ProductionOrderPostHomogenizationGranuleChecks[]
+  disintegrationChecks                          ProductionOrderDisintegrationChecks[]
+  hardCapsuleLeakageChecks                      ProductionOrderHardCapsuleLeakageChecks[]
+  volumeChecks                                  ProductionOrderVolumeChecks[]
+  shellWeightChecks                             ProductionOrderShellWeightChecks[]
+  tenShellWeightCheck                           ProductionOrderTenShellWeightChecks?
+  semiFinishedProductGrossWeightChecks          ProductionOrderSemiFinishedProductGrossWeightChecks[]
+  semiFinishedProductNetWeightChecks            ProductionOrderSemiFinishedProductNetWeightChecks[]
+  semiFinishedProductSummaries                  ProductionOrderSemiFinishedProductSummaries[]
+  postSecondaryPackagingSummaries               ProductionOrderPostSecondaryPackagingSummaries[]      @relation("PostSecondaryPackagingSummaryProductionOrder")
+  postSecondaryPackagingSummariesAsSemiFinished ProductionOrderPostSecondaryPackagingSummaries[]      @relation("PostSecondaryPackagingSummarySemiFinishedProductOrder")
+  materialSummaries                             ProductionOrderMaterialSummaries[]
+  materialProcessSummaries                      ProductionOrderMaterialProcessSummaries[]
+  leakTightnessChecks                           ProductionOrderLeakTightnessChecks[]
+  hardnessChecks                                ProductionOrderHardnessChecks[]
+  tabletThicknessChecks                         ProductionOrderTabletThicknessChecks[]
+  tenUnitSensoryChecks                          ProductionOrderTenUnitSensoryChecks[]
+  vialInspectionChecks                          ProductionOrderVialInspectionChecks[]
+  cylinderCalibration                           ProductionOrderCylinderCalibrations?
+  sensoryChecks                                 ProductionOrderSensoryChecks[]
+  dateChecks                                    ProductionOrderDateChecks[]
+  disinfectantPreparations                      ProductionOrderDisinfectantPreparations[]
+  steamSterilizationChecks                      ProductionOrderSteamSterilizationChecks[]
+  postPreparationSolutionChecks                 ProductionOrderPostPreparationSolutionChecks[]
+  filtrationChecks                              ProductionOrderFiltrationChecks[]
+  factoryReleaseReviews                         ProductionOrderFactoryReleaseReviews[]
+  equipmentMonitoringRecords                    EquipmentMonitoringRecords[]
+  documentControl                               ProductionOrderDocumentControls?
+  productionGuide                               ProductionOrderProductionGuides?
+  primaryPackagingConfirmations                 ProductionOrderPrimaryPackagingConfirmations[]
+  attachments                                   ProductionOrderAttachments[]
+  registrationNumber                            ProductionOrderRegistrationNumbers?
+  mixingRecords                                 ProductionOrderMixingRecords[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
   @@map("production_orders")
@@ -1657,7 +1657,7 @@ model ProductionOrderPostSecondaryPackagingSummaries {
   id                             Int                                                             @id @default(autoincrement())
   production_order_id            Int
   productionOrder                ProductionOrders                                                @relation("PostSecondaryPackagingSummaryProductionOrder", fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_post_secondary_summary_production_order_id_fkey")
-  semi_finished_product_order_id Int                                                             @unique(map: "po_post_secondary_summary_semi_finished_order_id_key")
+  semi_finished_product_order_id Int
   semiFinishedProductOrder       ProductionOrders                                                @relation("PostSecondaryPackagingSummarySemiFinishedProductOrder", fields: [semi_finished_product_order_id], references: [id], onDelete: Restrict, map: "po_post_secondary_summary_semi_finished_order_id_fkey")
   received_bag_count             Int
   remaining_quantity             Decimal                                                         @db.Decimal(12, 3)
@@ -1671,6 +1671,7 @@ model ProductionOrderPostSecondaryPackagingSummaries {
   updated_at                     DateTime                                                        @default(now()) @updatedAt
 
   @@index([production_order_id], map: "po_post_secondary_summary_production_order_id_idx")
+  @@index([semi_finished_product_order_id], map: "po_post_secondary_summary_semi_finished_order_id_idx")
   @@index([created_by_id], map: "po_post_secondary_summary_created_by_id_idx")
   @@map("production_order_post_secondary_packaging_summaries")
 }
