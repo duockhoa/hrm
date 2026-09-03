@@ -751,6 +751,7 @@ model ProductionOrders {
   production_order_code                            String?
   remarks                                          String?                                               @db.Text
   internal_notes                                   String?                                               @db.Text
+  change_content                                   String?                                               @db.Text
   deviations                                       ProductionOrderDeviations[]
   samplingRequests                                 ProductionOrderSamplingRequests[]
   environmentChecks                                ProductionOrderEnvironmentChecks[]

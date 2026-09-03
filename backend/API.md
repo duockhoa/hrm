@@ -2674,6 +2674,29 @@ Ví dụ phần dữ liệu lấy mẫu trong response:
 `samplingRecords` được sắp xếp theo `created_at` mới nhất trước, sau đó `id` giảm dần. Nếu chưa có dữ liệu lấy mẫu, `samplingRecords` là mảng rỗng `[]`.
 Nếu chưa có thông tin cấp/nhận chứng từ, `documentControl` là `null`.
 
+### Cập nhật nội dung thay đổi của lệnh sản xuất
+
+```http
+PATCH /production-orders/:id/change-content
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "change_content": "Điều chỉnh quy cách đóng gói theo yêu cầu QA."
+}
+```
+
+Cần quyền `production-orders.update`. `change_content` là nội dung lưu cục bộ tại hệ thống, không được đồng bộ hoặc ghi đè từ SAP B1. Gửi `null` hoặc chuỗi rỗng để xóa nội dung. API trả về production order sau khi cập nhật.
+
+Lỗi thường gặp:
+
+- `400 change_content is required`
+- `400 change_content must be a string`
+- `404 Production order not found`
+
 Ví dụ `featureConfig`:
 
 ```json

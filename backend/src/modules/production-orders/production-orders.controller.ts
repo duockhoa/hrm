@@ -31,6 +31,7 @@ import { ProductionOrdersService } from './production-orders.service';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import type { ExportProductionOrderLinesDto } from './dto/export-production-order-lines.dto';
 import { CreateProductionOrderSamplingRequestDto } from './dto/create-production-order-sampling-request.dto';
+import { UpdateProductionOrderChangeContentDto } from './dto/update-production-order-change-content.dto';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { CreateProductionOrderSamplingRecordDto } from './dto/create-production-order-sampling-record.dto';
 import { UpdateProductionOrderSamplingRecordDto } from './dto/update-production-order-sampling-record.dto';
@@ -2203,6 +2204,15 @@ export class ProductionOrdersController {
   @Get(':id')
   async findProductionOrderById(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderById(id);
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Patch(':id/change-content')
+  async updateChangeContent(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDto: UpdateProductionOrderChangeContentDto,
+  ) {
+    return this.productionOrdersService.updateChangeContent(id, updateDto);
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)

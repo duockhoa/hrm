@@ -16,6 +16,7 @@ import type {
 import { FeaturesService } from '../features/features.service';
 import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
 import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
+import { UpdateProductionOrderChangeContentDto } from './dto/update-production-order-change-content.dto';
 
 export type SapProductionOrderLine = {
   StageID?: number | null;
@@ -272,6 +273,44 @@ export class ProductionOrdersService {
       ...this.addPyclmInfo(productionOrder),
       featureConfig,
     };
+  }
+
+  async updateChangeContent(
+    id: number,
+    dto: UpdateProductionOrderChangeContentDto,
+  ) {
+    if (!dto || !('change_content' in dto)) {
+      throw new BadRequestException('change_content is required');
+    }
+
+    const changeContent = this.normalizeChangeContent(dto.change_content);
+
+    const productionOrder =
+      await this.prismaService.productionOrders.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+    if (!productionOrder) {
+      throw new NotFoundException('Production order not found');
+    }
+
+    return this.prismaService.productionOrders.update({
+      where: { id },
+      data: { change_content: changeContent },
+    });
+  }
+
+  private normalizeChangeContent(value: unknown) {
+    if (value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('change_content must be a string');
+    }
+
+    return value.trim() || null;
   }
 
   private addPyclmInfoToList<T extends ProductionOrderWithSamplingRequests>(

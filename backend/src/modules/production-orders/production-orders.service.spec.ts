@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProductionOrdersService } from './production-orders.service';
 import { PrismaService } from 'src/prisma.service';
 import ExcelJS from 'exceljs';
@@ -73,6 +74,7 @@ describe('ProductionOrdersService', () => {
     productionOrders: {
       findMany: jest.Mock;
       findUnique: jest.Mock;
+      update: jest.Mock;
     };
   };
 
@@ -106,6 +108,7 @@ describe('ProductionOrdersService', () => {
             productionOrders: {
               findMany: jest.fn(),
               findUnique: jest.fn(),
+              update: jest.fn(),
             },
           },
         },
@@ -358,6 +361,58 @@ describe('ProductionOrdersService', () => {
     expect(featuresService.findConfigByItemCode).toHaveBeenCalledWith(
       'TP00001',
     );
+  });
+
+  it('updates change content without modifying SAP-synced fields', async () => {
+    const updatedProductionOrder = {
+      id: 2031,
+      change_content: 'Điều chỉnh quy cách đóng gói theo QA.',
+    };
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrders.update.mockResolvedValue(
+      updatedProductionOrder,
+    );
+
+    await expect(
+      service.updateChangeContent(2031, {
+        change_content: '  Điều chỉnh quy cách đóng gói theo QA.  ',
+      }),
+    ).resolves.toBe(updatedProductionOrder);
+    expect(prismaService.productionOrders.update).toHaveBeenCalledWith({
+      where: { id: 2031 },
+      data: {
+        change_content: 'Điều chỉnh quy cách đóng gói theo QA.',
+      },
+    });
+  });
+
+  it('allows change content to be cleared', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrders.update.mockResolvedValue({
+      id: 2031,
+      change_content: null,
+    });
+
+    await expect(
+      service.updateChangeContent(2031, { change_content: '' }),
+    ).resolves.toEqual({ id: 2031, change_content: null });
+  });
+
+  it('rejects an invalid or missing change content value', async () => {
+    await expect(service.updateChangeContent(2031, {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(
+      service.updateChangeContent(2031, { change_content: 123 as never }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects change content for a missing production order', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.updateChangeContent(2031, { change_content: 'Điều chỉnh' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('returns production order lines joined with production order stages', async () => {

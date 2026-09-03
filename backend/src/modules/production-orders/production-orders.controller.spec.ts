@@ -55,6 +55,7 @@ describe('ProductionOrdersController', () => {
     findFinishedProducts: jest.Mock;
     findSemiFinishedProducts: jest.Mock;
     findProductionOrderById: jest.Mock;
+    updateChangeContent: jest.Mock;
     findProductionOrderLines: jest.Mock;
     exportProductionOrder: jest.Mock;
     exportProductionOrderLines: jest.Mock;
@@ -379,6 +380,7 @@ describe('ProductionOrdersController', () => {
       findFinishedProducts: jest.fn(),
       findSemiFinishedProducts: jest.fn(),
       findProductionOrderById: jest.fn(),
+      updateChangeContent: jest.fn(),
       findProductionOrderLines: jest.fn(),
       exportProductionOrder: jest.fn(),
       exportProductionOrderLines: jest.fn(),
@@ -1002,6 +1004,20 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrdersService.findProductionOrderById,
     ).toHaveBeenCalledWith(2031);
+  });
+
+  it('updates production order change content', async () => {
+    const updateDto = { change_content: 'Điều chỉnh quy cách đóng gói.' };
+    const result = { id: 2031, ...updateDto };
+    productionOrdersService.updateChangeContent.mockResolvedValue(result);
+
+    await expect(controller.updateChangeContent(2031, updateDto)).resolves.toBe(
+      result,
+    );
+    expect(productionOrdersService.updateChangeContent).toHaveBeenCalledWith(
+      2031,
+      updateDto,
+    );
   });
 
   it('sets download headers and returns a streamable file when exporting a production order', async () => {
