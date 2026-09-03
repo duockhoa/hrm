@@ -75,6 +75,7 @@ model Users {
   createdProductionOrderHardnessChecks                  ProductionOrderHardnessChecks[]                                 @relation("ProductionOrderHardnessCheckCreator")
   createdProductionOrderTabletThicknessChecks           ProductionOrderTabletThicknessChecks[]                          @relation("ProductionOrderTabletThicknessCheckCreator")
   createdProductionOrderTenUnitSensoryChecks            ProductionOrderTenUnitSensoryChecks[]                           @relation("ProductionOrderTenUnitSensoryCheckCreator")
+  createdProductionOrderTenUnitSensoryCheckImages       ProductionOrderTenUnitSensoryCheckImages[]                      @relation("ProductionOrderTenUnitSensoryCheckImageCreator")
   checkedProductionOrderPostPreparationSolutionChecks   ProductionOrderPostPreparationSolutionChecks[]                  @relation("ProductionOrderPostPreparationSolutionCheckChecker")
   approvedProductionOrderFactoryReleaseReviews          ProductionOrderFactoryReleaseReviews[]                          @relation("ProductionOrderFactoryReleaseReviewApprover")
   issuedProductionOrderBatchRecordControls              ProductionOrderDocumentControls[]                               @relation("ProductionOrderBatchRecordIssuer")
@@ -1819,11 +1820,11 @@ model ProductionOrderTabletThicknessChecks {
 }
 
 model ProductionOrderTenUnitSensoryChecks {
-  id                  Int              @id @default(autoincrement())
+  id                  Int                                        @id @default(autoincrement())
   production_order_id Int
-  productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_ten_unit_sensory_checks_po_fkey")
-  requirement         String?          @db.Text
-  dosage_form_stage   String?          @db.VarChar(50)
+  productionOrder     ProductionOrders                           @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_ten_unit_sensory_checks_po_fkey")
+  requirement         String?                                    @db.Text
+  dosage_form_stage   String?                                    @db.VarChar(50)
   unit_1_result       Boolean
   unit_2_result       Boolean?
   unit_3_result       Boolean?
@@ -1835,13 +1836,29 @@ model ProductionOrderTenUnitSensoryChecks {
   unit_9_result       Boolean?
   unit_10_result      Boolean?
   created_by_id       Int
-  createdBy           Users            @relation("ProductionOrderTenUnitSensoryCheckCreator", fields: [created_by_id], references: [id], map: "po_ten_unit_sensory_checks_user_fkey")
-  created_at          DateTime         @default(now())
-  updated_at          DateTime         @default(now()) @updatedAt
+  createdBy           Users                                      @relation("ProductionOrderTenUnitSensoryCheckCreator", fields: [created_by_id], references: [id], map: "po_ten_unit_sensory_checks_user_fkey")
+  created_at          DateTime                                   @default(now())
+  updated_at          DateTime                                   @default(now()) @updatedAt
+  images              ProductionOrderTenUnitSensoryCheckImages[]
 
   @@index([production_order_id], map: "po_ten_unit_sensory_checks_po_idx")
   @@index([created_by_id], map: "po_ten_unit_sensory_checks_user_idx")
   @@map("production_order_ten_unit_sensory_checks")
+}
+
+model ProductionOrderTenUnitSensoryCheckImages {
+  id                        Int                                 @id @default(autoincrement())
+  ten_unit_sensory_check_id Int
+  tenUnitSensoryCheck       ProductionOrderTenUnitSensoryChecks @relation(fields: [ten_unit_sensory_check_id], references: [id], onDelete: Cascade, map: "po_ten_unit_sensory_check_images_check_id_fkey")
+  image_path                String                              @db.Text
+  created_by_id             Int
+  createdBy                 Users                               @relation("ProductionOrderTenUnitSensoryCheckImageCreator", fields: [created_by_id], references: [id], map: "po_ten_unit_sensory_check_images_user_fkey")
+  created_at                DateTime                            @default(now())
+  updated_at                DateTime                            @default(now()) @updatedAt
+
+  @@index([ten_unit_sensory_check_id], map: "po_ten_unit_sensory_check_images_check_idx")
+  @@index([created_by_id], map: "po_ten_unit_sensory_check_images_user_idx")
+  @@map("production_order_ten_unit_sensory_check_images")
 }
 
 model ProductionOrderVialInspectionChecks {

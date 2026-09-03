@@ -7154,7 +7154,7 @@ Lỗi thường gặp:
 
 Tất cả API trong nhóm này cần `Auth: Bearer`.
 
-Nhóm API này lưu kiểm tra cảm quan theo tối đa 10 đơn vị của một lệnh sản xuất. Chỉ đơn vị 1 bắt buộc, các đơn vị 2-10 có thể để trống. Nhóm này không xử lý upload ảnh; API cảm quan có ảnh vẫn nằm ở nhóm `Production Order Sensory Checks`.
+Nhóm API này lưu kiểm tra cảm quan theo tối đa 10 đơn vị của một lệnh sản xuất. Chỉ đơn vị 1 bắt buộc, các đơn vị 2-10 có thể để trống. Mỗi lần kiểm tra có thể có tối đa 10 ảnh.
 
 ### Lấy danh sách kiểm tra cảm quan 10 đơn vị
 
@@ -7280,6 +7280,44 @@ API trả về bản ghi vừa xóa.
 Lỗi thường gặp:
 
 - `404 Ten-unit sensory check not found`
+
+### Thêm ảnh kiểm tra cảm quan 10 đơn vị
+
+```http
+POST /production-orders/ten-unit-sensory-checks/:checkId/images
+Content-Type: multipart/form-data
+```
+
+Gửi ảnh qua field `images` (nhiều file) hoặc `image`. Chấp nhận JPG, PNG, WEBP, GIF; tối đa 10 ảnh cho mỗi lần kiểm tra và tối đa 20 MB mỗi ảnh. Cần quyền `production-orders.create`.
+
+Response trả về bản ghi kiểm tra, kèm mảng `images` (gồm `id`, `image_path`, người tạo và thời gian tạo).
+
+Lỗi thường gặp:
+
+- `400 images are required`
+- `400 images cannot exceed 10 files per ten-unit sensory check`
+- `400 image must be a JPG, PNG, WEBP, or GIF image`
+- `404 Ten-unit sensory check not found`
+
+### Xem ảnh kiểm tra cảm quan 10 đơn vị
+
+```http
+GET /production-orders/ten-unit-sensory-checks/images/:filename
+```
+
+Thêm `?original=true` để nhận file gốc; nếu không có query này API ưu tiên ảnh thumbnail. Cần quyền `production-orders.read`.
+
+### Xóa ảnh kiểm tra cảm quan 10 đơn vị
+
+```http
+DELETE /production-orders/ten-unit-sensory-checks/images/:imageId
+```
+
+Cần quyền `production-orders.delete`. API xóa metadata và file ảnh/thumbnails.
+
+Lỗi thường gặp:
+
+- `404 Ten-unit sensory check image not found`
 
 ## Production Order Sensory Checks
 

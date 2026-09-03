@@ -18,6 +18,12 @@ describe('ProductionOrderTenUnitSensoryChecksService', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    productionOrderTenUnitSensoryCheckImages: {
+      findUnique: jest.Mock;
+      findFirst: jest.Mock;
+      createMany: jest.Mock;
+      delete: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
@@ -28,6 +34,12 @@ describe('ProductionOrderTenUnitSensoryChecksService', () => {
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
+      },
+      productionOrderTenUnitSensoryCheckImages: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        createMany: jest.fn(),
         delete: jest.fn(),
       },
     };
@@ -153,9 +165,9 @@ describe('ProductionOrderTenUnitSensoryChecksService', () => {
       updatedCheck,
     );
 
-    await expect(
-      service.update(1, { dosage_form_stage: '  ' }),
-    ).resolves.toBe(updatedCheck);
+    await expect(service.update(1, { dosage_form_stage: '  ' })).resolves.toBe(
+      updatedCheck,
+    );
     expect(
       prismaService.productionOrderTenUnitSensoryChecks.update,
     ).toHaveBeenCalledWith(
@@ -169,13 +181,57 @@ describe('ProductionOrderTenUnitSensoryChecksService', () => {
   it('deletes an existing check', async () => {
     const deletedCheck = { id: 1 };
     prismaService.productionOrderTenUnitSensoryChecks.findUnique.mockResolvedValue(
-      { id: 1 },
+      { id: 1, images: [] },
     );
     prismaService.productionOrderTenUnitSensoryChecks.delete.mockResolvedValue(
       deletedCheck,
     );
 
     await expect(service.delete(1)).resolves.toBe(deletedCheck);
+  });
+
+  it('adds images to a ten-unit sensory check', async () => {
+    const check = { id: 1, images: [] };
+    const result = { id: 1, images: [{ id: 2 }] };
+    prismaService.productionOrderTenUnitSensoryChecks.findUnique
+      .mockResolvedValueOnce(check)
+      .mockResolvedValueOnce(result);
+
+    await expect(
+      service.addImages(
+        1,
+        ['/production-orders/ten-unit-sensory-checks/images/a.jpg'],
+        {
+          id: 7,
+        },
+      ),
+    ).resolves.toBe(result);
+    expect(
+      prismaService.productionOrderTenUnitSensoryCheckImages.createMany,
+    ).toHaveBeenCalledWith({
+      data: [
+        {
+          ten_unit_sensory_check_id: 1,
+          image_path: '/production-orders/ten-unit-sensory-checks/images/a.jpg',
+          created_by_id: 7,
+        },
+      ],
+    });
+  });
+
+  it('deletes a ten-unit sensory check image', async () => {
+    const image = {
+      id: 2,
+      image_path: '/production-orders/ten-unit-sensory-checks/images/a.jpg',
+    };
+    prismaService.productionOrderTenUnitSensoryCheckImages.findUnique.mockResolvedValue(
+      image,
+    );
+
+    await expect(service.deleteImage(2)).resolves.toBe(image);
+    expect(
+      prismaService.productionOrderTenUnitSensoryCheckImages.delete,
+    ).toHaveBeenCalledWith({ where: { id: 2 } });
   });
 
   it('rejects a missing unit 1 result', async () => {

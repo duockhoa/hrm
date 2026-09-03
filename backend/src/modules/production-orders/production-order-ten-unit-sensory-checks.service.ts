@@ -8,6 +8,12 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderTenUnitSensoryCheckDto } from './dto/create-production-order-ten-unit-sensory-check.dto';
 import { UpdateProductionOrderTenUnitSensoryCheckDto } from './dto/update-production-order-ten-unit-sensory-check.dto';
+import {
+  getTenUnitSensoryCheckImageLookupPaths,
+  MAX_TEN_UNIT_SENSORY_CHECK_IMAGE_COUNT,
+  removeTenUnitSensoryCheckImagesByPath,
+  resolveTenUnitSensoryCheckImageFile,
+} from './production-order-ten-unit-sensory-check-upload.config';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -60,6 +66,14 @@ const tenUnitSensoryCheckInclude = {
   createdBy: {
     select: creatorSelect,
   },
+  images: {
+    include: {
+      createdBy: {
+        select: creatorSelect,
+      },
+    },
+    orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+  },
 } satisfies Prisma.ProductionOrderTenUnitSensoryChecksInclude;
 
 @Injectable()
@@ -88,6 +102,32 @@ export class ProductionOrderTenUnitSensoryChecksService {
       include: tenUnitSensoryCheckInclude,
       orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     });
+  }
+
+  async findImageFile(filename: string, original = false) {
+    const imagePaths = getTenUnitSensoryCheckImageLookupPaths(filename);
+
+    if (imagePaths.length === 0) {
+      return null;
+    }
+
+    const image =
+      await this.prismaService.productionOrderTenUnitSensoryCheckImages.findFirst(
+        {
+          where: {
+            image_path: {
+              in: imagePaths,
+            },
+          },
+          select: { id: true },
+        },
+      );
+
+    if (!image) {
+      return null;
+    }
+
+    return resolveTenUnitSensoryCheckImageFile(filename, original);
   }
 
   async create(
@@ -164,12 +204,75 @@ export class ProductionOrderTenUnitSensoryChecksService {
   }
 
   async delete(checkId: number) {
-    await this.ensureCheckExists(checkId);
+    const check = await this.findCheckWithImagesOrThrow(checkId);
 
-    return this.prismaService.productionOrderTenUnitSensoryChecks.delete({
-      where: { id: checkId },
-      include: tenUnitSensoryCheckInclude,
+    const deletedCheck =
+      await this.prismaService.productionOrderTenUnitSensoryChecks.delete({
+        where: { id: checkId },
+        include: tenUnitSensoryCheckInclude,
+      });
+
+    await removeTenUnitSensoryCheckImagesByPath(
+      check.images.map((image) => image.image_path),
+    );
+
+    return deletedCheck;
+  }
+
+  async addImages(
+    checkId: number,
+    imagePaths: string[],
+    user?: AuthenticatedUser,
+  ) {
+    if (imagePaths.length === 0) {
+      throw new BadRequestException('images are required');
+    }
+
+    const check = await this.findCheckWithImagesOrThrow(checkId);
+
+    if (
+      check.images.length + imagePaths.length >
+      MAX_TEN_UNIT_SENSORY_CHECK_IMAGE_COUNT
+    ) {
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_TEN_UNIT_SENSORY_CHECK_IMAGE_COUNT} files per ten-unit sensory check`,
+      );
+    }
+
+    const userId = this.normalizeUserId(user);
+
+    await this.prismaService.productionOrderTenUnitSensoryCheckImages.createMany(
+      {
+        data: imagePaths.map((imagePath) => ({
+          ten_unit_sensory_check_id: checkId,
+          image_path: imagePath,
+          created_by_id: userId,
+        })),
+      },
+    );
+
+    return this.findById(checkId);
+  }
+
+  async deleteImage(imageId: number) {
+    const image =
+      await this.prismaService.productionOrderTenUnitSensoryCheckImages.findUnique(
+        {
+          where: { id: imageId },
+        },
+      );
+
+    if (!image) {
+      throw new NotFoundException('Ten-unit sensory check image not found');
+    }
+
+    await this.prismaService.productionOrderTenUnitSensoryCheckImages.delete({
+      where: { id: imageId },
     });
+
+    await removeTenUnitSensoryCheckImagesByPath([image.image_path]);
+
+    return image;
   }
 
   private normalizeUpdateData(
@@ -336,6 +439,27 @@ export class ProductionOrderTenUnitSensoryChecksService {
     if (!check) {
       throw new NotFoundException('Ten-unit sensory check not found');
     }
+  }
+
+  private async findCheckWithImagesOrThrow(checkId: number) {
+    const check =
+      await this.prismaService.productionOrderTenUnitSensoryChecks.findUnique({
+        where: { id: checkId },
+        select: {
+          id: true,
+          images: {
+            select: {
+              image_path: true,
+            },
+          },
+        },
+      });
+
+    if (!check) {
+      throw new NotFoundException('Ten-unit sensory check not found');
+    }
+
+    return check;
   }
 
   private normalizeUserId(user?: AuthenticatedUser) {

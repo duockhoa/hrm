@@ -167,6 +167,12 @@ import {
   removeUploadedSensoryCheckImages,
 } from './production-order-sensory-check-upload.config';
 import {
+  getTenUnitSensoryCheckImagePaths,
+  MAX_TEN_UNIT_SENSORY_CHECK_IMAGE_COUNT,
+  productionOrderTenUnitSensoryCheckImageUploadOptions,
+  removeUploadedTenUnitSensoryCheckImages,
+} from './production-order-ten-unit-sensory-check-upload.config';
+import {
   getPreSecondaryPackagingCheckImagePaths,
   MAX_PRE_SECONDARY_PACKAGING_CHECK_IMAGE_COUNT,
   preSecondaryPackagingCheckImageUploadOptions,
@@ -211,6 +217,11 @@ type DateCheckUploadFields = {
 type SensoryCheckUploadFields = {
   images?: Express.Multer.File[];
   sensory_image?: Express.Multer.File[];
+  image?: Express.Multer.File[];
+};
+
+type TenUnitSensoryCheckUploadFields = {
+  images?: Express.Multer.File[];
   image?: Express.Multer.File[];
 };
 
@@ -280,6 +291,15 @@ const sensoryCheckImageUploadFields = [
   { name: 'sensory_image', maxCount: MAX_SENSORY_CHECK_IMAGE_COUNT },
   { name: 'image', maxCount: MAX_SENSORY_CHECK_IMAGE_COUNT },
 ];
+
+const tenUnitSensoryCheckImageUploadFields = [
+  { name: 'images', maxCount: MAX_TEN_UNIT_SENSORY_CHECK_IMAGE_COUNT },
+  { name: 'image', maxCount: MAX_TEN_UNIT_SENSORY_CHECK_IMAGE_COUNT },
+];
+
+const getUploadedTenUnitSensoryCheckImages = (
+  uploadedFiles?: TenUnitSensoryCheckUploadFields,
+) => [...(uploadedFiles?.images ?? []), ...(uploadedFiles?.image ?? [])];
 
 const getUploadedMaterialProcessSummaryImages = (
   uploadedFiles?: MaterialProcessSummaryUploadFields,
@@ -451,7 +471,9 @@ export class ProductionOrdersController {
   async deleteFinishedProductSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
   ) {
-    return this.productionOrderFinishedProductSummariesService.delete(summaryId);
+    return this.productionOrderFinishedProductSummariesService.delete(
+      summaryId,
+    );
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
@@ -1563,6 +1585,32 @@ export class ProductionOrdersController {
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Get('ten-unit-sensory-checks/images/:filename')
+  async getTenUnitSensoryCheckImage(
+    @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile =
+      await this.productionOrderTenUnitSensoryChecksService.findImageFile(
+        filename,
+        original === 'true',
+      );
+
+    if (!imageFile) {
+      throw new NotFoundException('Ten-unit sensory check image not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('pre-secondary-packaging-checks/images/:filename')
   async getPreSecondaryPackagingCheckImage(
     @Param('filename') filename: string,
@@ -1779,6 +1827,48 @@ export class ProductionOrdersController {
       checkId,
       updateDto,
     );
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Post('ten-unit-sensory-checks/:checkId/images')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      tenUnitSensoryCheckImageUploadFields,
+      productionOrderTenUnitSensoryCheckImageUploadOptions,
+    ),
+  )
+  async addTenUnitSensoryCheckImages(
+    @Param('checkId', ParseIntPipe) checkId: number,
+    @UploadedFiles() uploadedFiles: TenUnitSensoryCheckUploadFields | undefined,
+    @Request() req: any,
+  ) {
+    const uploadedImages = getUploadedTenUnitSensoryCheckImages(uploadedFiles);
+
+    if (uploadedImages.length > MAX_TEN_UNIT_SENSORY_CHECK_IMAGE_COUNT) {
+      await removeUploadedTenUnitSensoryCheckImages(uploadedImages);
+      throw new BadRequestException(
+        `images cannot exceed ${MAX_TEN_UNIT_SENSORY_CHECK_IMAGE_COUNT} files per ten-unit sensory check`,
+      );
+    }
+
+    try {
+      return await this.productionOrderTenUnitSensoryChecksService.addImages(
+        checkId,
+        getTenUnitSensoryCheckImagePaths(uploadedImages),
+        req.user,
+      );
+    } catch (error) {
+      await removeUploadedTenUnitSensoryCheckImages(uploadedImages);
+      throw error;
+    }
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
+  @Delete('ten-unit-sensory-checks/images/:imageId')
+  async deleteTenUnitSensoryCheckImage(
+    @Param('imageId', ParseIntPipe) imageId: number,
+  ) {
+    return this.productionOrderTenUnitSensoryChecksService.deleteImage(imageId);
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)

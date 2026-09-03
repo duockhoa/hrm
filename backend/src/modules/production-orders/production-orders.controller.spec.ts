@@ -226,6 +226,9 @@ describe('ProductionOrdersController', () => {
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
+    addImages: jest.Mock;
+    deleteImage: jest.Mock;
+    findImageFile: jest.Mock;
   };
   let productionOrderDateChecksService: {
     findById: jest.Mock;
@@ -544,6 +547,9 @@ describe('ProductionOrdersController', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      addImages: jest.fn(),
+      deleteImage: jest.fn(),
+      findImageFile: jest.fn(),
     };
     productionOrderDateChecksService = {
       findById: jest.fn(),
@@ -2764,6 +2770,35 @@ describe('ProductionOrdersController', () => {
     await expect(controller.deleteTenUnitSensoryCheck(1)).resolves.toBe(result);
     expect(
       productionOrderTenUnitSensoryChecksService.delete,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('adds images to a ten-unit sensory check using the authenticated user', async () => {
+    const user = { id: 7, name: 'Binh' };
+    const result = { id: 1, images: [] };
+    productionOrderTenUnitSensoryChecksService.addImages.mockResolvedValue(
+      result,
+    );
+
+    await expect(
+      controller.addTenUnitSensoryCheckImages(1, undefined, { user }),
+    ).resolves.toBe(result);
+    expect(
+      productionOrderTenUnitSensoryChecksService.addImages,
+    ).toHaveBeenCalledWith(1, [], user);
+  });
+
+  it('deletes a ten-unit sensory check image', async () => {
+    const result = { id: 1 };
+    productionOrderTenUnitSensoryChecksService.deleteImage.mockResolvedValue(
+      result,
+    );
+
+    await expect(controller.deleteTenUnitSensoryCheckImage(1)).resolves.toBe(
+      result,
+    );
+    expect(
+      productionOrderTenUnitSensoryChecksService.deleteImage,
     ).toHaveBeenCalledWith(1);
   });
 
