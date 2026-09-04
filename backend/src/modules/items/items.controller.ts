@@ -7,6 +7,7 @@ import {
   Patch,
   ParseIntPipe,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
+import { CopyItemEquipmentDto } from './dto/copy-item-equipment.dto';
 import { CreateMixingActivityTemplateDto } from './dto/create-mixing-activity-template.dto';
 import { CreateMixingActivityTemplateStageDto } from './dto/create-mixing-activity-template-stage.dto';
 import { CreateMixingActivityTemplateStageStepDto } from './dto/create-mixing-activity-template-stage-step.dto';
@@ -46,8 +48,8 @@ export class ItemsController {
 
   @Get()
   @Permissions(ITEM_PERMISSIONS.LIST)
-  async findAll() {
-    return this.itemsService.findAll();
+  async findAll(@Query('codePrefix') codePrefix?: string) {
+    return this.itemsService.findAll(codePrefix);
   }
 
   @Get('finished-products')
@@ -290,6 +292,20 @@ export class ItemsController {
     @Request() req: any,
   ) {
     return this.itemEquipmentService.create(itemCode, createDto, req.user);
+  }
+
+  @Post(':item_code/equipment/copy')
+  @Permissions(ITEM_PERMISSIONS.UPDATE)
+  async copyItemEquipment(
+    @Param('item_code') itemCode: string,
+    @Body() copyDto: CopyItemEquipmentDto,
+    @Request() req: any,
+  ) {
+    return this.itemEquipmentService.copyFromItem(
+      itemCode,
+      copyDto,
+      req.user,
+    );
   }
 
   @Post(':item_code/mixing-activity-templates')

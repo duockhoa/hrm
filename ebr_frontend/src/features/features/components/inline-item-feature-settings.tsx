@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { featuresService, itemsService } from "@/services/index.service";
+import { getItemCodePrefix } from "@/lib/item-code-prefix";
 import { Copy, LoaderCircle } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -235,6 +236,7 @@ export default function InlineItemFeatureSettings({
   const [copySourceCode, setCopySourceCode] = useState("");
   const [isCopying, setIsCopying] = useState(false);
   const copyDialogContentRef = useRef<HTMLDivElement | null>(null);
+  const itemCodePrefix = getItemCodePrefix(itemCode);
 
   const { data: features, isLoading: isFeaturesLoading } = useSWR(
     "/features",
@@ -255,19 +257,13 @@ export default function InlineItemFeatureSettings({
     error: itemsError,
     isLoading: isItemsLoading,
   } = useSWR(
-    isCopyDialogOpen ? "/items?feature-copy=true" : null,
-    itemsService.fetchItems,
-  );
-
-  const {
-    data: copySourceConfig,
-    error: copySourceConfigError,
-    isLoading: isCopySourceConfigLoading,
-  } = useSWR(
-    isCopyDialogOpen && copySourceCode
-      ? `/features/items/${encodeURIComponent(copySourceCode)}/config?includeDisabled=true`
+    isCopyDialogOpen
+      ? `/items?feature-copy=true&codePrefix=${itemCodePrefix ?? ""}`
       : null,
-    () => featuresService.fetchItemFeatureConfig(copySourceCode, true),
+    () =>
+      itemCodePrefix
+        ? itemsService.fetchItemsByCodePrefix(itemCodePrefix)
+        : itemsService.fetchItems(),
   );
 
   const rows = useMemo(
@@ -285,6 +281,7 @@ export default function InlineItemFeatureSettings({
       if (
         !code ||
         code.toLocaleLowerCase() === normalizedCurrentItemCode ||
+        (itemCodePrefix && getItemCodePrefix(code) !== itemCodePrefix) ||
         uniqueItems.has(code)
       ) {
         return;
@@ -310,33 +307,9 @@ export default function InlineItemFeatureSettings({
         sensitivity: "base",
       }),
     );
-  }, [itemCode, items]);
+  }, [itemCode, itemCodePrefix, items]);
   const selectedCopySource =
     copySourceOptions.find((option) => option.value === copySourceCode) ?? null;
-  const activeCopySourceConfig =
-    String(copySourceConfig?.item_code ?? "").trim() === copySourceCode
-      ? copySourceConfig
-      : undefined;
-  const copySourceFeatureMap = useMemo(
-    () =>
-      new Map(
-        (activeCopySourceConfig?.features ?? []).map((feature) => [
-          feature.feature_id,
-          feature,
-        ]),
-      ),
-    [activeCopySourceConfig?.features],
-  );
-  const enabledSourceFeatureCount = useMemo(
-    () =>
-      (features ?? []).reduce(
-        (count, feature) =>
-          count + (copySourceFeatureMap.get(feature.id)?.enabled ? 1 : 0),
-        0,
-      ),
-    [copySourceFeatureMap, features],
-  );
-
   const getDraftRow = (row: ItemFeatureRow) => draftRows[row.feature_id] ?? row;
 
   const updateDraftRow = (
@@ -455,32 +428,19 @@ export default function InlineItemFeatureSettings({
   };
 
   const handleCopyFeatures = async () => {
-    if (!itemCode || !copySourceCode || !features || !activeCopySourceConfig) {
+    if (!itemCode || !copySourceCode) {
       return;
     }
-
-    const sourceFeatureById = new Map(
-      activeCopySourceConfig.features.map((feature) => [
-        feature.feature_id,
-        feature,
-      ]),
-    );
-    const copiedFeatures = features.map((feature) => {
-      const sourceFeature = sourceFeatureById.get(feature.id);
-
-      return {
-        feature_id: feature.id,
-        enabled: sourceFeature?.enabled ?? false,
-        order: sourceFeature?.order ?? feature.default_order ?? 0,
-      };
-    });
 
     setIsCopying(true);
 
     try {
-      await featuresService.replaceItemFeatureConfig(itemCode, copiedFeatures);
+      const copiedConfig = await featuresService.copyItemFeatureConfig(
+        itemCode,
+        copySourceCode,
+      );
       setDraftRows({});
-      await mutate();
+      await mutate(copiedConfig, false);
       closeCopyDialog();
       toast.success(
         `Đã sao chép toàn bộ tính năng từ ${copySourceCode} sang ${itemCode}.`,
@@ -588,12 +548,16 @@ export default function InlineItemFeatureSettings({
                 placeholder={
                   isItemsLoading
                     ? "Đang tải danh sách mã hàng..."
-                    : "Tìm theo mã hoặc tên hàng hóa"
+                    : itemCodePrefix
+                      ? `Tìm mã ${itemCodePrefix} hoặc tên hàng hóa`
+                      : "Tìm theo mã hoặc tên hàng hóa"
                 }
                 showClear
               />
               <ComboboxContent portalContainer={copyDialogContentRef}>
-                <ComboboxEmpty>Không tìm thấy mã hàng phù hợp.</ComboboxEmpty>
+                <ComboboxEmpty>
+                  Không tìm thấy mã hàng cùng nhóm phù hợp.
+                </ComboboxEmpty>
                 <ComboboxList>
                   {(option) => (
                     <ComboboxItem key={option.value} value={option}>
@@ -628,23 +592,10 @@ export default function InlineItemFeatureSettings({
           {selectedCopySource ? (
             <div className="rounded-md border bg-muted/40 p-3 text-sm">
               <p className="font-medium">Nguồn: {selectedCopySource.label}</p>
-              {isCopySourceConfigLoading ? (
-                <p className="mt-1 text-muted-foreground">
-                  Đang tải cấu hình tính năng...
-                </p>
-              ) : copySourceConfigError ? (
-                <p className="mt-1 text-destructive">
-                  {getErrorMessage(
-                    copySourceConfigError,
-                    "Không thể tải cấu hình của mã hàng nguồn.",
-                  )}
-                </p>
-              ) : activeCopySourceConfig ? (
-                <p className="mt-1 text-muted-foreground">
-                  {enabledSourceFeatureCount}/{features?.length ?? 0} tính năng
-                  đang bật. Cấu hình hiện tại của {itemCode} sẽ được thay thế.
-                </p>
-              ) : null}
+              <p className="mt-1 text-muted-foreground">
+                Cấu hình hiện tại của {itemCode} sẽ được thay thế bằng toàn bộ
+                tính năng từ mã hàng nguồn.
+              </p>
             </div>
           ) : null}
 
@@ -662,12 +613,8 @@ export default function InlineItemFeatureSettings({
               disabled={
                 isCopying ||
                 isItemsLoading ||
-                isCopySourceConfigLoading ||
                 Boolean(itemsError) ||
-                Boolean(copySourceConfigError) ||
-                !selectedCopySource ||
-                !activeCopySourceConfig ||
-                !features
+                !selectedCopySource
               }
               onClick={() => void handleCopyFeatures()}
             >

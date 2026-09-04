@@ -969,7 +969,7 @@ Tất cả API item và thiết bị theo item trong nhóm này cần `Auth: Bea
 | `items.list`   | `GET /items`, `GET /items/finished-products`, `GET /items/semi-finished-products`, `GET /items/raw-materials` |
 | `items.read`   | Các API `GET` chi tiết item và item-equipment                                                                 |
 | `items.create` | Các API `POST` item-equipment                                                                                 |
-| `items.update` | Các API `PATCH` item                                                                                          |
+| `items.update` | Các API `PATCH` item và `POST /items/:item_code/equipment/copy`                                               |
 | `items.delete` | Các API `DELETE` item-equipment                                                                               |
 
 ### Mixing Activity Templates
@@ -987,9 +987,14 @@ Các API template, stage, step và parameter cần `Auth: Bearer` cùng quyền 
 
 ```http
 GET /items
+GET /items?codePrefix=BTP
 ```
 
 Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`. Nếu specification có `updated_by_id`, response include thêm `productionSpecification.updatedBy`.
+
+`codePrefix` là tiền tố chỉ gồm chữ cái, không phân biệt hoa/thường. Khi có
+query này, API chỉ trả item có `item_code` bắt đầu bằng tiền tố đó, ví dụ `BTP`,
+`TP`, `NL`, `BB`, hoặc `VTP`.
 
 ### Lấy thành phẩm
 
@@ -1022,6 +1027,32 @@ GET /items/TP00001
 ```
 
 Response include `productionSpecification`. Nếu specification có `product_line_id`, response include thêm `productionSpecification.productLine`. Nếu specification có `updated_by_id`, response include thêm `productionSpecification.updatedBy`.
+
+### Sao chép thiết bị từ mã hàng khác
+
+```http
+POST /items/:item_code/equipment/copy
+Content-Type: application/json
+```
+
+```json
+{
+  "source_item_code": "BTP00001"
+}
+```
+
+Thay thế toàn bộ danh sách thiết bị của `item_code` bằng danh sách từ
+`source_item_code` trong một transaction. Hai mã phải có cùng tiền tố chữ cái
+(ví dụ `BTP`, `TP`, `NL`, `BB`, `VTP`). Backend bulk insert danh sách mới và
+ghi nhận người thực hiện sao chép là người tạo các liên kết mới. Response là
+danh sách thiết bị mới của mã đích.
+
+Lỗi thường gặp:
+
+- `400 source_item_code must be different from item_code`
+- `400 source_item_code must have the same prefix as item_code`
+- `404 Source item not found`
+- `404 Item not found`
 
 ### Cập nhật item
 
@@ -2262,6 +2293,33 @@ Response:
 
 Lỗi thường gặp:
 
+- `404 Item not found`
+
+### Sao chép toàn bộ cấu hình feature từ mã hàng khác
+
+```http
+POST /features/items/:item_code/copy
+Content-Type: application/json
+```
+
+```json
+{
+  "source_item_code": "TP00001"
+}
+```
+
+Sao chép toàn bộ trạng thái và thứ tự feature từ `source_item_code` sang
+`item_code`. Backend thực hiện toàn bộ thao tác trong một transaction và dùng
+bulk insert, do đó frontend chỉ cần gọi một API thay vì gửi một request cho mỗi
+feature. Các feature chưa được liên kết ở mã nguồn sẽ được tạo ở mã đích với
+trạng thái tắt và thứ tự mặc định. Response là config mới của mã đích, cùng cấu
+trúc với `GET /features/items/:item_code/config?includeDisabled=true`.
+
+Lỗi thường gặp:
+
+- `400 source_item_code is required`
+- `400 source_item_code must be different from item_code`
+- `404 Source item not found`
 - `404 Item not found`
 
 ### Bật hoặc cập nhật feature cho item

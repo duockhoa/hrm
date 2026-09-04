@@ -24,6 +24,7 @@ describe('ItemsController', () => {
     findById: jest.Mock;
     findAllByItem: jest.Mock;
     create: jest.Mock;
+    copyFromItem: jest.Mock;
     delete: jest.Mock;
   };
   let mixingActivityTemplatesService: {
@@ -69,6 +70,7 @@ describe('ItemsController', () => {
       findById: jest.fn(),
       findAllByItem: jest.fn(),
       create: jest.fn(),
+      copyFromItem: jest.fn(),
       delete: jest.fn(),
     };
     mixingActivityTemplatesService = {
@@ -163,7 +165,7 @@ describe('ItemsController', () => {
         ITEM_PERMISSIONS.CREATE,
       ]),
     );
-    ['updateItem'].forEach((method) =>
+    ['updateItem', 'copyItemEquipment'].forEach((method) =>
       expect(metadata(method as keyof ItemsController)).toEqual([
         ITEM_PERMISSIONS.UPDATE,
       ]),
@@ -236,6 +238,14 @@ describe('ItemsController', () => {
     expect(itemsService.findItemByCode).toHaveBeenCalledWith('TP00001');
   });
 
+  it('passes an optional item code prefix when listing items', async () => {
+    const items = [{ item_code: 'BTP00001' }];
+    itemsService.findAll.mockResolvedValue(items);
+
+    await expect(controller.findAll('BTP')).resolves.toBe(items);
+    expect(itemsService.findAll).toHaveBeenCalledWith('BTP');
+  });
+
   it('gets all mixing activity templates with their items', async () => {
     const templates = [
       {
@@ -279,6 +289,22 @@ describe('ItemsController', () => {
     ).resolves.toBe(result);
     expect(itemEquipmentService.create).toHaveBeenCalledWith(
       'TP00001',
+      dto,
+      user,
+    );
+  });
+
+  it('copies equipment from another item using the authenticated user', async () => {
+    const result = [{ id: 1, item_code: 'BTP00002', equipment_id: 2 }];
+    const dto = { source_item_code: 'BTP00001' };
+    const user = { id: 7 };
+    itemEquipmentService.copyFromItem.mockResolvedValue(result);
+
+    await expect(
+      controller.copyItemEquipment('BTP00002', dto, { user }),
+    ).resolves.toBe(result);
+    expect(itemEquipmentService.copyFromItem).toHaveBeenCalledWith(
+      'BTP00002',
       dto,
       user,
     );

@@ -50,6 +50,8 @@ const ITEMS = {
   ) => `/items/mixing-activity-template-stage-step-parameters/${parameterId}`,
   equipment: (itemCode: string) =>
     `/items/${encodeURIComponent(itemCode)}/equipment`,
+  equipmentCopy: (itemCode: string) =>
+    `/items/${encodeURIComponent(itemCode)}/equipment/copy`,
   equipmentDetail: (itemEquipmentId: string | number) =>
     `/items/equipment/${itemEquipmentId}`,
 };
@@ -323,6 +325,8 @@ const FEATURES = {
   item: (itemCode: string) => `/features/items/${encodeURIComponent(itemCode)}`,
   itemConfig: (itemCode: string) =>
     `/features/items/${encodeURIComponent(itemCode)}/config`,
+  copyItemConfig: (itemCode: string) =>
+    `/features/items/${encodeURIComponent(itemCode)}/copy`,
 };
 
 const PRODUCT_LINES = {

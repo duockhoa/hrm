@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateFeatureDto } from './dto/create-feature.dto';
 import { CreateItemFeatureDto } from './dto/create-item-feature.dto';
+import { CopyItemFeatureConfigDto } from './dto/copy-item-feature-config.dto';
 import { UpdateFeatureDto } from './dto/update-feature.dto';
 import { UpdateItemFeatureDto } from './dto/update-item-feature.dto';
 
@@ -128,12 +129,7 @@ export class FeaturesService {
       enabled: itemFeature.enabled,
     }));
 
-    return {
-      item_code: normalizedItemCode,
-      actions: features.filter((feature) => feature.kind === 'action'),
-      sections: features.filter((feature) => feature.kind === 'section'),
-      features,
-    };
+    return this.buildItemFeatureConfig(normalizedItemCode, features);
   }
 
   async upsertItemFeature(item_code: string, createDto: CreateItemFeatureDto) {
@@ -160,6 +156,94 @@ export class FeaturesService {
         ...createData,
       },
       include: ITEM_FEATURE_INCLUDE,
+    });
+  }
+
+  /**
+   * Replaces a target item's feature configuration with a snapshot of a source
+   * item. Keeping the reads and writes in one transaction prevents a partially
+   * copied configuration when a request fails midway through the operation.
+   */
+  async copyItemFeatureConfig(
+    item_code: string,
+    copyDto: CopyItemFeatureConfigDto,
+  ) {
+    const targetItemCode = this.normalizeRequiredString(item_code, 'item_code');
+    const sourceItemCode = this.normalizeRequiredString(
+      copyDto.source_item_code,
+      'source_item_code',
+    );
+
+    if (
+      sourceItemCode.toLocaleLowerCase() ===
+      targetItemCode.toLocaleLowerCase()
+    ) {
+      throw new BadRequestException(
+        'source_item_code must be different from item_code',
+      );
+    }
+
+    return this.prismaService.$transaction(async (tx) => {
+      const [sourceItem, targetItem, features, sourceItemFeatures] =
+        await Promise.all([
+          tx.items.findFirst({
+            where: { item_code: sourceItemCode, deleted_at: null },
+          }),
+          tx.items.findFirst({
+            where: { item_code: targetItemCode, deleted_at: null },
+          }),
+          tx.features.findMany({
+            orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
+          }),
+          tx.itemFeatures.findMany({
+            where: { item_code: sourceItemCode },
+          }),
+        ]);
+
+      if (!sourceItem) {
+        throw new NotFoundException('Source item not found');
+      }
+
+      if (!targetItem) {
+        throw new NotFoundException('Item not found');
+      }
+
+      const sourceFeatureById = new Map(
+        sourceItemFeatures.map((itemFeature) => [
+          itemFeature.feature_id,
+          itemFeature,
+        ]),
+      );
+      const copiedFeatures = features.map((feature) => {
+        const sourceFeature = sourceFeatureById.get(feature.id);
+
+        return {
+          feature_id: feature.id,
+          key: feature.key,
+          kind: feature.kind,
+          label: feature.label,
+          group_name: feature.group_name,
+          order: sourceFeature?.order ?? feature.default_order,
+          enabled: sourceFeature?.enabled ?? false,
+        };
+      });
+
+      await tx.itemFeatures.deleteMany({
+        where: { item_code: targetItemCode },
+      });
+
+      if (copiedFeatures.length > 0) {
+        await tx.itemFeatures.createMany({
+          data: copiedFeatures.map(({ feature_id, enabled, order }) => ({
+            item_code: targetItemCode,
+            feature_id,
+            enabled,
+            order,
+          })),
+        });
+      }
+
+      return this.buildItemFeatureConfig(targetItemCode, copiedFeatures);
     });
   }
 
@@ -203,6 +287,20 @@ export class FeaturesService {
       },
       include: ITEM_FEATURE_INCLUDE,
     });
+  }
+
+  private buildItemFeatureConfig<
+    T extends {
+      kind: string;
+      enabled: boolean;
+    },
+  >(item_code: string, features: T[]) {
+    return {
+      item_code,
+      actions: features.filter((feature) => feature.kind === 'action'),
+      sections: features.filter((feature) => feature.kind === 'section'),
+      features,
+    };
   }
 
   private buildCreateFeatureData(

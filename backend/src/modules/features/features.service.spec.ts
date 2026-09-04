@@ -23,10 +23,13 @@ describe('FeaturesService', () => {
       upsert: jest.Mock;
       update: jest.Mock;
       delete: jest.Mock;
+      deleteMany: jest.Mock;
+      createMany: jest.Mock;
     };
     items: {
       findFirst: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -44,11 +47,17 @@ describe('FeaturesService', () => {
         upsert: jest.fn(),
         update: jest.fn(),
         delete: jest.fn(),
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
       },
       items: {
         findFirst: jest.fn(),
       },
+      $transaction: jest.fn(),
     };
+    prismaService.$transaction.mockImplementation((callback) =>
+      callback(prismaService),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -102,6 +111,7 @@ describe('FeaturesService', () => {
         key: 'environment_checks',
         kind: 'section',
         label: 'Nhiệt độ/độ ẩm',
+        group_name: null,
         default_order: 10,
       },
     });
@@ -136,6 +146,7 @@ describe('FeaturesService', () => {
           key: 'create_environment_check',
           kind: 'action',
           label: 'Nhập nhiệt độ/độ ẩm',
+          group_name: null,
           default_order: 10,
         },
       },
@@ -147,6 +158,7 @@ describe('FeaturesService', () => {
           key: 'environment_checks',
           kind: 'section',
           label: 'Nhiệt độ/độ ẩm',
+          group_name: null,
           default_order: 10,
         },
       },
@@ -160,6 +172,7 @@ describe('FeaturesService', () => {
           key: 'create_environment_check',
           kind: 'action',
           label: 'Nhập nhiệt độ/độ ẩm',
+          group_name: null,
           order: 10,
           enabled: true,
         },
@@ -170,6 +183,7 @@ describe('FeaturesService', () => {
           key: 'environment_checks',
           kind: 'section',
           label: 'Nhiệt độ/độ ẩm',
+          group_name: null,
           order: 20,
           enabled: true,
         },
@@ -180,6 +194,7 @@ describe('FeaturesService', () => {
           key: 'create_environment_check',
           kind: 'action',
           label: 'Nhập nhiệt độ/độ ẩm',
+          group_name: null,
           order: 10,
           enabled: true,
         },
@@ -188,6 +203,7 @@ describe('FeaturesService', () => {
           key: 'environment_checks',
           kind: 'section',
           label: 'Nhiệt độ/độ ẩm',
+          group_name: null,
           order: 20,
           enabled: true,
         },
@@ -248,6 +264,87 @@ describe('FeaturesService', () => {
         },
       }),
     );
+  });
+
+  it('copies every feature from the source in one transaction', async () => {
+    prismaService.items.findFirst
+      .mockResolvedValueOnce({ item_code: 'TP00001' })
+      .mockResolvedValueOnce({ item_code: 'TP00002' });
+    prismaService.features.findMany.mockResolvedValue([
+      {
+        id: 1,
+        key: 'create_environment_check',
+        kind: 'action',
+        label: 'Nhập nhiệt độ/độ ẩm',
+        group_name: 'Biểu mẫu chung',
+        default_order: 10,
+      },
+      {
+        id: 2,
+        key: 'environment_checks',
+        kind: 'section',
+        label: 'Nhiệt độ/độ ẩm',
+        group_name: 'Biểu mẫu chung',
+        default_order: 20,
+      },
+    ]);
+    prismaService.itemFeatures.findMany.mockResolvedValue([
+      { feature_id: 1, enabled: true, order: null },
+      { feature_id: 2, enabled: false, order: 30 },
+    ]);
+    prismaService.itemFeatures.deleteMany.mockResolvedValue({ count: 1 });
+    prismaService.itemFeatures.createMany.mockResolvedValue({ count: 2 });
+
+    await expect(
+      service.copyItemFeatureConfig('TP00002', {
+        source_item_code: 'TP00001',
+      }),
+    ).resolves.toEqual({
+      item_code: 'TP00002',
+      actions: [
+        {
+          feature_id: 1,
+          key: 'create_environment_check',
+          kind: 'action',
+          label: 'Nhập nhiệt độ/độ ẩm',
+          group_name: 'Biểu mẫu chung',
+          order: 10,
+          enabled: true,
+        },
+      ],
+      sections: [
+        {
+          feature_id: 2,
+          key: 'environment_checks',
+          kind: 'section',
+          label: 'Nhiệt độ/độ ẩm',
+          group_name: 'Biểu mẫu chung',
+          order: 30,
+          enabled: false,
+        },
+      ],
+      features: expect.any(Array),
+    });
+    expect(prismaService.$transaction).toHaveBeenCalledTimes(1);
+    expect(prismaService.itemFeatures.deleteMany).toHaveBeenCalledWith({
+      where: { item_code: 'TP00002' },
+    });
+    expect(prismaService.itemFeatures.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          item_code: 'TP00002',
+          feature_id: 1,
+          enabled: true,
+          order: 10,
+        },
+        {
+          item_code: 'TP00002',
+          feature_id: 2,
+          enabled: false,
+          order: 30,
+        },
+      ],
+    });
   });
 
   it('throws BadRequestException when updating item feature without data', async () => {

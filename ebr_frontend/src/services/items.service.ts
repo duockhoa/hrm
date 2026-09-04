@@ -14,6 +14,13 @@ const fetchItems = async () => {
   return response.data;
 };
 
+const fetchItemsByCodePrefix = async (codePrefix: string) => {
+  const response = await axiosClient.get(API_ROUTES.items.base, {
+    params: { codePrefix },
+  });
+  return response.data;
+};
+
 const fetchFinishedProducts = async () => {
   const response = await axiosClient.get(API_ROUTES.items.finishedProducts);
   return response.data;
@@ -78,54 +85,20 @@ const deleteItemEquipment = async (
   return response.data;
 };
 
-const replaceItemEquipment = async (
+const copyItemEquipment = async (
   itemCode: string,
-  currentEntries: ItemEquipment[],
-  sourceEntries: ItemEquipment[],
-) => {
-  const sourceEquipmentIds = new Set(
-    sourceEntries.map((entry) => entry.equipment_id),
+  sourceItemCode: string,
+): Promise<ItemEquipment[]> => {
+  const response = await axiosClient.post(
+    API_ROUTES.items.equipmentCopy(itemCode),
+    { source_item_code: sourceItemCode },
   );
-  const currentEquipmentIds = new Set(
-    currentEntries.map((entry) => entry.equipment_id),
-  );
-  const operations: Array<() => Promise<ItemEquipment>> = [
-    ...currentEntries
-      .filter((entry) => !sourceEquipmentIds.has(entry.equipment_id))
-      .map((entry) => () => deleteItemEquipment(entry.id)),
-    ...Array.from(sourceEquipmentIds)
-      .filter((equipmentId) => !currentEquipmentIds.has(equipmentId))
-      .map(
-        (equipmentId) => () =>
-          createItemEquipment(itemCode, { equipment_id: equipmentId }),
-      ),
-  ];
-  const batchSize = 8;
-  const failures: unknown[] = [];
-
-  for (let index = 0; index < operations.length; index += batchSize) {
-    const results = await Promise.allSettled(
-      operations
-        .slice(index, index + batchSize)
-        .map((operation) => operation()),
-    );
-
-    results.forEach((result) => {
-      if (result.status === "rejected") {
-        failures.push(result.reason);
-      }
-    });
-  }
-
-  if (failures.length > 0) {
-    throw new Error(
-      `Không thể thực hiện ${failures.length}/${operations.length} thay đổi thiết bị.`,
-    );
-  }
+  return response.data;
 };
 
 const itemsService = {
   fetchItems,
+  fetchItemsByCodePrefix,
   fetchFinishedProducts,
   fetchSemiFinishedProducts,
   fetchRawMaterials,
@@ -135,7 +108,7 @@ const itemsService = {
   fetchItemEquipmentById,
   createItemEquipment,
   deleteItemEquipment,
-  replaceItemEquipment,
+  copyItemEquipment,
 };
 
 export default itemsService;

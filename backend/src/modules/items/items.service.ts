@@ -28,8 +28,16 @@ const ITEM_INCLUDE = {
 @Injectable()
 export class ItemsService {
   constructor(private readonly prismaService: PrismaService) {}
-  async findAll() {
+  async findAll(codePrefix?: string) {
+    const normalizedCodePrefix = this.normalizeCodePrefix(codePrefix);
     const items = await this.prismaService.items.findMany({
+      ...(normalizedCodePrefix
+        ? {
+            where: {
+              item_code: { startsWith: normalizedCodePrefix },
+            },
+          }
+        : {}),
       include: ITEM_INCLUDE,
     });
 
@@ -111,6 +119,20 @@ export class ItemsService {
     if (!item) {
       throw new NotFoundException('Item not found');
     }
+  }
+
+  private normalizeCodePrefix(value?: string) {
+    if (value === undefined || value.trim() === '') {
+      return undefined;
+    }
+
+    const normalizedValue = value.trim().toUpperCase();
+
+    if (!/^[A-Z]+$/.test(normalizedValue)) {
+      throw new BadRequestException('codePrefix must contain letters only');
+    }
+
+    return normalizedValue;
   }
 
   private async buildUpdateData(dto: UpdateItemDto) {

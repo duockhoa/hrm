@@ -16,6 +16,7 @@ describe('FeaturesController', () => {
     update: jest.Mock;
     delete: jest.Mock;
     upsertItemFeature: jest.Mock;
+    copyItemFeatureConfig: jest.Mock;
     updateItemFeature: jest.Mock;
     deleteItemFeature: jest.Mock;
   };
@@ -31,6 +32,7 @@ describe('FeaturesController', () => {
       update: jest.fn(),
       delete: jest.fn(),
       upsertItemFeature: jest.fn(),
+      copyItemFeatureConfig: jest.fn(),
       updateItemFeature: jest.fn(),
       deleteItemFeature: jest.fn(),
     };
@@ -79,6 +81,9 @@ describe('FeaturesController', () => {
     ]);
     expect(
       Reflect.getMetadata(PERMISSIONS_KEY, controller.upsertItemFeature),
+    ).toEqual([FEATURE_PERMISSIONS.MANAGE]);
+    expect(
+      Reflect.getMetadata(PERMISSIONS_KEY, controller.copyItemFeatureConfig),
     ).toEqual([FEATURE_PERMISSIONS.MANAGE]);
     expect(
       Reflect.getMetadata(PERMISSIONS_KEY, controller.updateItemFeature),
@@ -154,6 +159,20 @@ describe('FeaturesController', () => {
     );
     expect(featuresService.upsertItemFeature).toHaveBeenCalledWith(
       'TP00001',
+      dto,
+    );
+  });
+
+  it('copies an item feature configuration', async () => {
+    const dto = { source_item_code: 'TP00001' };
+    const config = { item_code: 'TP00002', features: [] };
+    featuresService.copyItemFeatureConfig.mockResolvedValue(config);
+
+    await expect(
+      controller.copyItemFeatureConfig('TP00002', dto),
+    ).resolves.toBe(config);
+    expect(featuresService.copyItemFeatureConfig).toHaveBeenCalledWith(
+      'TP00002',
       dto,
     );
   });

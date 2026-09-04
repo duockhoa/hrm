@@ -85,6 +85,25 @@ describe('ItemsService', () => {
     });
   });
 
+  it('filters items by an alphabetical code prefix', async () => {
+    prismaService.items.findMany.mockResolvedValue([]);
+
+    await expect(service.findAll('btp')).resolves.toEqual([]);
+    expect(prismaService.items.findMany).toHaveBeenCalledWith({
+      where: {
+        item_code: { startsWith: 'BTP' },
+      },
+      include: expect.any(Object),
+    });
+  });
+
+  it('rejects an invalid item code prefix', async () => {
+    await expect(service.findAll('BTP-')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prismaService.items.findMany).not.toHaveBeenCalled();
+  });
+
   it('returns item detail with production specification product line', async () => {
     const item = {
       item_code: 'TP00001',

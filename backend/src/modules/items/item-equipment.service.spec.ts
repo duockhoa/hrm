@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma.service';
 import { ItemEquipmentService } from './item-equipment.service';
@@ -17,7 +21,10 @@ describe('ItemEquipmentService', () => {
       findUnique: jest.Mock;
       create: jest.Mock;
       delete: jest.Mock;
+      deleteMany: jest.Mock;
+      createMany: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -38,7 +45,10 @@ describe('ItemEquipmentService', () => {
               findUnique: jest.fn(),
               create: jest.fn(),
               delete: jest.fn(),
+              deleteMany: jest.fn(),
+              createMany: jest.fn(),
             },
+            $transaction: jest.fn(),
           },
         },
       ],
@@ -46,6 +56,9 @@ describe('ItemEquipmentService', () => {
 
     service = module.get<ItemEquipmentService>(ItemEquipmentService);
     prismaService = module.get(PrismaService);
+    prismaService.$transaction.mockImplementation((callback) =>
+      callback(prismaService),
+    );
   });
 
   it('creates an item equipment relation with authenticated user', async () => {
@@ -147,5 +160,51 @@ describe('ItemEquipmentService', () => {
         },
       },
     });
+  });
+
+  it('copies equipment in one transaction when item prefixes match', async () => {
+    prismaService.items.findUnique
+      .mockResolvedValueOnce({ item_code: 'BTP00001' })
+      .mockResolvedValueOnce({ item_code: 'BTP00002' });
+    prismaService.itemEquipment.findMany
+      .mockResolvedValueOnce([{ equipment_id: 2 }, { equipment_id: 3 }])
+      .mockResolvedValueOnce([
+        { id: 11, item_code: 'BTP00002', equipment_id: 2 },
+        { id: 12, item_code: 'BTP00002', equipment_id: 3 },
+      ]);
+    prismaService.itemEquipment.deleteMany.mockResolvedValue({ count: 1 });
+    prismaService.itemEquipment.createMany.mockResolvedValue({ count: 2 });
+
+    await expect(
+      service.copyFromItem(
+        'BTP00002',
+        { source_item_code: 'BTP00001' },
+        { id: 7 },
+      ),
+    ).resolves.toEqual([
+      { id: 11, item_code: 'BTP00002', equipment_id: 2 },
+      { id: 12, item_code: 'BTP00002', equipment_id: 3 },
+    ]);
+    expect(prismaService.$transaction).toHaveBeenCalledTimes(1);
+    expect(prismaService.itemEquipment.deleteMany).toHaveBeenCalledWith({
+      where: { item_code: 'BTP00002' },
+    });
+    expect(prismaService.itemEquipment.createMany).toHaveBeenCalledWith({
+      data: [
+        { item_code: 'BTP00002', equipment_id: 2, created_by_id: 7 },
+        { item_code: 'BTP00002', equipment_id: 3, created_by_id: 7 },
+      ],
+    });
+  });
+
+  it('rejects copying equipment between different item prefixes', async () => {
+    await expect(
+      service.copyFromItem(
+        'BTP00002',
+        { source_item_code: 'TP00001' },
+        { id: 7 },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prismaService.$transaction).not.toHaveBeenCalled();
   });
 });

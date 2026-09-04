@@ -26,6 +26,7 @@ export type ItemFeatureConfigEntry = {
   key: string;
   kind: string;
   label: string;
+  group_name: string | null;
   order: number;
   enabled: boolean;
 };

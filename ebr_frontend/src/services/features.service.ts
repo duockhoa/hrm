@@ -85,31 +85,15 @@ const updateItemFeature = async (
   return response.data;
 };
 
-const replaceItemFeatureConfig = async (
+const copyItemFeatureConfig = async (
   itemCode: string,
-  features: UpsertItemFeaturePayload[],
-) => {
-  const batchSize = 8;
-  const failures: unknown[] = [];
-
-  for (let index = 0; index < features.length; index += batchSize) {
-    const batch = features.slice(index, index + batchSize);
-    const results = await Promise.allSettled(
-      batch.map((feature) => upsertItemFeature(itemCode, feature)),
-    );
-
-    results.forEach((result) => {
-      if (result.status === "rejected") {
-        failures.push(result.reason);
-      }
-    });
-  }
-
-  if (failures.length > 0) {
-    throw new Error(
-      `Không thể sao chép ${failures.length}/${features.length} tính năng.`,
-    );
-  }
+  sourceItemCode: string,
+): Promise<ItemFeatureConfig> => {
+  const response = await axiosClient.post(
+    API_ROUTES.features.copyItemConfig(itemCode),
+    { source_item_code: sourceItemCode },
+  );
+  return response.data;
 };
 
 const featuresService = {
@@ -122,7 +106,7 @@ const featuresService = {
   fetchItemFeatureConfig,
   upsertItemFeature,
   updateItemFeature,
-  replaceItemFeatureConfig,
+  copyItemFeatureConfig,
 };
 
 export default featuresService;

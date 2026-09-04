@@ -15,6 +15,7 @@ import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateFeatureDto } from './dto/create-feature.dto';
 import { CreateItemFeatureDto } from './dto/create-item-feature.dto';
+import { CopyItemFeatureConfigDto } from './dto/copy-item-feature-config.dto';
 import { UpdateFeatureDto } from './dto/update-feature.dto';
 import { UpdateItemFeatureDto } from './dto/update-item-feature.dto';
 import { FEATURE_PERMISSIONS } from './features.permissions';
@@ -89,6 +90,18 @@ export class FeaturesController {
     return this.featuresService.upsertItemFeature(
       item_code,
       createItemFeatureDto,
+    );
+  }
+
+  @Post('items/:item_code/copy')
+  @Permissions(FEATURE_PERMISSIONS.MANAGE)
+  async copyItemFeatureConfig(
+    @Param('item_code') item_code: string,
+    @Body() copyItemFeatureConfigDto: CopyItemFeatureConfigDto,
+  ) {
+    return this.featuresService.copyItemFeatureConfig(
+      item_code,
+      copyItemFeatureConfigDto,
     );
   }
 

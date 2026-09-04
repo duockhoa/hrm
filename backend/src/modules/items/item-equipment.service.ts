@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { CopyItemEquipmentDto } from './dto/copy-item-equipment.dto';
 import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
 
 type AuthenticatedUser = {
@@ -101,12 +102,98 @@ export class ItemEquipmentService {
     });
   }
 
+  /** Replaces a target item's equipment list from a source item atomically. */
+  async copyFromItem(
+    itemCode: string,
+    dto: CopyItemEquipmentDto,
+    user?: AuthenticatedUser,
+  ) {
+    const targetItemCode = this.normalizeItemCode(itemCode);
+    const sourceItemCode = this.normalizeItemCode(dto?.source_item_code);
+    const createdById = this.normalizeUserId(user);
+
+    if (
+      sourceItemCode.toLocaleLowerCase() ===
+      targetItemCode.toLocaleLowerCase()
+    ) {
+      throw new BadRequestException(
+        'source_item_code must be different from item_code',
+      );
+    }
+
+    const sourceCodePrefix = this.getItemCodePrefix(sourceItemCode);
+    const targetCodePrefix = this.getItemCodePrefix(targetItemCode);
+
+    if (!sourceCodePrefix || sourceCodePrefix !== targetCodePrefix) {
+      throw new BadRequestException(
+        'source_item_code must have the same prefix as item_code',
+      );
+    }
+
+    return this.prismaService.$transaction(async (tx) => {
+      const [sourceItem, targetItem, sourceItemEquipment] =
+        await Promise.all([
+          tx.items.findUnique({
+            where: { item_code: sourceItemCode },
+            select: { item_code: true },
+          }),
+          tx.items.findUnique({
+            where: { item_code: targetItemCode },
+            select: { item_code: true },
+          }),
+          tx.itemEquipment.findMany({
+            where: { item_code: sourceItemCode },
+            select: { equipment_id: true },
+          }),
+        ]);
+
+      if (!sourceItem) {
+        throw new NotFoundException('Source item not found');
+      }
+
+      if (!targetItem) {
+        throw new NotFoundException('Item not found');
+      }
+
+      await tx.itemEquipment.deleteMany({
+        where: { item_code: targetItemCode },
+      });
+
+      if (sourceItemEquipment.length > 0) {
+        await tx.itemEquipment.createMany({
+          data: sourceItemEquipment.map((entry) => ({
+            item_code: targetItemCode,
+            equipment_id: entry.equipment_id,
+            created_by_id: createdById,
+          })),
+        });
+      }
+
+      return tx.itemEquipment.findMany({
+        where: { item_code: targetItemCode },
+        include: itemEquipmentInclude,
+        orderBy: [
+          {
+            equipment: {
+              name: 'asc',
+            },
+          },
+          { id: 'asc' },
+        ],
+      });
+    });
+  }
+
   private normalizeItemCode(value: unknown) {
     if (typeof value !== 'string' || value.trim() === '') {
       throw new BadRequestException('item_code is required');
     }
 
     return value.trim();
+  }
+
+  private getItemCodePrefix(itemCode: string) {
+    return itemCode.trim().match(/^[A-Za-z]+/)?.[0]?.toUpperCase() ?? null;
   }
 
   private normalizeEquipmentId(value: unknown) {

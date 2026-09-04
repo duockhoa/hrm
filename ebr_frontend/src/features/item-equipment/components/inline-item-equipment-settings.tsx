@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { equipmentService, itemsService } from "@/services/index.service";
+import { getItemCodePrefix } from "@/lib/item-code-prefix";
 import { Copy, LoaderCircle } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -63,6 +64,7 @@ export default function InlineItemEquipmentSettings({
   const [copySourceCode, setCopySourceCode] = useState("");
   const [isCopying, setIsCopying] = useState(false);
   const copyDialogContentRef = useRef<HTMLDivElement | null>(null);
+  const itemCodePrefix = getItemCodePrefix(itemCode);
 
   const {
     data: itemEquipment,
@@ -84,19 +86,13 @@ export default function InlineItemEquipmentSettings({
     error: itemsError,
     isLoading: isItemsLoading,
   } = useSWR(
-    isCopyDialogOpen ? "/items?feature-copy=true" : null,
-    itemsService.fetchItems,
-  );
-
-  const {
-    data: sourceItemEquipment,
-    error: sourceItemEquipmentError,
-    isLoading: isSourceItemEquipmentLoading,
-  } = useSWR(
-    isCopyDialogOpen && copySourceCode
-      ? `/items/${encodeURIComponent(copySourceCode)}/equipment`
+    isCopyDialogOpen
+      ? `/items?equipment-copy=true&codePrefix=${itemCodePrefix ?? ""}`
       : null,
-    () => itemsService.fetchItemEquipment(copySourceCode),
+    () =>
+      itemCodePrefix
+        ? itemsService.fetchItemsByCodePrefix(itemCodePrefix)
+        : itemsService.fetchItems(),
   );
 
   const itemEquipmentByEquipmentId = useMemo(
@@ -125,6 +121,7 @@ export default function InlineItemEquipmentSettings({
       if (
         !code ||
         code.toLocaleLowerCase() === normalizedCurrentItemCode ||
+        (itemCodePrefix && getItemCodePrefix(code) !== itemCodePrefix) ||
         uniqueItems.has(code)
       ) {
         return;
@@ -150,17 +147,10 @@ export default function InlineItemEquipmentSettings({
         sensitivity: "base",
       }),
     );
-  }, [itemCode, items]);
+  }, [itemCode, itemCodePrefix, items]);
 
   const selectedCopySource =
     copySourceOptions.find((option) => option.value === copySourceCode) ?? null;
-  const activeSourceItemEquipment =
-    sourceItemEquipment?.every(
-      (entry) => String(entry.item_code).trim() === copySourceCode,
-    ) === true
-      ? sourceItemEquipment
-      : undefined;
-
   const getIsSelected = (equipmentId: number) =>
     selectionOverrides[equipmentId] ??
     itemEquipmentByEquipmentId.has(equipmentId);
@@ -217,25 +207,19 @@ export default function InlineItemEquipmentSettings({
   };
 
   const handleCopyEquipment = async () => {
-    if (
-      !itemCode ||
-      !copySourceCode ||
-      !itemEquipment ||
-      !activeSourceItemEquipment
-    ) {
+    if (!itemCode || !copySourceCode) {
       return;
     }
 
     setIsCopying(true);
 
     try {
-      await itemsService.replaceItemEquipment(
+      const copiedEquipment = await itemsService.copyItemEquipment(
         itemCode,
-        itemEquipment,
-        activeSourceItemEquipment,
+        copySourceCode,
       );
       setSelectionOverrides({});
-      await mutateItemEquipment();
+      await mutateItemEquipment(copiedEquipment, false);
       closeCopyDialog();
       toast.success(
         `Đã sao chép thiết bị từ ${copySourceCode} sang ${itemCode}.`,
@@ -373,12 +357,16 @@ export default function InlineItemEquipmentSettings({
                 placeholder={
                   isItemsLoading
                     ? "Đang tải danh sách mã hàng..."
-                    : "Tìm theo mã hoặc tên hàng hóa"
+                    : itemCodePrefix
+                      ? `Tìm mã ${itemCodePrefix} hoặc tên hàng hóa`
+                      : "Tìm theo mã hoặc tên hàng hóa"
                 }
                 showClear
               />
               <ComboboxContent portalContainer={copyDialogContentRef}>
-                <ComboboxEmpty>Không tìm thấy mã hàng phù hợp.</ComboboxEmpty>
+                <ComboboxEmpty>
+                  Không tìm thấy mã hàng cùng nhóm phù hợp.
+                </ComboboxEmpty>
                 <ComboboxList>
                   {(option) => (
                     <ComboboxItem key={option.value} value={option}>
@@ -413,23 +401,10 @@ export default function InlineItemEquipmentSettings({
           {selectedCopySource ? (
             <div className="rounded-md border bg-muted/40 p-3 text-sm">
               <p className="font-medium">Nguồn: {selectedCopySource.label}</p>
-              {isSourceItemEquipmentLoading ? (
-                <p className="mt-1 text-muted-foreground">
-                  Đang tải danh sách thiết bị...
-                </p>
-              ) : sourceItemEquipmentError ? (
-                <p className="mt-1 text-destructive">
-                  {getErrorMessage(
-                    sourceItemEquipmentError,
-                    "Không thể tải thiết bị của mã hàng nguồn.",
-                  )}
-                </p>
-              ) : activeSourceItemEquipment ? (
-                <p className="mt-1 text-muted-foreground">
-                  Mã nguồn đang sử dụng {activeSourceItemEquipment.length} thiết
-                  bị. Danh sách hiện tại của {itemCode} sẽ được thay thế.
-                </p>
-              ) : null}
+              <p className="mt-1 text-muted-foreground">
+                Danh sách thiết bị hiện tại của {itemCode} sẽ được thay thế
+                bằng danh sách từ mã hàng nguồn.
+              </p>
             </div>
           ) : null}
 
@@ -447,12 +422,8 @@ export default function InlineItemEquipmentSettings({
               disabled={
                 isCopying ||
                 isItemsLoading ||
-                isSourceItemEquipmentLoading ||
                 Boolean(itemsError) ||
-                Boolean(sourceItemEquipmentError) ||
-                !selectedCopySource ||
-                !activeSourceItemEquipment ||
-                !itemEquipment
+                !selectedCopySource
               }
               onClick={() => void handleCopyEquipment()}
             >
