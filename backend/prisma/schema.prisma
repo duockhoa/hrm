@@ -1246,6 +1246,7 @@ model ProductionOrderFinishedProductSummaries {
   package_count       Int
   boxes_per_package   Int
   loose_box_count     Int
+  note                String?          @db.Text
   created_by_id       Int
   createdBy           Users            @relation("ProductionOrderFinishedProductSummaryCreator", fields: [created_by_id], references: [id], map: "po_finished_summary_created_by_id_fkey")
   created_at          DateTime         @default(now())

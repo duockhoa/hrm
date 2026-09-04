@@ -200,6 +200,7 @@ export class ProductionOrderFinishedProductSummariesService {
           dto?.loose_box_count,
           'loose_box_count',
         ),
+        note: this.normalizeOptionalText(dto?.note, 'note'),
         created_by_id: this.normalizeUserId(user),
       },
       include: finishedProductSummaryInclude,
@@ -245,6 +246,10 @@ export class ProductionOrderFinishedProductSummariesService {
           field,
         );
       }
+    }
+
+    if ('note' in updateDto) {
+      data.note = this.normalizeOptionalText(updateDto.note, 'note');
     }
 
     if (Object.keys(data).length === 0) {
@@ -318,6 +323,22 @@ export class ProductionOrderFinishedProductSummariesService {
     }
 
     return numberValue;
+  }
+
+  private normalizeOptionalText(value: unknown, fieldName: string) {
+    if (
+      value === null ||
+      value === undefined ||
+      (typeof value === 'string' && value.trim() === '')
+    ) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be a string`);
+    }
+
+    return value.trim();
   }
 
   private normalizeUserId(user?: AuthenticatedUser) {

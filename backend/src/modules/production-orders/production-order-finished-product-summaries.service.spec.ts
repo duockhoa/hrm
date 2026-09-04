@@ -182,6 +182,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
         package_count: ' 12 ',
         boxes_per_package: '024',
         loose_box_count: 3,
+        note: ' Đóng gói cuối ca ',
       },
       { id: 7 },
     );
@@ -196,6 +197,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
           package_count: 12,
           boxes_per_package: 24,
           loose_box_count: 3,
+          note: 'Đóng gói cuối ca',
           created_by_id: 7,
         },
       }),
@@ -233,7 +235,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     ).toHaveBeenCalledTimes(1);
   });
 
-  it('updates supplied finished product summary counts', async () => {
+  it('updates supplied finished product summary fields', async () => {
     const updatedSummary = { id: 1, package_count: 14 };
     prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
       { id: 1 },
@@ -242,16 +244,35 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       updatedSummary,
     );
 
-    await expect(service.update(1, { package_count: ' 014 ' })).resolves.toBe(
-      updatedSummary,
-    );
+    await expect(
+      service.update(1, { package_count: ' 014 ', note: ' Đã kiểm tra ' }),
+    ).resolves.toBe(updatedSummary);
     expect(
       prismaService.productionOrderFinishedProductSummaries.update,
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 1 },
-        data: { package_count: 14 },
+        data: { package_count: 14, note: 'Đã kiểm tra' },
       }),
+    );
+  });
+
+  it('clears a finished product summary note with an empty value', async () => {
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+    prismaService.productionOrderFinishedProductSummaries.update.mockResolvedValue(
+      { id: 1, note: null },
+    );
+
+    await expect(service.update(1, { note: '   ' })).resolves.toEqual({
+      id: 1,
+      note: null,
+    });
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { note: null } }),
     );
   });
 
@@ -306,5 +327,22 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
         loose_box_count: 3,
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects a non-string note', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+    await expect(
+      service.create(
+        2031,
+        {
+          package_count: 12,
+          boxes_per_package: 24,
+          loose_box_count: 3,
+          note: 1 as any,
+        },
+        { id: 7 },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

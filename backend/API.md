@@ -7945,6 +7945,7 @@ Response mẫu:
     "package_count": 12,
     "boxes_per_package": 24,
     "loose_box_count": 3,
+    "note": "Đóng gói cuối ca",
     "created_by_id": 7,
     "created_at": "2026-06-12T08:10:00.000Z",
     "updated_at": "2026-06-12T08:10:00.000Z",
@@ -8012,6 +8013,7 @@ Response mẫu:
     "package_count": 12,
     "boxes_per_package": 24,
     "loose_box_count": 3,
+    "note": "Đóng gói cuối ca",
     "created_by_id": 7,
     "created_at": "2026-06-12T08:10:00.000Z",
     "updated_at": "2026-06-12T08:10:00.000Z",
@@ -8074,6 +8076,7 @@ Response mẫu:
   "package_count": 12,
   "boxes_per_package": 24,
   "loose_box_count": 3,
+  "note": "Đóng gói cuối ca",
   "created_by_id": 7,
   "created_at": "2026-06-12T08:10:00.000Z",
   "updated_at": "2026-06-12T08:10:00.000Z",
@@ -8106,7 +8109,8 @@ Body:
 {
   "package_count": 12,
   "boxes_per_package": 24,
-  "loose_box_count": 3
+  "loose_box_count": 3,
+  "note": "Đóng gói cuối ca"
 }
 ```
 
@@ -8115,6 +8119,7 @@ Quy tắc:
 - `package_count`: Số kiện, bắt buộc, là số nguyên không âm.
 - `boxes_per_package`: Số hộp trên kiện, bắt buộc, là số nguyên không âm.
 - `loose_box_count`: Số hộp lẻ, bắt buộc, là số nguyên không âm.
+- `note`: Ghi chú tùy chọn; lưu dạng text dài. Gửi `null` hoặc chuỗi rỗng để không lưu ghi chú.
 - Có thể gửi số dạng chuỗi, ví dụ `"12"`.
 - `created_by_id` lấy từ user đăng nhập, frontend không gửi field này.
 - Một lệnh sản xuất có thể có nhiều bản tổng kết thành phẩm.
@@ -8124,6 +8129,7 @@ Lỗi thường gặp:
 - `404 Production order not found`
 - `400 package_count is required`
 - `400 package_count must be a non-negative integer`
+- `400 note must be a string`
 - `401 Authenticated user not found`
 
 ### Cập nhật tổng kết thành phẩm
@@ -8138,17 +8144,19 @@ Chỉ gửi các trường cần sửa:
 ```json
 {
   "package_count": 14,
-  "loose_box_count": 5
+  "loose_box_count": 5,
+  "note": "Đã kiểm tra số lượng"
 }
 ```
 
-Các trường `package_count`, `boxes_per_package`, `loose_box_count` phải là số nguyên không âm; cần gửi ít nhất một trường. Cần quyền `production-orders.update`.
+Các trường `package_count`, `boxes_per_package`, `loose_box_count` phải là số nguyên không âm. `note` là ghi chú tùy chọn; gửi `null` hoặc chuỗi rỗng để xóa. Cần gửi ít nhất một trường. Cần quyền `production-orders.update`.
 
 Lỗi thường gặp:
 
 - `400 At least one field is required`
 - `400 package_count is required`
 - `400 package_count must be a non-negative integer`
+- `400 note must be a string`
 - `404 Finished product summary not found`
 
 ### Xóa tổng kết thành phẩm
