@@ -24,7 +24,6 @@ type AppLauncherItem = {
   link: string;
   icon: LucideIcon;
   tileClassName: string;
-  external?: boolean;
 };
 
 type Application = {
@@ -52,7 +51,6 @@ const APPS: AppLauncherItem[] = [
     icon: Clock3,
     tileClassName:
       "bg-[linear-gradient(180deg,#59BEFF_0%,#3096F4_58%,#2C72E7_100%)]",
-    external: true,
   },
 
   {
@@ -86,7 +84,6 @@ const APPS: AppLauncherItem[] = [
     icon: Wrench,
     tileClassName:
       "bg-[linear-gradient(180deg,#8B7CFF_0%,#6657D8_58%,#4638A7_100%)]",
-    external: true,
   },
 
   {
@@ -96,7 +93,6 @@ const APPS: AppLauncherItem[] = [
     icon: Package,
     tileClassName:
       "bg-[linear-gradient(180deg,#FF6B6B_0%,#E63946_50%,#D90429_100%)]",
-    external: true,
   },
 ];
 
@@ -208,7 +204,6 @@ export default function Home() {
                     key={app.key}
                     link={app.link}
                     name={app.name}
-                    external={app.external}
                     tileClassName={app.tileClassName}
                     disabled={!hasAccess}
                     icon={

@@ -11,7 +11,6 @@ type ItemAppProps = {
   icon?: ReactNode;
   className?: string;
   tileClassName?: string;
-  external?: boolean;
   disabled?: boolean;
 };
 
@@ -21,10 +20,8 @@ export default function ItemApp({
   icon,
   className,
   tileClassName,
-  external,
   disabled = false,
 }: ItemAppProps) {
-  const isExternal = external ?? /^https?:\/\//.test(link);
   const content = (
     <>
       <div
@@ -73,8 +70,6 @@ export default function ItemApp({
     <Link
       href={link}
       aria-label={name}
-      rel={isExternal ? "noreferrer noopener" : undefined}
-      target={isExternal ? "_blank" : undefined}
       className={wrapperClassName}
     >
       {content}
