@@ -1,0 +1,784 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { API_ROUTES } from "@/lib/api-routes";
+import { mixingActivityTemplateStageStepParametersService } from "@/services/index.service";
+import {
+  ArrowDown,
+  ArrowUp,
+  Copy,
+  Edit2,
+  EllipsisVertical,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { type FormEvent, useMemo, useState } from "react";
+import { toast } from "sonner";
+import useSWR from "swr";
+import {
+  MIXING_ACTIVITY_PARAMETER_DATA_TYPES,
+  MIXING_ACTIVITY_PARAMETER_UNITS,
+  type MixingActivityParameterDataType,
+  type MixingActivityTemplateStageStep,
+  type MixingActivityTemplateStageStepParameter,
+  type UpdateMixingActivityTemplateStageStepParameterPayload,
+} from "../types";
+import {
+  compactUniqueOrdersAfterDelete,
+  swapUniqueOrders,
+} from "../swap-unique-orders";
+
+type ParameterFormState = {
+  parameterName: string;
+  dataType: MixingActivityParameterDataType;
+  unit: string;
+  requirement: string;
+  parameterOrder: string;
+};
+
+type ParameterRow =
+  | { kind: "parameter"; parameter: MixingActivityTemplateStageStepParameter }
+  | { kind: "editor"; key: string }
+  | { kind: "loading" }
+  | { kind: "error"; message: string }
+  | { kind: "empty" };
+
+const DATA_TYPE_LABELS: Record<MixingActivityParameterDataType, string> = {
+  text: "văn bản",
+  number: "số",
+  decimal: "số thập phân",
+  boolean: "đúng/sai",
+  date: "ngày",
+  datetime: "ngày giờ",
+  select: "lựa chọn",
+};
+
+const getErrorMessage = (error: any, fallback: string) => {
+  const message = error?.response?.data?.message ?? error?.message;
+  return Array.isArray(message) ? message.join("; ") : message ?? fallback;
+};
+
+export default function MixingActivityTemplateStageStepBlock({
+  step,
+  disabled,
+  canMoveUp,
+  canMoveDown,
+  onEditStep,
+  onDeleteStep,
+  onDuplicateStep,
+  onMoveStepUp,
+  onMoveStepDown,
+}: {
+  step: MixingActivityTemplateStageStep;
+  disabled: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onEditStep: () => void;
+  onDeleteStep: () => void;
+  onDuplicateStep: () => void;
+  onMoveStepUp: () => void;
+  onMoveStepDown: () => void;
+}) {
+  const [isEditingRow, setIsEditingRow] = useState(false);
+  const [editingParameter, setEditingParameter] =
+    useState<MixingActivityTemplateStageStepParameter | null>(null);
+  const [deletingParameter, setDeletingParameter] =
+    useState<MixingActivityTemplateStageStepParameter | null>(null);
+  const [form, setForm] = useState<ParameterFormState>({
+    parameterName: "",
+    dataType: "text",
+    unit: "",
+    requirement: "",
+    parameterOrder: "1",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const parametersRoute =
+    API_ROUTES.items.mixingActivityTemplateStageStepParameters(step.id);
+  const { data = [], error, isLoading, mutate } = useSWR(parametersRoute, () =>
+    mixingActivityTemplateStageStepParametersService.fetchByStepId(step.id),
+  );
+
+  const parameters = useMemo(
+    () =>
+      [...data].sort(
+        (first, second) => first.parameter_order - second.parameter_order,
+      ),
+    [data],
+  );
+
+  const closeEditor = () => {
+    setIsEditingRow(false);
+    setEditingParameter(null);
+  };
+
+  const openCreateForm = () => {
+    const nextOrder =
+      parameters.reduce(
+        (highestOrder, parameter) =>
+          Math.max(highestOrder, parameter.parameter_order),
+        0,
+      ) + 1;
+    setEditingParameter(null);
+    setForm({
+      parameterName: "",
+      dataType: "text",
+      unit: "",
+      requirement: "",
+      parameterOrder: String(nextOrder),
+    });
+    setIsEditingRow(true);
+  };
+
+  const openEditForm = (
+    parameter: MixingActivityTemplateStageStepParameter,
+  ) => {
+    setEditingParameter(parameter);
+    setForm({
+      parameterName: parameter.parameter_name,
+      dataType: parameter.data_type,
+      unit: parameter.unit ?? "",
+      requirement: parameter.requirement,
+      parameterOrder: String(parameter.parameter_order),
+    });
+    setIsEditingRow(true);
+  };
+
+  const validateForm = () => {
+    const parameterName = form.parameterName.trim();
+    const unit = form.unit.trim();
+    const requirement = form.requirement.trim();
+    const parameterOrder = Number(form.parameterOrder);
+
+    if (!parameterName) {
+      toast.error("Vui lòng nhập tên thông số.");
+      return false;
+    }
+    if (parameterName.length > 255) {
+      toast.error("Tên thông số tối đa 255 ký tự.");
+      return false;
+    }
+    if (unit.length > 50) {
+      toast.error("Đơn vị tính tối đa 50 ký tự.");
+      return false;
+    }
+    if (!requirement) {
+      toast.error("Vui lòng nhập yêu cầu của thông số.");
+      return false;
+    }
+    if (!MIXING_ACTIVITY_PARAMETER_DATA_TYPES.includes(form.dataType)) {
+      toast.error("Kiểu dữ liệu không hợp lệ.");
+      return false;
+    }
+    if (!Number.isInteger(parameterOrder) || parameterOrder <= 0) {
+      toast.error("Thứ tự thông số phải là số nguyên dương.");
+      return false;
+    }
+    if (
+      parameters.some(
+        (parameter) =>
+          parameter.id !== editingParameter?.id &&
+          parameter.parameter_order === parameterOrder,
+      )
+    ) {
+      toast.error("Thứ tự này đã được sử dụng trong bước.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!validateForm()) return;
+
+    const nextValues = {
+      parameter_name: form.parameterName.trim(),
+      data_type: form.dataType,
+      unit: form.unit.trim() || null,
+      requirement: form.requirement.trim(),
+      parameter_order: Number(form.parameterOrder),
+    };
+
+    setIsSubmitting(true);
+    try {
+      if (editingParameter) {
+        const payload: UpdateMixingActivityTemplateStageStepParameterPayload = {};
+        if (nextValues.parameter_name !== editingParameter.parameter_name) {
+          payload.parameter_name = nextValues.parameter_name;
+        }
+        if (nextValues.data_type !== editingParameter.data_type) {
+          payload.data_type = nextValues.data_type;
+        }
+        if (nextValues.unit !== (editingParameter.unit ?? null)) {
+          payload.unit = nextValues.unit;
+        }
+        if (nextValues.requirement !== editingParameter.requirement) {
+          payload.requirement = nextValues.requirement;
+        }
+        if (nextValues.parameter_order !== editingParameter.parameter_order) {
+          payload.parameter_order = nextValues.parameter_order;
+        }
+        if (Object.keys(payload).length > 0) {
+          await mixingActivityTemplateStageStepParametersService.update(
+            editingParameter.id,
+            payload,
+          );
+          toast.success("Đã cập nhật thông số.");
+        }
+      } else {
+        await mixingActivityTemplateStageStepParametersService.create(
+          step.id,
+          nextValues,
+        );
+        toast.success("Đã thêm thông số.");
+      }
+
+      closeEditor();
+      await mutate();
+    } catch (submitError) {
+      toast.error(
+        getErrorMessage(
+          submitError,
+          editingParameter
+            ? "Không thể cập nhật thông số."
+            : "Không thể thêm thông số.",
+        ),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingParameter) return;
+
+    let wasDeleted = false;
+    setIsSubmitting(true);
+    try {
+      await mixingActivityTemplateStageStepParametersService.delete(
+        deletingParameter.id,
+      );
+      wasDeleted = true;
+      setDeletingParameter(null);
+      await compactUniqueOrdersAfterDelete({
+        deletedItemId: deletingParameter.id,
+        orderedItems: parameters.map((parameter) => ({
+          id: parameter.id,
+          order: parameter.parameter_order,
+        })),
+        updateOrder: (id, order) =>
+          mixingActivityTemplateStageStepParametersService.update(id, {
+            parameter_order: order,
+          }),
+      });
+      toast.success("Đã xóa thông số.");
+      await mutate();
+    } catch (deleteError) {
+      if (wasDeleted) {
+        await mutate().catch(() => undefined);
+        toast.error("Đã xóa thông số, nhưng không thể cập nhật lại thứ tự.");
+        return;
+      }
+      toast.error(getErrorMessage(deleteError, "Không thể xóa thông số."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const moveParameter = async (
+    parameter: MixingActivityTemplateStageStepParameter,
+    direction: "up" | "down",
+  ) => {
+    const currentIndex = parameters.findIndex(
+      (item) => item.id === parameter.id,
+    );
+    const adjacentIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    const adjacentParameter = parameters[adjacentIndex];
+    if (!adjacentParameter) return;
+
+    const temporaryOrder =
+      parameters.reduce(
+        (highestOrder, item) => Math.max(highestOrder, item.parameter_order),
+        0,
+      ) + 1;
+
+    setIsSubmitting(true);
+    try {
+      await swapUniqueOrders({
+        itemId: parameter.id,
+        itemOrder: parameter.parameter_order,
+        adjacentId: adjacentParameter.id,
+        adjacentOrder: adjacentParameter.parameter_order,
+        temporaryOrder,
+        updateOrder: (id, order) =>
+          mixingActivityTemplateStageStepParametersService.update(id, {
+            parameter_order: order,
+          }),
+      });
+      toast.success(
+        direction === "up"
+          ? "Đã di chuyển thông số lên trên."
+          : "Đã di chuyển thông số xuống dưới.",
+      );
+      await mutate();
+    } catch (moveError) {
+      await mutate();
+      toast.error(
+        getErrorMessage(moveError, "Không thể thay đổi thứ tự thông số."),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const rollbackShiftedParameters = async (
+    shiftedParameters: MixingActivityTemplateStageStepParameter[],
+  ) => {
+    for (const shiftedParameter of [...shiftedParameters].sort(
+      (first, second) => first.parameter_order - second.parameter_order,
+    )) {
+      try {
+        await mixingActivityTemplateStageStepParametersService.update(
+          shiftedParameter.id,
+          { parameter_order: shiftedParameter.parameter_order },
+        );
+      } catch (rollbackError) {
+        void rollbackError;
+      }
+    }
+  };
+
+  const shiftParametersForInsert = async (parameterOrder: number) => {
+    const parametersToShift = parameters
+      .filter((item) => item.parameter_order >= parameterOrder)
+      .sort((first, second) => second.parameter_order - first.parameter_order);
+    const shiftedParameters: MixingActivityTemplateStageStepParameter[] = [];
+
+    try {
+      for (const parameterToShift of parametersToShift) {
+        await mixingActivityTemplateStageStepParametersService.update(
+          parameterToShift.id,
+          { parameter_order: parameterToShift.parameter_order + 1 },
+        );
+        shiftedParameters.push(parameterToShift);
+      }
+      return shiftedParameters;
+    } catch (shiftError) {
+      await rollbackShiftedParameters(shiftedParameters);
+      throw shiftError;
+    }
+  };
+
+  const duplicateParameter = async (
+    parameter: MixingActivityTemplateStageStepParameter,
+  ) => {
+    const duplicateOrder = parameter.parameter_order + 1;
+    let shiftedParameters: MixingActivityTemplateStageStepParameter[] = [];
+
+    setIsSubmitting(true);
+    try {
+      shiftedParameters = await shiftParametersForInsert(duplicateOrder);
+      try {
+        await mixingActivityTemplateStageStepParametersService.create(step.id, {
+          parameter_name: parameter.parameter_name,
+          data_type: parameter.data_type,
+          unit: parameter.unit ?? null,
+          requirement: parameter.requirement,
+          parameter_order: duplicateOrder,
+        });
+      } catch (createError) {
+        await rollbackShiftedParameters(shiftedParameters);
+        shiftedParameters = [];
+        throw createError;
+      }
+
+      toast.success("Đã nhân bản thông số xuống ngay phía dưới.");
+      await mutate();
+    } catch (duplicateError) {
+      await mutate();
+      toast.error(
+        getErrorMessage(duplicateError, "Không thể nhân bản thông số."),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const rows: ParameterRow[] = useMemo(() => {
+    if (error) {
+      return [
+        {
+          kind: "error",
+          message: getErrorMessage(error, "Không thể tải danh sách thông số."),
+        },
+      ];
+    }
+    if (isLoading) return [{ kind: "loading" }];
+
+    const parameterRows: ParameterRow[] = parameters.map((parameter) =>
+      isEditingRow && editingParameter?.id === parameter.id
+        ? { kind: "editor", key: `edit-${parameter.id}` }
+        : { kind: "parameter", parameter },
+    );
+    if (isEditingRow && !editingParameter) {
+      parameterRows.push({ kind: "editor", key: `new-${step.id}` });
+    }
+    return parameterRows.length > 0 ? parameterRows : [{ kind: "empty" }];
+  }, [editingParameter, error, isEditingRow, isLoading, parameters, step.id]);
+
+  return (
+    <>
+      {rows.map((row, rowIndex) => (
+        <tr
+          key={
+            row.kind === "parameter"
+              ? row.parameter.id
+              : row.kind === "editor"
+                ? row.key
+                : row.kind
+          }
+        >
+          {rowIndex === 0 ? (
+            <td
+              rowSpan={rows.length}
+              className="border border-black px-2 py-1 align-top"
+            >
+              <div className="flex items-start justify-between gap-1">
+                <span className="min-w-0 flex-1 break-words">
+                  Bước {step.step_order}: {step.step_name}
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="h-7 w-7 shrink-0"
+                      disabled={disabled || isEditingRow || isSubmitting}
+                      aria-label={`Thao tác bước ${step.step_order}`}
+                    >
+                      <EllipsisVertical className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="font-sans">
+                    <DropdownMenuItem onSelect={openCreateForm}>
+                      <Plus className="size-4" />
+                      Thêm thông số
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={onDuplicateStep}>
+                      <Copy className="size-4" />
+                      Nhân bản
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={!canMoveUp}
+                      onSelect={onMoveStepUp}
+                    >
+                      <ArrowUp className="size-4" />
+                      Di chuyển lên trên
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={!canMoveDown}
+                      onSelect={onMoveStepDown}
+                    >
+                      <ArrowDown className="size-4" />
+                      Di chuyển xuống dưới
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={onEditStep}>
+                      <Edit2 className="size-4" />
+                      Sửa
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onSelect={onDeleteStep}
+                    >
+                      <Trash2 className="size-4" />
+                      Xóa
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </td>
+          ) : null}
+
+          {row.kind === "parameter" ? (
+            <>
+              <td className="border border-black px-2 py-1 align-top">
+                <div className="flex items-start justify-between gap-1">
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+                    {row.parameter.parameter_name}: {row.parameter.requirement}
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="h-7 w-7 shrink-0 opacity-25 hover:opacity-100"
+                        disabled={isEditingRow || isSubmitting}
+                        aria-label={`Thao tác thông số ${row.parameter.parameter_order}`}
+                      >
+                        <EllipsisVertical className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="font-sans">
+                      <DropdownMenuItem
+                        onSelect={() => void duplicateParameter(row.parameter)}
+                      >
+                        <Copy className="size-4" />
+                        Nhân bản
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={parameters[0]?.id === row.parameter.id}
+                        onSelect={() => moveParameter(row.parameter, "up")}
+                      >
+                        <ArrowUp className="size-4" />
+                        Di chuyển lên trên
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={
+                          parameters[parameters.length - 1]?.id ===
+                          row.parameter.id
+                        }
+                        onSelect={() => moveParameter(row.parameter, "down")}
+                      >
+                        <ArrowDown className="size-4" />
+                        Di chuyển xuống dưới
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => openEditForm(row.parameter)}
+                      >
+                        <Edit2 className="size-4" />
+                        Sửa
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onSelect={() => setDeletingParameter(row.parameter)}
+                      >
+                        <Trash2 className="size-4" />
+                        Xóa
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </td>
+              <td className="border border-black px-2 py-1 align-top">
+                <div>
+                  Kiểu dữ liệu dạng {DATA_TYPE_LABELS[row.parameter.data_type]}
+                </div>
+                {row.parameter.unit ? (
+                  <div className="mt-1 break-words text-sm">
+                    Đơn vị: <span className="font-semibold">{row.parameter.unit}</span>
+                  </div>
+                ) : null}
+              </td>
+              <td className="border border-black" />
+            </>
+          ) : row.kind === "editor" ? (
+            <td
+              colSpan={3}
+              className="border border-black bg-emerald-50/40 px-2 py-1"
+            >
+              <form
+                className="grid grid-cols-[64px_minmax(120px,0.9fr)_120px_minmax(90px,0.65fr)_minmax(160px,1.35fr)] items-start gap-2"
+                onSubmit={handleSubmit}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && !isSubmitting) {
+                    event.preventDefault();
+                    closeEditor();
+                  }
+                }}
+              >
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  value={form.parameterOrder}
+                  readOnly={!editingParameter}
+                  disabled={isSubmitting}
+                  className="h-8 rounded-sm border-black bg-white px-2 text-center font-serif text-[15px] read-only:bg-gray-100"
+                  aria-label="Thứ tự thông số"
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      parameterOrder: event.target.value,
+                    }))
+                  }
+                />
+                <Textarea
+                  value={form.parameterName}
+                  maxLength={255}
+                  rows={1}
+                  disabled={isSubmitting}
+                  placeholder="Tên thông số"
+                  autoFocus
+                  className="min-h-8 resize-none overflow-hidden rounded-sm border-black bg-white px-2 py-1 font-serif text-[15px] leading-5"
+                  aria-label="Tên thông số"
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      parameterName: event.target.value,
+                    }))
+                  }
+                />
+                <select
+                  value={form.dataType}
+                  disabled={isSubmitting}
+                  className="h-8 rounded-sm border border-black bg-white px-2 font-serif text-[15px] outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="Kiểu dữ liệu"
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      dataType: event.target.value as MixingActivityParameterDataType,
+                    }))
+                  }
+                >
+                  {MIXING_ACTIVITY_PARAMETER_DATA_TYPES.map((dataType) => (
+                    <option key={dataType} value={dataType}>
+                      {DATA_TYPE_LABELS[dataType]}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={form.unit}
+                  disabled={isSubmitting}
+                  className="h-8 rounded-sm border border-black bg-white px-2 font-serif text-[15px] outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="Đơn vị tính"
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      unit: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Không có đơn vị</option>
+                  {form.unit &&
+                  !MIXING_ACTIVITY_PARAMETER_UNITS.some(
+                    (unit) => unit === form.unit,
+                  ) ? (
+                    <option value={form.unit}>{form.unit}</option>
+                  ) : null}
+                  {MIXING_ACTIVITY_PARAMETER_UNITS.map((unit) => (
+                    <option key={unit} value={unit}>
+                      {unit}
+                    </option>
+                  ))}
+                </select>
+                <Textarea
+                  value={form.requirement}
+                  rows={1}
+                  disabled={isSubmitting}
+                  placeholder="Yêu cầu"
+                  className="min-h-8 resize-none overflow-hidden rounded-sm border-black bg-white px-2 py-1 font-serif text-[15px] leading-5"
+                  aria-label="Yêu cầu thông số"
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      requirement: event.target.value,
+                    }))
+                  }
+                />
+                <div className="col-span-full flex items-center justify-end gap-1 font-sans">
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="h-8"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Đang lưu..." : "Lưu"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={closeEditor}
+                    disabled={isSubmitting}
+                  >
+                    Hủy
+                  </Button>
+                </div>
+              </form>
+            </td>
+          ) : row.kind === "loading" ? (
+            <td
+              colSpan={3}
+              className="h-9 animate-pulse border border-black bg-gray-50 px-2 py-1 text-center text-sm text-gray-500"
+            >
+              Đang tải thông số...
+            </td>
+          ) : row.kind === "error" ? (
+            <td
+              colSpan={3}
+              className="h-9 border border-black px-2 py-1 text-center text-sm text-red-700"
+            >
+              {row.message}
+            </td>
+          ) : (
+            <>
+              <td className="h-9 border border-black" />
+              <td className="border border-black" />
+              <td className="border border-black" />
+            </>
+          )}
+        </tr>
+      ))}
+
+      <Dialog
+        open={Boolean(deletingParameter)}
+        onOpenChange={(open) => {
+          if (!open && !isSubmitting) setDeletingParameter(null);
+        }}
+      >
+        <DialogContent className="font-sans">
+          <DialogHeader>
+            <DialogTitle>Xóa thông số</DialogTitle>
+            <DialogDescription>
+              Thông số này sẽ bị xóa khỏi bước và không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded border bg-gray-50 p-3">
+            <p className="font-medium">{deletingParameter?.parameter_name}</p>
+            <p className="mt-1 text-sm text-gray-600">
+              {deletingParameter?.requirement}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeletingParameter(null)}
+              disabled={isSubmitting}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Đang xóa..." : "Xóa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

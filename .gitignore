@@ -45,9 +45,15 @@ Desktop.ini
 coverage/
 
 # Frontend (Next.js)
-frontend/.next/
-frontend/out/
-frontend/.turbo/
+hrm_frontend/.next/
+hrm_frontend/out/
+hrm_frontend/.turbo/
+ebr_frontend/.next/
+ebr_frontend/out/
+ebr_frontend/.turbo/
+wms_frontend/.next/
+wms_frontend/out/
+wms_frontend/.turbo/
 
 # Backend (Node.js)
 backend/node_modules/
@@ -60,18 +66,35 @@ backend/dist/
 backend/uploads/
 
 # Frontend (Node.js, Next.js, configs)
-frontend/node_modules/
-frontend/.env
-frontend/.env.*
-!frontend/.env.example
-frontend/logs/
-frontend/build/
-frontend/dist/
-frontend/next-env.d.ts
+hrm_frontend/node_modules/
+hrm_frontend/.env
+hrm_frontend/.env.*
+!hrm_frontend/.env.example
+hrm_frontend/logs/
+hrm_frontend/build/
+hrm_frontend/dist/
+hrm_frontend/next-env.d.ts
+ebr_frontend/node_modules/
+ebr_frontend/.env
+ebr_frontend/.env.*
+!ebr_frontend/.env.example
+ebr_frontend/logs/
+ebr_frontend/build/
+ebr_frontend/dist/
+ebr_frontend/next-env.d.ts
+wms_frontend/node_modules/
+wms_frontend/.env
+wms_frontend/.env.*
+!wms_frontend/.env.example
+wms_frontend/logs/
+wms_frontend/build/
+wms_frontend/dist/
+wms_frontend/next-env.d.ts
 # Misc
 *.local
 *.cache
 .cache/
+*.tsbuildinfo
 
 # Mobile app (React Native)
 mobileapp/node_modules/
