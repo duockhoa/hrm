@@ -90,6 +90,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { API_ROUTES } from "@/lib/api-routes";
+import useUserStore from "@/store/user.store";
+import userService from "@/services/user.service";
 import { productionSpecificationsService } from "@/services/index.service";
 import productionOrdersService from "@/services/product-orders.service";
 import {
@@ -454,6 +456,11 @@ function ProductionOrderDocumentControlActions({
   productionOrderId?: string | number | null;
   featureConfig?: ProductionOrderFeatureConfig;
 }) {
+  const userId = useUserStore((state) => state.user?.id);
+  const { data: permissions, error: permissionsError } = useSWR(
+    userId ? [API_ROUTES.users.myPermissions, userId] : null,
+    () => userService.fetchMyPermissions(),
+  );
   const [confirmingActionKey, setConfirmingActionKey] =
     React.useState<DocumentControlActionKey | null>(null);
   const [submittingAction, setSubmittingAction] =
@@ -461,6 +468,7 @@ function ProductionOrderDocumentControlActions({
 
   const documentControlActions: Array<{
     key: DocumentControlActionKey;
+    permissionKey?: string;
     label: string;
     title: string;
     icon: React.ReactNode;
@@ -470,6 +478,7 @@ function ProductionOrderDocumentControlActions({
   }> = [
     {
       key: "issue_batch_record",
+      permissionKey: "production-orders.document-control.update",
       label: "Cấp hồ sơ lô giấy",
       title: "Cấp hồ sơ lô giấy",
       icon: <FileUp />,
@@ -477,6 +486,7 @@ function ProductionOrderDocumentControlActions({
     },
     {
       key: "receive_batch_record",
+      permissionKey: "production-orders.document-control.update",
       label: "Nhận hồ sơ lô giấy",
       title: "Nhận hồ sơ lô giấy",
       icon: <FileCheck />,
@@ -484,6 +494,7 @@ function ProductionOrderDocumentControlActions({
     },
     {
       key: "receive_warehouse_release",
+      permissionKey: "production-orders.document-control.update",
       label: "Nhận phiếu xuất kho",
       title: "Nhận phiếu xuất kho",
       icon: <PackageCheck />,
@@ -491,6 +502,7 @@ function ProductionOrderDocumentControlActions({
     },
     {
       key: "receive_test_certificate",
+      permissionKey: "production-orders.document-control.update",
       label: "Nhận phiếu kiểm nghiệm",
       title: "Nhận phiếu kiểm nghiệm",
       icon: <FileCheck />,
@@ -504,7 +516,12 @@ function ProductionOrderDocumentControlActions({
         normalizedFeatureConfig,
         "action",
         action.key,
-      ),
+      ) &&
+      (!action.permissionKey ||
+        Boolean(
+          !permissionsError &&
+            permissions?.permissionKeys.includes(action.permissionKey),
+        )),
   );
 
   const handleAction = async (
@@ -651,6 +668,11 @@ export default function ProductOrderDetail({
     summaryId: string | number,
   ) => void;
 }) {
+  const userId = useUserStore((state) => state.user?.id);
+  const { data: permissions, error: permissionsError } = useSWR(
+    userId ? [API_ROUTES.users.myPermissions, userId] : null,
+    () => userService.fetchMyPermissions(),
+  );
   const productOrderItemCode =
     productOrder?.item_code ?? productOrder?.item?.item_code;
   const { data: fetchedProductionSpecification } = useSWR(
@@ -693,8 +715,12 @@ export default function ProductOrderDetail({
     ...(productOrder.item?.productionSpecification ?? {}),
   };
   const featureConfig = productOrder.featureConfig;
-  const isActionEnabled = (key: string) =>
-    isProductionOrderFeatureEnabled(featureConfig, "action", key);
+  const isActionEnabled = (key: string, permissionKey?: string) =>
+    isProductionOrderFeatureEnabled(featureConfig, "action", key) &&
+    (!permissionKey ||
+      Boolean(
+        !permissionsError && permissions?.permissionKeys.includes(permissionKey),
+      ));
   const isActionConfigured = (key: string) =>
     Boolean(
       featureConfig?.actions?.some(
@@ -737,7 +763,10 @@ export default function ProductOrderDetail({
         </div>
 
         <div className="grid w-full grid-cols-4 justify-items-center gap-x-1 gap-y-1 md:min-h-50 md:grid-cols-[repeat(auto-fill,minmax(90px,1fr))] md:gap-2">
-          {isActionEnabled("export_warehouse_release") && (
+          {isActionEnabled(
+            "export_warehouse_release",
+            "production-orders.export-warehouse-release",
+          ) && (
             <OpenFormButton
               icon={<FaFileImport />}
               name="Xuất PXK"
@@ -761,7 +790,10 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("export_production_order") && (
+          {isActionEnabled(
+            "export_production_order",
+            "production-orders.export",
+          ) && (
             <ExportProductionOrderButton
               productionOrderId={productionOrderId}
             />

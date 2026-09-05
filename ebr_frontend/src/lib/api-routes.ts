@@ -7,6 +7,7 @@ const AUTH = {
 const USERS = {
   base: "/users",
   me: "/users/me",
+  myPermissions: "/users/me/permissions",
   addUser: "/users",
   applications: (userId: string | number) => `/users/${userId}/applications`,
   uploadAvatar: "/users/me/avatar",

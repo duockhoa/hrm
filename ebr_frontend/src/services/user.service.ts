@@ -17,6 +17,11 @@ const fetchUserApplications = async (userId: string | number) => {
   return response.data;
 };
 
+const fetchMyPermissions = async (): Promise<{ permissionKeys: string[] }> => {
+  const response = await axiosClient.get(API_ROUTES.users.myPermissions);
+  return response.data;
+};
+
 // The function to add a new user
 const addUser = async (userData: any) => {
   const response = await axiosClient.post(API_ROUTES.users.base, userData);
@@ -71,6 +76,7 @@ const deleteUser = async (userId: string) => {
 
 export default {
   fetcherMe,
+  fetchMyPermissions,
   fetcherUserById,
   fetchUserApplications,
   uploadAvatar,
