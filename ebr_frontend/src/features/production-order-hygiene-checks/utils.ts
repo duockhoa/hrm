@@ -1,3 +1,7 @@
+const ROOM_OR_EQUIPMENT_HTTP_ERROR = 'Phòng/thiết bị không được chứa "http".';
+
+const containsHttp = (value: string) => /http/i.test(value);
+
 const HYGIENE_CLEANING_TYPE_OPTIONS = [
   { value: "Đầu ca", label: "Đầu ca" },
   { value: "Cuối ca", label: "Cuối ca" },
@@ -122,6 +126,8 @@ const getUserLabel = (
 ) => user?.name ?? user?.username ?? user?.email ?? "";
 
 export {
+  ROOM_OR_EQUIPMENT_HTTP_ERROR,
+  containsHttp,
   HYGIENE_CLEANING_TYPE_OPTIONS,
   HYGIENE_RESULT_OPTIONS,
   formatDateTime,

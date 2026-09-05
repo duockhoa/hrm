@@ -31,6 +31,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { API_ROUTES } from "@/lib/api-routes";
 import productionOrdersService from "@/services/product-orders.service";
 import {
+  ROOM_OR_EQUIPMENT_HTTP_ERROR,
+  containsHttp,
   HYGIENE_CLEANING_TYPE_OPTIONS,
   HYGIENE_RESULT_OPTIONS,
   normalizeOptionalText,
@@ -50,7 +52,8 @@ const formSchema = z.object({
     .string()
     .trim()
     .min(1, "Vui lòng nhập phòng/thiết bị")
-    .max(255, "Phòng/thiết bị tối đa 255 ký tự"),
+    .max(255, "Phòng/thiết bị tối đa 255 ký tự")
+    .refine((value) => !containsHttp(value), ROOM_OR_EQUIPMENT_HTTP_ERROR),
   cleaning_type: z
     .string()
     .trim()
@@ -103,6 +106,11 @@ export default function FormProductionOrderHygieneCheck({
 
       if (!scannedValue) {
         toast.error("Không đọc được phòng/thiết bị từ mã QR.");
+        return;
+      }
+
+      if (containsHttp(scannedValue)) {
+        toast.error(ROOM_OR_EQUIPMENT_HTTP_ERROR);
         return;
       }
 
@@ -165,6 +173,13 @@ export default function FormProductionOrderHygieneCheck({
                           className="pr-11"
                           disabled={form.formState.isSubmitting}
                           {...field}
+                          onChange={(event) => {
+                            if (containsHttp(event.target.value)) {
+                              toast.error(ROOM_OR_EQUIPMENT_HTTP_ERROR);
+                              return;
+                            }
+                            field.onChange(event);
+                          }}
                         />
                         <QrInputButton
                           disabled={form.formState.isSubmitting}
