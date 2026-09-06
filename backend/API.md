@@ -110,11 +110,11 @@ Body tạo/cập nhật:
 
 | Key quyền                      | API được phép gọi                   |
 | ------------------------------ | ----------------------------------- |
-| `cleaning-requirements.list`   | `GET /cleaning-requirements`        |
-| `cleaning-requirements.read`   | `GET /cleaning-requirements/:id`    |
-| `cleaning-requirements.create` | `POST /cleaning-requirements`       |
-| `cleaning-requirements.update` | `PATCH /cleaning-requirements/:id`  |
-| `cleaning-requirements.delete` | `DELETE /cleaning-requirements/:id` |
+| `cleaning-objects.list`   | `GET /cleaning-requirements`        |
+| `cleaning-objects.read`   | `GET /cleaning-requirements/:id`    |
+| `cleaning-objects.create` | `POST /cleaning-requirements`       |
+| `cleaning-objects.update` | `PATCH /cleaning-requirements/:id`  |
+| `cleaning-objects.delete` | `DELETE /cleaning-requirements/:id` |
 
 ```http
 GET    /cleaning-requirements
