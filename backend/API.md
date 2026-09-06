@@ -8707,9 +8707,12 @@ Tất cả API xưởng, chênh áp và checklist vệ sinh trong nhóm này c�
 | ----------------------------- | ----------------------------------------------------------- |
 | `production-workshops.list`   | `GET /production-workshops`                                 |
 | `production-workshops.read`   | Các API `GET` chi tiết xưởng, chênh áp và checklist vệ sinh |
-| `production-workshops.create` | Các API `POST` xưởng, chênh áp và checklist vệ sinh         |
-| `production-workshops.update` | Các API `PUT` xưởng, chênh áp và checklist vệ sinh          |
-| `production-workshops.delete` | Các API `DELETE` xưởng, chênh áp và checklist vệ sinh       |
+| `production-workshops.create` | Các API `POST` xưởng và checklist vệ sinh         |
+| `production-workshops.update` | Các API `PUT` xưởng và checklist vệ sinh          |
+| `production-workshops.delete` | Các API `DELETE` xưởng và checklist vệ sinh       |
+| `production-workshops.pressure-differentials.create` | `POST /production-workshops/:id/pressure-differentials` |
+| `production-workshops.pressure-differentials.update` | `PUT /production-workshops/pressure-differentials/:pressureDifferentialId` |
+| `production-workshops.pressure-differentials.delete` | `DELETE /production-workshops/pressure-differentials/:pressureDifferentialId` |
 
 ### Lấy danh sách xưởng
 

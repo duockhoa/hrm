@@ -50,21 +50,21 @@ describe('ProductionWorkshopsController', () => {
     ]);
     expect(metadata('create')).toEqual([PRODUCTION_WORKSHOP_PERMISSIONS.CREATE]);
     expect(metadata('createPressureDifferential')).toEqual([
-      PRODUCTION_WORKSHOP_PERMISSIONS.CREATE,
+      PRODUCTION_WORKSHOP_PERMISSIONS.PRESSURE_DIFFERENTIAL_CREATE,
     ]);
     expect(metadata('createCleaningChecklist')).toEqual([
       PRODUCTION_WORKSHOP_PERMISSIONS.CREATE,
     ]);
     expect(metadata('update')).toEqual([PRODUCTION_WORKSHOP_PERMISSIONS.UPDATE]);
     expect(metadata('updatePressureDifferential')).toEqual([
-      PRODUCTION_WORKSHOP_PERMISSIONS.UPDATE,
+      PRODUCTION_WORKSHOP_PERMISSIONS.PRESSURE_DIFFERENTIAL_UPDATE,
     ]);
     expect(metadata('updateCleaningChecklist')).toEqual([
       PRODUCTION_WORKSHOP_PERMISSIONS.UPDATE,
     ]);
     expect(metadata('delete')).toEqual([PRODUCTION_WORKSHOP_PERMISSIONS.DELETE]);
     expect(metadata('deletePressureDifferential')).toEqual([
-      PRODUCTION_WORKSHOP_PERMISSIONS.DELETE,
+      PRODUCTION_WORKSHOP_PERMISSIONS.PRESSURE_DIFFERENTIAL_DELETE,
     ]);
     expect(metadata('deleteCleaningChecklist')).toEqual([
       PRODUCTION_WORKSHOP_PERMISSIONS.DELETE,

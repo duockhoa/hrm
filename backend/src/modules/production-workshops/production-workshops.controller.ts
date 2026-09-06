@@ -51,7 +51,7 @@ export class ProductionWorkshopsController {
   }
 
   @Put('pressure-differentials/:pressureDifferentialId')
-  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.PRESSURE_DIFFERENTIAL_UPDATE)
   async updatePressureDifferential(
     @Param('pressureDifferentialId', ParseIntPipe)
     pressureDifferentialId: number,
@@ -64,7 +64,7 @@ export class ProductionWorkshopsController {
   }
 
   @Delete('pressure-differentials/:pressureDifferentialId')
-  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.DELETE)
+  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.PRESSURE_DIFFERENTIAL_DELETE)
   async deletePressureDifferential(
     @Param('pressureDifferentialId', ParseIntPipe)
     pressureDifferentialId: number,
@@ -118,7 +118,7 @@ export class ProductionWorkshopsController {
   }
 
   @Post(':id/pressure-differentials')
-  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.PRESSURE_DIFFERENTIAL_CREATE)
   async createPressureDifferential(
     @Param('id', ParseIntPipe) id: number,
     @Body() createDto: CreateProductionWorkshopPressureDifferentialDto,
