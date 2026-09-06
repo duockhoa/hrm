@@ -37,6 +37,8 @@ describe('ItemsController', () => {
     delete: jest.Mock;
   };
   let mixingActivityTemplateStagesService: {
+    move: jest.Mock;
+    duplicate: jest.Mock;
     findById: jest.Mock;
     findAllByTemplate: jest.Mock;
     create: jest.Mock;
@@ -44,6 +46,8 @@ describe('ItemsController', () => {
     delete: jest.Mock;
   };
   let mixingActivityTemplateStageStepsService: {
+    move: jest.Mock;
+    duplicate: jest.Mock;
     findById: jest.Mock;
     findAllByStage: jest.Mock;
     create: jest.Mock;
@@ -51,6 +55,8 @@ describe('ItemsController', () => {
     delete: jest.Mock;
   };
   let mixingActivityTemplateStageStepParametersService: {
+    move: jest.Mock;
+    duplicate: jest.Mock;
     findById: jest.Mock;
     findAllByStep: jest.Mock;
     create: jest.Mock;
@@ -84,6 +90,8 @@ describe('ItemsController', () => {
       delete: jest.fn(),
     };
     mixingActivityTemplateStagesService = {
+      move: jest.fn(),
+      duplicate: jest.fn(),
       findById: jest.fn(),
       findAllByTemplate: jest.fn(),
       create: jest.fn(),
@@ -91,6 +99,8 @@ describe('ItemsController', () => {
       delete: jest.fn(),
     };
     mixingActivityTemplateStageStepsService = {
+      move: jest.fn(),
+      duplicate: jest.fn(),
       findById: jest.fn(),
       findAllByStage: jest.fn(),
       create: jest.fn(),
@@ -98,6 +108,8 @@ describe('ItemsController', () => {
       delete: jest.fn(),
     };
     mixingActivityTemplateStageStepParametersService = {
+      move: jest.fn(),
+      duplicate: jest.fn(),
       findById: jest.fn(),
       findAllByStep: jest.fn(),
       create: jest.fn(),
@@ -195,8 +207,11 @@ describe('ItemsController', () => {
     );
     [
       'createMixingActivityTemplateStage',
+      'duplicateMixingActivityTemplateStage',
       'createMixingActivityTemplateStageStep',
+      'duplicateMixingActivityTemplateStageStep',
       'createMixingActivityTemplateStageStepParameter',
+      'duplicateMixingActivityTemplateStageStepParameter',
       'createMixingActivityTemplate',
       'copyMixingActivityTemplate',
     ].forEach((method) =>
@@ -207,8 +222,11 @@ describe('ItemsController', () => {
     [
       'updateMixingActivityTemplate',
       'updateMixingActivityTemplateStage',
+      'moveMixingActivityTemplateStage',
       'updateMixingActivityTemplateStageStep',
+      'moveMixingActivityTemplateStageStep',
       'updateMixingActivityTemplateStageStepParameter',
+      'moveMixingActivityTemplateStageStepParameter',
     ].forEach((method) =>
       expect(metadata(method as keyof ItemsController)).toEqual([
         MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.UPDATE,
@@ -224,6 +242,26 @@ describe('ItemsController', () => {
         MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.DELETE,
       ]),
     );
+  });
+
+  it('delegates subtree duplication and movement with the authenticated creator', async () => {
+    const user = { id: 9 };
+    const result = { id: 22, siblings: [] };
+    const routes = [
+      ['Stage', mixingActivityTemplateStagesService],
+      ['StageStep', mixingActivityTemplateStageStepsService],
+      ['StageStepParameter', mixingActivityTemplateStageStepParametersService],
+    ] as const;
+    for (const [suffix, service] of routes) {
+      service.duplicate.mockResolvedValue(result);
+      service.move.mockResolvedValue(result);
+      const duplicate = controller[`duplicateMixingActivityTemplate${suffix}`].bind(controller);
+      const move = controller[`moveMixingActivityTemplate${suffix}`].bind(controller);
+      await expect(duplicate(17, { user })).resolves.toBe(result);
+      await expect(move(17, { direction: 'down' })).resolves.toBe(result);
+      expect(service.duplicate).toHaveBeenCalledWith(17, user);
+      expect(service.move).toHaveBeenCalledWith(17, 'down');
+    }
   });
 
   it('copies a mixing template to the target item with the authenticated user', async () => {

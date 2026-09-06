@@ -28,7 +28,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import {
@@ -37,12 +37,9 @@ import {
   type MixingActivityParameterDataType,
   type MixingActivityTemplateStageStep,
   type MixingActivityTemplateStageStepParameter,
+  type MixingActivityTemplateParameterMutation,
   type UpdateMixingActivityTemplateStageStepParameterPayload,
 } from "../types";
-import {
-  compactUniqueOrdersAfterDelete,
-  swapUniqueOrders,
-} from "../swap-unique-orders";
 
 type ParameterFormState = {
   parameterName: string;
@@ -108,11 +105,13 @@ export default function MixingActivityTemplateStageStepBlock({
     parameterOrder: "1",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionInFlight = useRef(false);
 
   const parametersRoute =
     API_ROUTES.items.mixingActivityTemplateStageStepParameters(step.id);
   const { data = [], error, isLoading, mutate } = useSWR(parametersRoute, () =>
     mixingActivityTemplateStageStepParametersService.fetchByStepId(step.id),
+    { revalidateIfStale: false },
   );
 
   const parameters = useMemo(
@@ -203,9 +202,13 @@ export default function MixingActivityTemplateStageStepBlock({
     return true;
   };
 
+  const applyMutation = async (result: MixingActivityTemplateParameterMutation) => {
+    await mutate(result.siblings, { revalidate: false });
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!validateForm()) return;
+    if (submissionInFlight.current || !validateForm()) return;
 
     const nextValues = {
       parameter_name: form.parameterName.trim(),
@@ -215,6 +218,7 @@ export default function MixingActivityTemplateStageStepBlock({
       parameter_order: Number(form.parameterOrder),
     };
 
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     try {
       if (editingParameter) {
@@ -235,22 +239,23 @@ export default function MixingActivityTemplateStageStepBlock({
           payload.parameter_order = nextValues.parameter_order;
         }
         if (Object.keys(payload).length > 0) {
-          await mixingActivityTemplateStageStepParametersService.update(
+          const result = await mixingActivityTemplateStageStepParametersService.update(
             editingParameter.id,
             payload,
           );
+          await applyMutation(result);
           toast.success("Đã cập nhật thông số.");
         }
       } else {
-        await mixingActivityTemplateStageStepParametersService.create(
+        const result = await mixingActivityTemplateStageStepParametersService.create(
           step.id,
           nextValues,
         );
+        await applyMutation(result);
         toast.success("Đã thêm thông số.");
       }
 
       closeEditor();
-      await mutate();
     } catch (submitError) {
       toast.error(
         getErrorMessage(
@@ -261,161 +266,56 @@ export default function MixingActivityTemplateStageStepBlock({
         ),
       );
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!deletingParameter) return;
-
-    let wasDeleted = false;
+    if (submissionInFlight.current || !deletingParameter) return;
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     try {
-      await mixingActivityTemplateStageStepParametersService.delete(
-        deletingParameter.id,
-      );
-      wasDeleted = true;
+      const result = await mixingActivityTemplateStageStepParametersService.delete(deletingParameter.id);
+      await applyMutation(result);
       setDeletingParameter(null);
-      await compactUniqueOrdersAfterDelete({
-        deletedItemId: deletingParameter.id,
-        orderedItems: parameters.map((parameter) => ({
-          id: parameter.id,
-          order: parameter.parameter_order,
-        })),
-        updateOrder: (id, order) =>
-          mixingActivityTemplateStageStepParametersService.update(id, {
-            parameter_order: order,
-          }),
-      });
       toast.success("Đã xóa thông số.");
-      await mutate();
-    } catch (deleteError) {
-      if (wasDeleted) {
-        await mutate().catch(() => undefined);
-        toast.error("Đã xóa thông số, nhưng không thể cập nhật lại thứ tự.");
-        return;
-      }
-      toast.error(getErrorMessage(deleteError, "Không thể xóa thông số."));
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể xóa thông số."));
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };
 
-  const moveParameter = async (
-    parameter: MixingActivityTemplateStageStepParameter,
-    direction: "up" | "down",
-  ) => {
-    const currentIndex = parameters.findIndex(
-      (item) => item.id === parameter.id,
-    );
-    const adjacentIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    const adjacentParameter = parameters[adjacentIndex];
-    if (!adjacentParameter) return;
-
-    const temporaryOrder =
-      parameters.reduce(
-        (highestOrder, item) => Math.max(highestOrder, item.parameter_order),
-        0,
-      ) + 1;
-
+  const moveParameter = async (parameter: MixingActivityTemplateStageStepParameter, direction: "up" | "down") => {
+    if (submissionInFlight.current) return;
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     try {
-      await swapUniqueOrders({
-        itemId: parameter.id,
-        itemOrder: parameter.parameter_order,
-        adjacentId: adjacentParameter.id,
-        adjacentOrder: adjacentParameter.parameter_order,
-        temporaryOrder,
-        updateOrder: (id, order) =>
-          mixingActivityTemplateStageStepParametersService.update(id, {
-            parameter_order: order,
-          }),
-      });
-      toast.success(
-        direction === "up"
-          ? "Đã di chuyển thông số lên trên."
-          : "Đã di chuyển thông số xuống dưới.",
-      );
-      await mutate();
-    } catch (moveError) {
-      await mutate();
-      toast.error(
-        getErrorMessage(moveError, "Không thể thay đổi thứ tự thông số."),
-      );
+      const result = await mixingActivityTemplateStageStepParametersService.move(parameter.id, direction);
+      await applyMutation(result);
+      toast.success(direction === "up" ? "Đã di chuyển lên trên." : "Đã di chuyển xuống dưới.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể thay đổi thứ tự thông số."));
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };
 
-  const rollbackShiftedParameters = async (
-    shiftedParameters: MixingActivityTemplateStageStepParameter[],
-  ) => {
-    for (const shiftedParameter of [...shiftedParameters].sort(
-      (first, second) => first.parameter_order - second.parameter_order,
-    )) {
-      try {
-        await mixingActivityTemplateStageStepParametersService.update(
-          shiftedParameter.id,
-          { parameter_order: shiftedParameter.parameter_order },
-        );
-      } catch (rollbackError) {
-        void rollbackError;
-      }
-    }
-  };
-
-  const shiftParametersForInsert = async (parameterOrder: number) => {
-    const parametersToShift = parameters
-      .filter((item) => item.parameter_order >= parameterOrder)
-      .sort((first, second) => second.parameter_order - first.parameter_order);
-    const shiftedParameters: MixingActivityTemplateStageStepParameter[] = [];
-
-    try {
-      for (const parameterToShift of parametersToShift) {
-        await mixingActivityTemplateStageStepParametersService.update(
-          parameterToShift.id,
-          { parameter_order: parameterToShift.parameter_order + 1 },
-        );
-        shiftedParameters.push(parameterToShift);
-      }
-      return shiftedParameters;
-    } catch (shiftError) {
-      await rollbackShiftedParameters(shiftedParameters);
-      throw shiftError;
-    }
-  };
-
-  const duplicateParameter = async (
-    parameter: MixingActivityTemplateStageStepParameter,
-  ) => {
-    const duplicateOrder = parameter.parameter_order + 1;
-    let shiftedParameters: MixingActivityTemplateStageStepParameter[] = [];
-
+  const duplicateParameter = async (parameter: MixingActivityTemplateStageStepParameter) => {
+    if (submissionInFlight.current) return;
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     try {
-      shiftedParameters = await shiftParametersForInsert(duplicateOrder);
-      try {
-        await mixingActivityTemplateStageStepParametersService.create(step.id, {
-          parameter_name: parameter.parameter_name,
-          data_type: parameter.data_type,
-          unit: parameter.unit ?? null,
-          requirement: parameter.requirement,
-          parameter_order: duplicateOrder,
-        });
-      } catch (createError) {
-        await rollbackShiftedParameters(shiftedParameters);
-        shiftedParameters = [];
-        throw createError;
-      }
-
+      const result = await mixingActivityTemplateStageStepParametersService.duplicate(parameter.id);
+      await applyMutation(result);
       toast.success("Đã nhân bản thông số xuống ngay phía dưới.");
-      await mutate();
-    } catch (duplicateError) {
-      await mutate();
-      toast.error(
-        getErrorMessage(duplicateError, "Không thể nhân bản thông số."),
-      );
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể nhân bản thông số."));
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };

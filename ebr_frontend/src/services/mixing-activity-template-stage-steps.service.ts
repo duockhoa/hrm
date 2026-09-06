@@ -1,4 +1,5 @@
 import type {
+  MixingActivityTemplateStepMutation,
   CreateMixingActivityTemplateStageStepPayload,
   MixingActivityTemplateStageStep,
   UpdateMixingActivityTemplateStageStepPayload,
@@ -27,7 +28,7 @@ const fetchById = async (
 const create = async (
   stageId: string | number,
   payload: CreateMixingActivityTemplateStageStepPayload,
-): Promise<MixingActivityTemplateStageStep> => {
+): Promise<MixingActivityTemplateStepMutation> => {
   const response = await axiosClient.post(
     API_ROUTES.items.mixingActivityTemplateStageSteps(stageId),
     payload,
@@ -38,7 +39,7 @@ const create = async (
 const update = async (
   stepId: string | number,
   payload: UpdateMixingActivityTemplateStageStepPayload,
-): Promise<MixingActivityTemplateStageStep> => {
+): Promise<MixingActivityTemplateStepMutation> => {
   const response = await axiosClient.patch(
     API_ROUTES.items.mixingActivityTemplateStageStepDetail(stepId),
     payload,
@@ -48,9 +49,27 @@ const update = async (
 
 const remove = async (
   stepId: string | number,
-): Promise<MixingActivityTemplateStageStep> => {
+): Promise<MixingActivityTemplateStepMutation> => {
   const response = await axiosClient.delete(
     API_ROUTES.items.mixingActivityTemplateStageStepDetail(stepId),
+  );
+  return response.data;
+};
+
+const duplicate = async (id: string | number): Promise<MixingActivityTemplateStepMutation> => {
+  const response = await axiosClient.post(
+    `${API_ROUTES.items.mixingActivityTemplateStageStepDetail(id)}/duplicate`,
+  );
+  return response.data;
+};
+
+const move = async (
+  id: string | number,
+  direction: "up" | "down",
+): Promise<MixingActivityTemplateStepMutation> => {
+  const response = await axiosClient.patch(
+    `${API_ROUTES.items.mixingActivityTemplateStageStepDetail(id)}/move`,
+    { direction },
   );
   return response.data;
 };
@@ -61,6 +80,8 @@ const mixingActivityTemplateStageStepsService = {
   create,
   update,
   delete: remove,
+  duplicate,
+  move,
 };
 
 export default mixingActivityTemplateStageStepsService;

@@ -19,8 +19,6 @@ import { Input } from "@/components/ui/input";
 import { API_ROUTES } from "@/lib/api-routes";
 import {
   mixingActivityTemplateStagesService,
-  mixingActivityTemplateStageStepParametersService,
-  mixingActivityTemplateStageStepsService,
 } from "@/services/index.service";
 import {
   ArrowDown,
@@ -31,17 +29,14 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { Fragment, type FormEvent, useMemo, useState } from "react";
+import { Fragment, type FormEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type {
+  MixingActivityTemplateStageMutation,
   MixingActivityTemplateStage,
   UpdateMixingActivityTemplateStagePayload,
 } from "../types";
-import {
-  compactUniqueOrdersAfterDelete,
-  swapUniqueOrders,
-} from "../swap-unique-orders";
 import MixingActivityTemplateStageSteps from "./mixing-activity-template-stage-steps";
 
 type StageFormState = {
@@ -74,10 +69,13 @@ export default function MixingActivityTemplateStages({
     stageOrder: "1",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionInFlight = useRef(false);
+  const { mutate: mutateCache } = useSWRConfig();
 
   const stagesRoute = API_ROUTES.items.mixingActivityTemplateStages(templateId);
   const { data = [], error, isLoading, mutate } = useSWR(stagesRoute, () =>
     mixingActivityTemplateStagesService.fetchByTemplateId(templateId),
+    { revalidateIfStale: false },
   );
 
   const stages = useMemo(
@@ -150,183 +148,34 @@ export default function MixingActivityTemplateStages({
     return true;
   };
 
-  const rollbackShiftedStages = async (
-    shiftedStages: MixingActivityTemplateStage[],
-  ) => {
-    const stagesInOriginalOrder = [...shiftedStages].sort(
-      (first, second) => first.stage_order - second.stage_order,
-    );
-
-    for (const stage of stagesInOriginalOrder) {
-      try {
-        await mixingActivityTemplateStagesService.update(stage.id, {
-          stage_order: stage.stage_order,
-        });
-      } catch (rollbackError) {
-        void rollbackError;
-      }
-    }
-  };
-
-  const shiftStagesForInsert = async (stageOrder: number) => {
-    const stagesToShift = stages
-      .filter((stage) => stage.stage_order >= stageOrder)
-      .sort((first, second) => second.stage_order - first.stage_order);
-    const shiftedStages: MixingActivityTemplateStage[] = [];
-
-    try {
-      for (const stage of stagesToShift) {
-        await mixingActivityTemplateStagesService.update(stage.id, {
-          stage_order: stage.stage_order + 1,
-        });
-        shiftedStages.push(stage);
-      }
-      return shiftedStages;
-    } catch (shiftError) {
-      await rollbackShiftedStages(shiftedStages);
-      throw shiftError;
-    }
-  };
-
-  const moveStage = async (
-    stage: MixingActivityTemplateStage,
-    direction: "up" | "down",
-  ) => {
-    const currentIndex = stages.findIndex((item) => item.id === stage.id);
-    const adjacentIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    const adjacentStage = stages[adjacentIndex];
-    if (!adjacentStage) return;
-
-    const temporaryOrder =
-      stages.reduce(
-        (highestOrder, item) => Math.max(highestOrder, item.stage_order),
-        0,
-      ) + 1;
-
-    setIsSubmitting(true);
-    try {
-      await swapUniqueOrders({
-        itemId: stage.id,
-        itemOrder: stage.stage_order,
-        adjacentId: adjacentStage.id,
-        adjacentOrder: adjacentStage.stage_order,
-        temporaryOrder,
-        updateOrder: (id, order) =>
-          mixingActivityTemplateStagesService.update(id, {
-            stage_order: order,
-          }),
-      });
-      toast.success(
-        direction === "up"
-          ? "Đã di chuyển giai đoạn lên trên."
-          : "Đã di chuyển giai đoạn xuống dưới.",
-      );
-      await mutate();
-    } catch (moveError) {
-      await mutate();
-      toast.error(getErrorMessage(moveError, "Không thể thay đổi thứ tự giai đoạn."));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const duplicateStage = async (stage: MixingActivityTemplateStage) => {
-    const duplicateOrder = stage.stage_order + 1;
-    let shiftedStages: MixingActivityTemplateStage[] = [];
-    let duplicatedStage: MixingActivityTemplateStage | null = null;
-    let cleanupFailed = false;
-
-    setIsSubmitting(true);
-    try {
-      const sourceSteps = (
-        await mixingActivityTemplateStageStepsService.fetchByStageId(stage.id)
-      ).sort((first, second) => first.step_order - second.step_order);
-      const sourceStructure = await Promise.all(
-        sourceSteps.map(async (sourceStep) => ({
-          step: sourceStep,
-          parameters: (
-            await mixingActivityTemplateStageStepParametersService.fetchByStepId(
-              sourceStep.id,
-            )
-          ).sort(
-            (first, second) => first.parameter_order - second.parameter_order,
-          ),
-        })),
-      );
-
-      shiftedStages = await shiftStagesForInsert(duplicateOrder);
-
-      try {
-        duplicatedStage = await mixingActivityTemplateStagesService.create(
-          templateId,
-          {
-            stage_name: stage.stage_name,
-            stage_order: duplicateOrder,
-          },
+  const applyMutation = async (result: MixingActivityTemplateStageMutation) => {
+    if (result.steps) {
+      for (const step of result.steps) {
+        await mutateCache(
+          API_ROUTES.items.mixingActivityTemplateStageStepParameters(step.id),
+          step.parameters,
+          { revalidate: false },
         );
-
-        for (const { step, parameters } of sourceStructure) {
-          const duplicatedStep =
-            await mixingActivityTemplateStageStepsService.create(
-              duplicatedStage.id,
-              {
-                step_name: step.step_name,
-                step_order: step.step_order,
-              },
-            );
-
-          for (const parameter of parameters) {
-            await mixingActivityTemplateStageStepParametersService.create(
-              duplicatedStep.id,
-              {
-                parameter_name: parameter.parameter_name,
-                data_type: parameter.data_type,
-                unit: parameter.unit ?? null,
-                requirement: parameter.requirement,
-                parameter_order: parameter.parameter_order,
-              },
-            );
-          }
-        }
-      } catch (cloneError) {
-        if (duplicatedStage) {
-          try {
-            await mixingActivityTemplateStagesService.delete(duplicatedStage.id);
-            duplicatedStage = null;
-          } catch (cleanupError) {
-            cleanupFailed = true;
-            void cleanupError;
-          }
-        }
-        throw cloneError;
       }
-
-      toast.success("Đã nhân bản giai đoạn xuống ngay phía dưới.");
-      await mutate();
-    } catch (duplicateError) {
-      if (!cleanupFailed && shiftedStages.length > 0) {
-        await rollbackShiftedStages(shiftedStages);
-      }
-      await mutate();
-      toast.error(
-        cleanupFailed
-          ? "Không thể hoàn tất nhân bản và không thể tự động dọn dữ liệu đã tạo. Vui lòng tải lại để kiểm tra."
-          : getErrorMessage(duplicateError, "Không thể nhân bản giai đoạn pha chế."),
+      await mutateCache(
+        API_ROUTES.items.mixingActivityTemplateStageSteps(result.id),
+        result.steps,
+        { revalidate: false },
       );
-    } finally {
-      setIsSubmitting(false);
     }
+    await mutate(result.siblings, { revalidate: false });
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!validateForm()) return;
+    if (submissionInFlight.current || !validateForm()) return;
 
     const nextValues = {
       stage_name: form.stageName.trim(),
       stage_order: Number(form.stageOrder),
     };
 
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     try {
       if (editingStage) {
@@ -338,24 +187,21 @@ export default function MixingActivityTemplateStages({
           payload.stage_order = nextValues.stage_order;
         }
         if (Object.keys(payload).length > 0) {
-          await mixingActivityTemplateStagesService.update(editingStage.id, payload);
+          const result = await mixingActivityTemplateStagesService.update(editingStage.id, payload);
+          await applyMutation(result);
           toast.success("Đã cập nhật giai đoạn pha chế.");
         }
       } else {
-        const shiftedStages = await shiftStagesForInsert(nextValues.stage_order);
-        try {
-          await mixingActivityTemplateStagesService.create(templateId, nextValues);
-        } catch (createError) {
-          await rollbackShiftedStages(shiftedStages);
-          throw createError;
-        }
+        const result = await mixingActivityTemplateStagesService.create(templateId, {
+          ...nextValues,
+          insert: true,
+        });
+        await applyMutation(result);
         toast.success("Đã thêm giai đoạn pha chế.");
       }
 
       closeForm();
-      await mutate();
     } catch (submitError) {
-      await mutate();
       toast.error(
         getErrorMessage(
           submitError,
@@ -365,42 +211,56 @@ export default function MixingActivityTemplateStages({
         ),
       );
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!deletingStage) return;
-
-    let wasDeleted = false;
+    if (submissionInFlight.current || !deletingStage) return;
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     try {
-      await mixingActivityTemplateStagesService.delete(deletingStage.id);
-      wasDeleted = true;
+      const result = await mixingActivityTemplateStagesService.delete(deletingStage.id);
+      await applyMutation(result);
       setDeletingStage(null);
-      await compactUniqueOrdersAfterDelete({
-        deletedItemId: deletingStage.id,
-        orderedItems: stages.map((stage) => ({
-          id: stage.id,
-          order: stage.stage_order,
-        })),
-        updateOrder: (id, order) =>
-          mixingActivityTemplateStagesService.update(id, {
-            stage_order: order,
-          }),
-      });
       toast.success("Đã xóa giai đoạn pha chế.");
-      await mutate();
-    } catch (deleteError) {
-      if (wasDeleted) {
-        await mutate().catch(() => undefined);
-        toast.error("Đã xóa giai đoạn, nhưng không thể cập nhật lại thứ tự.");
-        return;
-      }
-      toast.error(
-        getErrorMessage(deleteError, "Không thể xóa giai đoạn pha chế."),
-      );
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể xóa giai đoạn pha chế."));
     } finally {
+      submissionInFlight.current = false;
+      setIsSubmitting(false);
+    }
+  };
+
+  const moveStage = async (stage: MixingActivityTemplateStage, direction: "up" | "down") => {
+    if (submissionInFlight.current) return;
+    submissionInFlight.current = true;
+    setIsSubmitting(true);
+    try {
+      const result = await mixingActivityTemplateStagesService.move(stage.id, direction);
+      await applyMutation(result);
+      toast.success(direction === "up" ? "Đã di chuyển lên trên." : "Đã di chuyển xuống dưới.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể thay đổi thứ tự giai đoạn pha chế."));
+    } finally {
+      submissionInFlight.current = false;
+      setIsSubmitting(false);
+    }
+  };
+
+  const duplicateStage = async (stage: MixingActivityTemplateStage) => {
+    if (submissionInFlight.current) return;
+    submissionInFlight.current = true;
+    setIsSubmitting(true);
+    try {
+      const result = await mixingActivityTemplateStagesService.duplicate(stage.id);
+      await applyMutation(result);
+      toast.success("Đã nhân bản giai đoạn pha chế xuống ngay phía dưới.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể nhân bản giai đoạn pha chế."));
+    } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };

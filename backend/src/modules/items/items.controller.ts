@@ -17,6 +17,7 @@ import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
 import { CopyItemEquipmentDto } from './dto/copy-item-equipment.dto';
 import { CreateMixingActivityTemplateDto } from './dto/create-mixing-activity-template.dto';
+import { MoveMixingActivityTemplateNodeDto } from './dto/move-mixing-activity-template-node.dto';
 import { CopyMixingActivityTemplateDto } from './dto/copy-mixing-activity-template.dto';
 import { CreateMixingActivityTemplateStageDto } from './dto/create-mixing-activity-template-stage.dto';
 import { CreateMixingActivityTemplateStageStepDto } from './dto/create-mixing-activity-template-stage-step.dto';
@@ -118,6 +119,24 @@ export class ItemsController {
     return this.mixingActivityTemplatesService.delete(templateId);
   }
 
+  @Post('mixing-activity-template-stages/:stageId/duplicate')
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE)
+  async duplicateMixingActivityTemplateStage(
+    @Param('stageId', ParseIntPipe) stageId: number,
+    @Request() req: any,
+  ) {
+    return this.mixingActivityTemplateStagesService.duplicate(stageId, req.user);
+  }
+
+  @Patch('mixing-activity-template-stages/:stageId/move')
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.UPDATE)
+  async moveMixingActivityTemplateStage(
+    @Param('stageId', ParseIntPipe) stageId: number,
+    @Body() dto: MoveMixingActivityTemplateNodeDto,
+  ) {
+    return this.mixingActivityTemplateStagesService.move(stageId, dto?.direction);
+  }
+
   @Get('mixing-activity-template-stages/:stageId')
   @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findMixingActivityTemplateStageById(
@@ -141,6 +160,24 @@ export class ItemsController {
     @Param('stageId', ParseIntPipe) stageId: number,
   ) {
     return this.mixingActivityTemplateStagesService.delete(stageId);
+  }
+
+  @Post('mixing-activity-template-stage-steps/:stepId/duplicate')
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE)
+  async duplicateMixingActivityTemplateStageStep(
+    @Param('stepId', ParseIntPipe) stepId: number,
+    @Request() req: any,
+  ) {
+    return this.mixingActivityTemplateStageStepsService.duplicate(stepId, req.user);
+  }
+
+  @Patch('mixing-activity-template-stage-steps/:stepId/move')
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.UPDATE)
+  async moveMixingActivityTemplateStageStep(
+    @Param('stepId', ParseIntPipe) stepId: number,
+    @Body() dto: MoveMixingActivityTemplateNodeDto,
+  ) {
+    return this.mixingActivityTemplateStageStepsService.move(stepId, dto?.direction);
   }
 
   @Get('mixing-activity-template-stage-steps/:stepId')
@@ -169,6 +206,24 @@ export class ItemsController {
     @Param('stepId', ParseIntPipe) stepId: number,
   ) {
     return this.mixingActivityTemplateStageStepsService.delete(stepId);
+  }
+
+  @Post('mixing-activity-template-stage-step-parameters/:parameterId/duplicate')
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE)
+  async duplicateMixingActivityTemplateStageStepParameter(
+    @Param('parameterId', ParseIntPipe) parameterId: number,
+    @Request() req: any,
+  ) {
+    return this.mixingActivityTemplateStageStepParametersService.duplicate(parameterId, req.user);
+  }
+
+  @Patch('mixing-activity-template-stage-step-parameters/:parameterId/move')
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.UPDATE)
+  async moveMixingActivityTemplateStageStepParameter(
+    @Param('parameterId', ParseIntPipe) parameterId: number,
+    @Body() dto: MoveMixingActivityTemplateNodeDto,
+  ) {
+    return this.mixingActivityTemplateStageStepParametersService.move(parameterId, dto?.direction);
   }
 
   @Get('mixing-activity-template-stage-step-parameters/:parameterId')

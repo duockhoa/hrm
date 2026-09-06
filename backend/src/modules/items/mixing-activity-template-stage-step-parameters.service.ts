@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import {
+  mutateTemplateStructure, shiftTemplateOrdersForInsert, compactTemplateOrders,
+  moveTemplateNode, validateMoveDirection,
+} from './mixing-activity-template-order.utils';
 import { CreateMixingActivityTemplateStageStepParameterDto } from './dto/create-mixing-activity-template-stage-step-parameter.dto';
 import { UpdateMixingActivityTemplateStageStepParameterDto } from './dto/update-mixing-activity-template-stage-step-parameter.dto';
 
@@ -52,9 +56,9 @@ export class MixingActivityTemplateStageStepParametersService {
     );
   }
 
-  async findById(id: number) {
+  async findById(id: number, client: Prisma.TransactionClient = this.prismaService) {
     const parameter =
-      await this.prismaService.mixingActivityTemplateStageStepParameters.findUnique(
+      await client.mixingActivityTemplateStageStepParameters.findUnique(
         {
           where: { id },
           include: mixingActivityTemplateStageStepParameterInclude,
@@ -75,65 +79,98 @@ export class MixingActivityTemplateStageStepParametersService {
     dto: CreateMixingActivityTemplateStageStepParameterDto,
     user?: AuthenticatedUser,
   ) {
-    const normalizedStepId = this.normalizePositiveInteger(stepId, 'stepId');
-    await this.ensureStepExists(normalizedStepId);
-
-    const parameterOrder = this.normalizePositiveInteger(
-      dto?.parameter_order,
-      'parameter_order',
-    );
-    await this.ensureParameterOrderAvailable(normalizedStepId, parameterOrder);
-
-    return this.prismaService.mixingActivityTemplateStageStepParameters.create({
-      data: {
-        mixing_activity_template_stage_step_id: normalizedStepId,
-        parameter_name: this.normalizeRequiredText(
-          dto?.parameter_name,
-          'parameter_name',
-          255,
-        ),
-        data_type: this.normalizeDataType(dto?.data_type),
-        unit: this.normalizeOptionalText(dto?.unit, 'unit', 50),
-        requirement: this.normalizeRequiredText(
-          dto?.requirement,
-          'requirement',
-        ),
-        parameter_order: parameterOrder,
-        created_by_id: this.normalizeUserId(user),
-      },
-      include: mixingActivityTemplateStageStepParameterInclude,
+    const parentId = this.normalizePositiveInteger(stepId, 'stepId');
+    const order = this.normalizePositiveInteger(dto?.parameter_order, 'parameter_order');
+    const userId = this.normalizeUserId(user);
+    return mutateTemplateStructure(this.prismaService, { kind: 'step', id: parentId }, async (tx) => {
+      await this.ensureStepExists(parentId, tx);
+      await this.ensureParameterOrderAvailable(parentId, order, undefined, tx);
+      const created = await tx.mixingActivityTemplateStageStepParameters.create({
+        data: {
+          mixing_activity_template_stage_step_id: parentId,
+          parameter_name: this.normalizeRequiredText(dto?.parameter_name, 'parameter_name', 255),
+          data_type: this.normalizeDataType(dto?.data_type),
+          unit: this.normalizeOptionalText(dto?.unit, 'unit', 50),
+          requirement: this.normalizeRequiredText(dto?.requirement, 'requirement'),
+          parameter_order: order,
+          created_by_id: userId,
+        },
+        include: mixingActivityTemplateStageStepParameterInclude,
+      });
+      return { ...created,  siblings: await this.findSiblings(tx, parentId) };
     });
   }
 
-  async update(
-    id: number,
-    dto: UpdateMixingActivityTemplateStageStepParameterDto,
-  ) {
-    const parameter = await this.findById(id);
+  async update(id: number, dto: UpdateMixingActivityTemplateStageStepParameterDto) {
     const data = this.normalizeUpdateData(dto);
-
-    const nextParameterOrder = data.parameter_order;
-    if (typeof nextParameterOrder === 'number') {
-      await this.ensureParameterOrderAvailable(
-        parameter.mixing_activity_template_stage_step_id,
-        nextParameterOrder,
-        id,
-      );
-    }
-
-    return this.prismaService.mixingActivityTemplateStageStepParameters.update({
-      where: { id },
-      data,
-      include: mixingActivityTemplateStageStepParameterInclude,
+    return mutateTemplateStructure(this.prismaService, { kind: 'parameter', id }, async (tx) => {
+      const current = await this.findById(id, tx);
+      if (typeof data.parameter_order === 'number') {
+        await this.ensureParameterOrderAvailable(current.mixing_activity_template_stage_step_id, data.parameter_order, id, tx);
+      }
+      const updated = await tx.mixingActivityTemplateStageStepParameters.update({
+        where: { id }, data, include: mixingActivityTemplateStageStepParameterInclude,
+      });
+      return { ...updated, siblings: await this.findSiblings(tx, current.mixing_activity_template_stage_step_id) };
     });
   }
 
   async delete(id: number) {
-    await this.findById(id);
+    return mutateTemplateStructure(this.prismaService, { kind: 'parameter', id }, async (tx) => {
+      const current = await this.findById(id, tx);
+      const deleted = await tx.mixingActivityTemplateStageStepParameters.delete({
+        where: { id }, include: mixingActivityTemplateStageStepParameterInclude,
+      });
+      const remaining = await this.findSiblings(tx, current.mixing_activity_template_stage_step_id);
+      await compactTemplateOrders(remaining.map((node) => ({ id: node.id, order: node.parameter_order })),
+        (nodeId, order) => tx.mixingActivityTemplateStageStepParameters.update({ where: { id: nodeId }, data: { parameter_order: order } }));
+      return { ...deleted, siblings: await this.findSiblings(tx, current.mixing_activity_template_stage_step_id) };
+    });
+  }
 
-    return this.prismaService.mixingActivityTemplateStageStepParameters.delete({
-      where: { id },
+  async move(id: number, direction: unknown) {
+    validateMoveDirection(direction);
+    return mutateTemplateStructure(this.prismaService, { kind: 'parameter', id }, async (tx) => {
+      const current = await this.findById(id, tx);
+      const siblings = await this.findSiblings(tx, current.mixing_activity_template_stage_step_id);
+      await moveTemplateNode(siblings.map((node) => ({ id: node.id, order: node.parameter_order })), id, direction,
+        (nodeId, order) => tx.mixingActivityTemplateStageStepParameters.update({ where: { id: nodeId }, data: { parameter_order: order } }));
+      return { ...await this.findById(id, tx), siblings: await this.findSiblings(tx, current.mixing_activity_template_stage_step_id) };
+    });
+  }
+
+  async duplicate(id: number, user?: AuthenticatedUser) {
+    const userId = this.normalizeUserId(user);
+    return mutateTemplateStructure(this.prismaService, { kind: 'parameter', id }, async (tx) => {
+      const source = await tx.mixingActivityTemplateStageStepParameters.findUnique({
+        where: { id }, include: mixingActivityTemplateStageStepParameterInclude,
+      });
+      if (!source) throw new NotFoundException('Mixing activity template parameter not found');
+      const siblings = await this.findSiblings(tx, source.mixing_activity_template_stage_step_id);
+      const order = source.parameter_order + 1;
+      await shiftTemplateOrdersForInsert(siblings.map((node) => ({ id: node.id, order: node.parameter_order })), order,
+        (nodeId, nextOrder) => tx.mixingActivityTemplateStageStepParameters.update({ where: { id: nodeId }, data: { parameter_order: nextOrder } }));
+      const created = await tx.mixingActivityTemplateStageStepParameters.create({
+        data: {
+          mixing_activity_template_stage_step_id: source.mixing_activity_template_stage_step_id,
+          parameter_name: source.parameter_name,
+          data_type: source.data_type,
+          unit: source.unit,
+          requirement: source.requirement,
+          parameter_order: order,
+          created_by_id: userId,
+        },
+        include: mixingActivityTemplateStageStepParameterInclude,
+      });
+      return { ...created, siblings: await this.findSiblings(tx, source.mixing_activity_template_stage_step_id) };
+    });
+  }
+
+  private findSiblings(tx: Prisma.TransactionClient, parentId: number) {
+    return tx.mixingActivityTemplateStageStepParameters.findMany({
+      where: { mixing_activity_template_stage_step_id: parentId },
       include: mixingActivityTemplateStageStepParameterInclude,
+      orderBy: [{ parameter_order: 'asc' }, { id: 'asc' }],
     });
   }
 
@@ -249,9 +286,9 @@ export class MixingActivityTemplateStageStepParametersService {
     return normalizedValue;
   }
 
-  private async ensureStepExists(stepId: number) {
+  private async ensureStepExists(stepId: number, client: Prisma.TransactionClient = this.prismaService) {
     const step =
-      await this.prismaService.mixingActivityTemplateStageSteps.findUnique({
+      await client.mixingActivityTemplateStageSteps.findUnique({
         where: { id: stepId },
         select: { id: true },
       });
@@ -267,9 +304,10 @@ export class MixingActivityTemplateStageStepParametersService {
     stepId: number,
     parameterOrder: number,
     excludedParameterId?: number,
+    client: Prisma.TransactionClient = this.prismaService,
   ) {
     const existing =
-      await this.prismaService.mixingActivityTemplateStageStepParameters.findUnique(
+      await client.mixingActivityTemplateStageStepParameters.findUnique(
         {
           where: {
             mixing_activity_template_stage_step_id_parameter_order: {

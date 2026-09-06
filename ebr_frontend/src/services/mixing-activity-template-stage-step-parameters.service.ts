@@ -1,4 +1,5 @@
 import type {
+  MixingActivityTemplateParameterMutation,
   CreateMixingActivityTemplateStageStepParameterPayload,
   MixingActivityTemplateStageStepParameter,
   UpdateMixingActivityTemplateStageStepParameterPayload,
@@ -27,7 +28,7 @@ const fetchById = async (
 const create = async (
   stepId: string | number,
   payload: CreateMixingActivityTemplateStageStepParameterPayload,
-): Promise<MixingActivityTemplateStageStepParameter> => {
+): Promise<MixingActivityTemplateParameterMutation> => {
   const response = await axiosClient.post(
     API_ROUTES.items.mixingActivityTemplateStageStepParameters(stepId),
     payload,
@@ -38,7 +39,7 @@ const create = async (
 const update = async (
   parameterId: string | number,
   payload: UpdateMixingActivityTemplateStageStepParameterPayload,
-): Promise<MixingActivityTemplateStageStepParameter> => {
+): Promise<MixingActivityTemplateParameterMutation> => {
   const response = await axiosClient.patch(
     API_ROUTES.items.mixingActivityTemplateStageStepParameterDetail(parameterId),
     payload,
@@ -48,9 +49,27 @@ const update = async (
 
 const remove = async (
   parameterId: string | number,
-): Promise<MixingActivityTemplateStageStepParameter> => {
+): Promise<MixingActivityTemplateParameterMutation> => {
   const response = await axiosClient.delete(
     API_ROUTES.items.mixingActivityTemplateStageStepParameterDetail(parameterId),
+  );
+  return response.data;
+};
+
+const duplicate = async (id: string | number): Promise<MixingActivityTemplateParameterMutation> => {
+  const response = await axiosClient.post(
+    `${API_ROUTES.items.mixingActivityTemplateStageStepParameterDetail(id)}/duplicate`,
+  );
+  return response.data;
+};
+
+const move = async (
+  id: string | number,
+  direction: "up" | "down",
+): Promise<MixingActivityTemplateParameterMutation> => {
+  const response = await axiosClient.patch(
+    `${API_ROUTES.items.mixingActivityTemplateStageStepParameterDetail(id)}/move`,
+    { direction },
   );
   return response.data;
 };
@@ -61,6 +80,8 @@ const mixingActivityTemplateStageStepParametersService = {
   create,
   update,
   delete: remove,
+  duplicate,
+  move,
 };
 
 export default mixingActivityTemplateStageStepParametersService;

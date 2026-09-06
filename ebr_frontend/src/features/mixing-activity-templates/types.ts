@@ -62,6 +62,7 @@ export type MixingActivityTemplateStage = {
 };
 
 export type CreateMixingActivityTemplateStagePayload = {
+  insert?: boolean;
   stage_name: string;
   stage_order: number;
 };
@@ -142,3 +143,18 @@ export type CreateMixingActivityTemplateStageStepParameterPayload = {
 export type UpdateMixingActivityTemplateStageStepParameterPayload = Partial<
   CreateMixingActivityTemplateStageStepParameterPayload
 >;
+
+export type TemplateNodeMutationResult<T> = T & { siblings: T[] };
+
+export type MixingActivityTemplateParameterMutation = TemplateNodeMutationResult<
+  MixingActivityTemplateStageStepParameter
+>;
+export type MixingActivityTemplateStepTree = MixingActivityTemplateStageStep & {
+  parameters: MixingActivityTemplateStageStepParameter[];
+};
+export type MixingActivityTemplateStepMutation = TemplateNodeMutationResult<
+  MixingActivityTemplateStageStep
+> & { parameters?: MixingActivityTemplateStageStepParameter[] };
+export type MixingActivityTemplateStageMutation = TemplateNodeMutationResult<
+  MixingActivityTemplateStage
+> & { steps?: MixingActivityTemplateStepTree[] };

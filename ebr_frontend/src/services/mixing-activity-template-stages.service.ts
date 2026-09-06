@@ -1,4 +1,5 @@
 import type {
+  MixingActivityTemplateStageMutation,
   CreateMixingActivityTemplateStagePayload,
   MixingActivityTemplateStage,
   UpdateMixingActivityTemplateStagePayload,
@@ -27,7 +28,7 @@ const fetchById = async (
 const create = async (
   templateId: string | number,
   payload: CreateMixingActivityTemplateStagePayload,
-): Promise<MixingActivityTemplateStage> => {
+): Promise<MixingActivityTemplateStageMutation> => {
   const response = await axiosClient.post(
     API_ROUTES.items.mixingActivityTemplateStages(templateId),
     payload,
@@ -38,7 +39,7 @@ const create = async (
 const update = async (
   stageId: string | number,
   payload: UpdateMixingActivityTemplateStagePayload,
-): Promise<MixingActivityTemplateStage> => {
+): Promise<MixingActivityTemplateStageMutation> => {
   const response = await axiosClient.patch(
     API_ROUTES.items.mixingActivityTemplateStageDetail(stageId),
     payload,
@@ -48,9 +49,27 @@ const update = async (
 
 const remove = async (
   stageId: string | number,
-): Promise<MixingActivityTemplateStage> => {
+): Promise<MixingActivityTemplateStageMutation> => {
   const response = await axiosClient.delete(
     API_ROUTES.items.mixingActivityTemplateStageDetail(stageId),
+  );
+  return response.data;
+};
+
+const duplicate = async (id: string | number): Promise<MixingActivityTemplateStageMutation> => {
+  const response = await axiosClient.post(
+    `${API_ROUTES.items.mixingActivityTemplateStageDetail(id)}/duplicate`,
+  );
+  return response.data;
+};
+
+const move = async (
+  id: string | number,
+  direction: "up" | "down",
+): Promise<MixingActivityTemplateStageMutation> => {
+  const response = await axiosClient.patch(
+    `${API_ROUTES.items.mixingActivityTemplateStageDetail(id)}/move`,
+    { direction },
   );
   return response.data;
 };
@@ -61,6 +80,8 @@ const mixingActivityTemplateStagesService = {
   create,
   update,
   delete: remove,
+  duplicate,
+  move,
 };
 
 export default mixingActivityTemplateStagesService;
