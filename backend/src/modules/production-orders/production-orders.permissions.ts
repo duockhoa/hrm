@@ -9,4 +9,5 @@ export const PRODUCTION_ORDER_PERMISSIONS = {
   CREATE: 'production-orders.create',
   UPDATE: 'production-orders.update',
   DELETE: 'production-orders.delete',
+  SEND_SAMPLING_REQUEST: 'production-orders.sampling-requests.send',
 } as const;

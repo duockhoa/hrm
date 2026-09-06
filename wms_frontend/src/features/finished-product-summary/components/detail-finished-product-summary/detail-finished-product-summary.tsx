@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_ROUTES } from "@/lib/api-routes";
+import useUserStore from "@/store/user.store";
+import userService from "@/services/user.service";
 import productionOrdersService from "@/services/product-orders.service";
 import { Pencil, Trash2 } from "lucide-react";
 import { LuFileInput } from "react-icons/lu";
@@ -201,6 +203,15 @@ export default function FinishedProductSummaryDetail({
   onClose: () => void;
   showCloseButton?: boolean;
 }) {
+  const userId = useUserStore((state) => state.user?.id);
+  const { data: permissions, error: permissionsError } = useSWR(
+    userId ? [API_ROUTES.users.myPermissions, userId] : null,
+    () => userService.fetchMyPermissions(),
+  );
+  const canSendSamplingRequest = Boolean(
+    !permissionsError &&
+      permissions?.permissionKeys.includes("production-orders.sampling-requests.send"),
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -355,7 +366,7 @@ export default function FinishedProductSummaryDetail({
         </DialogContent>
       </Dialog>
 
-      {productionOrderId !== null && productionOrderId !== undefined ? (
+      {canSendSamplingRequest && productionOrderId !== null && productionOrderId !== undefined ? (
         <div className="border-b py-3">
           <div className="flex flex-wrap justify-start gap-2">
             <OpenFormButton

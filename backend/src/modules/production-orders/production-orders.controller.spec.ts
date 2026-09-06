@@ -898,6 +898,7 @@ describe('ProductionOrdersController', () => {
       'exportPostWeighingMaterialCheck',
     ]);
     const dedicatedPermissionRoutes = new Map([
+      ['createSamplingRequest', PRODUCTION_ORDER_PERMISSIONS.SEND_SAMPLING_REQUEST],
       ['exportWeighingTicket', PRODUCTION_ORDER_PERMISSIONS.EXPORT_WEIGHING_TICKET],
       ['exportProductionOrder', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
       [

@@ -883,7 +883,10 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("create_sampling_request") && (
+          {isActionEnabled(
+            "create_sampling_request",
+            "production-orders.sampling-requests.send",
+          ) && (
             <OpenFormButton
               icon={<LuFileInput />}
               name="Tạo PYCLM"

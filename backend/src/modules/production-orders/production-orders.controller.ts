@@ -2345,7 +2345,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.SEND_SAMPLING_REQUEST)
   @Post(':id/sampling-requests')
   async createSamplingRequest(
     @Param('id', ParseIntPipe) id: number,
