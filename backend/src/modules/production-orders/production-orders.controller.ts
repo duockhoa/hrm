@@ -1335,7 +1335,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.MATERIAL_SUMMARY_READ)
   @Get('material-summaries/:summaryId')
   async findMaterialSummaryById(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1343,7 +1343,7 @@ export class ProductionOrdersController {
     return this.productionOrderMaterialSummariesService.findById(summaryId);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.MATERIAL_SUMMARY_UPDATE)
   @Patch('material-summaries/:summaryId')
   async updateMaterialSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1355,7 +1355,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.MATERIAL_SUMMARY_DELETE)
   @Delete('material-summaries/:summaryId')
   async deleteMaterialSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1775,7 +1775,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(imageFile.filePath));
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.STEAM_STERILIZATION_READ)
   @Get('steam-sterilization-checks/images/:filename')
   async getSteamSterilizationCheckImage(
     @Param('filename') filename: string,
@@ -1934,7 +1934,7 @@ export class ProductionOrdersController {
     return this.productionOrderTenUnitSensoryChecksService.delete(checkId);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.STEAM_STERILIZATION_READ)
   @Get('steam-sterilization-checks/:checkId')
   async findSteamSterilizationCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1944,7 +1944,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.STEAM_STERILIZATION_UPDATE)
   @Patch('steam-sterilization-checks/:checkId')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -1973,7 +1973,7 @@ export class ProductionOrdersController {
     }
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.STEAM_STERILIZATION_DELETE)
   @Delete('steam-sterilization-checks/:checkId')
   async deleteSteamSterilizationCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1981,7 +1981,7 @@ export class ProductionOrdersController {
     return this.productionOrderSteamSterilizationChecksService.delete(checkId);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.FILTRATION_CHECK_READ)
   @Get('filtration-checks/:checkId')
   async findFiltrationCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -1989,7 +1989,7 @@ export class ProductionOrdersController {
     return this.productionOrderFiltrationChecksService.findById(checkId);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.FILTRATION_CHECK_UPDATE)
   @Patch('filtration-checks/:checkId')
   async updateFiltrationCheck(
     @Param('checkId', ParseIntPipe) checkId: number,
@@ -2001,7 +2001,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.FILTRATION_CHECK_DELETE)
   @Delete('filtration-checks/:checkId')
   async deleteFiltrationCheck(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderFiltrationChecksService.delete(checkId);
@@ -2248,7 +2248,7 @@ export class ProductionOrdersController {
     return new StreamableFile(createReadStream(file.filePath));
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPLOAD_PRODUCTION_GUIDE)
   @Post(':id/production-guide')
   @UseInterceptors(
     FileInterceptor('file', productionOrderProductionGuideUploadOptions),
@@ -2996,7 +2996,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.MATERIAL_SUMMARY_READ)
   @Get(':id/material-summaries')
   async findMaterialSummaries(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderMaterialSummariesService.findAllByProductionOrder(
@@ -3004,7 +3004,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.MATERIAL_SUMMARY_CREATE)
   @Post(':id/material-summaries')
   async createMaterialSummary(
     @Param('id', ParseIntPipe) id: number,
@@ -3233,7 +3233,7 @@ export class ProductionOrdersController {
     }
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.STEAM_STERILIZATION_READ)
   @Get(':id/steam-sterilization-checks')
   async findSteamSterilizationChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderSteamSterilizationChecksService.findAllByProductionOrder(
@@ -3241,7 +3241,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.STEAM_STERILIZATION_CREATE)
   @Post(':id/steam-sterilization-checks')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -3272,7 +3272,7 @@ export class ProductionOrdersController {
     }
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.FILTRATION_CHECK_READ)
   @Get(':id/filtration-checks')
   async findFiltrationChecks(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrderFiltrationChecksService.findAllByProductionOrder(
@@ -3280,7 +3280,7 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.FILTRATION_CHECK_CREATE)
   @Post(':id/filtration-checks')
   async createFiltrationCheck(
     @Param('id', ParseIntPipe) id: number,

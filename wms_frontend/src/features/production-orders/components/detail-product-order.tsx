@@ -897,7 +897,10 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("upload_production_guide") &&
+          {isActionEnabled(
+            "upload_production_guide",
+            "production-orders.production-guide.upload",
+          ) &&
             productionOrderId !== null &&
             productionOrderId !== undefined && (
               <ProductionGuideUploadButton

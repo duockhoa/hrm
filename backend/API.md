@@ -2404,6 +2404,19 @@ Tất cả API lệnh sản xuất và tài nguyên con trong nhóm này cần `
 
 | Key quyền                  | API được phép gọi                                                                                                                                                          |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `production-orders.steam-sterilization-checks.read` | Xem danh sách, chi tiết và ảnh tiệt trùng |
+| `production-orders.steam-sterilization-checks.create` | Thêm phiếu theo dõi tiệt trùng |
+| `production-orders.steam-sterilization-checks.update` | Sửa phiếu và cập nhật ảnh tiệt trùng |
+| `production-orders.steam-sterilization-checks.delete` | Xóa phiếu theo dõi tiệt trùng |
+| `production-orders.material-summaries.read` | Xem danh sách và chi tiết tổng kết vật liệu |
+| `production-orders.material-summaries.create` | Thêm tổng kết vật liệu |
+| `production-orders.material-summaries.update` | Sửa tổng kết vật liệu |
+| `production-orders.material-summaries.delete` | Xóa tổng kết vật liệu |
+| `production-orders.production-guide.upload` | `POST /production-orders/:id/production-guide` (tải hướng dẫn sản xuất lên) |
+| `production-orders.filtration-checks.read` | Xem danh sách và chi tiết theo dõi quá trình lọc |
+| `production-orders.filtration-checks.create` | Thêm theo dõi quá trình lọc |
+| `production-orders.filtration-checks.update` | Sửa theo dõi quá trình lọc |
+| `production-orders.filtration-checks.delete` | Xóa theo dõi quá trình lọc |
 | `production-orders.list`   | `GET /production-orders`, `GET /production-orders/finished-products`, `GET /production-orders/semi-finished-products`, `GET /production-orders/finished-product-summaries` |
 | `production-orders.read`   | Các API `GET` chi tiết, file, ảnh và dữ liệu con, trừ API xuất lệnh sản xuất và theo dõi in date                                                                            |
 | `production-orders.export-weighing-ticket` | `POST /production-orders/:id/production-order-lines/weighing-ticket/export` (xuất phiếu cân) |
