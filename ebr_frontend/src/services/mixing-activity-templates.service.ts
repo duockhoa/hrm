@@ -1,5 +1,6 @@
 import type {
   CreateMixingActivityTemplatePayload,
+  CopyMixingActivityTemplatePayload,
   MixingActivityTemplate,
   UpdateMixingActivityTemplatePayload,
 } from "@/features/mixing-activity-templates/types";
@@ -42,6 +43,17 @@ const create = async (
   return response.data;
 };
 
+const copy = async (
+  itemCode: string,
+  payload: CopyMixingActivityTemplatePayload,
+): Promise<MixingActivityTemplate> => {
+  const response = await axiosClient.post(
+    API_ROUTES.items.copyMixingActivityTemplate(itemCode),
+    payload,
+  );
+  return response.data;
+};
+
 const update = async (
   templateId: string | number,
   payload: UpdateMixingActivityTemplatePayload,
@@ -67,6 +79,7 @@ const mixingActivityTemplatesService = {
   fetchByItemCode,
   fetchById,
   create,
+  copy,
   update,
   delete: remove,
 };

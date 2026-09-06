@@ -17,6 +17,7 @@ import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
 import { CopyItemEquipmentDto } from './dto/copy-item-equipment.dto';
 import { CreateMixingActivityTemplateDto } from './dto/create-mixing-activity-template.dto';
+import { CopyMixingActivityTemplateDto } from './dto/copy-mixing-activity-template.dto';
 import { CreateMixingActivityTemplateStageDto } from './dto/create-mixing-activity-template-stage.dto';
 import { CreateMixingActivityTemplateStageStepDto } from './dto/create-mixing-activity-template-stage-step.dto';
 import { CreateMixingActivityTemplateStageStepParameterDto } from './dto/create-mixing-activity-template-stage-step-parameter.dto';
@@ -302,6 +303,20 @@ export class ItemsController {
     @Request() req: any,
   ) {
     return this.itemEquipmentService.copyFromItem(
+      itemCode,
+      copyDto,
+      req.user,
+    );
+  }
+
+  @Post(':item_code/mixing-activity-templates/copy')
+  @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE)
+  async copyMixingActivityTemplate(
+    @Param('item_code') itemCode: string,
+    @Body() copyDto: CopyMixingActivityTemplateDto,
+    @Request() req: any,
+  ) {
+    return this.mixingActivityTemplatesService.copyFromTemplate(
       itemCode,
       copyDto,
       req.user,

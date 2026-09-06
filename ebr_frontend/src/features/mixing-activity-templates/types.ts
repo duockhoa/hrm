@@ -40,6 +40,12 @@ export type CreateMixingActivityTemplatePayload = {
   description?: string | null;
 };
 
+export type CopyMixingActivityTemplatePayload = Partial<
+  CreateMixingActivityTemplatePayload
+> & {
+  source_template_id: number;
+};
+
 export type UpdateMixingActivityTemplatePayload = Partial<
   CreateMixingActivityTemplatePayload
 >;

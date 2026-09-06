@@ -34,6 +34,8 @@ const ITEMS = {
   allMixingActivityTemplates: "/items/mixing-activity-templates",
   mixingActivityTemplates: (itemCode: string) =>
     `/items/${encodeURIComponent(itemCode)}/mixing-activity-templates`,
+  copyMixingActivityTemplate: (itemCode: string) =>
+    `/items/${encodeURIComponent(itemCode)}/mixing-activity-templates/copy`,
   mixingActivityTemplateDetail: (templateId: string | number) =>
     `/items/mixing-activity-templates/${templateId}`,
   mixingActivityTemplateStages: (templateId: string | number) =>

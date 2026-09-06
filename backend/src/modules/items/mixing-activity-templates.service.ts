@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateMixingActivityTemplateDto } from './dto/create-mixing-activity-template.dto';
+import { CopyMixingActivityTemplateDto } from './dto/copy-mixing-activity-template.dto';
 import { UpdateMixingActivityTemplateDto } from './dto/update-mixing-activity-template.dto';
 
 type AuthenticatedUser = { id?: number | string | null };
@@ -94,6 +95,108 @@ export class MixingActivityTemplatesService {
       },
       include: mixingActivityTemplateInclude,
     });
+  }
+
+  async copyFromTemplate(
+    itemCode: string,
+    dto: CopyMixingActivityTemplateDto,
+    user?: AuthenticatedUser,
+  ) {
+    const normalizedItemCode = this.normalizeItemCode(itemCode);
+    const sourceTemplateId = this.normalizePositiveInteger(
+      dto?.source_template_id,
+      'source_template_id',
+    );
+    const userId = this.normalizeUserId(user);
+
+    return this.prismaService.$transaction(
+      async (tx) => {
+        await this.ensureItemExists(normalizedItemCode, tx);
+        const source = await tx.mixingActivityTemplates.findUnique({
+          where: { id: sourceTemplateId },
+          include: {
+            stages: {
+              orderBy: { stage_order: 'asc' },
+              include: {
+                steps: {
+                  orderBy: { step_order: 'asc' },
+                  include: {
+                    parameters: { orderBy: { parameter_order: 'asc' } },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (!source) {
+          throw new NotFoundException(
+            'Source mixing activity template not found',
+          );
+        }
+
+        const latestVersion =
+          dto.version == null
+            ? await tx.mixingActivityTemplates.aggregate({
+                where: { item_code: normalizedItemCode },
+                _max: { version: true },
+              })
+            : null;
+
+        // A nested create writes the entire tree atomically with new IDs.
+        return tx.mixingActivityTemplates.create({
+          data: {
+            item_code: normalizedItemCode,
+            version: this.normalizePositiveInteger(
+              dto.version ?? (latestVersion?._max.version ?? 0) + 1,
+              'version',
+            ),
+            batch_size: this.normalizePositiveNumber(
+              dto.batch_size === undefined ? source.batch_size : dto.batch_size,
+              'batch_size',
+            ),
+            unit_of_measure: this.normalizeRequiredString(
+              dto.unit_of_measure === undefined
+                ? source.unit_of_measure
+                : dto.unit_of_measure,
+              'unit_of_measure',
+              50,
+            ),
+            description: this.normalizeDescription(
+              dto.description === undefined
+                ? source.description
+                : dto.description,
+            ),
+            created_by_id: userId,
+            stages: {
+              create: source.stages.map((stage) => ({
+                stage_name: stage.stage_name,
+                stage_order: stage.stage_order,
+                created_by_id: userId,
+                steps: {
+                  create: stage.steps.map((step) => ({
+                    step_name: step.step_name,
+                    step_order: step.step_order,
+                    created_by_id: userId,
+                    parameters: {
+                      create: step.parameters.map((parameter) => ({
+                        parameter_name: parameter.parameter_name,
+                        data_type: parameter.data_type,
+                        unit: parameter.unit,
+                        requirement: parameter.requirement,
+                        parameter_order: parameter.parameter_order,
+                        created_by_id: userId,
+                      })),
+                    },
+                  })),
+                },
+              })),
+            },
+          },
+          include: mixingActivityTemplateInclude,
+        });
+      },
+      { timeout: 30000 },
+    );
   }
 
   async update(id: number, dto: UpdateMixingActivityTemplateDto) {
@@ -213,8 +316,11 @@ export class MixingActivityTemplatesService {
     return normalizedValue || null;
   }
 
-  private async ensureItemExists(itemCode: string) {
-    const item = await this.prismaService.items.findUnique({
+  private async ensureItemExists(
+    itemCode: string,
+    client: Pick<Prisma.TransactionClient, 'items'> = this.prismaService,
+  ) {
+    const item = await client.items.findUnique({
       where: { item_code: itemCode },
       select: { item_code: true },
     });

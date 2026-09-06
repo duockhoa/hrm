@@ -1267,6 +1267,36 @@ Body:
 - `unit_of_measure` bắt buộc, tối đa 50 ký tự.
 - `description` không bắt buộc; `null` hoặc chuỗi rỗng được lưu là `null`.
 
+### Sao chép template phiếu pha chế
+
+```http
+POST /items/:item_code/mixing-activity-templates/copy
+Content-Type: application/json
+```
+
+Permission: `mixing-activity-templates.create`.
+
+```json
+{
+  "source_template_id": 17
+}
+```
+
+Backend sao chép template nguồn cùng toàn bộ giai đoạn, bước, thông số, kiểu dữ liệu,
+đơn vị và yêu cầu sang sản phẩm đích trong một transaction. Bản sao có ID mới và
+người tạo là user đang đăng nhập; template nguồn không bị sửa. Nếu lỗi, không lưu
+phiếu tạo dở.
+
+Có thể gửi thêm `version`, `batch_size`, `unit_of_measure`, `description` để
+chỉnh thông tin bản sao. Khi không gửi `version`, backend dùng phiên bản lớn nhất
+của sản phẩm đích cộng 1 (hoặc 1 nếu chưa có template). Các thông tin còn lại mặc
+định lấy từ nguồn; `description: null` xóa mô tả trên bản sao.
+
+Response: template mới kèm `item`, `createdBy`, giống API tạo template.
+Frontend dùng response để cập nhật danh sách, không cần gọi lại API danh sách sau
+khi sao chép. Nguồn hoặc sản phẩm đích không tồn tại trả `404`; dữ liệu không hợp lệ
+trả `400`.
+
 ### Lấy chi tiết template
 
 ```http

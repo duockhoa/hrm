@@ -43,7 +43,6 @@ import type {
   MixingActivityTemplate,
   UpdateMixingActivityTemplatePayload,
 } from "../types";
-import { cloneMixingActivityTemplateStructure } from "../clone-template-structure";
 import { formatBatchSize, getCreatorLabel } from "../utils";
 import MixingActivityTemplateDetail from "./mixing-activity-template-detail";
 
@@ -101,6 +100,7 @@ export default function InlineMixingActivityTemplates({
   );
   const [form, setForm] = useState<TemplateFormState>(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionInFlight = useRef(false);
   const [isCopyFromOpen, setIsCopyFromOpen] = useState(false);
   const [copySourceId, setCopySourceId] = useState("");
   const copyDialogContentRef = useRef<HTMLDivElement | null>(null);
@@ -256,7 +256,7 @@ export default function InlineMixingActivityTemplates({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!validateForm()) return;
+    if (submissionInFlight.current || !validateForm()) return;
 
     const nextValues = {
       version: Number(form.version),
@@ -265,6 +265,7 @@ export default function InlineMixingActivityTemplates({
       description: form.description.trim(),
     };
 
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     try {
       if (editingTemplate) {
@@ -286,38 +287,25 @@ export default function InlineMixingActivityTemplates({
           await mixingActivityTemplatesService.update(editingTemplate.id, payload);
           toast.success("Đã cập nhật biểu mẫu theo dõi pha chế.");
         }
+      } else if (cloningTemplate) {
+        const copiedTemplate = await mixingActivityTemplatesService.copy(itemCode, {
+          source_template_id: cloningTemplate.id,
+          ...nextValues,
+        });
+        await mutate((current) => [copiedTemplate, ...(current ?? [])], {
+          revalidate: false,
+        });
+        toast.success("Đã nhân bản biểu mẫu và toàn bộ nội dung pha chế.");
       } else {
-        const createdTemplate = await mixingActivityTemplatesService.create(
-          itemCode,
-          nextValues,
-        );
-
-        if (cloningTemplate) {
-          try {
-            await cloneMixingActivityTemplateStructure(
-              cloningTemplate.id,
-              createdTemplate.id,
-            );
-          } catch (cloneError) {
-            try {
-              await mixingActivityTemplatesService.delete(createdTemplate.id);
-            } catch (rollbackError) {
-              void rollbackError;
-              throw new Error(
-                "Không thể nhân bản đầy đủ và biểu mẫu mới có thể đã được tạo một phần.",
-              );
-            }
-            throw cloneError;
-          }
-          toast.success("Đã nhân bản biểu mẫu và toàn bộ nội dung pha chế.");
-        } else {
-          toast.success("Đã tạo biểu mẫu theo dõi pha chế.");
-        }
+        await mixingActivityTemplatesService.create(itemCode, nextValues);
+        toast.success("Đã tạo biểu mẫu theo dõi pha chế.");
       }
 
       setFormOpen(false);
       setEditingTemplate(null);
-      await Promise.all([mutate(), editingTemplate ? mutateDetail() : null]);
+      if (!cloningTemplate) {
+        await Promise.all([mutate(), editingTemplate ? mutateDetail() : null]);
+      }
     } catch (submitError) {
       toast.error(
         getErrorMessage(
@@ -330,58 +318,38 @@ export default function InlineMixingActivityTemplates({
         ),
       );
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleCopyFrom = async () => {
+    if (submissionInFlight.current) return;
     if (!selectedCopySource) {
       toast.error("Vui lòng chọn phiếu pha cần sao chép.");
       return;
     }
 
-    const sourceTemplate = selectedCopySource.template;
-    let createdTemplate: MixingActivityTemplate | null = null;
-
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     try {
-      createdTemplate = await mixingActivityTemplatesService.create(itemCode, {
-        version: nextCopyVersion,
-        batch_size: Number(sourceTemplate.batch_size),
-        unit_of_measure: sourceTemplate.unit_of_measure,
-        description: sourceTemplate.description ?? null,
+      const copiedTemplate = await mixingActivityTemplatesService.copy(itemCode, {
+        source_template_id: selectedCopySource.template.id,
       });
-
-      try {
-        await cloneMixingActivityTemplateStructure(
-          sourceTemplate.id,
-          createdTemplate.id,
-        );
-      } catch (cloneError) {
-        try {
-          await mixingActivityTemplatesService.delete(createdTemplate.id);
-          createdTemplate = null;
-        } catch (rollbackError) {
-          void rollbackError;
-          throw new Error(
-            "Không thể sao chép đầy đủ và phiếu mới có thể đã được tạo một phần. Vui lòng tải lại để kiểm tra.",
-          );
-        }
-        throw cloneError;
-      }
-
+      await mutate((current) => [copiedTemplate, ...(current ?? [])], {
+        revalidate: false,
+      });
       setIsCopyFromOpen(false);
       setCopySourceId("");
       toast.success(
-        `Đã copy phiếu sang ${itemCode} với phiên bản ${nextCopyVersion}.`,
+        `Đã copy phiếu sang ${itemCode} với phiên bản ${copiedTemplate.version}.`,
       );
-      await mutate();
     } catch (copyError) {
-      await mutate();
       toast.error(
         getErrorMessage(copyError, "Không thể copy phiếu pha đã chọn."),
       );
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };

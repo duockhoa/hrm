@@ -28,6 +28,7 @@ describe('ItemsController', () => {
     delete: jest.Mock;
   };
   let mixingActivityTemplatesService: {
+    copyFromTemplate: jest.Mock;
     findAll: jest.Mock;
     findById: jest.Mock;
     findAllByItem: jest.Mock;
@@ -74,6 +75,7 @@ describe('ItemsController', () => {
       delete: jest.fn(),
     };
     mixingActivityTemplatesService = {
+      copyFromTemplate: jest.fn(),
       findAll: jest.fn(),
       findById: jest.fn(),
       findAllByItem: jest.fn(),
@@ -196,6 +198,7 @@ describe('ItemsController', () => {
       'createMixingActivityTemplateStageStep',
       'createMixingActivityTemplateStageStepParameter',
       'createMixingActivityTemplate',
+      'copyMixingActivityTemplate',
     ].forEach((method) =>
       expect(metadata(method as keyof ItemsController)).toEqual([
         MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.CREATE,
@@ -220,6 +223,20 @@ describe('ItemsController', () => {
       expect(metadata(method as keyof ItemsController)).toEqual([
         MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.DELETE,
       ]),
+    );
+  });
+
+  it('copies a mixing template to the target item with the authenticated user', async () => {
+    const dto = { source_template_id: 17, version: 3 };
+    const user = { id: 9 };
+    const result = { id: 22, item_code: 'BTP002', version: 3 };
+    mixingActivityTemplatesService.copyFromTemplate.mockResolvedValue(result);
+
+    await expect(
+      controller.copyMixingActivityTemplate('BTP002', dto, { user }),
+    ).resolves.toBe(result);
+    expect(mixingActivityTemplatesService.copyFromTemplate).toHaveBeenCalledWith(
+      'BTP002', dto, user,
     );
   });
 
