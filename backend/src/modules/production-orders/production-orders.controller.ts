@@ -3476,7 +3476,7 @@ export class ProductionOrdersController {
     return new StreamableFile(exportedFile.buffer);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT_WEIGHING_TICKET)
   @Post(':id/production-order-lines/weighing-ticket/export')
   async exportWeighingTicket(
     @Param('id', ParseIntPipe) id: number,

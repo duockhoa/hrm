@@ -778,7 +778,10 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("export_weighing_ticket") && (
+          {isActionEnabled(
+            "export_weighing_ticket",
+            "production-orders.export-weighing-ticket",
+          ) && (
             <OpenFormButton
               icon={<FaFileExport />}
               name="Xuất phiếu cân"

@@ -2406,6 +2406,7 @@ Tất cả API lệnh sản xuất và tài nguyên con trong nhóm này cần `
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `production-orders.list`   | `GET /production-orders`, `GET /production-orders/finished-products`, `GET /production-orders/semi-finished-products`, `GET /production-orders/finished-product-summaries` |
 | `production-orders.read`   | Các API `GET` chi tiết, file, ảnh và dữ liệu con, trừ API xuất lệnh sản xuất và theo dõi in date                                                                            |
+| `production-orders.export-weighing-ticket` | `POST /production-orders/:id/production-order-lines/weighing-ticket/export` (xuất phiếu cân) |
 | `production-orders.export` | `GET /production-orders/:id/export` (xuất lệnh sản xuất)                                                                                                                   |
 | `production-orders.export-warehouse-release` | `POST /production-orders/:id/production-order-lines/export` (xuất phiếu xuất kho)                                                                                       |
 | `production-orders.document-control.update` | Cấp/nhận hồ sơ lô giấy, nhận phiếu xuất kho và phiếu kiểm nghiệm                                                                                                         |
@@ -3145,6 +3146,8 @@ Các tên field được hỗ trợ: `stageId`, `stageIds`, `StageID`.
 Response: file `.xlsx`.
 
 ### Export phiếu cân theo line
+
+Permission: `production-orders.export-weighing-ticket`.
 
 ```http
 POST /production-orders/:id/production-order-lines/weighing-ticket/export

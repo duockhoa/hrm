@@ -895,10 +895,10 @@ describe('ProductionOrdersController', () => {
       'findAllFinishedProductSummaries',
     ]);
     const readPostRoutes = new Set([
-      'exportWeighingTicket',
       'exportPostWeighingMaterialCheck',
     ]);
     const dedicatedPermissionRoutes = new Map([
+      ['exportWeighingTicket', PRODUCTION_ORDER_PERMISSIONS.EXPORT_WEIGHING_TICKET],
       ['exportProductionOrder', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
       [
         'exportProductionOrderLines',

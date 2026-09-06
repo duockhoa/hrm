@@ -3,6 +3,7 @@ export const PRODUCTION_ORDER_PERMISSIONS = {
   LIST: 'production-orders.list',
   READ: 'production-orders.read',
   EXPORT: 'production-orders.export',
+  EXPORT_WEIGHING_TICKET: 'production-orders.export-weighing-ticket',
   EXPORT_WAREHOUSE_RELEASE: 'production-orders.export-warehouse-release',
   DOCUMENT_CONTROL_UPDATE: 'production-orders.document-control.update',
   CREATE: 'production-orders.create',
