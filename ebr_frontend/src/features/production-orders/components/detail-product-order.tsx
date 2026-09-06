@@ -843,7 +843,10 @@ export default function ProductOrderDetail({
                 </div>
               </div>
             )}
-          {isActionEnabled("create_semi_finished_product_label") && (
+          {isActionEnabled(
+            "create_semi_finished_product_label",
+            "production-orders.semi-finished-product-labels.create",
+          ) && (
             <OpenFormButton
               icon={<Tags />}
               name="Tạo nhãn BTP"
@@ -854,7 +857,10 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("create_dispensed_material_label") && (
+          {isActionEnabled(
+            "create_dispensed_material_label",
+            "production-orders.dispensed-material-labels.create",
+          ) && (
             <OpenFormButton
               icon={<Tags />}
               name="Tạo nhãn cấp phát"
