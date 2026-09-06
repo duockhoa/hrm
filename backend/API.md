@@ -2417,6 +2417,10 @@ Tất cả API lệnh sản xuất và tài nguyên con trong nhóm này cần `
 | `production-orders.filtration-checks.create` | Thêm theo dõi quá trình lọc |
 | `production-orders.filtration-checks.update` | Sửa theo dõi quá trình lọc |
 | `production-orders.filtration-checks.delete` | Xóa theo dõi quá trình lọc |
+| `production-orders.post-secondary-packaging-summaries.read` | Xem danh sách, chi tiết tổng kết BTP hoàn thiện và hạng mục chờ xử lý/chờ hủy |
+| `production-orders.post-secondary-packaging-summaries.create` | Thêm tổng kết BTP hoàn thiện và hạng mục chờ xử lý/chờ hủy |
+| `production-orders.post-secondary-packaging-summaries.update` | Sửa tổng kết BTP hoàn thiện |
+| `production-orders.post-secondary-packaging-summaries.delete` | Xóa tổng kết BTP hoàn thiện |
 | `production-orders.list`   | `GET /production-orders`, `GET /production-orders/finished-products`, `GET /production-orders/semi-finished-products`, `GET /production-orders/finished-product-summaries` |
 | `production-orders.read`   | Các API `GET` chi tiết, file, ảnh và dữ liệu con, trừ API xuất lệnh sản xuất và theo dõi in date                                                                            |
 | `production-orders.export-weighing-ticket` | `POST /production-orders/:id/production-order-lines/weighing-ticket/export` (xuất phiếu cân) |

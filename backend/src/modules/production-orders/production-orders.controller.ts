@@ -1237,7 +1237,9 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+  )
   @Get('post-secondary-packaging-summaries/:summaryId')
   async findPostSecondaryPackagingSummaryById(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1247,7 +1249,9 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_UPDATE,
+  )
   @Patch('post-secondary-packaging-summaries/:summaryId')
   async updatePostSecondaryPackagingSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -1259,7 +1263,9 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_DELETE,
+  )
   @Delete('post-secondary-packaging-summaries/:summaryId')
   async deletePostSecondaryPackagingSummary(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -2918,7 +2924,9 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+  )
   @Get(':id/post-secondary-packaging-summaries')
   async findPostSecondaryPackagingSummaries(
     @Param('id', ParseIntPipe) id: number,
@@ -2928,7 +2936,9 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_CREATE,
+  )
   @Post(':id/post-secondary-packaging-summaries')
   async createPostSecondaryPackagingSummary(
     @Param('id', ParseIntPipe) id: number,
@@ -2942,7 +2952,9 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+  )
   @Get('post-secondary-packaging-summaries/:summaryId/pending-process-items')
   async findPostSecondaryPackagingPendingProcessItems(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -2952,7 +2964,9 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_CREATE,
+  )
   @Post('post-secondary-packaging-summaries/:summaryId/pending-process-items')
   async createPostSecondaryPackagingPendingProcessItem(
     @Param('summaryId', ParseIntPipe) summaryId: number,
@@ -2967,7 +2981,9 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+  )
   @Get(
     'post-secondary-packaging-summaries/:summaryId/pending-cancellation-items',
   )
@@ -2979,7 +2995,9 @@ export class ProductionOrdersController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_CREATE,
+  )
   @Post(
     'post-secondary-packaging-summaries/:summaryId/pending-cancellation-items',
   )

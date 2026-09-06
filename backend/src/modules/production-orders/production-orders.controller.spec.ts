@@ -899,6 +899,42 @@ describe('ProductionOrdersController', () => {
     ]);
     const dedicatedPermissionRoutes = new Map([
       [
+        'findPostSecondaryPackagingSummaryById',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+      ],
+      [
+        'findPostSecondaryPackagingSummaries',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+      ],
+      [
+        'createPostSecondaryPackagingSummary',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_CREATE,
+      ],
+      [
+        'updatePostSecondaryPackagingSummary',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_UPDATE,
+      ],
+      [
+        'deletePostSecondaryPackagingSummary',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_DELETE,
+      ],
+      [
+        'findPostSecondaryPackagingPendingProcessItems',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+      ],
+      [
+        'createPostSecondaryPackagingPendingProcessItem',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_CREATE,
+      ],
+      [
+        'findPostSecondaryPackagingPendingCancellationItems',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+      ],
+      [
+        'createPostSecondaryPackagingPendingCancellationItem',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_CREATE,
+      ],
+      [
         'findFiltrationCheckById',
         PRODUCTION_ORDER_PERMISSIONS.FILTRATION_CHECK_READ,
       ],

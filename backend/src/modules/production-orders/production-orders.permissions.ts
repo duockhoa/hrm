@@ -23,4 +23,12 @@ export const PRODUCTION_ORDER_PERMISSIONS = {
   FILTRATION_CHECK_CREATE: 'production-orders.filtration-checks.create',
   FILTRATION_CHECK_UPDATE: 'production-orders.filtration-checks.update',
   FILTRATION_CHECK_DELETE: 'production-orders.filtration-checks.delete',
+  POST_SECONDARY_PACKAGING_SUMMARY_READ:
+    'production-orders.post-secondary-packaging-summaries.read',
+  POST_SECONDARY_PACKAGING_SUMMARY_CREATE:
+    'production-orders.post-secondary-packaging-summaries.create',
+  POST_SECONDARY_PACKAGING_SUMMARY_UPDATE:
+    'production-orders.post-secondary-packaging-summaries.update',
+  POST_SECONDARY_PACKAGING_SUMMARY_DELETE:
+    'production-orders.post-secondary-packaging-summaries.delete',
 } as const;
