@@ -8706,13 +8706,17 @@ Tất cả API xưởng, chênh áp và checklist vệ sinh trong nhóm này c�
 | Key quyền                     | API được phép gọi                                           |
 | ----------------------------- | ----------------------------------------------------------- |
 | `production-workshops.list`   | `GET /production-workshops`                                 |
-| `production-workshops.read`   | Các API `GET` chi tiết xưởng, chênh áp và checklist vệ sinh |
-| `production-workshops.create` | Các API `POST` xưởng và checklist vệ sinh         |
-| `production-workshops.update` | Các API `PUT` xưởng và checklist vệ sinh          |
-| `production-workshops.delete` | Các API `DELETE` xưởng và checklist vệ sinh       |
+| `production-workshops.read`   | Các API `GET` chi tiết xưởng và chênh áp |
+| `production-workshops.create` | Các API `POST` xưởng         |
+| `production-workshops.update` | Các API `PUT` xưởng          |
+| `production-workshops.delete` | Các API `DELETE` xưởng       |
 | `production-workshops.pressure-differentials.create` | `POST /production-workshops/:id/pressure-differentials` |
 | `production-workshops.pressure-differentials.update` | `PUT /production-workshops/pressure-differentials/:pressureDifferentialId` |
 | `production-workshops.pressure-differentials.delete` | `DELETE /production-workshops/pressure-differentials/:pressureDifferentialId` |
+| `production-workshops.cleaning-checklists.read` | `GET /production-workshops/:id/cleaning-checklists`, `GET /production-workshops/cleaning-checklists/:cleaningChecklistId` |
+| `production-workshops.cleaning-checklists.create` | `POST /production-workshops/:id/cleaning-checklists` |
+| `production-workshops.cleaning-checklists.update` | `PUT /production-workshops/cleaning-checklists/:cleaningChecklistId` |
+| `production-workshops.cleaning-checklists.delete` | `DELETE /production-workshops/cleaning-checklists/:cleaningChecklistId` |
 
 ### Lấy danh sách xưởng
 

@@ -75,7 +75,7 @@ export class ProductionWorkshopsController {
   }
 
   @Get('cleaning-checklists/:cleaningChecklistId')
-  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.CLEANING_CHECKLIST_READ)
   async findCleaningChecklistById(
     @Param('cleaningChecklistId', ParseIntPipe)
     cleaningChecklistId: number,
@@ -86,7 +86,7 @@ export class ProductionWorkshopsController {
   }
 
   @Put('cleaning-checklists/:cleaningChecklistId')
-  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.UPDATE)
+  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.CLEANING_CHECKLIST_UPDATE)
   async updateCleaningChecklist(
     @Param('cleaningChecklistId', ParseIntPipe)
     cleaningChecklistId: number,
@@ -99,7 +99,7 @@ export class ProductionWorkshopsController {
   }
 
   @Delete('cleaning-checklists/:cleaningChecklistId')
-  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.DELETE)
+  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.CLEANING_CHECKLIST_DELETE)
   async deleteCleaningChecklist(
     @Param('cleaningChecklistId', ParseIntPipe)
     cleaningChecklistId: number,
@@ -132,7 +132,7 @@ export class ProductionWorkshopsController {
   }
 
   @Get(':id/cleaning-checklists')
-  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.READ)
+  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.CLEANING_CHECKLIST_READ)
   async findCleaningChecklists(@Param('id', ParseIntPipe) id: number) {
     return this.productionWorkshopCleaningChecklistsService.findAllByProductionWorkshop(
       id,
@@ -140,7 +140,7 @@ export class ProductionWorkshopsController {
   }
 
   @Post(':id/cleaning-checklists')
-  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.CLEANING_CHECKLIST_CREATE)
   async createCleaningChecklist(
     @Param('id', ParseIntPipe) id: number,
     @Body() createDto: CreateProductionWorkshopCleaningChecklistDto,
