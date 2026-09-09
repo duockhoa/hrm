@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -618,11 +619,16 @@ function EquipmentMonitoringRecordsSection({
 
 function EquipmentMonitoringRecordDetailView({
   onBack,
+  onDeleted,
   recordId,
 }: {
   onBack: () => void;
+  onDeleted: (recordId: number) => Promise<void>;
   recordId: number;
 }) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const deletingRef = useRef(false);
   const {
     data: record,
     error,
@@ -631,13 +637,94 @@ function EquipmentMonitoringRecordDetailView({
     equipmentService.fetchEquipmentMonitoringRecordById(recordId),
   );
 
+  const handleDelete = async () => {
+    if (!record || deletingRef.current) return;
+    deletingRef.current = true;
+    setIsDeleting(true);
+    try {
+      await equipmentService.deleteEquipmentMonitoringRecord(recordId);
+    } catch (deleteError) {
+      toast.error(getErrorMessage(deleteError, "Không thể xoá thông số thiết bị."));
+      deletingRef.current = false;
+      setIsDeleting(false);
+      return;
+    }
+
+    toast.success("Đã xoá thông số thiết bị.");
+    await mutate(API_ROUTES.equipment.monitoringRecordDetail(recordId), undefined, {
+      revalidate: false,
+    });
+    await onDeleted(recordId);
+  };
+
   return (
     <div className="w-full max-w-4xl rounded-md bg-white p-4 shadow-md">
       <DetailPanelHeader
         title="Chi tiết thông số thiết bị"
         subtitle={record ? getEquipmentLabel(record) : ""}
-        onClose={onBack}
+        actions={
+          record && !error && !isLoading ? (
+            <Button
+              type="button"
+              size="sm"
+              className="bg-gray-900 text-white hover:bg-black"
+              disabled={isDeleting}
+              aria-busy={isDeleting}
+              onClick={() => setIsDeleteConfirmOpen(true)}
+            >
+              Xoá
+            </Button>
+          ) : null
+        }
+        onClose={() => {
+          if (!isDeleting) onBack();
+        }}
+        showCloseButton={!isDeleting}
       />
+
+      <Dialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={(open) => {
+          if (!deletingRef.current) setIsDeleteConfirmOpen(open);
+        }}
+      >
+        <DialogContent showCloseButton={!isDeleting}>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xoá thông số thiết bị</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xoá bản ghi thông số thiết bị này?
+            </DialogDescription>
+          </DialogHeader>
+          {record ? (
+            <div className="rounded border bg-gray-50 p-3 text-sm">
+              <p className="font-medium">{getEquipmentLabel(record)}</p>
+              <p className="mt-1 text-gray-500">
+                Thời điểm ghi nhận: {formatDateTime(record.recorded_at ?? record.created_at)}
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isDeleting}
+              autoFocus
+              onClick={() => setIsDeleteConfirmOpen(false)}
+            >
+              Huỷ
+            </Button>
+            <Button
+              type="button"
+              className="bg-gray-900 text-white hover:bg-black"
+              disabled={isDeleting}
+              aria-busy={isDeleting}
+              onClick={handleDelete}
+            >
+              {isDeleting ? "Đang xoá..." : "Xác nhận xoá"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {error ? (
         <div className="mt-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -759,6 +846,7 @@ export default function FormEquipmentMonitoringRecord({
     data: monitoringRecords = [],
     error: monitoringRecordsError,
     isLoading: isMonitoringRecordsLoading,
+    mutate: mutateMonitoringRecords,
   } = useSWR(monitoringRecordsKey, () =>
     equipmentService.fetchEquipmentMonitoringRecords({
       production_order_id: numericProductionOrderId,
@@ -921,6 +1009,13 @@ export default function FormEquipmentMonitoringRecord({
       <EquipmentMonitoringRecordDetailView
         recordId={selectedMonitoringRecordId}
         onBack={() => setSelectedMonitoringRecordId(null)}
+        onDeleted={async (recordId) => {
+          await mutateMonitoringRecords(
+            (records) => records?.filter((record) => record.id !== recordId),
+            { revalidate: false },
+          );
+          setSelectedMonitoringRecordId(null);
+        }}
       />
     );
   }

@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma.service';
 import { EquipmentMonitoringRecordsService } from './equipment-monitoring-records.service';
@@ -176,6 +176,48 @@ describe('EquipmentMonitoringRecordsService', () => {
         { id: 7 },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('soft deletes a monitoring record while preserving its values and images', async () => {
+    const record = { id: 1, deleted_at: null };
+    prismaService.equipmentMonitoringRecords.findFirst.mockResolvedValue(record);
+    prismaService.equipmentMonitoringRecords.update.mockResolvedValue({
+      ...record,
+      deleted_at: new Date(),
+    });
+
+    const result = await service.delete(1);
+
+    expect(result.deleted_at).toBeInstanceOf(Date);
+    expect(prismaService.equipmentMonitoringRecords.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: { deleted_at: expect.any(Date) },
+      }),
+    );
+    expect(prismaService.equipmentMonitoringValues.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects deleting a missing or already deleted monitoring record', async () => {
+    prismaService.equipmentMonitoringRecords.findFirst.mockResolvedValue(null);
+
+    await expect(service.delete(1)).rejects.toBeInstanceOf(NotFoundException);
+    expect(prismaService.equipmentMonitoringRecords.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 1, deleted_at: null } }),
+    );
+    expect(prismaService.equipmentMonitoringRecords.update).not.toHaveBeenCalled();
+  });
+
+  it('excludes deleted monitoring records from the production order list', async () => {
+    prismaService.equipmentMonitoringRecords.findMany.mockResolvedValue([]);
+
+    await service.findAll({ production_order_id: '1001' });
+
+    expect(prismaService.equipmentMonitoringRecords.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { production_order_id: 1001, deleted_at: null },
+      }),
+    );
   });
 
   it('adds image paths to an active monitoring record', async () => {
