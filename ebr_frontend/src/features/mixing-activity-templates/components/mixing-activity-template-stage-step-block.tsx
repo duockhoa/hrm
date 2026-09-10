@@ -28,7 +28,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { type FormEvent, useMemo, useRef, useState } from "react";
+import { type FormEvent, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import {
@@ -92,6 +92,7 @@ export default function MixingActivityTemplateStageStepBlock({
   onMoveStepUp: () => void;
   onMoveStepDown: () => void;
 }) {
+  const unitOptionsId = useId();
   const [isEditingRow, setIsEditingRow] = useState(false);
   const [editingParameter, setEditingParameter] =
     useState<MixingActivityTemplateStageStepParameter | null>(null);
@@ -555,8 +556,12 @@ export default function MixingActivityTemplateStageStepBlock({
                     </option>
                   ))}
                 </select>
-                <select
+                <Input
                   value={form.unit}
+                  list={unitOptionsId}
+                  maxLength={50}
+                  placeholder="Chọn hoặc nhập đơn vị"
+                  autoComplete="off"
                   disabled={isSubmitting}
                   className="h-8 rounded-sm border border-black bg-white px-2 font-serif text-[15px] outline-none focus:ring-2 focus:ring-blue-500"
                   aria-label="Đơn vị tính"
@@ -566,20 +571,12 @@ export default function MixingActivityTemplateStageStepBlock({
                       unit: event.target.value,
                     }))
                   }
-                >
-                  <option value="">Không có đơn vị</option>
-                  {form.unit &&
-                  !MIXING_ACTIVITY_PARAMETER_UNITS.some(
-                    (unit) => unit === form.unit,
-                  ) ? (
-                    <option value={form.unit}>{form.unit}</option>
-                  ) : null}
+                />
+                <datalist id={unitOptionsId}>
                   {MIXING_ACTIVITY_PARAMETER_UNITS.map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
-                    </option>
+                    <option key={unit} value={unit} />
                   ))}
-                </select>
+                </datalist>
                 <Textarea
                   value={form.requirement}
                   rows={1}
