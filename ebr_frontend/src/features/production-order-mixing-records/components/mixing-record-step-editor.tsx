@@ -455,7 +455,7 @@ export default function MixingRecordStepEditor({
               </td>
               <td className="border border-black p-0 align-middle">
                 <MixingRecordResultInput
-                  key={`${row.parameter.id}-${String(row.parameter.result_value)}`}
+                  key={row.parameter.id}
                   parameter={row.parameter}
                   disabled={parameterEntryDisabled}
                   onSaved={onChanged}
@@ -463,7 +463,7 @@ export default function MixingRecordStepEditor({
               </td>
               <td className="border border-black p-0 align-middle">
                 <MixingRecordNoteInput
-                  key={`${row.parameter.id}-${row.parameter.note ?? ""}`}
+                  key={row.parameter.id}
                   parameter={row.parameter}
                   disabled={parameterEntryDisabled}
                   onSaved={onChanged}

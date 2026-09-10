@@ -23,7 +23,7 @@ export class AuthService {
       username: user.username,
       sub: user.id,
     };
-    const refreshToken = this.jwtService.sign(payload, {
+    const refreshToken = this.jwtService.sign({ ...payload, token_use: 'refresh' }, {
       expiresIn: Number(process.env.JWT_REFRESH_EXPIRES_IN) || 2592000,
     });
     await this.prisma.$transaction(async (tx) => {
@@ -45,7 +45,7 @@ export class AuthService {
         },
       });
     });
-    const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign({ ...payload, token_use: 'access' });
     return {
       accessToken,
       refreshToken,
@@ -54,7 +54,6 @@ export class AuthService {
 
   async refreshToken(refreshTokenDto: any) {
     const { refreshToken } = refreshTokenDto;
-    console.log('Refresh token received:', refreshToken);
     const storedToken = await this.prisma.tokens.findUnique({
       where: { refreshToken },
     });
@@ -71,6 +70,7 @@ export class AuthService {
     const newAccessToken = this.jwtService.sign({
       username: payload.username,
       sub: payload.sub,
+      token_use: 'access',
     });
     console.log("verify successfully")
     return {

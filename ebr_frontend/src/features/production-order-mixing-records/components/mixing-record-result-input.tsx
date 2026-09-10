@@ -40,18 +40,17 @@ export default function MixingRecordResultInput({
   disabled = false,
 }: {
   parameter: ProductionOrderMixingRecordParameter;
-  onSaved: () => void | Promise<unknown>;
+  onSaved: (updated: ProductionOrderMixingRecordParameter) => void | Promise<unknown>;
   disabled?: boolean;
 }) {
-  const [draft, setDraft] = useState(() => toInputValue(parameter));
-  const [booleanDraft, setBooleanDraft] = useState<boolean | null>(() =>
-    toBoolean(parameter.result_value),
-  );
+  const [localDraft, setDraft] = useState<string | undefined>(undefined);
+  const [localBooleanDraft, setBooleanDraft] = useState<boolean | null | undefined>(undefined);
+  const draft = localDraft ?? toInputValue(parameter);
+  const booleanDraft = localBooleanDraft === undefined ? toBoolean(parameter.result_value) : localBooleanDraft;
   const [isSaving, setIsSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const remoteInputValue = toInputValue(parameter);
-  const remoteBooleanValue = toBoolean(parameter.result_value);
 
   const resizeTextarea = () => {
     const textarea = textareaRef.current;
@@ -66,14 +65,14 @@ export default function MixingRecordResultInput({
     if (disabled) return;
     setIsSaving(true);
     try {
-      await productionOrderMixingRecordsService.updateParameterResult(
+      const updated = await productionOrderMixingRecordsService.updateParameterResult(
         parameter.id,
         { result_value: resultValue },
       );
-      await onSaved();
+      await onSaved(updated);
+      setDraft(undefined);
+      setBooleanDraft(undefined);
     } catch (error) {
-      setDraft(remoteInputValue);
-      setBooleanDraft(remoteBooleanValue);
       toast.error(getErrorMessage(error));
     } finally {
       setIsSaving(false);
@@ -94,7 +93,11 @@ export default function MixingRecordResultInput({
           ? Number(remoteInputValue)
           : remoteInputValue;
 
-    if (disabled || normalized === normalizedRemote || isSaving) return;
+    if (disabled || isSaving) return;
+    if (normalized === normalizedRemote) {
+      setDraft(undefined);
+      return;
+    }
     if (typeof normalized === "number" && Number.isNaN(normalized)) {
       toast.error("Giá trị thực tế phải là một số hợp lệ.");
       return;

@@ -17,11 +17,12 @@ export default function MixingRecordNoteInput({
   disabled = false,
 }: {
   parameter: ProductionOrderMixingRecordParameter;
-  onSaved: () => void | Promise<unknown>;
+  onSaved: (updated: ProductionOrderMixingRecordParameter) => void | Promise<unknown>;
   disabled?: boolean;
 }) {
   const remoteNote = parameter.note ?? "";
-  const [draft, setDraft] = useState(remoteNote);
+  const [localDraft, setDraft] = useState<string | undefined>(undefined);
+  const draft = localDraft ?? remoteNote;
   const [isSaving, setIsSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -35,17 +36,21 @@ export default function MixingRecordNoteInput({
   const save = async () => {
     const normalized = draft.trim();
     const normalizedRemote = remoteNote.trim();
-    if (disabled || isSaving || normalized === normalizedRemote) return;
+    if (disabled || isSaving) return;
+    if (normalized === normalizedRemote) {
+      setDraft(undefined);
+      return;
+    }
 
     setIsSaving(true);
     try {
-      await productionOrderMixingRecordsService.updateParameterResult(
+      const updated = await productionOrderMixingRecordsService.updateParameterResult(
         parameter.id,
         { note: normalized || null },
       );
-      await onSaved();
+      await onSaved(updated);
+      setDraft(undefined);
     } catch (error) {
-      setDraft(remoteNote);
       toast.error(getErrorMessage(error));
     } finally {
       setIsSaving(false);

@@ -24,21 +24,7 @@ const refreshClient = axios.create({
   timeout: 360000,
 });
 
-let isRefreshing = false;
-let refreshSubscribers: Array<{
-  resolve: (token: string) => void;
-  reject: (error: unknown) => void;
-}> = [];
-
-const notifyRefreshSuccess = (token: string) => {
-  refreshSubscribers.forEach((subscriber) => subscriber.resolve(token));
-  refreshSubscribers = [];
-};
-
-const notifyRefreshFailure = (error: unknown) => {
-  refreshSubscribers.forEach((subscriber) => subscriber.reject(error));
-  refreshSubscribers = [];
-};
+let refreshPromise: Promise<string> | null = null;
 
 const redirectToLogin = async () => {
   clearTokenCache();
@@ -52,6 +38,36 @@ const redirectToLogin = async () => {
       window.location.replace("/login");
     }
   }
+};
+
+// Share one refresh across REST requests and socket reconnects.
+export const refreshAccessToken = (): Promise<string> => {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const { refreshToken } = getTokenCache();
+      if (!refreshToken) throw new Error("Missing refresh token");
+      const response = await refreshClient.post("/auth/refresh-token", {
+        refreshToken,
+      });
+      const accessToken = response.data?.accessToken;
+      if (typeof accessToken !== "string" || !accessToken)
+        throw new Error("Invalid refresh response");
+      await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken, refreshToken }),
+      });
+      setTokenCache(accessToken, refreshToken);
+      return accessToken;
+    } catch (error) {
+      await redirectToLogin();
+      throw error;
+    }
+  })().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
 };
 
 axiosClient.interceptors.request.use((config) => {
@@ -93,54 +109,10 @@ axiosClient.interceptors.response.use(
 
     originalRequest._retry = true;
 
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        refreshSubscribers.push({
-          resolve: (token) => {
-            originalRequest.headers = originalRequest.headers ?? {};
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            resolve(axiosClient(originalRequest));
-          },
-          reject,
-        });
-      });
-    }
-
-    isRefreshing = true;
-    try {
-      const { refreshToken } = getTokenCache();
-      if (!refreshToken) {
-        throw error;
-      }
-
-      const refreshResponse = await refreshClient.post("/auth/refresh-token", {
-        refreshToken,
-      });
-      const newAccessToken = (refreshResponse.data as { accessToken?: string })
-        ?.accessToken;
-
-      if (!newAccessToken) {
-        throw error;
-      }
-
-      setTokenCache(newAccessToken, refreshToken);
-      await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accessToken: newAccessToken, refreshToken }),
-      });
-
-      notifyRefreshSuccess(newAccessToken);
-      originalRequest.headers = originalRequest.headers ?? {};
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-      return axiosClient(originalRequest);
-    } catch (refreshError) {
-      notifyRefreshFailure(refreshError);
-      await redirectToLogin();
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
-    }
+    const token = await refreshAccessToken();
+    originalRequest.headers = originalRequest.headers ?? {};
+    originalRequest.headers.Authorization = `Bearer ${token}`;
+    return axiosClient(originalRequest);
   },
 );
 

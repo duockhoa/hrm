@@ -81,10 +81,11 @@ describe('AuthService', () => {
 
     expect(jwtService.sign).toHaveBeenNthCalledWith(
       1,
-      { username: 'user@example.com', sub: 1 },
+      { username: 'user@example.com', sub: 1, token_use: 'refresh' },
       { expiresIn: 3888000 },
     );
     expect(jwtService.sign).toHaveBeenNthCalledWith(2, {
+      token_use: 'access',
       username: 'user@example.com',
       sub: 1,
     });
@@ -134,6 +135,7 @@ describe('AuthService', () => {
     });
 
     expect(jwtService.sign).toHaveBeenCalledWith({
+      token_use: 'access',
       username: 'user@example.com',
       sub: 1,
     });

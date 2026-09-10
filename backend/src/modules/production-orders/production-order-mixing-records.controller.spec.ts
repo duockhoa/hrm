@@ -1,3 +1,4 @@
+import { ProductionOrderMixingRecordsGateway } from './production-order-mixing-records.gateway';
 import { RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -14,6 +15,7 @@ describe('ProductionOrderMixingRecordsController permissions', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductionOrderMixingRecordsController],
       providers: [
+        { provide: ProductionOrderMixingRecordsGateway, useValue: {} },
         {
           provide: ProductionOrderMixingRecordsService,
           useValue: {},

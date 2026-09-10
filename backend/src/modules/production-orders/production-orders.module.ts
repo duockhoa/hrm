@@ -1,3 +1,7 @@
+import { JwtModule } from '@nestjs/jwt';
+import { UsersModule } from '../users/users.module';
+import { ProductionOrderMixingRecordsGateway } from './production-order-mixing-records.gateway';
+import { ProductionOrderMixingRecordsEventsInterceptor } from './production-order-mixing-records-events.interceptor';
 import { Module } from '@nestjs/common';
 import { ProductionOrdersService } from './production-orders.service';
 import { ProductionOrdersController } from './production-orders.controller';
@@ -54,7 +58,7 @@ import { ProductionOrderMixingRecordsController } from './production-order-mixin
 import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.module';
 
 @Module({
-  imports: [FeaturesModule, SapB1ConnectorModule],
+  imports: [FeaturesModule, SapB1ConnectorModule, UsersModule, JwtModule.register({})],
   controllers: [
     ProductionOrdersController,
     ProductionOrderMixingRecordsController,
@@ -102,6 +106,8 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
     ProductionOrderProductionGuidesService,
     ProductionOrderAttachmentsService,
     ProductionOrderMixingRecordsService,
+    ProductionOrderMixingRecordsGateway,
+    ProductionOrderMixingRecordsEventsInterceptor,
     WarehouseReleaseExportService,
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,

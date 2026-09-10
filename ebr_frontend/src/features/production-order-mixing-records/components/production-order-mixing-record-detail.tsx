@@ -31,6 +31,7 @@ import {
   getStageSteps,
   getStepParameters,
 } from "../utils";
+import { useMixingRecordSocket } from "../use-mixing-record-socket";
 import MixingRecordResultInput from "./mixing-record-result-input";
 import MixingRecordNoteInput from "./mixing-record-note-input";
 import MixingRecordParameterImageCell from "./mixing-record-parameter-image-cell";
@@ -76,12 +77,30 @@ export default function ProductionOrderMixingRecordDetail({
     () => productionOrderMixingRecordsService.fetchById(recordId),
     {
       fallbackData: initialRecord ?? undefined,
-      refreshInterval: 2_000,
+      refreshInterval: 0,
       revalidateOnFocus: true,
-      keepPreviousData: true,
+      keepPreviousData: false,
     },
   );
 
+  const { connected, requestRefresh } = useMixingRecordSocket(recordId, mutate, () => {
+    toast.info("Phiếu pha chế đã bị xóa hoặc không còn tồn tại.");
+    onClose();
+  });
+  const handleParameterSaved = async (updated: ProductionOrderMixingRecordParameter) => {
+    await mutate((current) => current ? {
+      ...current,
+      stages: current.stages?.map((stage) => ({
+        ...stage,
+        steps: stage.steps?.map((step) => ({
+          ...step,
+          parameters: step.parameters?.map((parameter) => parameter.id === updated.id ? updated : parameter),
+        })),
+      })),
+    } : current, { revalidate: false });
+    // Also resync if this cache write superseded an in-flight remote refresh.
+    await requestRefresh();
+  };
   const record = data ?? initialRecord ?? null;
   const itemCode =
     productionOrder?.item_code ??
@@ -147,7 +166,7 @@ export default function ProductionOrderMixingRecordDetail({
       await productionOrderMixingRecordsService.update(record.id, {
         description: descriptionDraft.trim() || null,
       });
-      await mutate();
+      requestRefresh();
       setIsDescriptionOpen(false);
       toast.success("Đã cập nhật mô tả phiếu pha chế.");
     } catch (updateError) {
@@ -161,6 +180,12 @@ export default function ProductionOrderMixingRecordDetail({
 
   return (
     <section className="w-full max-w-4xl overflow-hidden rounded border bg-white shadow-md">
+      {!connected ? (
+        <div className="flex items-center justify-between gap-2 border-b bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          <span>Chưa kết nối cập nhật trực tiếp.</span>
+          <Button type="button" variant="ghost" size="sm" onClick={requestRefresh}>Làm mới</Button>
+        </div>
+      ) : null}
       <div className="flex items-start gap-2 border-b p-4">
         <Button
           type="button"
@@ -288,7 +313,7 @@ export default function ProductionOrderMixingRecordDetail({
             <MixingRecordStructureEditor
               record={record}
               parameterEntryDisabled={isParameterEntryDisabled}
-              onChanged={() => mutate()}
+              onChanged={requestRefresh}
             />
           ) : (
           <table className="mt-6 w-full table-fixed border-collapse border border-black">
@@ -433,25 +458,25 @@ export default function ProductionOrderMixingRecordDetail({
                           </td>
                           <td className="border border-black p-0 align-middle">
                             <MixingRecordResultInput
-                              key={`${parameter.id}-${String(parameter.result_value)}`}
+                              key={parameter.id}
                               parameter={parameter}
                               disabled={isParameterEntryDisabled}
-                              onSaved={() => mutate()}
+                              onSaved={handleParameterSaved}
                             />
                           </td>
                           <td className="border border-black p-0 align-middle">
                             <MixingRecordNoteInput
-                              key={`${parameter.id}-${parameter.note ?? ""}`}
+                              key={parameter.id}
                               parameter={parameter}
                               disabled={isParameterEntryDisabled}
-                              onSaved={() => mutate()}
+                              onSaved={handleParameterSaved}
                             />
                           </td>
                           <td className="border border-black p-0 align-middle">
                             <MixingRecordParameterImageCell
                               parameter={parameter}
                               readOnly={isParameterEntryDisabled}
-                              onChanged={() => mutate()}
+                              onChanged={requestRefresh}
                             />
                           </td>
                           <td className="break-words border border-black px-2 py-2 text-center align-middle text-sm leading-5">
@@ -471,7 +496,7 @@ export default function ProductionOrderMixingRecordDetail({
             </tbody>
           </table>
 
-          <MixingRecordApprovals record={record} onChanged={() => mutate()} />
+          <MixingRecordApprovals record={record} onChanged={requestRefresh} />
         </div>
       </div>
 

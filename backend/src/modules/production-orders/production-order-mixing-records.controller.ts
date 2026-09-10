@@ -1,3 +1,4 @@
+import { ProductionOrderMixingRecordsEventsInterceptor } from './production-order-mixing-records-events.interceptor';
 import {
   BadRequestException,
   Body,
@@ -40,6 +41,7 @@ import { PRODUCTION_ORDER_MIXING_RECORD_PERMISSIONS } from './production-order-m
 import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 import { ProductionOrderMixingRecordsService } from './production-order-mixing-records.service';
 
+@UseInterceptors(ProductionOrderMixingRecordsEventsInterceptor)
 @UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('production-orders')
 export class ProductionOrderMixingRecordsController {
