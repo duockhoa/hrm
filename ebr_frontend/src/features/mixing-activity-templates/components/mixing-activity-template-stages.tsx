@@ -16,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { API_ROUTES } from "@/lib/api-routes";
 import {
   mixingActivityTemplateStagesService,
 } from "@/services/index.service";
@@ -31,7 +30,8 @@ import {
 } from "lucide-react";
 import { Fragment, type FormEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import useSWR, { useSWRConfig } from "swr";
+import { useTemplateTree } from "./template-tree-context";
+import { applyStageMutation } from "../tree-cache";
 import type {
   MixingActivityTemplateStageMutation,
   MixingActivityTemplateStage,
@@ -43,6 +43,8 @@ type StageFormState = {
   stageName: string;
   stageOrder: string;
 };
+
+const EMPTY_DATA: MixingActivityTemplateStage[] = [];
 
 const getErrorMessage = (error: any, fallback: string) => {
   const message = error?.response?.data?.message ?? error?.message;
@@ -70,13 +72,8 @@ export default function MixingActivityTemplateStages({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionInFlight = useRef(false);
-  const { mutate: mutateCache } = useSWRConfig();
-
-  const stagesRoute = API_ROUTES.items.mixingActivityTemplateStages(templateId);
-  const { data = [], error, isLoading, mutate } = useSWR(stagesRoute, () =>
-    mixingActivityTemplateStagesService.fetchByTemplateId(templateId),
-    { revalidateIfStale: false },
-  );
+  const { template, mutate, error, isLoading } = useTemplateTree();
+  const data = template?.stages ?? EMPTY_DATA;
 
   const stages = useMemo(
     () => [...data].sort((first, second) => first.stage_order - second.stage_order),
@@ -149,21 +146,10 @@ export default function MixingActivityTemplateStages({
   };
 
   const applyMutation = async (result: MixingActivityTemplateStageMutation) => {
-    if (result.steps) {
-      for (const step of result.steps) {
-        await mutateCache(
-          API_ROUTES.items.mixingActivityTemplateStageStepParameters(step.id),
-          step.parameters,
-          { revalidate: false },
-        );
-      }
-      await mutateCache(
-        API_ROUTES.items.mixingActivityTemplateStageSteps(result.id),
-        result.steps,
-        { revalidate: false },
-      );
-    }
-    await mutate(result.siblings, { revalidate: false });
+    await mutate(
+      (current) => current ? applyStageMutation(current, result) : current,
+      { revalidate: false },
+    );
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -526,7 +512,7 @@ export default function MixingActivityTemplateStages({
           type="button"
           className="absolute bottom-0 -left-3 z-10 flex size-6 items-center justify-center rounded-full border border-blue-500 bg-white text-blue-600 opacity-20 shadow-sm transition-[background-color,color,opacity,box-shadow] hover:bg-blue-50 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-10"
           onClick={() => openCreateForm()}
-          disabled={isLoading || isSubmitting || isEditingRow}
+          disabled={!template || isLoading || isSubmitting || isEditingRow}
           title="Thêm giai đoạn pha chế"
           aria-label="Thêm giai đoạn pha chế"
         >

@@ -44,6 +44,7 @@ import type {
   UpdateMixingActivityTemplatePayload,
 } from "../types";
 import { formatBatchSize, getCreatorLabel } from "../utils";
+import { TemplateTreeContext } from "./template-tree-context";
 import MixingActivityTemplateDetail from "./mixing-activity-template-detail";
 
 type TemplateFormState = {
@@ -180,6 +181,7 @@ export default function InlineMixingActivityTemplates({
       ? null
       : API_ROUTES.items.mixingActivityTemplateDetail(selectedTemplateId),
     () => mixingActivityTemplatesService.fetchById(selectedTemplateId!),
+    { revalidateOnFocus: false, revalidateOnReconnect: false },
   );
   const detailTemplate = fetchedDetailTemplate ?? selectedListTemplate;
 
@@ -284,7 +286,22 @@ export default function InlineMixingActivityTemplates({
         }
 
         if (Object.keys(payload).length > 0) {
-          await mixingActivityTemplatesService.update(editingTemplate.id, payload);
+          const updated = await mixingActivityTemplatesService.update(
+            editingTemplate.id,
+            payload,
+          );
+          await mutate(
+            (current) => current?.map((template) =>
+              template.id === updated.id ? updated : template,
+            ),
+            { revalidate: false },
+          );
+          if (selectedTemplateId === updated.id) {
+            await mutateDetail(
+              (current) => current ? { ...current, ...updated } : current,
+              { revalidate: false },
+            );
+          }
           toast.success("Đã cập nhật biểu mẫu theo dõi pha chế.");
         }
       } else if (cloningTemplate) {
@@ -297,15 +314,15 @@ export default function InlineMixingActivityTemplates({
         });
         toast.success("Đã nhân bản biểu mẫu và toàn bộ nội dung pha chế.");
       } else {
-        await mixingActivityTemplatesService.create(itemCode, nextValues);
+        const created = await mixingActivityTemplatesService.create(itemCode, nextValues);
+        await mutate((current) => [created, ...(current ?? [])], {
+          revalidate: false,
+        });
         toast.success("Đã tạo biểu mẫu theo dõi pha chế.");
       }
 
       setFormOpen(false);
       setEditingTemplate(null);
-      if (!cloningTemplate) {
-        await Promise.all([mutate(), editingTemplate ? mutateDetail() : null]);
-      }
     } catch (submitError) {
       toast.error(
         getErrorMessage(
@@ -378,23 +395,33 @@ export default function InlineMixingActivityTemplates({
   return (
     <div className="w-full max-w-4xl pb-24">
       {detailTemplate ? (
-        <MixingActivityTemplateDetail
-          template={detailTemplate}
-          itemCode={itemCode}
-          itemName={itemName}
-          isLoading={isDetailLoading}
-          errorMessage={
-            detailError
-              ? getErrorMessage(
-                  detailError,
-                  "Không thể tải dữ liệu mới nhất của biểu mẫu pha chế.",
-                )
-              : null
-          }
-          onClose={() => setSelectedTemplateId(null)}
-          onEdit={() => openEditForm(detailTemplate)}
-          onDelete={() => setDeletingTemplate(detailTemplate)}
-        />
+        <TemplateTreeContext.Provider
+          key={detailTemplate.id}
+          value={{
+            template: fetchedDetailTemplate,
+            mutate: mutateDetail,
+            isLoading: isDetailLoading,
+            error: detailError,
+          }}
+        >
+          <MixingActivityTemplateDetail
+            template={detailTemplate}
+            itemCode={itemCode}
+            itemName={itemName}
+            isLoading={isDetailLoading}
+            errorMessage={
+              detailError
+                ? getErrorMessage(
+                    detailError,
+                    "Không thể tải dữ liệu mới nhất của biểu mẫu pha chế.",
+                  )
+                : null
+            }
+            onClose={() => setSelectedTemplateId(null)}
+            onEdit={() => openEditForm(detailTemplate)}
+            onDelete={() => setDeletingTemplate(detailTemplate)}
+          />
+        </TemplateTreeContext.Provider>
       ) : (
       <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
         <div className="mb-4 flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">

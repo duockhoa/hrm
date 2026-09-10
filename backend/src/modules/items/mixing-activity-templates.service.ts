@@ -58,11 +58,33 @@ export class MixingActivityTemplatesService {
     });
   }
 
-  async findById(id: number) {
+  async findById(id: number, includeTree = true) {
     const template =
       await this.prismaService.mixingActivityTemplates.findUnique({
         where: { id },
-        include: mixingActivityTemplateInclude,
+        include: {
+          ...mixingActivityTemplateInclude,
+          ...(includeTree
+            ? ({
+                stages: {
+                  orderBy: [{ stage_order: 'asc' }, { id: 'asc' }],
+                  include: {
+                    createdBy: { select: creatorSelect },
+                    steps: {
+                      orderBy: [{ step_order: 'asc' }, { id: 'asc' }],
+                      include: {
+                        createdBy: { select: creatorSelect },
+                        parameters: {
+                          orderBy: [{ parameter_order: 'asc' }, { id: 'asc' }],
+                          include: { createdBy: { select: creatorSelect } },
+                        },
+                      },
+                    },
+                  },
+                },
+              } satisfies Prisma.MixingActivityTemplatesInclude)
+            : {}),
+        },
       });
 
     if (!template) {
@@ -200,7 +222,7 @@ export class MixingActivityTemplatesService {
   }
 
   async update(id: number, dto: UpdateMixingActivityTemplateDto) {
-    await this.findById(id);
+    await this.findById(id, false);
     const data = this.normalizeUpdateData(dto);
 
     return this.prismaService.mixingActivityTemplates.update({
@@ -211,7 +233,7 @@ export class MixingActivityTemplatesService {
   }
 
   async delete(id: number) {
-    await this.findById(id);
+    await this.findById(id, false);
 
     return this.prismaService.mixingActivityTemplates.delete({
       where: { id },

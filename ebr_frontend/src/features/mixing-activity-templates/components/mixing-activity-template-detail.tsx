@@ -52,7 +52,7 @@ export default function MixingActivityTemplateDetail({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-          <Button type="button" variant="outline" onClick={onEdit}>
+          <Button type="button" variant="outline" onClick={onEdit} disabled={isLoading}>
             <Edit2 className="size-4" />
             Sửa
           </Button>

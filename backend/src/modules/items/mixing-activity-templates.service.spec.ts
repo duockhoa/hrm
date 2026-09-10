@@ -6,6 +6,60 @@ import {
 import { PrismaService } from 'src/prisma.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 
+describe('MixingActivityTemplatesService detail loading', () => {
+  const findUnique = jest.fn();
+  const findMany = jest.fn();
+  const update = jest.fn();
+  const service = new MixingActivityTemplatesService({
+    mixingActivityTemplates: { findUnique, findMany, update },
+  } as unknown as PrismaService);
+
+  beforeEach(() => jest.resetAllMocks());
+
+  it('loads the entire ordered tree, including creator details, in the detail query', async () => {
+    const detail = {
+      id: 1,
+      stages: [{ id: 2, steps: [{ id: 3, parameters: [] }] }],
+    };
+    findUnique.mockResolvedValue(detail);
+    expect(await service.findById(1)).toEqual(detail);
+    expect(findUnique).toHaveBeenCalledTimes(1);
+    const query = findUnique.mock.calls[0][0];
+    expect(query.where).toEqual({ id: 1 });
+    const stages = query.include.stages;
+    expect(stages.orderBy).toEqual([{ stage_order: 'asc' }, { id: 'asc' }]);
+    const steps = stages.include.steps;
+    expect(steps.orderBy).toEqual([{ step_order: 'asc' }, { id: 'asc' }]);
+    const parameters = steps.include.parameters;
+    expect(parameters.orderBy).toEqual([
+      { parameter_order: 'asc' },
+      { id: 'asc' },
+    ]);
+    for (const node of [stages, steps, parameters]) {
+      expect(node.include.createdBy.select.name).toBe(true);
+    }
+  });
+
+  it('keeps the template list lightweight', async () => {
+    findMany.mockResolvedValue([]);
+    await service.findAll();
+    expect(findMany.mock.calls[0][0].include.stages).toBeUndefined();
+  });
+
+  it('does not load the tree for a metadata update', async () => {
+    findUnique.mockResolvedValue({ id: 1 });
+    update.mockResolvedValue({ id: 1, description: 'Updated' });
+    await service.update(1, { description: 'Updated' });
+    expect(findUnique.mock.calls[0][0].include.stages).toBeUndefined();
+    expect(update.mock.calls[0][0].include.stages).toBeUndefined();
+  });
+
+  it('rejects a missing template', async () => {
+    findUnique.mockResolvedValue(null);
+    await expect(service.findById(99)).rejects.toThrow(NotFoundException);
+  });
+});
+
 describe('MixingActivityTemplatesService.copyFromTemplate', () => {
   const source = {
     id: 17,

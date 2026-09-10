@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { API_ROUTES } from "@/lib/api-routes";
 import { mixingActivityTemplateStageStepParametersService } from "@/services/index.service";
 import {
   ArrowDown,
@@ -30,7 +29,8 @@ import {
 } from "lucide-react";
 import { type FormEvent, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
+import { useTemplateTree } from "./template-tree-context";
+import { applyParameterMutation } from "../tree-cache";
 import {
   MIXING_ACTIVITY_PARAMETER_DATA_TYPES,
   MIXING_ACTIVITY_PARAMETER_UNITS,
@@ -65,6 +65,8 @@ const DATA_TYPE_LABELS: Record<MixingActivityParameterDataType, string> = {
   datetime: "ngày giờ",
   select: "lựa chọn",
 };
+
+const EMPTY_DATA: MixingActivityTemplateStageStepParameter[] = [];
 
 const getErrorMessage = (error: any, fallback: string) => {
   const message = error?.response?.data?.message ?? error?.message;
@@ -108,12 +110,10 @@ export default function MixingActivityTemplateStageStepBlock({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionInFlight = useRef(false);
 
-  const parametersRoute =
-    API_ROUTES.items.mixingActivityTemplateStageStepParameters(step.id);
-  const { data = [], error, isLoading, mutate } = useSWR(parametersRoute, () =>
-    mixingActivityTemplateStageStepParametersService.fetchByStepId(step.id),
-    { revalidateIfStale: false },
-  );
+  const { template, mutate, error, isLoading } = useTemplateTree();
+  const data = template?.stages
+    .flatMap((stage) => stage.steps)
+    .find((current) => current.id === step.id)?.parameters ?? EMPTY_DATA;
 
   const parameters = useMemo(
     () =>
@@ -204,7 +204,10 @@ export default function MixingActivityTemplateStageStepBlock({
   };
 
   const applyMutation = async (result: MixingActivityTemplateParameterMutation) => {
-    await mutate(result.siblings, { revalidate: false });
+    await mutate(
+      (current) => current ? applyParameterMutation(current, step.id, result) : current,
+      { revalidate: false },
+    );
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

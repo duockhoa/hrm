@@ -159,3 +159,10 @@ export type MixingActivityTemplateStepMutation = TemplateNodeMutationResult<
 export type MixingActivityTemplateStageMutation = TemplateNodeMutationResult<
   MixingActivityTemplateStage
 > & { steps?: MixingActivityTemplateStepTree[] };
+
+export type MixingActivityTemplateStageTree = MixingActivityTemplateStage & {
+  steps: MixingActivityTemplateStepTree[];
+};
+export type MixingActivityTemplateTree = MixingActivityTemplate & {
+  stages: MixingActivityTemplateStageTree[];
+};

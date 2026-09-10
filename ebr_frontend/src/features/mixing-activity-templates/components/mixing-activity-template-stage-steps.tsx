@@ -11,13 +11,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { API_ROUTES } from "@/lib/api-routes";
 import {
   mixingActivityTemplateStageStepsService,
 } from "@/services/index.service";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import useSWR, { useSWRConfig } from "swr";
+import { useTemplateTree } from "./template-tree-context";
+import { applyStepMutation } from "../tree-cache";
 import type {
   MixingActivityTemplateStepMutation,
   MixingActivityTemplateStageStep,
@@ -29,6 +29,8 @@ type StepFormState = {
   stepName: string;
   stepOrder: string;
 };
+
+const EMPTY_DATA: MixingActivityTemplateStageStep[] = [];
 
 const getErrorMessage = (error: any, fallback: string) => {
   const message = error?.response?.data?.message ?? error?.message;
@@ -53,14 +55,10 @@ export default function MixingActivityTemplateStageSteps({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionInFlight = useRef(false);
-  const { mutate: mutateCache } = useSWRConfig();
+  const { template, mutate, error, isLoading } = useTemplateTree();
   const handledCreateRequestId = useRef(0);
-
-  const stepsRoute = API_ROUTES.items.mixingActivityTemplateStageSteps(stageId);
-  const { data = [], error, isLoading, mutate } = useSWR(stepsRoute, () =>
-    mixingActivityTemplateStageStepsService.fetchByStageId(stageId),
-    { revalidateIfStale: false },
-  );
+  const data =
+    template?.stages.find((stage) => stage.id === stageId)?.steps ?? EMPTY_DATA;
 
   const steps = useMemo(
     () => [...data].sort((first, second) => first.step_order - second.step_order),
@@ -130,14 +128,10 @@ export default function MixingActivityTemplateStageSteps({
   };
 
   const applyMutation = async (result: MixingActivityTemplateStepMutation) => {
-    if (result.parameters) {
-      await mutateCache(
-        API_ROUTES.items.mixingActivityTemplateStageStepParameters(result.id),
-        result.parameters,
-        { revalidate: false },
-      );
-    }
-    await mutate(result.siblings, { revalidate: false });
+    await mutate(
+      (current) => current ? applyStepMutation(current, stageId, result) : current,
+      { revalidate: false },
+    );
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

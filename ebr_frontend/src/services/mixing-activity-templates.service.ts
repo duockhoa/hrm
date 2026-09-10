@@ -2,6 +2,7 @@ import type {
   CreateMixingActivityTemplatePayload,
   CopyMixingActivityTemplatePayload,
   MixingActivityTemplate,
+  MixingActivityTemplateTree,
   UpdateMixingActivityTemplatePayload,
 } from "@/features/mixing-activity-templates/types";
 import axiosClient from "@/lib/axios-client";
@@ -25,7 +26,7 @@ const fetchByItemCode = async (
 
 const fetchById = async (
   templateId: string | number,
-): Promise<MixingActivityTemplate> => {
+): Promise<MixingActivityTemplateTree> => {
   const response = await axiosClient.get(
     API_ROUTES.items.mixingActivityTemplateDetail(templateId),
   );
