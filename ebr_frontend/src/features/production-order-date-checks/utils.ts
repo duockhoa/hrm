@@ -5,6 +5,7 @@ const PACKAGE_TYPE_LABELS: Record<string, string> = {
   hop: "Hộp",
   thung: "Thùng",
   ong_be: "Ống bẻ",
+  tui_nhom: "Túi nhôm",
 };
 
 const APPROVAL_STATUS_LABELS: Record<string, string> = {
@@ -20,6 +21,7 @@ const PACKAGE_TYPE_OPTIONS = [
   { value: "hop", label: "Hộp" },
   { value: "thung", label: "Thùng" },
   { value: "ong_be", label: "Ống bẻ" },
+  { value: "tui_nhom", label: "Túi nhôm" },
 ];
 
 const formatDateTime = (value: string | null | undefined) => {
