@@ -3,6 +3,8 @@ import type {
   Items,
   ProductionOrders,
   RegistrationNumbers,
+  ProductionOrderDeviations,
+  Users,
 } from '@prisma/client';
 import Docxtemplater from 'docxtemplater';
 import fs from 'node:fs/promises';
@@ -36,6 +38,9 @@ type ProductionOrderForExport = ProductionOrders & {
         registration?: RegistrationNumbers | null;
       })
     | null;
+  deviations?: (ProductionOrderDeviations & {
+    reporter?: Users;
+  })[];
 };
 
 const normalizeTemplateValue = (value: unknown) => {

@@ -52,7 +52,9 @@ export class ProductionOrderPdfRendererService {
             const footer = section.querySelector<HTMLElement>('.page-footer');
             if (footer) {
               const pageNum = document.createElement('span');
-              pageNum.textContent = `Page ${index + 1} of ${sections.length}`;
+              pageNum.style.flex = '1';
+              pageNum.style.textAlign = 'right';
+              pageNum.textContent = `Trang ${index + 1} / ${sections.length}`;
               footer.appendChild(pageNum);
               footer.style.display = 'flex';
               footer.style.justifyContent = 'space-between';

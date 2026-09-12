@@ -190,10 +190,8 @@
 
     .cover-title {
       font-size: 28pt;
-      font-weight: bold;
       margin-top: 30mm;
       margin-bottom: 20mm;
-      text-transform: uppercase;
     }
 
     .cover-info {
@@ -234,13 +232,13 @@
     <img class="watermark" src="{{watermark_data_uri}}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">{{app_info}}</span>
-      <span style="flex: 1; text-align: center; font-weight: bold;">BATCH PRODUCTION RECORD</span>
+      <span style="flex: 1; text-align: center;">Batch production record</span>
       <span style="flex: 1; text-align: right;">Supports 21 CFR 21 Compliance</span>
     </div>
 
     <div class="cover-page">
       <img class="logo" src="{{logo_data_uri}}" alt="DK Pharma" style="width: 60mm; height: auto;" />
-      <h1 class="cover-title">BATCH PRODUCTION RECORD</h1>
+      <h1 class="cover-title">Báo cáo lô sản xuất</h1>
 
       <table class="cover-info">
         <tr>
@@ -258,7 +256,10 @@
       </table>
     </div>
 
-    <div class="page-footer"><span>Exported by: {{printer_name}} - Exported at: {{print_time}}</span></div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">{{print_time}}</span>
+      <span style="flex: 1; text-align: center;">{{printer_name}}</span>
+    </div>
   </main>
 
   <!-- TRANG 2: LỆNH SẢN XUẤT -->
@@ -266,7 +267,7 @@
     <img class="watermark" src="{{watermark_data_uri}}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">{{app_info}}</span>
-      <span style="flex: 1; text-align: center; font-weight: bold;">BATCH PRODUCTION RECORD</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
       <span style="flex: 1; text-align: right;">Supports 21 CFR 21 Compliance</span>
     </div>
     <table class="document-header" aria-label="Thông tin biểu mẫu">
@@ -361,13 +362,16 @@
         <td class="name">Phạm Văn Giang</td>
       </tr>
     </table>
-    <div class="page-footer"><span>Exported by: {{printer_name}} - Exported at: {{print_time}}</span></div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">{{print_time}}</span>
+      <span style="flex: 1; text-align: center;">{{printer_name}}</span>
+    </div>
   </main>
   <main class="report-page page-break">
     <img class="watermark" src="{{watermark_data_uri}}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">{{app_info}}</span>
-      <span style="flex: 1; text-align: center; font-weight: bold;">BATCH PRODUCTION RECORD</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
       <span style="flex: 1; text-align: right;">Supports 21 CFR 21 Compliance</span>
     </div>
     
@@ -375,7 +379,10 @@
       {{deviations_html}}
     </div>
 
-    <div class="page-footer"><span>Exported by: {{printer_name}} - Exported at: {{print_time}}</span></div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">{{print_time}}</span>
+      <span style="flex: 1; text-align: center;">{{printer_name}}</span>
+    </div>
   </main>
 </body>
 
