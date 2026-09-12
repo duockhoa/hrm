@@ -8,6 +8,8 @@ import Docxtemplater from 'docxtemplater';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import PizZip from 'pizzip';
+import { ProductionOrderPdfRendererService } from './production-order-pdf-renderer.service';
+import { renderProductionOrderReportHtml } from './production-order-report-html';
 
 const DOCX_MIME_TYPE =
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -29,9 +31,11 @@ const SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
 );
 
 type ProductionOrderForExport = ProductionOrders & {
-  item?: (Items & {
-    registration?: RegistrationNumbers | null;
-  }) | null;
+  item?:
+    | (Items & {
+        registration?: RegistrationNumbers | null;
+      })
+    | null;
 };
 
 const normalizeTemplateValue = (value: unknown) => {
@@ -203,10 +207,35 @@ const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
 
 @Injectable()
 export class ProductionOrderExportService {
+  constructor(
+    private readonly pdfRenderer: ProductionOrderPdfRendererService,
+  ) {}
+
+  async exportBatchReport(productionOrder: ProductionOrderForExport) {
+    const html = await renderProductionOrderReportHtml(
+      getTemplateData(productionOrder),
+    );
+    return {
+      buffer: await this.pdfRenderer.render(html),
+      contentType: 'application/pdf',
+      filename: getProductionOrderFilename(productionOrder)
+        .replace(/^Lenh san xuat/, 'Bao cao lo san xuat')
+        .replace(/\.docx$/, '.pdf'),
+    };
+  }
+
   async export(productionOrder: ProductionOrderForExport) {
-    const template = await fs.readFile(
+    return this.renderTemplate(
+      productionOrder,
       getProductionOrderTemplatePath(productionOrder),
     );
+  }
+
+  private async renderTemplate(
+    productionOrder: ProductionOrderForExport,
+    templatePath: string,
+  ) {
+    const template = await fs.readFile(templatePath);
     const zip = new PizZip(template);
     const doc = new Docxtemplater(zip, {
       delimiters: {

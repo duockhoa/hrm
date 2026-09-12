@@ -12,6 +12,7 @@ import { WarehouseReleaseExportService } from './exports/warehouse-release-expor
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderSamplingRecordsService } from './production-order-sampling-records.service';
 import { ProductionOrderDisinfectantPreparationsService } from './production-order-disinfectant-preparations.service';
+import { ProductionOrderPdfRendererService } from './exports/production-order-pdf-renderer.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
 import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
@@ -58,7 +59,12 @@ import { ProductionOrderMixingRecordsController } from './production-order-mixin
 import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.module';
 
 @Module({
-  imports: [FeaturesModule, SapB1ConnectorModule, UsersModule, JwtModule.register({})],
+  imports: [
+    FeaturesModule,
+    SapB1ConnectorModule,
+    UsersModule,
+    JwtModule.register({}),
+  ],
   controllers: [
     ProductionOrdersController,
     ProductionOrderMixingRecordsController,
@@ -112,6 +118,7 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,
     ProductionOrderExportService,
+    ProductionOrderPdfRendererService,
     RolesGuard,
     PermissionsGuard,
     PrismaService,

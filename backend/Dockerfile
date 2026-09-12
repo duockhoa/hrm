@@ -26,11 +26,17 @@ FROM base AS production
 
 WORKDIR /app
 ENV NODE_ENV=production
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
+RUN npx playwright install --with-deps --only-shell chromium \
+  && apt-get install -y --no-install-recommends fonts-liberation fonts-noto-core \
+  && chmod -R a+rX /ms-playwright \
+  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/templates ./templates
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 RUN mkdir uploads && chown -R node:node /app
 

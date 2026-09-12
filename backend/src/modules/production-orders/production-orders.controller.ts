@@ -1,3 +1,4 @@
+import { ApiOperation, ApiProduces, ApiOkResponse } from '@nestjs/swagger';
 import {
   BadRequestException,
   Body,
@@ -2203,6 +2204,37 @@ export class ProductionOrdersController {
       'Content-Type': exportedFile.contentType,
     });
 
+    return new StreamableFile(exportedFile.buffer);
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT)
+  @Get(':id/batch-report/pdf')
+  @ApiOperation({
+    summary: 'Xuất PDF báo cáo lô sản xuất',
+    description:
+      'Hiện chỉ gồm trang lệnh pha chế dựng bằng HTML/CSS riêng cho tất cả mã sản phẩm. Yêu cầu quyền production-orders.export.',
+  })
+  @ApiProduces('application/pdf')
+  @ApiOkResponse({
+    description: 'PDF báo cáo lô, một trang.',
+    schema: { type: 'string', format: 'binary' },
+  })
+  async exportBatchReport(
+    @Param('id', ParseIntPipe) id: number,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const exportedFile =
+      await this.productionOrdersService.exportBatchReport(id);
+    const filenameFallback = getAsciiFilenameFallback(exportedFile.filename);
+    const encodedFilename = encodeContentDispositionFilename(
+      exportedFile.filename,
+    );
+    response.set({
+      'Content-Disposition': `attachment; filename="${filenameFallback}"; filename*=UTF-8''${encodedFilename}`,
+      'Content-Length': exportedFile.buffer.length,
+      'Content-Type': exportedFile.contentType,
+      'Cache-Control': 'private, no-store',
+    });
     return new StreamableFile(exportedFile.buffer);
   }
 

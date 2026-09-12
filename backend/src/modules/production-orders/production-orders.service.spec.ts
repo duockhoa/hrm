@@ -8,6 +8,7 @@ import { WeighingTicketExportService } from './exports/weighing-ticket-export.se
 import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import PizZip from 'pizzip';
+import { ProductionOrderPdfRendererService } from './exports/production-order-pdf-renderer.service';
 import { FeaturesService } from '../features/features.service';
 import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
 import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
@@ -94,6 +95,12 @@ describe('ProductionOrdersService', () => {
         WeighingTicketExportService,
         PostWeighingMaterialCheckExportService,
         ProductionOrderExportService,
+        {
+          provide: ProductionOrderPdfRendererService,
+          useValue: {
+            render: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.7')),
+          },
+        },
         {
           provide: FeaturesService,
           useValue: featuresService,
@@ -583,6 +590,35 @@ describe('ProductionOrdersService', () => {
     expect(documentXml).not.toContain('TGĐ Sản xuất');
     expect(documentXml).not.toContain('{{item_code}}');
   });
+
+  it('returns 404 for a missing batch report order', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue(null);
+    await expect(service.exportBatchReport(999)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it.each(['TP001', 'BTP001'])(
+    'exports a PDF batch report for %s',
+    async (itemCode) => {
+      prismaService.productionOrders.findUnique.mockResolvedValue({
+        id: 1,
+        item_code: itemCode,
+        item: { item_name: 'Dược Khoa' },
+        lot_no: '001',
+        planned_quatity: 100,
+        unit: 'Lọ',
+      });
+      const file = await service.exportBatchReport(1);
+      expect(file.contentType).toBe('application/pdf');
+      expect(file.filename).toBe('Bao cao lo san xuat Dược Khoa 001.pdf');
+      expect(file.buffer.toString()).toBe('%PDF-1.7');
+      expect(prismaService.productionOrders.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+        include: { item: { include: { registration: true } } },
+      });
+    },
+  );
 
   it('exports a semi-finished product production order with the BTP template', async () => {
     const productionOrder = {

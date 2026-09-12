@@ -58,6 +58,7 @@ describe('ProductionOrdersController', () => {
     updateChangeContent: jest.Mock;
     findProductionOrderLines: jest.Mock;
     exportProductionOrder: jest.Mock;
+    exportBatchReport: jest.Mock;
     exportProductionOrderLines: jest.Mock;
     exportWeighingTicket: jest.Mock;
     exportPostWeighingMaterialCheck: jest.Mock;
@@ -383,6 +384,7 @@ describe('ProductionOrdersController', () => {
       updateChangeContent: jest.fn(),
       findProductionOrderLines: jest.fn(),
       exportProductionOrder: jest.fn(),
+      exportBatchReport: jest.fn(),
       exportProductionOrderLines: jest.fn(),
       exportWeighingTicket: jest.fn(),
       exportPostWeighingMaterialCheck: jest.fn(),
@@ -894,9 +896,7 @@ describe('ProductionOrdersController', () => {
       'findSemiFinishedProducts',
       'findAllFinishedProductSummaries',
     ]);
-    const readPostRoutes = new Set([
-      'exportPostWeighingMaterialCheck',
-    ]);
+    const readPostRoutes = new Set(['exportPostWeighingMaterialCheck']);
     const dedicatedPermissionRoutes = new Map([
       [
         'findPostSecondaryPackagingSummaryById',
@@ -1002,9 +1002,16 @@ describe('ProductionOrdersController', () => {
         'deleteSteamSterilizationCheck',
         PRODUCTION_ORDER_PERMISSIONS.STEAM_STERILIZATION_DELETE,
       ],
-      ['createSamplingRequest', PRODUCTION_ORDER_PERMISSIONS.SEND_SAMPLING_REQUEST],
-      ['exportWeighingTicket', PRODUCTION_ORDER_PERMISSIONS.EXPORT_WEIGHING_TICKET],
+      [
+        'createSamplingRequest',
+        PRODUCTION_ORDER_PERMISSIONS.SEND_SAMPLING_REQUEST,
+      ],
+      [
+        'exportWeighingTicket',
+        PRODUCTION_ORDER_PERMISSIONS.EXPORT_WEIGHING_TICKET,
+      ],
       ['exportProductionOrder', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
+      ['exportBatchReport', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
       [
         'exportProductionOrderLines',
         PRODUCTION_ORDER_PERMISSIONS.EXPORT_WAREHOUSE_RELEASE,
@@ -1149,6 +1156,29 @@ describe('ProductionOrdersController', () => {
       'Content-Type':
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
+    expect(result).toBeInstanceOf(StreamableFile);
+  });
+
+  it('returns the batch report as a private PDF attachment', async () => {
+    const buffer = Buffer.from('%PDF-1.7');
+    productionOrdersService.exportBatchReport.mockResolvedValue({
+      buffer,
+      contentType: 'application/pdf',
+      filename: 'Bao cao lo san xuat Dược Khoa 001.pdf',
+    });
+    const response = { set: jest.fn() } as unknown as Response;
+    const result = await controller.exportBatchReport(1, response);
+    expect(productionOrdersService.exportBatchReport).toHaveBeenCalledWith(1);
+    expect(response.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        'Content-Type': 'application/pdf',
+        'Content-Length': buffer.length,
+        'Cache-Control': 'private, no-store',
+        'Content-Disposition': expect.stringContaining(
+          "filename*=UTF-8''Bao%20cao%20lo%20san%20xuat%20D%C6%B0%E1%BB%A3c%20Khoa%20001.pdf",
+        ),
+      }),
+    );
     expect(result).toBeInstanceOf(StreamableFile);
   });
 

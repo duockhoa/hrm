@@ -397,6 +397,18 @@ export class ProductionOrdersService {
   }
 
   async exportProductionOrder(id: number) {
+    return this.productionOrderExportService.export(
+      await this.findProductionOrderForExport(id),
+    );
+  }
+
+  async exportBatchReport(id: number) {
+    return this.productionOrderExportService.exportBatchReport(
+      await this.findProductionOrderForExport(id),
+    );
+  }
+
+  private async findProductionOrderForExport(id: number) {
     const productionOrder =
       await this.prismaService.productionOrders.findUnique({
         where: {
@@ -415,7 +427,7 @@ export class ProductionOrdersService {
       throw new NotFoundException('Production order not found');
     }
 
-    return this.productionOrderExportService.export(productionOrder);
+    return productionOrder;
   }
 
   async exportProductionOrderLines(

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Lệnh sản xuất - {{lot_no}}</title>
+    <style>
+      @page {
+        size: Letter;
+        margin: 0;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        color: #000;
+        background: #fff;
+      }
+      body {
+        font-family: 'Times New Roman', 'Liberation Serif', 'Noto Serif', serif;
+        font-size: 12pt;
+        line-height: 1.2;
+      }
+      .report-page {
+        width: 215.9mm;
+        min-height: 279.4mm;
+        padding: 12.7mm;
+      }
+      .document-header {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+      .document-header td {
+        border: 0.5pt solid #000;
+        padding: 1mm 2mm;
+        vertical-align: middle;
+      }
+      .logo-cell {
+        width: 43mm;
+        text-align: center;
+      }
+      .logo {
+        display: block;
+        width: 35mm;
+        height: 16mm;
+        object-fit: contain;
+        margin: auto;
+      }
+      .title-cell {
+        text-align: center;
+      }
+      h1 {
+        font-size: 18pt;
+        line-height: 1.1;
+        margin: 0;
+      }
+      .subtitle {
+        font-size: 16pt;
+        font-weight: bold;
+        margin: 0;
+      }
+      .document-meta {
+        width: 44mm;
+        font-size: 10.5pt;
+        line-height: 1.1;
+      }
+      .details {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin-top: 4mm;
+      }
+      .details td {
+        padding: 2mm;
+        vertical-align: top;
+      }
+      .label {
+        font-weight: normal;
+      }
+      .value {
+        font-weight: bold;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .notes {
+        min-height: 19mm;
+      }
+      .signatures {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin-top: 5mm;
+        text-align: center;
+      }
+      .signatures td {
+        padding: 1mm;
+        vertical-align: top;
+      }
+      .date {
+        font-weight: normal;
+        white-space: nowrap;
+        font-size: 11pt;
+      }
+      .role,
+      .name {
+        font-weight: bold;
+        margin: 0;
+      }
+      .signature-space {
+        height: 29mm;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="report-page">
+      <table class="document-header" aria-label="Thông tin biểu mẫu">
+        <tr>
+          <td class="logo-cell" rowspan="3">
+            <img class="logo" src="{{logo_data_uri}}" alt="DK Pharma" />
+          </td>
+          <td class="title-cell" rowspan="3">
+            <h1>LỆNH SẢN XUẤT</h1>
+            <p class="subtitle">(Lệnh pha chế)</p>
+          </td>
+          <td class="document-meta">Mã số: BMSX010.01</td>
+        </tr>
+        <tr>
+          <td class="document-meta">Ngày ban hành: 30/05/2019</td>
+        </tr>
+        <tr>
+          <td class="document-meta">Lần ban hành: 02</td>
+        </tr>
+      </table>
+
+      <table class="details" aria-label="Thông tin lệnh sản xuất">
+        <colgroup>
+          <col style="width: 23%" />
+          <col style="width: 27%" />
+          <col style="width: 18%" />
+          <col style="width: 32%" />
+        </colgroup>
+        <tr>
+          <td class="label">Mã sản phẩm:</td>
+          <td class="value">{{item_code}}</td>
+          <td class="label">Tên sản phẩm:</td>
+          <td class="value">{{item_name}}</td>
+        </tr>
+        <tr>
+          <td class="label">Mã lệnh:</td>
+          <td class="value" colspan="3">{{production_order_code}}</td>
+        </tr>
+        <tr>
+          <td class="label">Số lô:</td>
+          <td class="value">{{lot_no}}</td>
+          <td class="label">Cỡ lô:</td>
+          <td class="value">{{batch_size}}</td>
+        </tr>
+        <tr>
+          <td class="label">Ngày pha chế:</td>
+          <td colspan="3">……………………………</td>
+        </tr>
+        <tr>
+          <td class="label">Ngày sản xuất:</td>
+          <td class="value">{{date_manufacture}}</td>
+          <td class="label">Hạn dùng:</td>
+          <td class="value">{{expire_date}}</td>
+        </tr>
+        <tr>
+          <td class="label">Quy cách đóng gói:</td>
+          <td class="value" colspan="3">{{packing_specification}}</td>
+        </tr>
+        <tr>
+          <td class="label">Số đăng ký:</td>
+          <td class="value" colspan="3">{{registration_number}}</td>
+        </tr>
+        <tr>
+          <td class="label">Định mức tham chiếu:</td>
+          <td colspan="3"></td>
+        </tr>
+        <tr>
+          <td class="label">Ghi chú (nếu có):</td>
+          <td class="value notes" colspan="3">{{remarks}}</td>
+        </tr>
+      </table>
+
+      <table class="signatures" aria-label="Phần ký xác nhận">
+        <tr>
+          <td></td>
+          <td></td>
+          <td class="date">Ngày…..tháng…….năm 20…...</td>
+        </tr>
+        <tr>
+          <td class="role">TP Kế Hoạch Kho Vận</td>
+          <td class="role">TP Đảm Bảo Chất Lượng</td>
+          <td class="role">PGĐ Sản xuất</td>
+        </tr>
+        <tr>
+          <td class="signature-space"></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="name">Lê Thị Giang</td>
+          <td class="name">Quách Ngọc Luyến</td>
+          <td class="name">Phạm Văn Giang</td>
+        </tr>
+      </table>
+    </main>
+  </body>
+</html>
