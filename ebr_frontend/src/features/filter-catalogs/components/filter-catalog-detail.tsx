@@ -64,9 +64,11 @@ const FilterUsageHistoryRow = memo(function FilterUsageHistoryRow({
 export default function FilterCatalogDetail({
   id,
   onClose,
+  showCloseButton = true,
 }: {
   id: string | number;
   onClose: () => void;
+  showCloseButton?: boolean;
 }) {
   const { data, error } = useSWR<FilterCatalog>(
     API_ROUTES.filterCatalogs.detail(id),
@@ -76,7 +78,11 @@ export default function FilterCatalogDetail({
   if (error) {
     return (
       <div className="w-full max-w-5xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Chi tiết cột lọc" onClose={onClose} />
+        <DetailPanelHeader
+          title="Chi tiết cột lọc"
+          onClose={onClose}
+          showCloseButton={showCloseButton}
+        />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy danh mục cột lọc.
         </div>
@@ -115,6 +121,7 @@ export default function FilterCatalogDetail({
         title={`Cột lọc ${data.filter_code}`}
         subtitle={data.filter_type}
         onClose={onClose}
+        showCloseButton={showCloseButton}
       />
       <div className="mt-4 flex flex-col gap-4">
         {fields.map((field) => (

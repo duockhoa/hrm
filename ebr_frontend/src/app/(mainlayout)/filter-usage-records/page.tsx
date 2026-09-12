@@ -296,6 +296,7 @@ export default function FilterUsageRecordsPage() {
         <FilterCatalogDetail
           id={selectedFilterCatalogId}
           onClose={() => setSelectedFilterCatalogId(null)}
+          showCloseButton={false}
         />
       </div>
     </div>
