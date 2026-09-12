@@ -219,12 +219,14 @@ export class ProductionOrderExportService {
       dateStyle: 'short',
       timeStyle: 'short',
     }).format(new Date());
-    const printerName = user?.full_name || user?.username || user?.name || '';
+    const printerName = user?.name || user?.full_name || user?.username || '';
+    const appInfo = `${process.env.APP_NAME || 'EBR System'} - ${process.env.APP_VERSION || 'v1.0.0'}`;
     
     const html = await renderProductionOrderReportHtml({
       ...getTemplateData(productionOrder),
       print_time: printTime,
       printer_name: printerName,
+      app_info: appInfo,
     });
     return {
       buffer: await this.pdfRenderer.render(html),
