@@ -207,6 +207,24 @@
     .cover-info td {
       padding: 5mm;
     }
+    
+    .deviations-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 5mm;
+      table-layout: fixed;
+    }
+    .deviations-table th, .deviations-table td {
+      border: 0.5pt solid #000;
+      padding: 1.5mm;
+      vertical-align: top;
+      word-wrap: break-word;
+    }
+    .deviations-table th {
+      text-align: center;
+      background-color: #f1f5f9;
+      font-weight: bold;
+    }
   </style>
 </head>
 
@@ -352,6 +370,11 @@
       <span style="flex: 1; text-align: center; font-weight: bold;">BATCH PRODUCTION RECORD</span>
       <span style="flex: 1; text-align: right;">Supports 21 CFR 21 Compliance</span>
     </div>
+    
+    <div style="padding-top: 5mm;">
+      {{deviations_html}}
+    </div>
+
     <div class="page-footer"><span>Exported by: {{printer_name}} - Exported at: {{print_time}}</span></div>
   </main>
 </body>
