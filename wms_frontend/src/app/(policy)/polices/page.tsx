@@ -20,7 +20,7 @@ export default function PoliciesPage() {
               1. Mục đích thu thập dữ liệu
             </h2>
             <p className="mt-2">
-              Hệ thống Hồ sơ lô thu thập và xử lý dữ liệu nhằm phục vụ việc
+              Hệ thống Kho Dược Khoa thu thập và xử lý dữ liệu nhằm phục vụ việc
               quản lý lệnh sản xuất, bán thành phẩm, thành phẩm, nguyên liệu,
               phiếu kiểm tra trong quá trình sản xuất và các nghiệp vụ nội bộ
               liên quan.

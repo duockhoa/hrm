@@ -37,7 +37,7 @@ export default function Header() {
           height={60}
           className="p-4"
         />
-        <h1 className="text-xl hidden md:block">HỒ SƠ LÔ</h1>
+        <h1 className="text-xl hidden md:block">Kho Dược Khoa</h1>
       </div>
 
       <div className="flex items-center gap-4">

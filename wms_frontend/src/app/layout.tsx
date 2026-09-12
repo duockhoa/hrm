@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HỒ SƠ LÔ",
+  title: "Kho Dược Khoa",
   description:
     "Một ứng dụng dược phát triển bởi phòng đảm bao chất lượng công ty cổ phần Dược Khoa.",
   icons: {
