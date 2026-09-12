@@ -2222,9 +2222,10 @@ export class ProductionOrdersController {
   async exportBatchReport(
     @Param('id', ParseIntPipe) id: number,
     @Res({ passthrough: true }) response: Response,
+    @Request() req: any,
   ) {
     const exportedFile =
-      await this.productionOrdersService.exportBatchReport(id);
+      await this.productionOrdersService.exportBatchReport(id, req.user);
     const filenameFallback = getAsciiFilenameFallback(exportedFile.filename);
     const encodedFilename = encodeContentDispositionFilename(
       exportedFile.filename,

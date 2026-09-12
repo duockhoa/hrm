@@ -211,10 +211,21 @@ export class ProductionOrderExportService {
     private readonly pdfRenderer: ProductionOrderPdfRendererService,
   ) {}
 
-  async exportBatchReport(productionOrder: ProductionOrderForExport) {
-    const html = await renderProductionOrderReportHtml(
-      getTemplateData(productionOrder),
-    );
+  async exportBatchReport(
+    productionOrder: ProductionOrderForExport,
+    user?: any,
+  ) {
+    const printTime = new Intl.DateTimeFormat('vi-VN', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(new Date());
+    const printerName = user?.full_name || user?.username || user?.name || '';
+    
+    const html = await renderProductionOrderReportHtml({
+      ...getTemplateData(productionOrder),
+      print_time: printTime,
+      printer_name: printerName,
+    });
     return {
       buffer: await this.pdfRenderer.render(html),
       contentType: 'application/pdf',

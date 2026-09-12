@@ -44,32 +44,35 @@ export class ProductionOrderPdfRendererService {
             Array.from(document.images).map((image) => image.decode()),
           );
           const sections =
-            document.querySelectorAll<HTMLElement>('.report-page');
-          if (sections.length !== 1) return null;
-          const section = sections[0];
-          const bounds = section.getBoundingClientRect();
-          const styles = getComputedStyle(section);
-          const maxHeight = parseFloat(styles.minHeight);
-          if (!Number.isFinite(maxHeight) || maxHeight <= 0) return null;
-          const bottom =
-            bounds.top + maxHeight - parseFloat(styles.paddingBottom);
-          const overflows =
-            bounds.height > maxHeight + 1 ||
-            Array.from(section.querySelectorAll('table, td, p, img')).some(
-              (element) => {
-                const rect = element.getBoundingClientRect();
-                return (
-                  rect.bottom > bottom + 1 ||
-                  rect.right > bounds.right + 1 ||
-                  rect.left < bounds.left - 1
-                );
-              },
-            );
+            Array.from(document.querySelectorAll<HTMLElement>('.report-page'));
+          if (sections.length === 0) return null;
+          let overflows = false;
+          for (const section of sections) {
+            const bounds = section.getBoundingClientRect();
+            const styles = getComputedStyle(section);
+            const maxHeight = parseFloat(styles.minHeight);
+            if (!Number.isFinite(maxHeight) || maxHeight <= 0) return null;
+            const bottom =
+              bounds.top + maxHeight - parseFloat(styles.paddingBottom);
+            const sectionOverflows =
+              bounds.height > maxHeight + 1 ||
+              Array.from(section.querySelectorAll('table, td, p, img')).some(
+                (element) => {
+                  const rect = element.getBoundingClientRect();
+                  return (
+                    rect.bottom > bottom + 1 ||
+                    rect.right > bounds.right + 1 ||
+                    rect.left < bounds.left - 1
+                  );
+                },
+              );
+            if (sectionOverflows) overflows = true;
+          }
           return { overflows };
         });
         if (!layout || layout.overflows) {
           throw new UnprocessableEntityException(
-            'Nội dung lệnh sản xuất vượt quá một trang. Vui lòng kiểm tra độ dài dữ liệu hoặc mẫu xuất.',
+            'Nội dung lệnh sản xuất bị tràn trang. Vui lòng kiểm tra độ dài dữ liệu hoặc mẫu xuất.',
           );
         }
         return page.pdf({ printBackground: true, preferCSSPageSize: true });

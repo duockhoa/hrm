@@ -402,9 +402,10 @@ export class ProductionOrdersService {
     );
   }
 
-  async exportBatchReport(id: number) {
+  async exportBatchReport(id: number, user?: any) {
     return this.productionOrderExportService.exportBatchReport(
       await this.findProductionOrderForExport(id),
+      user,
     );
   }
 

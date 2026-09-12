@@ -7,7 +7,7 @@
       @import url('https://fonts.cdnfonts.com/css/times-new-roman');
 
       @page {
-        size: Letter;
+        size: A4;
         margin: 0;
       }
       * {
@@ -28,9 +28,25 @@
         line-height: 1.2;
       }
       .report-page {
-        width: 215.9mm;
-        min-height: 279.4mm;
+        width: 210mm;
+        min-height: 297mm;
         padding: 12.7mm;
+        position: relative;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      .page-header {
+        position: absolute;
+        top: 5mm;
+        right: 12.7mm;
+        font-size: 10pt;
+      }
+      .page-footer {
+        position: absolute;
+        bottom: 5mm;
+        left: 12.7mm;
+        font-size: 10pt;
       }
       .document-header {
         width: 100%;
@@ -120,6 +136,7 @@
   </head>
   <body>
     <main class="report-page">
+      <div class="page-header">Người in: {{printer_name}}</div>
       <table class="document-header" aria-label="Thông tin biểu mẫu">
         <tr>
           <td class="logo-cell" rowspan="3">
@@ -212,6 +229,11 @@
           <td class="name">Phạm Văn Giang</td>
         </tr>
       </table>
+      <div class="page-footer">Thời điểm in: {{print_time}}</div>
+    </main>
+    <main class="report-page page-break">
+      <div class="page-header">Người in: {{printer_name}}</div>
+      <div class="page-footer">Thời điểm in: {{print_time}}</div>
     </main>
   </body>
 </html>
