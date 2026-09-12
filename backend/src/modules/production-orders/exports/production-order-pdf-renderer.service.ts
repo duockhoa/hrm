@@ -27,8 +27,14 @@ export class ProductionOrderPdfRendererService {
       browser = await chromium.launch({ headless: true, timeout: 60_000 });
       const page = await browser.newPage({ javaScriptEnabled: false });
       page.setDefaultTimeout(60_000);
-      // No URLs from document contents may access the network or local files.
-      await page.route('**/*', (route) => route.abort());
+      // No URLs from document contents may access the network or local files, except for web fonts.
+      await page.route('**/*', (route) => {
+        const url = route.request().url();
+        if (url.startsWith('https://fonts.cdnfonts.com/')) {
+          return route.continue();
+        }
+        return route.abort();
+      });
       const task = async () => {
         await page.emulateMedia({ media: 'print' });
         await page.setContent(html, { waitUntil: 'load' });
