@@ -2474,6 +2474,14 @@ const exportProductionOrder = async (id: string | number) => {
   return response;
 };
 
+const exportProductionOrderBatchReportPDF = async (id: string | number) => {
+  const response = await axiosClient.get(
+    `${API_ROUTES.productionOrders.base}/${id}/batch-report/pdf`,
+    { responseType: "blob" },
+  );
+  return response;
+};
+
 const productOrdersService = {
   fetchProductionOrders,
   fetchFinishedProducts,
@@ -2704,6 +2712,7 @@ const productOrdersService = {
   exportWeighingTicket,
   exportPostWeighingMaterialCheck,
   exportProductionOrder,
+  exportProductionOrderBatchReportPDF,
 };
 
 export default productOrdersService;

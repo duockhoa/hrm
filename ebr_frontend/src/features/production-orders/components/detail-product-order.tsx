@@ -276,6 +276,59 @@ function ProductOrderDetailSkeleton() {
   );
 }
 
+function ExportBatchReportPDFButton({
+  productionOrderId,
+}: {
+  productionOrderId?: string | number | null;
+}) {
+  const [isExporting, setIsExporting] = React.useState(false);
+
+  const handleExport = async () => {
+    if (!productionOrderId) {
+      toast.error("Không tìm thấy mã lệnh sản xuất");
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      const response =
+        await productionOrdersService.exportProductionOrderBatchReportPDF(
+          productionOrderId,
+        );
+      const fileName =
+        getFileNameFromContentDisposition(
+          response.headers["content-disposition"],
+        ) ?? `batch-report-${productionOrderId}.pdf`;
+
+      downloadBlob(response.data, fileName);
+      toast.success("Xuất báo cáo lô thành công");
+    } catch {
+      toast.error("Xuất báo cáo lô thất bại");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <div className="inline-flex flex-col items-center p-0.5 md:p-1">
+      <button
+        type="button"
+        title="Xuất báo cáo lô (PDF)"
+        disabled={isExporting}
+        onClick={handleExport}
+        className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-red-500 px-3 py-2 text-center text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
+      >
+        {isExporting ? <Loader2 className="animate-spin" /> : <FileDown />}
+      </button>
+      <div className="w-[68px] md:w-[90px]">
+        <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+          Xuất báo cáo lô (PDF)
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function ExportProductionOrderButton({
   productionOrderId,
 }: {
@@ -797,9 +850,14 @@ export default function ProductOrderDetail({
             "export_production_order",
             "production-orders.export",
           ) && (
-            <ExportProductionOrderButton
-              productionOrderId={productionOrderId}
-            />
+            <>
+              <ExportProductionOrderButton
+                productionOrderId={productionOrderId}
+              />
+              <ExportBatchReportPDFButton
+                productionOrderId={productionOrderId}
+              />
+            </>
           )}
           <ProductionOrderDocumentControlActions
             productionOrderId={productionOrderId}

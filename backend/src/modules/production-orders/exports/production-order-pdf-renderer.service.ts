@@ -24,9 +24,9 @@ export class ProductionOrderPdfRendererService {
     let browser: Browser | undefined;
     let timer: NodeJS.Timeout | undefined;
     try {
-      browser = await chromium.launch({ headless: true, timeout: 15_000 });
+      browser = await chromium.launch({ headless: true, timeout: 60_000 });
       const page = await browser.newPage({ javaScriptEnabled: false });
-      page.setDefaultTimeout(15_000);
+      page.setDefaultTimeout(60_000);
       // No URLs from document contents may access the network or local files.
       await page.route('**/*', (route) => route.abort());
       const task = async () => {
