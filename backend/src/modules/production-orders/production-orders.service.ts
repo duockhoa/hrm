@@ -421,6 +421,11 @@ export class ProductionOrdersService {
               registration: true,
             },
           },
+          deviations: {
+            include: {
+              reporter: true,
+            },
+          },
         },
       });
 

@@ -222,11 +222,52 @@ export class ProductionOrderExportService {
     const printerName = user?.name || user?.full_name || user?.username || '';
     const appInfo = `${process.env.APP_NAME || 'EBR System'} - ${process.env.APP_VERSION || 'v1.0.0'}`;
     
+    let deviationsHtml = '';
+    if (productionOrder.deviations && productionOrder.deviations.length > 0) {
+      deviationsHtml = `
+        <h2 style="text-align: center; margin-top: 10mm; text-transform: uppercase;">CÁC SAI LỆCH TRONG QUÁ TRÌNH SẢN XUẤT</h2>
+        <table class="deviations-table">
+          <thead>
+            <tr>
+              <th style="width: 5%;">STT</th>
+              <th style="width: 25%;">Nội dung sai lệch</th>
+              <th style="width: 20%;">Nguyên nhân</th>
+              <th style="width: 20%;">Phương án xử lý</th>
+              <th style="width: 15%;">Kết quả xử lý</th>
+              <th style="width: 15%;">Người báo cáo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${productionOrder.deviations
+              .map(
+                (dev, idx) => `
+              <tr>
+                <td style="text-align: center;">${idx + 1}</td>
+                <td style="white-space: pre-wrap;">${dev.deviation_content || ''}</td>
+                <td style="white-space: pre-wrap;">${dev.cause || ''}</td>
+                <td style="white-space: pre-wrap;">${dev.handling_plan || ''}</td>
+                <td style="white-space: pre-wrap;">${dev.handling_result || ''}</td>
+                <td style="text-align: center;">${dev.reporter?.name || dev.reporter?.username || ''}</td>
+              </tr>
+            `,
+              )
+              .join('')}
+          </tbody>
+        </table>
+      `;
+    } else {
+      deviationsHtml = `
+        <h2 style="text-align: center; margin-top: 10mm; text-transform: uppercase;">CÁC SAI LỆCH TRONG QUÁ TRÌNH SẢN XUẤT</h2>
+        <p style="text-align: center; font-style: italic; margin-top: 10mm;">(Không có sai lệch nào được ghi nhận)</p>
+      `;
+    }
+
     const html = await renderProductionOrderReportHtml({
       ...getTemplateData(productionOrder),
       print_time: printTime,
       printer_name: printerName,
       app_info: appInfo,
+      deviations_html: deviationsHtml,
     });
     return {
       buffer: await this.pdfRenderer.render(html),

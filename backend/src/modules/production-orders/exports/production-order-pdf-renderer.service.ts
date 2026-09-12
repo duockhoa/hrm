@@ -46,6 +46,20 @@ export class ProductionOrderPdfRendererService {
           const sections =
             Array.from(document.querySelectorAll<HTMLElement>('.report-page'));
           if (sections.length === 0) return null;
+          
+          // Inject dynamic page numbers
+          sections.forEach((section, index) => {
+            const footer = section.querySelector<HTMLElement>('.page-footer');
+            if (footer) {
+              const pageNum = document.createElement('span');
+              pageNum.textContent = `Page ${index + 1} of ${sections.length}`;
+              footer.appendChild(pageNum);
+              footer.style.display = 'flex';
+              footer.style.justifyContent = 'space-between';
+              footer.style.width = 'calc(100% - 25.4mm)';
+            }
+          });
+
           let overflows = false;
           for (const section of sections) {
             const bounds = section.getBoundingClientRect();
