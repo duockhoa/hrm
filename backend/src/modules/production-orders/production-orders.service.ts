@@ -448,6 +448,11 @@ export class ProductionOrdersService {
         },
         include: {
           ...productionOrderFindInclude,
+          registrationNumber: {
+            include: {
+              registration: true,
+            },
+          },
           deviations: {
             include: {
               reporter: true,
@@ -458,6 +463,16 @@ export class ProductionOrdersService {
 
     if (!productionOrder) {
       throw new NotFoundException('Production order not found');
+    }
+
+    if (!productionOrder.item && productionOrder.item_code) {
+      const item = await this.prismaService.items.findUnique({
+        where: { item_code: productionOrder.item_code },
+        include: { registration: true },
+      });
+      if (item) {
+        (productionOrder as any).item = item;
+      }
     }
 
     return this.addPyclmInfo(productionOrder);

@@ -283,6 +283,20 @@ const getProductionOrderTemplatePath = (
     ? FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH
     : SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH;
 
+const getRegistrationNumber = (productionOrder: ProductionOrderForExport) => {
+  const itemReg = productionOrder.item?.registration?.registration_number?.trim();
+  const itemDk = (productionOrder.item as any)?.dk_code?.trim();
+  const poReg =
+    (productionOrder as any).registrationNumber?.registration_number?.trim() ||
+    (productionOrder as any).registrationNumber?.registration?.registration_number?.trim();
+
+  const reg = itemReg || poReg;
+  if (reg && itemDk && reg !== itemDk && !reg.includes(itemDk) && !itemDk.includes(reg)) {
+    return `${reg} (${itemDk})`;
+  }
+  return reg || itemDk || '';
+};
+
 const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
   item_code: normalizeTemplateValue(productionOrder.item_code),
   item_name: normalizeTemplateValue(productionOrder.item?.item_name),
@@ -297,7 +311,7 @@ const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
     productionOrder.packing_specification,
   ),
   registration_number: normalizeTemplateValue(
-    productionOrder.item?.registration?.registration_number,
+    getRegistrationNumber(productionOrder),
   ),
   remarks: normalizeTemplateValue(productionOrder.remarks),
   status: normalizeTemplateValue(productionOrder.status),
