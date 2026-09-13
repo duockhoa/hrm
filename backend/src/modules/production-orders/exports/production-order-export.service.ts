@@ -315,6 +315,213 @@ const getDosageForm = (productionOrder: ProductionOrderForExport) => {
   return spec?.dosageForm?.name || spec?.dosage_form || '';
 };
 
+const formatLimitWithOp = (
+  val: unknown,
+  unit?: string | null,
+  op?: string | null,
+) => {
+  if (val === null || val === undefined || val === '') return '';
+  const numStr = Number(val);
+  const formattedVal = Number.isNaN(numStr)
+    ? String(val)
+    : numStr.toLocaleString('vi-VN');
+  return [op, formattedVal, unit].filter(Boolean).join(' ');
+};
+
+const formatLimitRange = (
+  lowerVal: unknown,
+  lowerOp: string | null | undefined,
+  upperVal: unknown,
+  upperOp: string | null | undefined,
+  unit?: string | null,
+) => {
+  const lowerStr = formatLimitWithOp(lowerVal, unit, lowerOp);
+  const upperStr = formatLimitWithOp(upperVal, unit, upperOp);
+  if (lowerStr && upperStr) {
+    if (lowerStr === upperStr) return lowerStr;
+    return `${lowerStr} – ${upperStr}`;
+  }
+  return lowerStr || upperStr || '—';
+};
+
+const buildSpecificationsTableHtml = (
+  productionOrder: ProductionOrderForExport,
+) => {
+  const spec =
+    (productionOrder.item as any)?.productionSpecification ||
+    (productionOrder as any)?.productionSpecification;
+
+  if (!spec) {
+    return '';
+  }
+
+  const rows: { name: string; control: string; allowed: string }[] = [];
+
+  // 1. Thể tích / Khối lượng đóng gói (Giới hạn chung)
+  const generalControl = formatLimitRange(
+    spec.lower_control_limit,
+    spec.lower_control_limit_operator,
+    spec.upper_control_limit,
+    spec.upper_control_limit_operator,
+    spec.unit,
+  );
+  const generalAllowed = formatLimitRange(
+    spec.lower_allowed_limit,
+    spec.lower_allowed_limit_operator,
+    spec.upper_allowed_limit,
+    spec.upper_allowed_limit_operator,
+    spec.unit,
+  );
+  if (generalControl !== '—' || generalAllowed !== '—') {
+    rows.push({
+      name: 'Giới hạn đóng gói (Thể tích / Khối lượng)',
+      control: generalControl,
+      allowed: generalAllowed,
+    });
+  }
+
+  // 2. Số liều xịt
+  const sprayControl = formatLimitRange(
+    spec.spray_dose_lower_control_limit,
+    '>=',
+    spec.spray_dose_upper_control_limit,
+    '<=',
+    'liều',
+  );
+  const sprayAllowed = formatLimitRange(
+    spec.spray_dose_lower_allowed_limit,
+    '>=',
+    spec.spray_dose_upper_allowed_limit,
+    '<=',
+    'liều',
+  );
+  if (sprayControl !== '—' || sprayAllowed !== '—') {
+    rows.push({
+      name: 'Số liều xịt',
+      control: sprayControl,
+      allowed: sprayAllowed,
+    });
+  }
+
+  // 3. Khối lượng viên nén bao phim
+  const tabletWeightUnit = spec.film_coated_tablet_weight_unit || 'mg';
+  const tabletWeightControl = formatLimitRange(
+    spec.film_coated_tablet_weight_lower_control_limit,
+    null,
+    spec.film_coated_tablet_weight_upper_control_limit,
+    null,
+    tabletWeightUnit,
+  );
+  const tabletWeightAllowed = formatLimitRange(
+    spec.film_coated_tablet_weight_lower_allowed_limit,
+    null,
+    spec.film_coated_tablet_weight_upper_allowed_limit,
+    null,
+    tabletWeightUnit,
+  );
+  if (tabletWeightControl !== '—' || tabletWeightAllowed !== '—') {
+    rows.push({
+      name: 'Khối lượng viên nén bao phim',
+      control: tabletWeightControl,
+      allowed: tabletWeightAllowed,
+    });
+  }
+
+  // 4. Độ cứng viên
+  const hardnessUnit = spec.hardness_unit || 'N';
+  const hardnessControl = formatLimitRange(
+    spec.hardness_lower_control_limit,
+    null,
+    spec.hardness_upper_control_limit,
+    null,
+    hardnessUnit,
+  );
+  const hardnessAllowed = formatLimitRange(
+    spec.hardness_lower_allowed_limit,
+    null,
+    spec.hardness_upper_allowed_limit,
+    null,
+    hardnessUnit,
+  );
+  if (hardnessControl !== '—' || hardnessAllowed !== '—') {
+    rows.push({
+      name: 'Độ cứng viên',
+      control: hardnessControl,
+      allowed: hardnessAllowed,
+    });
+  }
+
+  // 5. Độ dày viên
+  const thicknessUnit = spec.tablet_thickness_unit || 'mm';
+  const thicknessControl = formatLimitWithOp(
+    spec.tablet_thickness_control_limit,
+    thicknessUnit,
+  );
+  const thicknessAllowed = formatLimitWithOp(
+    spec.tablet_thickness_allowed_limit,
+    thicknessUnit,
+  );
+  if (thicknessControl || thicknessAllowed) {
+    rows.push({
+      name: 'Độ dày viên',
+      control: thicknessControl || '—',
+      allowed: thicknessAllowed || '—',
+    });
+  }
+
+  // 6. Thời gian rã
+  const disintegrationUnit = spec.disintegration_time_unit || 'phút';
+  const disintegrationControl = formatLimitWithOp(
+    spec.disintegration_time_control_limit,
+    disintegrationUnit,
+  );
+  const disintegrationAllowed = formatLimitWithOp(
+    spec.disintegration_time_allowed_limit,
+    disintegrationUnit,
+  );
+  if (disintegrationControl || disintegrationAllowed) {
+    rows.push({
+      name: 'Thời gian rã',
+      control: disintegrationControl || '—',
+      allowed: disintegrationAllowed || '—',
+    });
+  }
+
+  if (rows.length === 0) {
+    return '';
+  }
+
+  const trs = rows
+    .map(
+      (r) => `
+        <tr>
+          <td class="spec-label">${r.name}</td>
+          <td class="spec-value">${r.control}</td>
+          <td class="spec-value">${r.allowed}</td>
+        </tr>`,
+    )
+    .join('');
+
+  return `
+    <div style="margin-top: 4mm;">
+      <h3 style="font-size: 11pt; font-weight: bold; margin-bottom: 2mm; text-transform: uppercase; color: #000;">
+        Tiêu chuẩn kỹ thuật kiểm soát chất lượng (IPC)
+      </h3>
+      <table class="batch-spec-table">
+        <thead>
+          <tr>
+            <th style="width: 40%; text-align: left;">Chỉ tiêu kiểm tra</th>
+            <th style="width: 30%; text-align: left;">Giới hạn kiểm soát</th>
+            <th style="width: 30%; text-align: left;">Giới hạn cho phép</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${trs}
+        </tbody>
+      </table>
+    </div>`;
+};
+
 const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
   item_code: normalizeTemplateValue(productionOrder.item_code),
   item_name: normalizeTemplateValue(productionOrder.item?.item_name),
@@ -500,9 +707,10 @@ export class ProductionOrderExportService {
           docControl?.test_certificate_received_at,
           docControl?.testCertificateReceivedBy,
         ),
+        specifications_table_html: buildSpecificationsTableHtml(productionOrder),
         deviations_html: linesHtml,
       },
-      ['deviations_html', 'pyclm_status_html'],
+      ['deviations_html', 'pyclm_status_html', 'specifications_table_html'],
     );
     return {
       buffer: await this.pdfRenderer.render(html),

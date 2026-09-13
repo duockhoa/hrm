@@ -263,6 +263,31 @@
     .batch-info-table .info-value {
       color: #000;
     }
+    .batch-spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5pt;
+      margin-top: 1.5mm;
+    }
+    .batch-spec-table th,
+    .batch-spec-table td {
+      border: 0.5pt solid #000;
+      padding: 1.2mm 2.5mm;
+      vertical-align: middle;
+    }
+    .batch-spec-table th {
+      background-color: #f8fafc;
+      font-weight: bold;
+      color: #000;
+    }
+    .batch-spec-table .spec-label {
+      font-weight: bold;
+      color: #000;
+      background-color: #f8fafc;
+    }
+    .batch-spec-table .spec-value {
+      color: #000;
+    }
   </style>
 </head>
 
@@ -410,6 +435,8 @@
           <td class="info-value">{{doc_test_certificate_received}}</td>
         </tr>
       </table>
+
+      {{specifications_table_html}}
     </div>
 
     <div class="page-footer">

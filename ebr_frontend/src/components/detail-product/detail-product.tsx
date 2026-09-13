@@ -131,6 +131,14 @@ const buildFilmCoatedTabletWeightRequirement = (
   return [controlRange, allowedRange].filter(Boolean).join("\n");
 };
 
+const formatPairRange = (lowerValue?: string, upperValue?: string) => {
+  if (lowerValue && upperValue) {
+    if (lowerValue === upperValue) return lowerValue;
+    return `${lowerValue} – ${upperValue}`;
+  }
+  return lowerValue || upperValue || "—";
+};
+
 function ProductDosageFormField({
   dosageFormId,
   dosageFormName,
@@ -225,152 +233,180 @@ export default function ProductDetail({
               lable="Dòng sản phẩm"
               value={formatValue(productLineValue)}
             />
-            <FieldDisplay
-              lable="Giới hạn kiểm soát dưới"
-              value={formatSpecificationLimit(
-                productionSpecification.lower_control_limit,
-                productionSpecification.unit,
-                productionSpecification.lower_control_limit_operator,
-              )}
-            />
-            <FieldDisplay
-              lable="Giới hạn kiểm soát trên"
-              value={formatSpecificationLimit(
-                productionSpecification.upper_control_limit,
-                productionSpecification.unit,
-                productionSpecification.upper_control_limit_operator,
-              )}
-            />
-            <FieldDisplay
-              lable="Giới hạn cho phép dưới"
-              value={formatSpecificationLimit(
-                productionSpecification.lower_allowed_limit,
-                productionSpecification.unit,
-                productionSpecification.lower_allowed_limit_operator,
-              )}
-            />
-            <FieldDisplay
-              lable="Giới hạn cho phép trên"
-              value={formatSpecificationLimit(
-                productionSpecification.upper_allowed_limit,
-                productionSpecification.unit,
-                productionSpecification.upper_allowed_limit_operator,
-              )}
-            />
-            <FieldDisplay
-              lable="Số liều xịt kiểm soát dưới"
-              value={formatSprayDoseLimit(
-                productionSpecification.spray_dose_lower_control_limit,
-              )}
-            />
-            <FieldDisplay
-              lable="Số liều xịt kiểm soát trên"
-              value={formatSprayDoseLimit(
-                productionSpecification.spray_dose_upper_control_limit,
-              )}
-            />
-            <FieldDisplay
-              lable="Số liều xịt cho phép dưới"
-              value={formatSprayDoseLimit(
-                productionSpecification.spray_dose_lower_allowed_limit,
-              )}
-            />
-            <FieldDisplay
-              lable="Số liều xịt cho phép trên"
-              value={formatSprayDoseLimit(
-                productionSpecification.spray_dose_upper_allowed_limit,
-              )}
-            />
-            <FieldDisplay
-              lable="Khối lượng viên nén bao phim kiểm soát dưới"
-              value={formatFilmCoatedTabletWeightLimit(
-                productionSpecification.film_coated_tablet_weight_lower_control_limit,
-                productionSpecification.film_coated_tablet_weight_unit,
-              )}
-            />
-            <FieldDisplay
-              lable="Khối lượng viên nén bao phim kiểm soát trên"
-              value={formatFilmCoatedTabletWeightLimit(
-                productionSpecification.film_coated_tablet_weight_upper_control_limit,
-                productionSpecification.film_coated_tablet_weight_unit,
-              )}
-            />
-            <FieldDisplay
-              lable="Khối lượng viên nén bao phim cho phép dưới"
-              value={formatFilmCoatedTabletWeightLimit(
-                productionSpecification.film_coated_tablet_weight_lower_allowed_limit,
-                productionSpecification.film_coated_tablet_weight_unit,
-              )}
-            />
-            <FieldDisplay
-              lable="Khối lượng viên nén bao phim cho phép trên"
-              value={formatFilmCoatedTabletWeightLimit(
-                productionSpecification.film_coated_tablet_weight_upper_allowed_limit,
-                productionSpecification.film_coated_tablet_weight_unit,
-              )}
-            />
-            <FieldDisplay
-              lable="Yêu cầu khối lượng viên nén bao phim"
-              value={buildFilmCoatedTabletWeightRequirement(
-                productionSpecification,
-              )}
-            />
-            <FieldDisplay
-              lable="Độ cứng kiểm soát dưới"
-              value={formatHardnessLimit(
-                productionSpecification.hardness_lower_control_limit,
-                productionSpecification.hardness_unit,
-              )}
-            />
-            <FieldDisplay
-              lable="Độ cứng kiểm soát trên"
-              value={formatHardnessLimit(
-                productionSpecification.hardness_upper_control_limit,
-                productionSpecification.hardness_unit,
-              )}
-            />
-            <FieldDisplay
-              lable="Độ cứng cho phép dưới"
-              value={formatHardnessLimit(
-                productionSpecification.hardness_lower_allowed_limit,
-                productionSpecification.hardness_unit,
-              )}
-            />
-            <FieldDisplay
-              lable="Độ cứng cho phép trên"
-              value={formatHardnessLimit(
-                productionSpecification.hardness_upper_allowed_limit,
-                productionSpecification.hardness_unit,
-              )}
-            />
-            <FieldDisplay
-              lable="Độ dày kiểm soát"
-              value={formatSpecificationLimit(
-                productionSpecification.tablet_thickness_control_limit,
-                productionSpecification.tablet_thickness_unit || "mm",
-              )}
-            />
-            <FieldDisplay
-              lable="Độ dày cho phép"
-              value={formatSpecificationLimit(
-                productionSpecification.tablet_thickness_allowed_limit,
-                productionSpecification.tablet_thickness_unit || "mm",
-              )}
-            />
-            <FieldDisplay
-              lable="Thời gian rã kiểm soát"
-              value={formatSpecificationLimit(
-                productionSpecification.disintegration_time_control_limit,
-                productionSpecification.disintegration_time_unit || "phút",
-              )}
-            />
-            <FieldDisplay
-              lable="Thời gian rã cho phép"
-              value={formatSpecificationLimit(
-                productionSpecification.disintegration_time_allowed_limit,
-                productionSpecification.disintegration_time_unit || "phút",
-              )}
-            />
+
+            <div className="mt-2 overflow-x-auto rounded-lg border border-gray-200">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700">
+                    <th className="border-b border-gray-200 px-4 py-2.5 font-semibold">
+                      Chỉ tiêu kiểm tra
+                    </th>
+                    <th className="border-b border-gray-200 px-4 py-2.5 font-semibold">
+                      Giới hạn kiểm soát
+                    </th>
+                    <th className="border-b border-gray-200 px-4 py-2.5 font-semibold">
+                      Giới hạn cho phép
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {(() => {
+                    const specRows = [
+                      {
+                        name: "Giới hạn đóng gói (Thể tích / Khối lượng)",
+                        control: formatPairRange(
+                          formatSpecificationLimit(
+                            productionSpecification.lower_control_limit,
+                            productionSpecification.unit,
+                            productionSpecification.lower_control_limit_operator,
+                          ),
+                          formatSpecificationLimit(
+                            productionSpecification.upper_control_limit,
+                            productionSpecification.unit,
+                            productionSpecification.upper_control_limit_operator,
+                          ),
+                        ),
+                        allowed: formatPairRange(
+                          formatSpecificationLimit(
+                            productionSpecification.lower_allowed_limit,
+                            productionSpecification.unit,
+                            productionSpecification.lower_allowed_limit_operator,
+                          ),
+                          formatSpecificationLimit(
+                            productionSpecification.upper_allowed_limit,
+                            productionSpecification.unit,
+                            productionSpecification.upper_allowed_limit_operator,
+                          ),
+                        ),
+                      },
+                      {
+                        name: "Số liều xịt",
+                        control: formatPairRange(
+                          formatSprayDoseLimit(
+                            productionSpecification.spray_dose_lower_control_limit,
+                          ),
+                          formatSprayDoseLimit(
+                            productionSpecification.spray_dose_upper_control_limit,
+                          ),
+                        ),
+                        allowed: formatPairRange(
+                          formatSprayDoseLimit(
+                            productionSpecification.spray_dose_lower_allowed_limit,
+                          ),
+                          formatSprayDoseLimit(
+                            productionSpecification.spray_dose_upper_allowed_limit,
+                          ),
+                        ),
+                      },
+                      {
+                        name: "Khối lượng viên nén bao phim",
+                        control: formatPairRange(
+                          formatFilmCoatedTabletWeightLimit(
+                            productionSpecification.film_coated_tablet_weight_lower_control_limit,
+                            productionSpecification.film_coated_tablet_weight_unit,
+                          ),
+                          formatFilmCoatedTabletWeightLimit(
+                            productionSpecification.film_coated_tablet_weight_upper_control_limit,
+                            productionSpecification.film_coated_tablet_weight_unit,
+                          ),
+                        ),
+                        allowed: formatPairRange(
+                          formatFilmCoatedTabletWeightLimit(
+                            productionSpecification.film_coated_tablet_weight_lower_allowed_limit,
+                            productionSpecification.film_coated_tablet_weight_unit,
+                          ),
+                          formatFilmCoatedTabletWeightLimit(
+                            productionSpecification.film_coated_tablet_weight_upper_allowed_limit,
+                            productionSpecification.film_coated_tablet_weight_unit,
+                          ),
+                        ),
+                      },
+                      {
+                        name: "Độ cứng viên",
+                        control: formatPairRange(
+                          formatHardnessLimit(
+                            productionSpecification.hardness_lower_control_limit,
+                            productionSpecification.hardness_unit,
+                          ),
+                          formatHardnessLimit(
+                            productionSpecification.hardness_upper_control_limit,
+                            productionSpecification.hardness_unit,
+                          ),
+                        ),
+                        allowed: formatPairRange(
+                          formatHardnessLimit(
+                            productionSpecification.hardness_lower_allowed_limit,
+                            productionSpecification.hardness_unit,
+                          ),
+                          formatHardnessLimit(
+                            productionSpecification.hardness_upper_allowed_limit,
+                            productionSpecification.hardness_unit,
+                          ),
+                        ),
+                      },
+                      {
+                        name: "Độ dày viên",
+                        control:
+                          formatSpecificationLimit(
+                            productionSpecification.tablet_thickness_control_limit,
+                            productionSpecification.tablet_thickness_unit || "mm",
+                          ) || "—",
+                        allowed:
+                          formatSpecificationLimit(
+                            productionSpecification.tablet_thickness_allowed_limit,
+                            productionSpecification.tablet_thickness_unit || "mm",
+                          ) || "—",
+                      },
+                      {
+                        name: "Thời gian rã",
+                        control:
+                          formatSpecificationLimit(
+                            productionSpecification.disintegration_time_control_limit,
+                            productionSpecification.disintegration_time_unit ||
+                              "phút",
+                          ) || "—",
+                        allowed:
+                          formatSpecificationLimit(
+                            productionSpecification.disintegration_time_allowed_limit,
+                            productionSpecification.disintegration_time_unit ||
+                              "phút",
+                          ) || "—",
+                      },
+                    ];
+
+                    const activeSpecRows = specRows.filter(
+                      (row) => row.control !== "—" || row.allowed !== "—",
+                    );
+
+                    return activeSpecRows.length > 0 ? (
+                      activeSpecRows.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="bg-slate-50/50 px-4 py-2 font-medium text-gray-900">
+                            {row.name}
+                          </td>
+                          <td className="px-4 py-2 text-gray-700">
+                            {row.control}
+                          </td>
+                          <td className="px-4 py-2 text-gray-700">
+                            {row.allowed}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-4 py-4 text-center italic text-gray-500"
+                        >
+                          Chưa thiết lập tiêu chuẩn kỹ thuật
+                        </td>
+                      </tr>
+                    );
+                  })()}
+                </tbody>
+              </table>
+            </div>
+
             {updatedBy ? (
               <FieldDisplay lable="Cập nhật bởi" value={updatedBy} />
             ) : null}
