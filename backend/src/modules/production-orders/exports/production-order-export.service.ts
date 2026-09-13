@@ -40,7 +40,8 @@ type ProductionOrderForExport = ProductionOrders & {
       })
     | null;
   deviations?: (ProductionOrderDeviations & {
-    reporter?: Users;
+    reporter?: Users | null;
+    approver?: Users | null;
   })[];
   documentControl?: any;
   pyclm?: any;
@@ -596,9 +597,9 @@ export class ProductionOrderExportService {
     const tableHead = `
       <thead>
         <tr>
-          <th style="width: 12%;">Giai đoạn</th>
+          <th style="width: 10%;">Giai đoạn</th>
           <th style="width: 11%;">Mã hàng</th>
-          <th style="width: 25%;">Tên hàng</th>
+          <th style="width: 27%;">Tên hàng</th>
           <th style="width: 14%;">Số lô</th>
           <th style="width: 9%;">Hạn dùng</th>
           <th style="width: 8%;">Kho</th>
@@ -620,8 +621,8 @@ export class ProductionOrderExportService {
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
       <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
     </div>
-    <div style="margin-top: 3mm; margin-bottom: 3mm;">
-      <h2 style="text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 4mm; text-transform: uppercase; color: #000;">
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">
         Thông tin phiếu xuất kho${totalPages > 1 && pageIndex > 0 ? ' (tiếp theo)' : ''}
       </h2>
       <table class="deviations-table">${tableHead}<tbody>${rowsHtml}</tbody></table>
@@ -632,7 +633,8 @@ export class ProductionOrderExportService {
     </div>
   </main>`;
 
-    const MAX_ROWS_PER_PAGE = 15;
+    const SINGLE_PAGE_MAX_ROWS = 22;
+    const MULTI_PAGE_MAX_ROWS = 20;
     let linesHtml = '';
 
     if (lines && lines.length > 0) {
@@ -653,16 +655,21 @@ export class ProductionOrderExportService {
       });
 
       const totalRows = allRows.length;
-      const totalPages = Math.max(1, Math.ceil(totalRows / MAX_ROWS_PER_PAGE));
-      const rowsPerPage = Math.ceil(totalRows / totalPages);
 
-      for (let i = 0; i < totalRows; i += rowsPerPage) {
-        const chunk = allRows.slice(i, i + rowsPerPage).join('');
-        linesHtml += buildPageSection(
-          chunk,
-          Math.floor(i / rowsPerPage),
-          totalPages,
-        );
+      if (totalRows <= SINGLE_PAGE_MAX_ROWS) {
+        linesHtml = buildPageSection(allRows.join(''), 0, 1);
+      } else {
+        const totalPages = Math.ceil(totalRows / MULTI_PAGE_MAX_ROWS);
+        const rowsPerPage = Math.ceil(totalRows / totalPages);
+
+        for (let i = 0; i < totalRows; i += rowsPerPage) {
+          const chunk = allRows.slice(i, i + rowsPerPage).join('');
+          linesHtml += buildPageSection(
+            chunk,
+            Math.floor(i / rowsPerPage),
+            totalPages,
+          );
+        }
       }
     } else {
       linesHtml = `
@@ -687,6 +694,125 @@ export class ProductionOrderExportService {
     </div>
   </main>`;
     }
+
+    const buildDeviationsHtml = () => {
+      const deviations = (productionOrder as any).deviations ?? [];
+
+      if (!deviations || deviations.length === 0) {
+        return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">
+        Thông tin sai lệch
+      </h2>
+      <div style="margin-top: 15mm; text-align: center;">
+        <p style="font-size: 11pt; font-style: italic; color: #475569;">
+          (Không có sai lệch nào phát sinh trong quá trình sản xuất lô này)
+        </p>
+      </div>
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+      }
+
+      const rows = deviations
+        .map((dev: any, index: number) => {
+          const time = formatDisplayDateTime(dev.created_at);
+          const reporterName = esc(dev.reporter?.name ?? dev.reporter?.username ?? '');
+          const approverName = esc(dev.approver?.name ?? dev.approver?.username ?? '');
+
+          let quantityHtml = '';
+          if (dev.affected_quantity !== null && dev.affected_quantity !== undefined && dev.affected_quantity !== '') {
+            quantityHtml += `<div><span style="color: #64748b;">Ảnh hưởng:</span> <b>${formatNum(dev.affected_quantity)}</b> ${esc(dev.affected_quantity_unit ?? '')}</div>`;
+          }
+          if (dev.handled_quantity !== null && dev.handled_quantity !== undefined && dev.handled_quantity !== '') {
+            quantityHtml += `<div><span style="color: #64748b;">Đã xử lý:</span> <b>${formatNum(dev.handled_quantity)}</b> ${esc(dev.handled_quantity_unit ?? '')}</div>`;
+          }
+          if (dev.destroyed_quantity !== null && dev.destroyed_quantity !== undefined && dev.destroyed_quantity !== '') {
+            quantityHtml += `<div><span style="color: #dc2626;">Đã hủy:</span> <b>${formatNum(dev.destroyed_quantity)}</b> ${esc(dev.destroyed_quantity_unit ?? '')}</div>`;
+          }
+
+          const causeClassification = dev.cause_classification
+            ? `<div style="font-size: 8pt; color: #64748b; font-style: italic; margin-bottom: 1mm;">[${esc(dev.cause_classification)}]</div>`
+            : '';
+          const causeContent = dev.cause ? esc(dev.cause) : (dev.cause_classification ? '' : '—');
+
+          const handlingPlan = dev.handling_plan
+            ? `<div><span style="font-weight: bold;">PA:</span> ${esc(dev.handling_plan)}</div>`
+            : '';
+          const handlingResult = dev.handling_result
+            ? `<div style="margin-top: 1mm;"><span style="font-weight: bold;">KQ:</span> ${esc(dev.handling_result)}</div>`
+            : '';
+          const handlingCombined = handlingPlan || handlingResult ? `${handlingPlan}${handlingResult}` : '—';
+
+          const personnelHtml =
+            `<div><span style="color: #64748b;">Báo cáo:</span> ${reporterName || '—'}</div>` +
+            (approverName
+              ? `<div style="margin-top: 1mm;"><span style="color: #166534;">Duyệt:</span> ${approverName}</div>`
+              : `<div style="margin-top: 1mm; color: #94a3b8; font-style: italic;">Chưa duyệt</div>`);
+
+          return `<tr>
+          <td style="text-align: center; vertical-align: middle;">${index + 1}</td>
+          <td style="text-align: center; vertical-align: middle; font-size: 8.5pt;">${time}</td>
+          <td style="vertical-align: top; white-space: normal; word-wrap: break-word;">
+            <div style="font-weight: bold; margin-bottom: 1mm;">${esc(dev.deviation_content ?? '')}</div>
+            ${quantityHtml ? `<div style="font-size: 8pt; margin-top: 1.5mm; border-top: 0.5pt dashed #cbd5e1; padding-top: 1mm;">${quantityHtml}</div>` : ''}
+          </td>
+          <td style="vertical-align: top; white-space: normal; word-wrap: break-word;">
+            ${causeClassification}
+            <div>${causeContent}</div>
+          </td>
+          <td style="vertical-align: top; white-space: normal; word-wrap: break-word;">
+            ${handlingCombined}
+          </td>
+          <td style="vertical-align: top; font-size: 8.5pt;">
+            ${personnelHtml}
+          </td>
+        </tr>`;
+        })
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">
+        Thông tin sai lệch
+      </h2>
+      <table class="deviations-table">
+        <thead>
+          <tr>
+            <th style="width: 5%;">STT</th>
+            <th style="width: 12%;">Thời gian</th>
+            <th style="width: 28%;">Nội dung sai lệch</th>
+            <th style="width: 18%;">Nguyên nhân</th>
+            <th style="width: 23%;">Phương án & Kết quả xử lý</th>
+            <th style="width: 14%;">Nhân sự</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
 
     const isPyclmSent = Boolean((productionOrder as any).pyclm?.isSent);
     const pyclmStatusHtml = `<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${
@@ -728,9 +854,15 @@ export class ProductionOrderExportService {
           docControl?.testCertificateReceivedBy,
         ),
         specifications_table_html: buildSpecificationsTableHtml(productionOrder),
-        deviations_html: linesHtml,
+        warehouse_release_html: linesHtml,
+        deviations_html: buildDeviationsHtml(),
       },
-      ['deviations_html', 'pyclm_status_html', 'specifications_table_html'],
+      [
+        'warehouse_release_html',
+        'deviations_html',
+        'pyclm_status_html',
+        'specifications_table_html',
+      ],
     );
     return {
       buffer: await this.pdfRenderer.render(html),

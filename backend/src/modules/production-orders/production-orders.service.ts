@@ -460,8 +460,15 @@ export class ProductionOrdersService {
             },
           },
           deviations: {
+            where: {
+              deleted_at: null,
+            },
             include: {
               reporter: true,
+              approver: true,
+            },
+            orderBy: {
+              created_at: 'asc',
             },
           },
         },
