@@ -28,9 +28,7 @@ import type { CreateSemiFinishedNetWeightCheckPayload } from "../../types";
 import {
   OPTIONAL_SEMI_FINISHED_NET_WEIGHT_KEYS,
   SEMI_FINISHED_NET_WEIGHT_KEYS,
-  buildTubeSolutionMassRequirement,
-  buildVialSolutionMassRequirement,
-  buildVialWeightRequirement,
+  calculateVialMassRequirement,
   getAverageShellWeight,
   getLatestDensityValue,
   normalizeDecimalText,
@@ -127,21 +125,19 @@ export default function FormProductionOrderVialSolutionMassCheck({
   );
   const density = getLatestDensityValue(densityChecks);
   const averageShellWeight = getAverageShellWeight(shellWeightChecks);
-  const requirementValue = isVialWeightCheck
-    ? buildVialWeightRequirement(
-        item?.productionSpecification ?? item,
-        density,
-        averageShellWeight,
-      )
-    : checkType === "tube"
-      ? buildTubeSolutionMassRequirement(
-          item?.productionSpecification ?? item,
-          density,
-        )
-      : buildVialSolutionMassRequirement(
-          item?.productionSpecification ?? item,
-          density,
-        );
+  const calculatedRequirement = calculateVialMassRequirement(
+    item?.productionSpecification ?? item,
+    density,
+    {
+      title: isVialWeightCheck
+        ? "lọ"
+        : checkType === "tube"
+          ? "dịch trong tuýp"
+          : "dịch trong lọ",
+      averageShellWeight: isVialWeightCheck ? averageShellWeight : 0,
+    },
+  );
+  const requirementValue = calculatedRequirement.requirement;
   const weightChecksKey = productionOrderId
     ? isVialWeightCheck
       ? API_ROUTES.productionOrders.semiFinishedGrossWeightChecks(
@@ -178,6 +174,8 @@ export default function FormProductionOrderVialSolutionMassCheck({
     try {
       if (isVialWeightCheck) {
         const payload: CreateSemiFinishedGrossWeightCheckPayload = {
+          lower_limit: calculatedRequirement.lower_limit,
+          upper_limit: calculatedRequirement.upper_limit,
           dosage_form_stage: "Lọ",
           unit: "g",
           unit_1_gross_weight: normalizeDecimalText(values.unit_1_net_weight),
@@ -202,6 +200,8 @@ export default function FormProductionOrderVialSolutionMassCheck({
         );
       } else {
         const payload: CreateSemiFinishedNetWeightCheckPayload = {
+          lower_limit: calculatedRequirement.lower_limit,
+          upper_limit: calculatedRequirement.upper_limit,
           dosage_form_stage: checkType === "tube" ? "Tuýp" : "Lọ dịch",
           unit: "g",
           unit_1_net_weight: normalizeDecimalText(values.unit_1_net_weight),

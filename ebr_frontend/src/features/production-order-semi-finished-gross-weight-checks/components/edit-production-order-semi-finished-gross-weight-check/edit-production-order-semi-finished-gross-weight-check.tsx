@@ -1,5 +1,6 @@
 "use client";
 
+import { storedControlLimits } from "@/lib/check-control-limits";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -123,6 +124,7 @@ export default function EditProductionOrderSemiFinishedGrossWeightCheckForm({
     }
 
     const payload: UpdateSemiFinishedGrossWeightCheckPayload = {
+      ...storedControlLimits(data),
       requirement: values.requirement.trim(),
       dosage_form_stage: values.dosage_form_stage.trim() || null,
       unit_1_gross_weight: normalizeDecimalText(values.unit_1_gross_weight),

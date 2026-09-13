@@ -1,5 +1,6 @@
 "use client";
 
+import type { CalculatedCheckRequirement } from "@/lib/check-control-limits";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -24,7 +25,7 @@ import type { CreateSemiFinishedNetWeightCheckPayload } from "../../types";
 import {
   OPTIONAL_SEMI_FINISHED_NET_WEIGHT_KEYS,
   SEMI_FINISHED_NET_WEIGHT_KEYS,
-  buildSemiFinishedNetWeightRequirement,
+  calculateSemiFinishedNetWeightRequirement,
   hasProductionSpecificationLimits,
   normalizeDecimalText,
   toNumber,
@@ -95,7 +96,7 @@ export default function FormProductionOrderTabletWeightCheck({
   unitLabel = unit,
   dosageFormStage = "Viên nén",
   hasSpecificationLimits = hasProductionSpecificationLimits,
-  buildRequirement = buildSemiFinishedNetWeightRequirement,
+  calculateRequirement = calculateSemiFinishedNetWeightRequirement,
   onClose,
 }: {
   productionOrderId: string | number;
@@ -108,9 +109,9 @@ export default function FormProductionOrderTabletWeightCheck({
   hasSpecificationLimits?: (
     productionSpecification: ProductionSpecificationLimits,
   ) => boolean;
-  buildRequirement?: (
+  calculateRequirement?: (
     productionSpecification: ProductionSpecificationLimits,
-  ) => string;
+  ) => CalculatedCheckRequirement;
   onClose?: () => void;
 }) {
   const itemCodeValue = itemCode ? String(itemCode) : "";
@@ -125,9 +126,11 @@ export default function FormProductionOrderTabletWeightCheck({
         itemCodeValue,
       ),
   );
-  const requirementValue =
-    buildRequirement(productionSpecification) ||
-    buildRequirement(fetchedProductionSpecification);
+  const orderRequirement = calculateRequirement(productionSpecification);
+  const calculatedRequirement = orderRequirement.requirement
+    ? orderRequirement
+    : calculateRequirement(fetchedProductionSpecification);
+  const requirementValue = calculatedRequirement.requirement;
   const semiFinishedNetWeightChecksKey = productionOrderId
     ? API_ROUTES.productionOrders.semiFinishedNetWeightChecks(
         productionOrderId,
@@ -155,6 +158,8 @@ export default function FormProductionOrderTabletWeightCheck({
 
     const requirement = values.requirement.trim();
     const payload: CreateSemiFinishedNetWeightCheckPayload = {
+      lower_limit: calculatedRequirement.lower_limit,
+      upper_limit: calculatedRequirement.upper_limit,
       dosage_form_stage: dosageFormStage,
       unit,
       unit_1_net_weight: normalizeDecimalText(values.unit_1_net_weight),

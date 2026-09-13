@@ -25,7 +25,7 @@ import type { CreateSemiFinishedGrossWeightCheckPayload } from "../../types";
 import {
   OPTIONAL_SEMI_FINISHED_GROSS_WEIGHT_KEYS,
   SEMI_FINISHED_GROSS_WEIGHT_KEYS,
-  buildSemiFinishedSolutionPackageGrossWeightRequirement,
+  calculateSemiFinishedSolutionPackageGrossWeightRequirement,
   formatDosageFormStage,
   getLatestCompleteShellWeightAverageGram,
   getLatestDensityValue,
@@ -125,13 +125,14 @@ export default function FormProductionOrderSolutionPackageWeightCheck({
   const latestShellWeightAverageGram =
     getLatestCompleteShellWeightAverageGram(shellWeightChecks);
   const latestDensity = getLatestDensityValue(densityChecks);
-  const requirementValue =
-    buildSemiFinishedSolutionPackageGrossWeightRequirement(
+  const calculatedRequirement =
+    calculateSemiFinishedSolutionPackageGrossWeightRequirement(
       item?.productionSpecification ?? item,
       latestShellWeightAverageGram,
       latestDensity,
       containerLabel,
     );
+  const requirementValue = calculatedRequirement.requirement;
   const semiFinishedGrossWeightChecksKey = productionOrderId
     ? API_ROUTES.productionOrders.semiFinishedGrossWeightChecks(
         productionOrderId,
@@ -175,6 +176,8 @@ export default function FormProductionOrderSolutionPackageWeightCheck({
 
     const requirement = values.requirement.trim();
     const payload: CreateSemiFinishedGrossWeightCheckPayload = {
+      lower_limit: calculatedRequirement.lower_limit,
+      upper_limit: calculatedRequirement.upper_limit,
       dosage_form_stage: dosageFormStage,
       unit: "g",
       unit_1_gross_weight: normalizeDecimalText(values.unit_1_gross_weight),

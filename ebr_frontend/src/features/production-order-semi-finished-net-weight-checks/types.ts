@@ -20,6 +20,8 @@ type SemiFinishedNetWeightKey =
   | "unit_10_net_weight";
 
 type ProductionOrderSemiFinishedNetWeightCheck = {
+  lower_limit?: number | string | null;
+  upper_limit?: number | string | null;
   id?: number | string;
   production_order_id?: number | string | null;
   requirement?: string | null;
@@ -42,6 +44,8 @@ type ProductionOrderSemiFinishedNetWeightCheck = {
 };
 
 type CreateSemiFinishedNetWeightCheckPayload = {
+  lower_limit?: number | null;
+  upper_limit?: number | null;
   requirement?: string;
   dosage_form_stage?: string;
   unit_1_net_weight: string;
@@ -51,6 +55,8 @@ type CreateSemiFinishedNetWeightCheckPayload = {
 >;
 
 type UpdateSemiFinishedNetWeightCheckPayload = Partial<{
+  lower_limit: number | null;
+  upper_limit: number | null;
   requirement: string;
   dosage_form_stage: string;
   unit_1_net_weight: string;

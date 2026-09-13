@@ -1,3 +1,7 @@
+import {
+  emptyCheckRequirement,
+  parseControlLimit,
+} from "@/lib/check-control-limits";
 import type { VolumeKey } from "./types";
 
 type VolumeRequirementLimits = {
@@ -181,12 +185,12 @@ const formatVariableRange = ({
     .filter(Boolean)
     .join(" ");
 
-const buildVolumeRequirement = (
+const calculateVolumeRequirement = (
   limits: VolumeRequirementLimits,
   cylinderCalibrationNumber?: CylinderCalibrationNumber,
 ) => {
   if (!limits) {
-    return "";
+    return emptyCheckRequirement();
   }
 
   const lowerControlLimit = formatSpecificationValue(
@@ -242,82 +246,122 @@ const buildVolumeRequirement = (
       : "";
 
   if (!controlRange && !allowedRange) {
-    return "";
+    return emptyCheckRequirement();
   }
 
-  return ["Tần suất kiểm tra: 30 phút/lần", controlRange, allowedRange]
-    .filter(Boolean)
-    .join("\n");
+  return {
+    requirement: ["Tần suất kiểm tra: 30 phút/lần", controlRange, allowedRange]
+      .filter(Boolean)
+      .join("\n"),
+    lower_limit: parseControlLimit(
+      formatAdjustedSpecificationValue(
+        limits.lower_control_limit,
+        cylinderCalibrationNumber,
+      ),
+      2,
+    ),
+    upper_limit: parseControlLimit(
+      formatAdjustedSpecificationValue(
+        limits.upper_control_limit,
+        cylinderCalibrationNumber,
+      ),
+      2,
+    ),
+  };
+};
+
+const buildVolumeRequirement = (
+  ...args: Parameters<typeof calculateVolumeRequirement>
+) => calculateVolumeRequirement(...args).requirement;
+
+const calculatePackageVolumeRequirement = (
+  limits: VolumeRequirementLimits,
+  cylinderCalibrationNumber?: CylinderCalibrationNumber,
+) => {
+  if (!limits) {
+    return emptyCheckRequirement();
+  }
+
+  const lowerControlLimit = formatSpecificationValue(
+    limits.lower_control_limit,
+    limits.unit,
+    cylinderCalibrationNumber,
+  );
+  const upperControlLimit = formatSpecificationValue(
+    limits.upper_control_limit,
+    limits.unit,
+    cylinderCalibrationNumber,
+  );
+  const lowerAllowedLimit = formatSpecificationValue(
+    limits.lower_allowed_limit,
+    limits.unit,
+    cylinderCalibrationNumber,
+  );
+  const upperAllowedLimit = formatSpecificationValue(
+    limits.upper_allowed_limit,
+    limits.unit,
+    cylinderCalibrationNumber,
+  );
+
+  const controlRange =
+    lowerControlLimit || upperControlLimit
+      ? `Thể tích kiểm soát ${formatVariableRange({
+          lowerValue: lowerControlLimit,
+          lowerOperator: getLimitOperator(
+            limits.lower_control_limit_operator,
+            ">",
+          ),
+          upperValue: upperControlLimit,
+          upperOperator: getLimitOperator(
+            limits.upper_control_limit_operator,
+            "<",
+          ),
+        })}`
+      : "";
+  const allowedRange =
+    lowerAllowedLimit || upperAllowedLimit
+      ? `Thể tích cho phép ${formatVariableRange({
+          lowerValue: lowerAllowedLimit,
+          lowerOperator: getLimitOperator(
+            limits.lower_allowed_limit_operator,
+            ">",
+          ),
+          upperValue: upperAllowedLimit,
+          upperOperator: getLimitOperator(
+            limits.upper_allowed_limit_operator,
+            "<",
+          ),
+        })}`
+      : "";
+
+  if (!controlRange && !allowedRange) {
+    return emptyCheckRequirement();
+  }
+
+  return {
+    requirement: ["Tần suất kiểm tra: 1h/lần", controlRange, allowedRange]
+      .filter(Boolean)
+      .join("\n"),
+    lower_limit: parseControlLimit(
+      formatAdjustedSpecificationValue(
+        limits.lower_control_limit,
+        cylinderCalibrationNumber,
+      ),
+      2,
+    ),
+    upper_limit: parseControlLimit(
+      formatAdjustedSpecificationValue(
+        limits.upper_control_limit,
+        cylinderCalibrationNumber,
+      ),
+      2,
+    ),
+  };
 };
 
 const buildPackageVolumeRequirement = (
-  limits: VolumeRequirementLimits,
-  cylinderCalibrationNumber?: CylinderCalibrationNumber,
-) => {
-  if (!limits) {
-    return "";
-  }
-
-  const lowerControlLimit = formatSpecificationValue(
-    limits.lower_control_limit,
-    limits.unit,
-    cylinderCalibrationNumber,
-  );
-  const upperControlLimit = formatSpecificationValue(
-    limits.upper_control_limit,
-    limits.unit,
-    cylinderCalibrationNumber,
-  );
-  const lowerAllowedLimit = formatSpecificationValue(
-    limits.lower_allowed_limit,
-    limits.unit,
-    cylinderCalibrationNumber,
-  );
-  const upperAllowedLimit = formatSpecificationValue(
-    limits.upper_allowed_limit,
-    limits.unit,
-    cylinderCalibrationNumber,
-  );
-
-  const controlRange =
-    lowerControlLimit || upperControlLimit
-      ? `Thể tích kiểm soát ${formatVariableRange({
-          lowerValue: lowerControlLimit,
-          lowerOperator: getLimitOperator(
-            limits.lower_control_limit_operator,
-            ">",
-          ),
-          upperValue: upperControlLimit,
-          upperOperator: getLimitOperator(
-            limits.upper_control_limit_operator,
-            "<",
-          ),
-        })}`
-      : "";
-  const allowedRange =
-    lowerAllowedLimit || upperAllowedLimit
-      ? `Thể tích cho phép ${formatVariableRange({
-          lowerValue: lowerAllowedLimit,
-          lowerOperator: getLimitOperator(
-            limits.lower_allowed_limit_operator,
-            ">",
-          ),
-          upperValue: upperAllowedLimit,
-          upperOperator: getLimitOperator(
-            limits.upper_allowed_limit_operator,
-            "<",
-          ),
-        })}`
-      : "";
-
-  if (!controlRange && !allowedRange) {
-    return "";
-  }
-
-  return ["Tần suất kiểm tra: 1h/lần", controlRange, allowedRange]
-    .filter(Boolean)
-    .join("\n");
-};
+  ...args: Parameters<typeof calculatePackageVolumeRequirement>
+) => calculatePackageVolumeRequirement(...args).requirement;
 
 const getUserLabel = (
   user:
@@ -331,6 +375,8 @@ const getUserLabel = (
 ) => user?.name ?? user?.username ?? user?.email ?? "";
 
 export {
+  calculatePackageVolumeRequirement,
+  calculateVolumeRequirement,
   buildPackageVolumeRequirement,
   buildVolumeRequirement,
   formatDateTime,

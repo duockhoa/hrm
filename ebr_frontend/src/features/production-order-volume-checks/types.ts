@@ -26,6 +26,8 @@ type VolumeCheckImage = {
 };
 
 type ProductionOrderVolumeCheck = {
+  lower_limit?: number | string | null;
+  upper_limit?: number | string | null;
   id?: number | string;
   production_order_id?: number | string | null;
   package_type?: string | null;
@@ -46,6 +48,8 @@ type ProductionOrderVolumeCheck = {
 };
 
 type VolumeCheckPayload = {
+  lower_limit?: number | null;
+  upper_limit?: number | null;
   package_type?: string | null;
   requirement?: string | null;
   dosage_form_stage?: string | null;

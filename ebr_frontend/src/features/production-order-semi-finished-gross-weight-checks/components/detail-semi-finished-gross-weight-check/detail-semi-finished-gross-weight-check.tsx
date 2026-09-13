@@ -174,6 +174,14 @@ export default function SemiFinishedGrossWeightCheckDetail({
             </p>
           </div>
         </div>
+        <FieldDisplay
+          lable="Khoảng kiểm soát"
+          value={
+            data.lower_limit == null && data.upper_limit == null
+              ? "Chưa có"
+              : `${formatWeight(data.lower_limit) || "Chưa có"} – ${formatWeight(data.upper_limit) || "Chưa có"} ${data.unit || "g"}`
+          }
+        />
         {SEMI_FINISHED_GROSS_WEIGHT_KEYS.map((key, index) => {
           const weight = formatWeight(data[key]);
 

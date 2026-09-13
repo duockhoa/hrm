@@ -20,6 +20,8 @@ type SemiFinishedGrossWeightKey =
   | "unit_10_gross_weight";
 
 type ProductionOrderSemiFinishedGrossWeightCheck = {
+  lower_limit?: number | string | null;
+  upper_limit?: number | string | null;
   id?: number | string;
   production_order_id?: number | string | null;
   requirement?: string | null;
@@ -42,6 +44,8 @@ type ProductionOrderSemiFinishedGrossWeightCheck = {
 };
 
 type CreateSemiFinishedGrossWeightCheckPayload = {
+  lower_limit?: number | null;
+  upper_limit?: number | null;
   requirement?: string;
   dosage_form_stage?: string;
   unit_1_gross_weight: string;
@@ -51,6 +55,8 @@ type CreateSemiFinishedGrossWeightCheckPayload = {
 >;
 
 type UpdateSemiFinishedGrossWeightCheckPayload = Partial<{
+  lower_limit: number | null;
+  upper_limit: number | null;
   requirement: string;
   dosage_form_stage: string | null;
   unit_1_gross_weight: string;

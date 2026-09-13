@@ -25,7 +25,7 @@ import type { CreateSemiFinishedGrossWeightCheckPayload } from "../../types";
 import {
   OPTIONAL_SEMI_FINISHED_GROSS_WEIGHT_KEYS,
   SEMI_FINISHED_GROSS_WEIGHT_KEYS,
-  buildSemiFinishedCapsuleGrossWeightRequirement,
+  calculateSemiFinishedCapsuleGrossWeightRequirement,
   formatDosageFormStage,
   getTenShellWeightAverageMilligram,
   hasProductionSpecificationLimits,
@@ -122,15 +122,17 @@ export default function FormProductionOrderCapsuleGrossWeightCheck({
     );
   const shellWeightAverageMilligram =
     getTenShellWeightAverageMilligram(tenShellWeightCheck);
-  const requirementValue =
-    buildSemiFinishedCapsuleGrossWeightRequirement(
-      productionSpecification,
-      shellWeightAverageMilligram,
-    ) ||
-    buildSemiFinishedCapsuleGrossWeightRequirement(
-      fetchedProductionSpecification,
-      shellWeightAverageMilligram,
-    );
+  const orderRequirement = calculateSemiFinishedCapsuleGrossWeightRequirement(
+    productionSpecification,
+    shellWeightAverageMilligram,
+  );
+  const calculatedRequirement = orderRequirement.requirement
+    ? orderRequirement
+    : calculateSemiFinishedCapsuleGrossWeightRequirement(
+        fetchedProductionSpecification,
+        shellWeightAverageMilligram,
+      );
+  const requirementValue = calculatedRequirement.requirement;
   const semiFinishedGrossWeightChecksKey = productionOrderId
     ? API_ROUTES.productionOrders.semiFinishedGrossWeightChecks(
         productionOrderId,
@@ -160,6 +162,8 @@ export default function FormProductionOrderCapsuleGrossWeightCheck({
     }
 
     const payload: CreateSemiFinishedGrossWeightCheckPayload = {
+      lower_limit: calculatedRequirement.lower_limit,
+      upper_limit: calculatedRequirement.upper_limit,
       dosage_form_stage: DOSAGE_FORM_STAGE,
       unit_1_gross_weight: normalizeDecimalText(values.unit_1_gross_weight),
       unit: "mg",

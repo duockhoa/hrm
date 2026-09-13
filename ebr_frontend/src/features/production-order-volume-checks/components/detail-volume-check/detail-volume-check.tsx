@@ -316,6 +316,14 @@ export default function VolumeCheckDetail({
           value={formatDosageFormStage(data.dosage_form_stage)}
         />
         <FieldDisplay lable="Yêu cầu" value={formatText(data.requirement)} />
+        <FieldDisplay
+          lable="Khoảng kiểm soát"
+          value={
+            data.lower_limit == null && data.upper_limit == null
+              ? "Chưa có"
+              : `${formatVolume(data.lower_limit) || "Chưa có"} – ${formatVolume(data.upper_limit) || "Chưa có"} ${data.unit || "ml"}`
+          }
+        />
         {VOLUME_KEYS.map((key, index) => (
           <FieldDisplay
             key={key}

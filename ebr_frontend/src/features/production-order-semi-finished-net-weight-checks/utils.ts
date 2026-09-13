@@ -1,3 +1,8 @@
+import {
+  emptyCheckRequirement,
+  parseControlLimit,
+  roundControlLimit,
+} from "@/lib/check-control-limits";
 import type {
   ProductionOrderSemiFinishedNetWeightCheck,
   SemiFinishedNetWeightKey,
@@ -317,11 +322,11 @@ const hasProductionSpecificationLimits = (
       ),
   );
 
-const buildSemiFinishedNetWeightRequirement = (
+const calculateSemiFinishedNetWeightRequirement = (
   productionSpecification: ProductionSpecificationLimits,
 ) => {
   if (!productionSpecification) {
-    return "";
+    return emptyCheckRequirement();
   }
 
   const lowerControlLimit = formatSpecificationValue(
@@ -373,19 +378,33 @@ const buildSemiFinishedNetWeightRequirement = (
       : "";
 
   if (!controlRange && !allowedRange) {
-    return "";
+    return emptyCheckRequirement();
   }
 
-  return ["Tần suất kiểm tra: 30 phút/lần", controlRange, allowedRange]
-    .filter(Boolean)
-    .join("\n");
+  return {
+    requirement: ["Tần suất kiểm tra: 30 phút/lần", controlRange, allowedRange]
+      .filter(Boolean)
+      .join("\n"),
+    lower_limit: parseControlLimit(
+      productionSpecification.lower_control_limit,
+      3,
+    ),
+    upper_limit: parseControlLimit(
+      productionSpecification.upper_control_limit,
+      3,
+    ),
+  };
 };
 
-const buildGranulesInBagNetWeightRequirement = (
+const buildSemiFinishedNetWeightRequirement = (
+  ...args: Parameters<typeof calculateSemiFinishedNetWeightRequirement>
+) => calculateSemiFinishedNetWeightRequirement(...args).requirement;
+
+const calculateGranulesInBagNetWeightRequirement = (
   productionSpecification: ProductionSpecificationLimits,
 ) => {
   if (!productionSpecification) {
-    return "";
+    return emptyCheckRequirement();
   }
 
   const lowerControlLimit = formatSpecificationValue(
@@ -437,13 +456,27 @@ const buildGranulesInBagNetWeightRequirement = (
       : "";
 
   if (!controlRange && !allowedRange) {
-    return "";
+    return emptyCheckRequirement();
   }
 
-  return ["Tần suất kiểm tra: 30 phút/lần", controlRange, allowedRange]
-    .filter(Boolean)
-    .join("\n");
+  return {
+    requirement: ["Tần suất kiểm tra: 30 phút/lần", controlRange, allowedRange]
+      .filter(Boolean)
+      .join("\n"),
+    lower_limit: parseControlLimit(
+      productionSpecification.lower_control_limit,
+      3,
+    ),
+    upper_limit: parseControlLimit(
+      productionSpecification.upper_control_limit,
+      3,
+    ),
+  };
 };
+
+const buildGranulesInBagNetWeightRequirement = (
+  ...args: Parameters<typeof calculateGranulesInBagNetWeightRequirement>
+) => calculateGranulesInBagNetWeightRequirement(...args).requirement;
 
 const formatGramValue = (value: number) => `${value.toFixed(2)} g`;
 
@@ -477,7 +510,7 @@ const convertVialSolutionLimitToGram = (
     : numberValue) * density * 0.996;
 };
 
-const buildVialMassRequirement = (
+const calculateVialMassRequirement = (
   productionSpecification: ProductionSpecificationLimits,
   density: number | null,
   {
@@ -489,7 +522,7 @@ const buildVialMassRequirement = (
   },
 ) => {
   if (!productionSpecification || averageShellWeight === null) {
-    return "";
+    return emptyCheckRequirement();
   }
 
   const lowerControlLimit = convertVialSolutionLimitToGram(
@@ -557,20 +590,38 @@ const buildVialMassRequirement = (
       : "";
 
   if (!controlRange && !allowedRange) {
-    return "";
+    return emptyCheckRequirement();
   }
 
-  return [
-    "Tần suất kiểm tra: 30 phút/lần",
-    averageShellWeight
-      ? `Khối lượng bao bì trung bình (10 bao bì): ${formatGramValue(averageShellWeight)}`
-      : "",
-    controlRange,
-    allowedRange,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  return {
+    requirement: [
+      "Tần suất kiểm tra: 30 phút/lần",
+      averageShellWeight
+        ? `Khối lượng bao bì trung bình (10 bao bì): ${formatGramValue(averageShellWeight)}`
+        : "",
+      controlRange,
+      allowedRange,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    lower_limit: roundControlLimit(
+      lowerControlLimit === null
+        ? null
+        : lowerControlLimit + averageShellWeight,
+      2,
+    ),
+    upper_limit: roundControlLimit(
+      upperControlLimit === null
+        ? null
+        : upperControlLimit + averageShellWeight,
+      2,
+    ),
+  };
 };
+
+const buildVialMassRequirement = (
+  ...args: Parameters<typeof calculateVialMassRequirement>
+) => calculateVialMassRequirement(...args).requirement;
 
 const buildVialWeightRequirement = (
   productionSpecification: ProductionSpecificationLimits,
@@ -639,11 +690,11 @@ const hasFilmCoatedTabletWeightSpecificationLimits = (
       ),
   );
 
-const buildFilmCoatedTabletWeightRequirement = (
+const calculateFilmCoatedTabletWeightRequirement = (
   productionSpecification: ProductionSpecificationLimits,
 ) => {
   if (!productionSpecification) {
-    return "";
+    return emptyCheckRequirement();
   }
 
   const unit = "mg";
@@ -683,8 +734,22 @@ const buildFilmCoatedTabletWeightRequirement = (
         })}`
       : "";
 
-  return [controlRange, allowedRange].filter(Boolean).join("\n");
+  return {
+    requirement: [controlRange, allowedRange].filter(Boolean).join("\n"),
+    lower_limit: parseControlLimit(
+      productionSpecification.film_coated_tablet_weight_lower_control_limit,
+      3,
+    ),
+    upper_limit: parseControlLimit(
+      productionSpecification.film_coated_tablet_weight_upper_control_limit,
+      3,
+    ),
+  };
 };
+
+const buildFilmCoatedTabletWeightRequirement = (
+  ...args: Parameters<typeof calculateFilmCoatedTabletWeightRequirement>
+) => calculateFilmCoatedTabletWeightRequirement(...args).requirement;
 
 const getUserLabel = (
   user:
@@ -698,6 +763,10 @@ const getUserLabel = (
 ) => user?.name ?? user?.username ?? user?.email ?? "";
 
 export {
+  calculateVialMassRequirement,
+  calculateFilmCoatedTabletWeightRequirement,
+  calculateGranulesInBagNetWeightRequirement,
+  calculateSemiFinishedNetWeightRequirement,
   OPTIONAL_SEMI_FINISHED_NET_WEIGHT_KEYS,
   SEMI_FINISHED_NET_WEIGHT_KEYS,
   buildFilmCoatedTabletWeightRequirement,

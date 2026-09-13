@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  buildFilmCoatedTabletWeightRequirement,
+  calculateFilmCoatedTabletWeightRequirement,
   hasFilmCoatedTabletWeightSpecificationLimits,
   type ProductionSpecificationLimits,
 } from "../../utils";
@@ -28,7 +28,7 @@ export default function FormProductionOrderFilmCoatedTabletWeightCheck({
       unitLabel="mg"
       dosageFormStage="Viên nén bao phim"
       hasSpecificationLimits={hasFilmCoatedTabletWeightSpecificationLimits}
-      buildRequirement={buildFilmCoatedTabletWeightRequirement}
+      calculateRequirement={calculateFilmCoatedTabletWeightRequirement}
       onClose={onClose}
     />
   );

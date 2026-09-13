@@ -24,8 +24,8 @@ import productionSpecificationsService from "@/services/production-specification
 import type { VolumeCheckPayload } from "../../types";
 import VolumeCheckImagePicker from "../volume-check-image-picker";
 import {
-  buildPackageVolumeRequirement,
-  buildVolumeRequirement,
+  calculatePackageVolumeRequirement,
+  calculateVolumeRequirement,
   formatDosageFormStage,
   normalizeDecimalText,
   toNumber,
@@ -102,16 +102,16 @@ export default function FormProductionOrderVialVolumeCheck({
     () => productionOrdersService.fetchCylinderCalibration(productionOrderId),
   );
   const cylinderCalibrationNumber = cylinderCalibration?.calibration_number;
-  const buildRequirement =
+  const calculateRequirement =
     packageType.trim().toLocaleLowerCase("vi-VN") === "gói"
-      ? buildPackageVolumeRequirement
-      : buildVolumeRequirement;
-  const orderRequirementValue = buildRequirement(
+      ? calculatePackageVolumeRequirement
+      : calculateVolumeRequirement;
+  const orderRequirement = calculateRequirement(
     productionSpecification,
     cylinderCalibrationNumber,
   );
   const { data: fetchedProductionSpecification } = useSWR(
-    !orderRequirementValue && itemCodeValue
+    !orderRequirement.requirement && itemCodeValue
       ? `${API_ROUTES.productionSpecifications.base}/${itemCodeValue}`
       : null,
     () =>
@@ -119,9 +119,10 @@ export default function FormProductionOrderVialVolumeCheck({
         itemCodeValue,
       ),
   );
-  const requirementValue =
-    orderRequirementValue ||
-    buildRequirement(fetchedProductionSpecification, cylinderCalibrationNumber);
+  const calculatedRequirement = orderRequirement.requirement
+    ? orderRequirement
+    : calculateRequirement(fetchedProductionSpecification, cylinderCalibrationNumber);
+  const requirementValue = calculatedRequirement.requirement;
   const volumeChecksKey = productionOrderId
     ? API_ROUTES.productionOrders.volumeChecks(productionOrderId)
     : null;
@@ -161,6 +162,8 @@ export default function FormProductionOrderVialVolumeCheck({
         };
       },
       {
+        lower_limit: calculatedRequirement.lower_limit,
+        upper_limit: calculatedRequirement.upper_limit,
         package_type: packageType,
         requirement: values.requirement.trim() || null,
         dosage_form_stage: dosageFormStage.trim() || null,

@@ -1,5 +1,6 @@
 "use client";
 
+import { storedControlLimits } from "@/lib/check-control-limits";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -143,7 +144,10 @@ export default function EditVolumeCheck({
     }
 
     try {
-      await productionOrdersService.updateVolumeCheck(data.id, payload);
+      await productionOrdersService.updateVolumeCheck(data.id, {
+        ...payload,
+        ...storedControlLimits(data),
+      });
       toast.success("Đã cập nhật kiểm tra thể tích.");
       await mutate(API_ROUTES.productionOrders.volumeCheckDetail(data.id));
       if (data.production_order_id) {

@@ -1,3 +1,7 @@
+import {
+  emptyCheckRequirement,
+  roundControlLimit,
+} from "@/lib/check-control-limits";
 import type { SemiFinishedGrossWeightKey } from "./types";
 
 type ProductionSpecificationLimits = {
@@ -396,12 +400,12 @@ const hasProductionSpecificationLimits = (
       ),
   );
 
-const buildSemiFinishedGrossWeightRequirement = (
+const calculateSemiFinishedGrossWeightRequirement = (
   productionSpecification: ProductionSpecificationLimits,
   latestShellWeightAverageGram: number | null | undefined,
 ) => {
   if (!productionSpecification || latestShellWeightAverageGram == null) {
-    return "";
+    return emptyCheckRequirement();
   }
 
   const lowerControlLimit = convertWeightToGram(
@@ -477,27 +481,43 @@ const buildSemiFinishedGrossWeightRequirement = (
       : "";
 
   if (!controlRange && !allowedRange) {
-    return "";
+    return emptyCheckRequirement();
   }
 
-  return ["Tần suất kiểm tra: 30 phút/lần", controlRange, allowedRange]
-    .filter(Boolean)
-    .join("\n");
+  return {
+    requirement: ["Tần suất kiểm tra: 30 phút/lần", controlRange, allowedRange]
+      .filter(Boolean)
+      .join("\n"),
+    lower_limit: roundControlLimit(
+      lowerControlLimit === null
+        ? null
+        : lowerControlLimit + latestShellWeightAverageGram,
+      3,
+    ),
+    upper_limit: roundControlLimit(
+      upperControlLimit === null
+        ? null
+        : upperControlLimit + latestShellWeightAverageGram,
+      3,
+    ),
+  };
 };
 
-const buildSemiFinishedSolutionPackageGrossWeightRequirement = (
+const buildSemiFinishedGrossWeightRequirement = (
+  ...args: Parameters<typeof calculateSemiFinishedGrossWeightRequirement>
+) => calculateSemiFinishedGrossWeightRequirement(...args).requirement;
+
+const calculateSemiFinishedSolutionPackageGrossWeightRequirement = (
   productionSpecification: ProductionSpecificationLimits,
   latestShellWeightAverageGram: number | null | undefined,
   density: number | null | undefined,
   containerLabel = "gói dịch",
 ) => {
   if (!productionSpecification || latestShellWeightAverageGram == null) {
-    return "";
+    return emptyCheckRequirement();
   }
 
-  const convertLimitToGram = (
-    value: string | number | null | undefined,
-  ) => {
+  const convertLimitToGram = (value: string | number | null | undefined) => {
     const numericValue = parseDecimal(value);
 
     if (numericValue === null) {
@@ -518,9 +538,13 @@ const buildSemiFinishedSolutionPackageGrossWeightRequirement = (
       return null;
     }
 
-    return (unit === "l" || unit === "liter" || unit === "liters"
-      ? numericValue * 1000
-      : numericValue) * density * 0.996;
+    return (
+      (unit === "l" || unit === "liter" || unit === "liters"
+        ? numericValue * 1000
+        : numericValue) *
+      density *
+      0.996
+    );
   };
 
   const lowerControlLimit = convertLimitToGram(
@@ -590,25 +614,47 @@ const buildSemiFinishedSolutionPackageGrossWeightRequirement = (
       : "";
 
   if (!controlRange && !allowedRange) {
-    return "";
+    return emptyCheckRequirement();
   }
 
-  return [
-    "Tần suất kiểm tra: 30 phút/lần",
-    `Khối lượng bao bì trung bình (10 bao bì): ${formatGramValueTwoDecimals(latestShellWeightAverageGram)}`,
-    controlRange,
-    allowedRange,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  return {
+    requirement: [
+      "Tần suất kiểm tra: 30 phút/lần",
+      `Khối lượng bao bì trung bình (10 bao bì): ${formatGramValueTwoDecimals(latestShellWeightAverageGram)}`,
+      controlRange,
+      allowedRange,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    lower_limit: roundControlLimit(
+      lowerControlLimit === null
+        ? null
+        : calculateGrossWeight(lowerControlLimit),
+      2,
+    ),
+    upper_limit: roundControlLimit(
+      upperControlLimit === null
+        ? null
+        : calculateGrossWeight(upperControlLimit),
+      2,
+    ),
+  };
 };
 
-const buildSemiFinishedCapsuleGrossWeightRequirement = (
+const buildSemiFinishedSolutionPackageGrossWeightRequirement = (
+  ...args: Parameters<
+    typeof calculateSemiFinishedSolutionPackageGrossWeightRequirement
+  >
+) =>
+  calculateSemiFinishedSolutionPackageGrossWeightRequirement(...args)
+    .requirement;
+
+const calculateSemiFinishedCapsuleGrossWeightRequirement = (
   productionSpecification: ProductionSpecificationLimits,
   shellWeightAverageMilligram: number | null | undefined,
 ) => {
   if (!productionSpecification || shellWeightAverageMilligram == null) {
-    return "";
+    return emptyCheckRequirement();
   }
 
   const lowerControlLimit = convertWeightToGram(
@@ -644,16 +690,14 @@ const buildSemiFinishedCapsuleGrossWeightRequirement = (
             lowerControlLimit === null
               ? ""
               : formatMilligramValue(
-                  toMilligram(lowerControlLimit) +
-                    shellWeightAverageMilligram,
+                  toMilligram(lowerControlLimit) + shellWeightAverageMilligram,
                 ),
           lowerOperator: productionSpecification.lower_control_limit_operator,
           upperValue:
             upperControlLimit === null
               ? ""
               : formatMilligramValue(
-                  toMilligram(upperControlLimit) +
-                    shellWeightAverageMilligram,
+                  toMilligram(upperControlLimit) + shellWeightAverageMilligram,
                 ),
           upperOperator: productionSpecification.upper_control_limit_operator,
         })}`
@@ -665,29 +709,50 @@ const buildSemiFinishedCapsuleGrossWeightRequirement = (
             lowerAllowedLimit === null
               ? ""
               : formatMilligramValue(
-                  toMilligram(lowerAllowedLimit) +
-                    shellWeightAverageMilligram,
+                  toMilligram(lowerAllowedLimit) + shellWeightAverageMilligram,
                 ),
           lowerOperator: productionSpecification.lower_allowed_limit_operator,
           upperValue:
             upperAllowedLimit === null
               ? ""
               : formatMilligramValue(
-                  toMilligram(upperAllowedLimit) +
-                    shellWeightAverageMilligram,
+                  toMilligram(upperAllowedLimit) + shellWeightAverageMilligram,
                 ),
           upperOperator: productionSpecification.upper_allowed_limit_operator,
         })}`
       : "";
 
   if (!controlRange && !allowedRange) {
-    return "";
+    return emptyCheckRequirement();
   }
 
-  return [checkFrequencyLine, shellAverageLine, controlRange, allowedRange]
-    .filter(Boolean)
-    .join("\n");
+  return {
+    requirement: [
+      checkFrequencyLine,
+      shellAverageLine,
+      controlRange,
+      allowedRange,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    lower_limit: roundControlLimit(
+      lowerControlLimit === null
+        ? null
+        : toMilligram(lowerControlLimit) + shellWeightAverageMilligram,
+      3,
+    ),
+    upper_limit: roundControlLimit(
+      upperControlLimit === null
+        ? null
+        : toMilligram(upperControlLimit) + shellWeightAverageMilligram,
+      3,
+    ),
+  };
 };
+
+const buildSemiFinishedCapsuleGrossWeightRequirement = (
+  ...args: Parameters<typeof calculateSemiFinishedCapsuleGrossWeightRequirement>
+) => calculateSemiFinishedCapsuleGrossWeightRequirement(...args).requirement;
 
 const getUserLabel = (
   user:
@@ -701,6 +766,9 @@ const getUserLabel = (
 ) => user?.name ?? user?.username ?? user?.email ?? "";
 
 export {
+  calculateSemiFinishedCapsuleGrossWeightRequirement,
+  calculateSemiFinishedSolutionPackageGrossWeightRequirement,
+  calculateSemiFinishedGrossWeightRequirement,
   OPTIONAL_SEMI_FINISHED_GROSS_WEIGHT_KEYS,
   SEMI_FINISHED_GROSS_WEIGHT_KEYS,
   buildSemiFinishedCapsuleGrossWeightRequirement,

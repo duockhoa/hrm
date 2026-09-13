@@ -227,6 +227,8 @@ type CreateBottleVolumeCheckPayload = {
 };
 
 type VolumeCheckPayload = {
+  lower_limit?: number | null;
+  upper_limit?: number | null;
   package_type?: string | null;
   requirement?: string | null;
   dosage_form_stage?: string | null;
@@ -267,6 +269,8 @@ type HardnessCheckPayload = {
 };
 
 type SemiFinishedGrossWeightCheckPayload = {
+  lower_limit?: number | null;
+  upper_limit?: number | null;
   requirement?: string;
   dosage_form_stage?: string | null;
   unit_1_gross_weight: string | number;
@@ -283,6 +287,8 @@ type SemiFinishedGrossWeightCheckPayload = {
 };
 
 type SemiFinishedNetWeightCheckPayload = {
+  lower_limit?: number | null;
+  upper_limit?: number | null;
   requirement?: string | null;
   dosage_form_stage?: string | null;
   unit_1_net_weight: string | number;

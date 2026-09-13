@@ -189,6 +189,14 @@ export default function SemiFinishedNetWeightCheckDetail({
           lable="Dạng kiểm tra"
           value={formatDosageFormStage(data.dosage_form_stage)}
         />
+        <FieldDisplay
+          lable="Khoảng kiểm soát"
+          value={
+            data.lower_limit == null && data.upper_limit == null
+              ? "Chưa có"
+              : `${formatWeightWithUnit(data.lower_limit, data.unit) || "Chưa có"} – ${formatWeightWithUnit(data.upper_limit, data.unit) || "Chưa có"}`
+          }
+        />
         {SEMI_FINISHED_NET_WEIGHT_KEYS.map((key, index) => (
           <FieldDisplay
             key={key}

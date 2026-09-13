@@ -24,7 +24,7 @@ import type { CreateSemiFinishedNetWeightCheckPayload } from "../../types";
 import {
   OPTIONAL_SEMI_FINISHED_NET_WEIGHT_KEYS,
   SEMI_FINISHED_NET_WEIGHT_KEYS,
-  buildGranulesInBagNetWeightRequirement,
+  calculateGranulesInBagNetWeightRequirement,
   hasProductionSpecificationLimits,
   normalizeDecimalText,
   toNumber,
@@ -109,9 +109,13 @@ export default function FormProductionOrderGranulesInBagWeightCheck({
         itemCodeValue,
       ),
   );
-  const requirementValue =
-    buildGranulesInBagNetWeightRequirement(productionSpecification) ||
-    buildGranulesInBagNetWeightRequirement(fetchedProductionSpecification);
+  const orderRequirement = calculateGranulesInBagNetWeightRequirement(
+    productionSpecification,
+  );
+  const calculatedRequirement = orderRequirement.requirement
+    ? orderRequirement
+    : calculateGranulesInBagNetWeightRequirement(fetchedProductionSpecification);
+  const requirementValue = calculatedRequirement.requirement;
   const semiFinishedNetWeightChecksKey = productionOrderId
     ? API_ROUTES.productionOrders.semiFinishedNetWeightChecks(
         productionOrderId,
@@ -139,6 +143,8 @@ export default function FormProductionOrderGranulesInBagWeightCheck({
 
     const requirement = values.requirement.trim();
     const payload: CreateSemiFinishedNetWeightCheckPayload = {
+      lower_limit: calculatedRequirement.lower_limit,
+      upper_limit: calculatedRequirement.upper_limit,
       dosage_form_stage: "Cốm trong gói",
       unit: "g",
       unit_1_net_weight: normalizeDecimalText(values.unit_1_net_weight),
