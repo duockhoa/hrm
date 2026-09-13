@@ -596,15 +596,15 @@ export class ProductionOrderExportService {
     const tableHead = `
       <thead>
         <tr>
-          <th style="width: 14%;">Giai \u0111o\u1ea1n</th>
-          <th style="width: 9%;">M\u00e3 h\u00e0ng</th>
-          <th style="width: 24%;">T\u00ean h\u00e0ng</th>
-          <th style="width: 12%;">S\u1ed1 l\u00f4</th>
-          <th style="width: 9%;">H\u1ea1n d\u00f9ng</th>
-          <th style="width: 9%;">Kho</th>
-          <th style="width: 8%; text-align: right;">Y\u00eau c\u1ea7u</th>
-          <th style="width: 8%; text-align: right;">\u0110\u00e3 xu\u1ea5t</th>
-          <th style="width: 5%;">\u0110VT</th>
+          <th style="width: 12%;">Giai đoạn</th>
+          <th style="width: 11%;">Mã hàng</th>
+          <th style="width: 25%;">Tên hàng</th>
+          <th style="width: 14%;">Số lô</th>
+          <th style="width: 9%;">Hạn dùng</th>
+          <th style="width: 8%;">Kho</th>
+          <th style="width: 7%; text-align: right;">Yêu cầu</th>
+          <th style="width: 7%; text-align: right;">Đã xuất</th>
+          <th style="width: 7%;">ĐVT</th>
         </tr>
       </thead>`;
 
@@ -620,8 +620,8 @@ export class ProductionOrderExportService {
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
       <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
     </div>
-    <div style="margin-top: 4mm; margin-bottom: 4mm;">
-      <h2 style="text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 5mm; text-transform: uppercase; color: #000;">
+    <div style="margin-top: 3mm; margin-bottom: 3mm;">
+      <h2 style="text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 4mm; text-transform: uppercase; color: #000;">
         Thông tin phiếu xuất kho${totalPages > 1 && pageIndex > 0 ? ' (tiếp theo)' : ''}
       </h2>
       <table class="deviations-table">${tableHead}<tbody>${rowsHtml}</tbody></table>
@@ -632,7 +632,7 @@ export class ProductionOrderExportService {
     </div>
   </main>`;
 
-    const ROWS_PER_PAGE = 8;
+    const MAX_ROWS_PER_PAGE = 15;
     let linesHtml = '';
 
     if (lines && lines.length > 0) {
@@ -652,12 +652,15 @@ export class ProductionOrderExportService {
         </tr>`;
       });
 
-      const totalPages = Math.ceil(allRows.length / ROWS_PER_PAGE);
-      for (let i = 0; i < allRows.length; i += ROWS_PER_PAGE) {
-        const chunk = allRows.slice(i, i + ROWS_PER_PAGE).join('');
+      const totalRows = allRows.length;
+      const totalPages = Math.max(1, Math.ceil(totalRows / MAX_ROWS_PER_PAGE));
+      const rowsPerPage = Math.ceil(totalRows / totalPages);
+
+      for (let i = 0; i < totalRows; i += rowsPerPage) {
+        const chunk = allRows.slice(i, i + rowsPerPage).join('');
         linesHtml += buildPageSection(
           chunk,
-          Math.floor(i / ROWS_PER_PAGE),
+          Math.floor(i / rowsPerPage),
           totalPages,
         );
       }
