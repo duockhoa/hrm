@@ -622,6 +622,20 @@ describe('ProductionOrdersService', () => {
       expect(prismaService.productionOrders.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 1 },
+          include: expect.objectContaining({
+            hygieneChecks: {
+              include: {
+                createdBy: { select: { name: true, username: true } },
+              },
+              orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+            },
+            environmentChecks: {
+              include: {
+                createdBy: { select: { name: true, username: true } },
+              },
+              orderBy: [{ checked_at: 'asc' }, { id: 'asc' }],
+            },
+          }),
         }),
       );
     },

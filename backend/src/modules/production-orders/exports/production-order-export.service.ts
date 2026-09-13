@@ -1,3 +1,8 @@
+import { buildHygieneChecksHtml, type HygieneCheckForReport } from './hygiene-checks-report-html';
+import {
+  buildEnvironmentChecksHtml,
+  type EnvironmentCheckForReport,
+} from './environment-checks-report-html';
 import { Injectable } from '@nestjs/common';
 import type {
   Items,
@@ -34,6 +39,8 @@ const SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
 );
 
 type ProductionOrderForExport = ProductionOrders & {
+  environmentChecks?: EnvironmentCheckForReport[];
+  hygieneChecks?: HygieneCheckForReport[];
   item?:
     | (Items & {
         registration?: RegistrationNumbers | null;
@@ -856,10 +863,20 @@ export class ProductionOrderExportService {
         specifications_table_html: buildSpecificationsTableHtml(productionOrder),
         warehouse_release_html: linesHtml,
         deviations_html: buildDeviationsHtml(),
+        hygiene_checks_html: buildHygieneChecksHtml(
+          productionOrder.hygieneChecks ?? [],
+          { appInfo, printTime, printerName, watermarkDataUri },
+        ),
+        environment_checks_html: buildEnvironmentChecksHtml(
+          productionOrder.environmentChecks ?? [],
+          { appInfo, printTime, printerName, watermarkDataUri },
+        ),
       },
       [
         'warehouse_release_html',
         'deviations_html',
+        'environment_checks_html',
+        'hygiene_checks_html',
         'pyclm_status_html',
         'specifications_table_html',
       ],

@@ -43,6 +43,33 @@ export class ProductionOrderPdfRendererService {
           await Promise.all(
             Array.from(document.images).map((image) => image.decode()),
           );
+          // Measure rows after fonts load so long room/user names also paginate.
+          for (const firstPage of Array.from(
+            document.querySelectorAll<HTMLElement>('.environment-check-page, .hygiene-check-page'),
+          )) {
+            let currentPage = firstPage;
+            let body = currentPage.querySelector('tbody');
+            if (!body) continue;
+            const rows = Array.from(body.rows);
+            body.replaceChildren();
+            for (const row of rows) {
+              body.appendChild(row);
+              const exceedsFooter = () => {
+                const footer = currentPage.querySelector<HTMLElement>('.page-footer')!;
+                return row.getBoundingClientRect().bottom > footer.getBoundingClientRect().top - 8;
+              };
+              if (exceedsFooter() && body.rows.length > 1) {
+                row.remove();
+                const nextPage = currentPage.cloneNode(true) as HTMLElement;
+                body = nextPage.querySelector('tbody')!;
+                body.replaceChildren();
+                currentPage.after(nextPage);
+                currentPage = nextPage;
+                body.appendChild(row);
+              }
+              if (exceedsFooter()) return { overflow: true };
+            }
+          }
           const sections =
             Array.from(document.querySelectorAll<HTMLElement>('.report-page'));
           if (sections.length === 0) return null;
@@ -67,6 +94,11 @@ export class ProductionOrderPdfRendererService {
         if (!layout) {
           throw new UnprocessableEntityException(
             'Không thể tải nội dung trang báo cáo.',
+          );
+        }
+        if ('overflow' in layout) {
+          throw new UnprocessableEntityException(
+            'Một bản ghi kiểm tra quá dài để hiển thị trên một trang báo cáo.',
           );
         }
         return page.pdf({ printBackground: true, preferCSSPageSize: true });

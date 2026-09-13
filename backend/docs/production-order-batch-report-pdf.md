@@ -16,21 +16,37 @@ curl --fail-with-body \
 - `400`: ID không phải số nguyên.
 - `401/403`: chưa đăng nhập hoặc thiếu quyền theo guards hiện hành.
 - `404`: không tìm thấy lệnh sản xuất.
-- `422`: nội dung không vừa một trang mẫu; không cắt mất nội dung hay tạo thêm trang.
+- `422`: một bản ghi kiểm tra quá dài để vừa một trang.
 - `503`: tiến trình backend đang xuất một báo cáo khác, Chromium chưa sẵn sàng hoặc xuất quá thời gian cho phép.
 
 ## Phạm vi
 
-Hiện chỉ có trang lệnh sản xuất đầu tiên, chưa thêm các phần báo cáo khác, watermark
-hay giao diện. HTML/CSS được viết riêng tại
-`templates/batch-report/production-order.html`; logo là asset độc lập
-`templates/batch-report/logo.png`, nhúng trực tiếp vào HTML.
+Báo cáo gồm trang bìa, thông tin lô, lệnh sản xuất, phiếu xuất kho, sai lệch và
+phần **Theo dõi nhiệt độ, độ ẩm**, sau đó là **Kiểm tra vệ sinh**. Phần mới lấy dữ liệu
+`environmentChecks` của lệnh sản xuất, sắp xếp theo `checked_at` rồi `id` tăng dần.
+Các cột gồm STT, thời điểm kiểm tra (giờ Việt Nam), phòng, nhiệt độ (°C), độ ẩm (%)
+và người nhập. Khi chưa có bản ghi, vẫn xuất một trang thông báo chưa có dữ liệu.
+
+Phần **Kiểm tra vệ sinh** lấy `hygieneChecks` theo `created_at` và `id` tăng dần,
+gồm STT, thời điểm ghi nhận (giờ Việt Nam), phòng/thiết bị, loại vệ sinh, kết quả,
+ghi chú và người nhập. Giữ nguyên kết quả đã ghi nhận, bao gồm “Không đạt”.
+Khi chưa có dữ liệu vẫn xuất trang thông báo. Ghi chú được giữ xuống dòng và
+escape HTML; các hàng tự chia trang, lặp tiêu đề và chân trang như phần nhiệt độ/độ ẩm.
+
+Các hàng nhiệt độ/độ ẩm được đo chiều cao sau khi tải font và tự chia trang để
+không chồng lên chân trang. Mỗi trang lặp tiêu đề, tiêu đề bảng, watermark và
+thông tin in; số trang tính trên toàn báo cáo. Nếu một bản ghi riêng lẻ quá dài
+để vừa trang, API trả 422.
+
+HTML/CSS tại `templates/batch-report/production-order.html`; dữ liệu phần mới
+được dựng tại `src/modules/production-orders/exports/environment-checks-report-html.ts`.
+Logo và watermark được nhúng trực tiếp vào HTML.
 
 Luôn dùng nội dung lệnh pha chế/bán thành phẩm cho cả mã TP và BTP.
 PDF không đọc, điền hay chuyển đổi DOCX. Có thể sửa bố cục PDF trực tiếp trong HTML/CSS.
 Giữ các trường thông tin, mã biểu mẫu, ngày ban hành và phần ký tên của mẫu BTP đã chọn.
 Tên in sẵn không phải chữ ký điện tử hoặc bằng chứng đã phê duyệt.
-Khổ giấy hiện là Letter; ngày tháng và cỡ lô dùng cùng cách định dạng với API Word.
+Khổ giấy hiện là A4; ngày tháng và cỡ lô dùng cùng cách định dạng với API Word.
 
 Playwright/Chromium in HTML với CSS `@page`. Font ưu tiên Times New Roman, sau đó
 Liberation Serif và Noto Serif. Dùng cùng bộ font ở các môi trường để bản in nhất quán.
@@ -61,10 +77,11 @@ PDF trả trực tiếp trong bộ nhớ và có `Cache-Control: private, no-sto
 
 ```bash
 npm test -- --runInBand production-orders.controller.spec.ts production-orders.service.spec.ts
-RUN_PDF_RENDER_TESTS=1 npm test -- --runInBand production-order-pdf-renderer.service.spec.ts
+RUN_PDF_RENDER_TESTS=1 npm test -- --runInBand environment-checks-report-html.spec.ts hygiene-checks-report-html.spec.ts
 npm run build
 ```
 
-Bộ kiểm thử Chromium kiểm tra cả mã TP/BTP đều xuất một trang theo mẫu HTML lệnh pha chế, lỗi tràn nội dung,
-khả năng xuất lại sau lỗi và dữ liệu chứa ký tự HTML. Bộ unit test kiểm tra quyền,
+Bộ kiểm thử Chromium của phần nhiệt độ/độ ẩm kiểm tra 90 bản ghi, chia trang,
+không chồng chân trang và tổng số trang PDF. Unit test kiểm tra dữ liệu rỗng,
+định dạng số/thời gian và escape HTML. Các bộ kiểm thử API kiểm tra quyền,
 header tải file, lô không tồn tại, lỗi khởi động browser và giới hạn xuất đồng thời.

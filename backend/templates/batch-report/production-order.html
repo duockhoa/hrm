@@ -39,6 +39,17 @@
       position: relative;
     }
 
+    .environment-check-page,
+    .hygiene-check-page {
+      height: 297mm;
+    }
+
+    .environment-check-page td,
+    .hygiene-check-page td {
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
     .page-break {
       page-break-before: always;
     }
@@ -556,6 +567,8 @@
   </main>
   {{warehouse_release_html}}
   {{deviations_html}}
+  {{environment_checks_html}}
+  {{hygiene_checks_html}}
 </body>
 
 </html>
