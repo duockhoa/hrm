@@ -26,6 +26,12 @@ const expectedProductionOrderFindInclude = {
   item: {
     include: {
       registration: true,
+      productionSpecification: {
+        include: {
+          productLine: true,
+          dosageForm: true,
+        },
+      },
     },
   },
   samplingRequests: {

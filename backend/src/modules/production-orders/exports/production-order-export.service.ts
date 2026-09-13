@@ -297,9 +297,29 @@ const getRegistrationNumber = (productionOrder: ProductionOrderForExport) => {
   return reg || itemDk || '';
 };
 
+const getProductLine = (productionOrder: ProductionOrderForExport) => {
+  const spec =
+    (productionOrder.item as any)?.productionSpecification ||
+    (productionOrder as any)?.productionSpecification;
+  const pl = spec?.productLine;
+  if (pl) {
+    return [pl.code, pl.name].filter(Boolean).join(' - ');
+  }
+  return spec?.product_line || '';
+};
+
+const getDosageForm = (productionOrder: ProductionOrderForExport) => {
+  const spec =
+    (productionOrder.item as any)?.productionSpecification ||
+    (productionOrder as any)?.productionSpecification;
+  return spec?.dosageForm?.name || spec?.dosage_form || '';
+};
+
 const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
   item_code: normalizeTemplateValue(productionOrder.item_code),
   item_name: normalizeTemplateValue(productionOrder.item?.item_name),
+  product_line: normalizeTemplateValue(getProductLine(productionOrder)),
+  dosage_form: normalizeTemplateValue(getDosageForm(productionOrder)),
   production_order_code: normalizeTemplateValue(
     productionOrder.production_order_code,
   ),

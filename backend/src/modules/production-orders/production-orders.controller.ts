@@ -2225,7 +2225,7 @@ export class ProductionOrdersController {
     @Request() req: any,
   ) {
     const exportedFile =
-      await this.productionOrdersService.exportBatchReport(id, req.user);
+      await this.productionOrdersService.exportBatchReport(id, req?.user);
     const filenameFallback = getAsciiFilenameFallback(exportedFile.filename);
     const encodedFilename = encodeContentDispositionFilename(
       exportedFile.filename,

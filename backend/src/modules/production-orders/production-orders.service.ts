@@ -121,6 +121,12 @@ const productionOrderFindInclude = {
   item: {
     include: {
       registration: true,
+      productionSpecification: {
+        include: {
+          productLine: true,
+          dosageForm: true,
+        },
+      },
     },
   },
   samplingRequests: productionOrderSamplingRequestWithSenderInclude,
@@ -468,7 +474,15 @@ export class ProductionOrdersService {
     if (!productionOrder.item && productionOrder.item_code) {
       const item = await this.prismaService.items.findUnique({
         where: { item_code: productionOrder.item_code },
-        include: { registration: true },
+        include: {
+          registration: true,
+          productionSpecification: {
+            include: {
+              productLine: true,
+              dosageForm: true,
+            },
+          },
+        },
       });
       if (item) {
         (productionOrder as any).item = item;

@@ -1168,7 +1168,10 @@ describe('ProductionOrdersController', () => {
     });
     const response = { set: jest.fn() } as unknown as Response;
     const result = await controller.exportBatchReport(1, response);
-    expect(productionOrdersService.exportBatchReport).toHaveBeenCalledWith(1);
+    expect(productionOrdersService.exportBatchReport).toHaveBeenCalledWith(
+      1,
+      undefined,
+    );
     expect(response.set).toHaveBeenCalledWith(
       expect.objectContaining({
         'Content-Type': 'application/pdf',
