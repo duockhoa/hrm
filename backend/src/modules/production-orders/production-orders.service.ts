@@ -403,9 +403,14 @@ export class ProductionOrdersService {
   }
 
   async exportBatchReport(id: number, user?: any) {
+    const [productionOrder, { lines }] = await Promise.all([
+      this.findProductionOrderForExport(id),
+      this.findProductionOrderLineData(id),
+    ]);
     return this.productionOrderExportService.exportBatchReport(
-      await this.findProductionOrderForExport(id),
+      productionOrder,
       user,
+      lines,
     );
   }
 

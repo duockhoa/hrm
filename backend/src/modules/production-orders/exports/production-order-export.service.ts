@@ -12,6 +12,7 @@ import path from 'node:path';
 import PizZip from 'pizzip';
 import { ProductionOrderPdfRendererService } from './production-order-pdf-renderer.service';
 import { renderProductionOrderReportHtml } from './production-order-report-html';
+import type { ProductionOrderLineWithRelations } from '../production-orders.service';
 
 const DOCX_MIME_TYPE =
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -219,6 +220,7 @@ export class ProductionOrderExportService {
   async exportBatchReport(
     productionOrder: ProductionOrderForExport,
     user?: any,
+    lines?: ProductionOrderLineWithRelations[],
   ) {
     const printTime = new Intl.DateTimeFormat('vi-VN', {
       dateStyle: 'short',
@@ -226,44 +228,65 @@ export class ProductionOrderExportService {
     }).format(new Date());
     const printerName = user?.name || user?.full_name || user?.username || '';
     const appInfo = `${process.env.APP_NAME || 'EBR System'} - ${process.env.APP_VERSION || 'v1.0.0'}`;
-    
-    let deviationsHtml = '';
-    if (productionOrder.deviations && productionOrder.deviations.length > 0) {
-      deviationsHtml = `
-        <h2 style="text-align: center; margin-top: 10mm; text-transform: uppercase;">CÁC SAI LỆCH TRONG QUÁ TRÌNH SẢN XUẤT</h2>
+
+    // Build production order lines HTML (page 3)
+    const formatNum = (v: unknown) => {
+      if (v === null || v === undefined || v === '') return '';
+      const n = Number(v);
+      if (Number.isNaN(n)) return String(v);
+      return n.toLocaleString('vi-VN');
+    };
+    const formatDate = (v: unknown) => {
+      if (!v) return '';
+      const d = new Date(String(v));
+      if (Number.isNaN(d.getTime())) return String(v);
+      return d.toLocaleDateString('vi-VN');
+    };
+
+    let linesHtml = '';
+    if (lines && lines.length > 0) {
+      linesHtml = `
+        <h2 style="text-align: center; margin-bottom: 4mm; text-transform: uppercase;">Thông tin dòng lệnh sản xuất</h2>
         <table class="deviations-table">
           <thead>
             <tr>
-              <th style="width: 5%;">STT</th>
-              <th style="width: 25%;">Nội dung sai lệch</th>
-              <th style="width: 20%;">Nguyên nhân</th>
-              <th style="width: 20%;">Phương án xử lý</th>
-              <th style="width: 15%;">Kết quả xử lý</th>
-              <th style="width: 15%;">Người báo cáo</th>
+              <th style="width: 4%;">STT</th>
+              <th style="width: 12%;">Giai đoạn</th>
+              <th style="width: 9%;">Mã hàng</th>
+              <th style="width: 24%;">Tên hàng</th>
+              <th style="width: 12%;">Số lô</th>
+              <th style="width: 9%;">Hạn dùng</th>
+              <th style="width: 9%;">Kho</th>
+              <th style="width: 8%; text-align: right;">Yêu cầu</th>
+              <th style="width: 8%; text-align: right;">Đã xuất</th>
+              <th style="width: 5%;">ĐVT</th>
             </tr>
           </thead>
           <tbody>
-            ${productionOrder.deviations
-              .map(
-                (dev, idx) => `
+            ${lines.map((line, idx) => {
+              const stage = (line.ProductionOrdersStage as any)?.Name ?? (line.ProductionOrdersStage as any)?.SequenceNumber ?? '';
+              const unit = (line.UnitOfMeasurement as any)?.Name ?? (line.UnitOfMeasurement as any)?.Code ?? '';
+              return `
               <tr>
                 <td style="text-align: center;">${idx + 1}</td>
-                <td style="white-space: pre-wrap;">${dev.deviation_content || ''}</td>
-                <td style="white-space: pre-wrap;">${dev.cause || ''}</td>
-                <td style="white-space: pre-wrap;">${dev.handling_plan || ''}</td>
-                <td style="white-space: pre-wrap;">${dev.handling_result || ''}</td>
-                <td style="text-align: center;">${dev.reporter?.name || dev.reporter?.username || ''}</td>
-              </tr>
-            `,
-              )
-              .join('')}
+                <td>${stage}</td>
+                <td style="font-weight: bold;">${(line as any).ItemNo ?? ''}</td>
+                <td style="white-space: normal; word-wrap: break-word;">${(line as any).ItemName ?? ''}</td>
+                <td style="white-space: normal; word-wrap: break-word;">${(line as any).U_SL ?? ''}</td>
+                <td>${formatDate((line as any).U_HSD)}</td>
+                <td>${(line as any).Warehouse ?? ''}</td>
+                <td style="text-align: right;">${formatNum((line as any).PlannedQuantity)}</td>
+                <td style="text-align: right;">${formatNum((line as any).IssuedQuantity)}</td>
+                <td>${unit}</td>
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       `;
     } else {
-      deviationsHtml = `
-        <h2 style="text-align: center; margin-top: 10mm; text-transform: uppercase;">CÁC SAI LỆCH TRONG QUÁ TRÌNH SẢN XUẤT</h2>
-        <p style="text-align: center; font-style: italic; margin-top: 10mm;">(Không có sai lệch nào được ghi nhận)</p>
+      linesHtml = `
+        <h2 style="text-align: center; margin-bottom: 4mm; text-transform: uppercase;">Thông tin dòng lệnh sản xuất</h2>
+        <p style="text-align: center; font-style: italic; margin-top: 10mm;">(Chưa có dữ liệu dòng lệnh)</p>
       `;
     }
 
@@ -272,7 +295,7 @@ export class ProductionOrderExportService {
       print_time: printTime,
       printer_name: printerName,
       app_info: appInfo,
-      deviations_html: deviationsHtml,
+      deviations_html: linesHtml,
     });
     return {
       buffer: await this.pdfRenderer.render(html),
