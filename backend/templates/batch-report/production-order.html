@@ -228,6 +228,9 @@
       margin-top: 5mm;
       table-layout: fixed;
     }
+    .deviations-table thead {
+      display: table-header-group;
+    }
     .deviations-table th, .deviations-table td {
       border: 0.5pt solid #000;
       padding: 1.5mm;
@@ -383,20 +386,7 @@
       <span style="flex: 1; text-align: center;">{{printer_name}}</span>
     </div>
   </main>
-  <div class="flow-section">
-    <div style="text-align: left; font-size: 10pt; border-bottom: 1px solid #cbd5e1; padding-bottom: 2mm; margin-bottom: 5mm; display: flex; justify-content: space-between;">
-      <span>{{app_info}}</span>
-      <span>Báo cáo lô sản xuất</span>
-      <span>Supports 21 CFR 11 Compliance</span>
-    </div>
-
-    {{deviations_html}}
-
-    <div style="font-size: 10pt; border-top: 1px solid #cbd5e1; padding-top: 2mm; margin-top: 5mm; display: flex; justify-content: space-between;">
-      <span>{{print_time}}</span>
-      <span>{{printer_name}}</span>
-    </div>
-  </div>
+  {{deviations_html}}
 </body>
 
 </html>

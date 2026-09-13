@@ -229,7 +229,18 @@ export class ProductionOrderExportService {
     const printerName = user?.name || user?.full_name || user?.username || '';
     const appInfo = `${process.env.APP_NAME || 'EBR System'} - ${process.env.APP_VERSION || 'v1.0.0'}`;
 
-    // Build production order lines HTML (page 3)
+    // Read watermark for inline embedding in multi-page sections
+    const directory = path.join(process.cwd(), 'templates', 'batch-report');
+    const [watermarkBuf] = await Promise.all([
+      fs.readFile(path.join(directory, 'logo-removebg.png')),
+    ]);
+    const watermarkDataUri = `data:image/png;base64,${watermarkBuf.toString('base64')}`;
+    const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
+    const safeAppInfo = esc(appInfo);
+    const safePrintTime = esc(printTime);
+    const safePrinterName = esc(printerName);
+
+
     const formatNum = (v: unknown) => {
       if (v === null || v === undefined || v === '') return '';
       const n = Number(v);
@@ -243,51 +254,79 @@ export class ProductionOrderExportService {
       return d.toLocaleDateString('vi-VN');
     };
 
+    const tableHead = `
+      <thead>
+        <tr>
+          <th style="width: 14%;">Giai \u0111o\u1ea1n</th>
+          <th style="width: 9%;">M\u00e3 h\u00e0ng</th>
+          <th style="width: 24%;">T\u00ean h\u00e0ng</th>
+          <th style="width: 12%;">S\u1ed1 l\u00f4</th>
+          <th style="width: 9%;">H\u1ea1n d\u00f9ng</th>
+          <th style="width: 9%;">Kho</th>
+          <th style="width: 8%; text-align: right;">Y\u00eau c\u1ea7u</th>
+          <th style="width: 8%; text-align: right;">\u0110\u00e3 xu\u1ea5t</th>
+          <th style="width: 5%;">\u0110VT</th>
+        </tr>
+      </thead>`;
+
+    const buildPageSection = (rowsHtml: string) => `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
+    </div>
+    <div style="margin-top: 15mm;">
+      <table class="deviations-table">${tableHead}<tbody>${rowsHtml}</tbody></table>
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+
+    const ROWS_PER_PAGE = 15;
     let linesHtml = '';
+
     if (lines && lines.length > 0) {
-      linesHtml = `
-        <h2 style="text-align: center; margin-bottom: 4mm; text-transform: uppercase;">Thông tin dòng lệnh sản xuất</h2>
-        <table class="deviations-table">
-          <thead>
-            <tr>
-              <th style="width: 4%;">STT</th>
-              <th style="width: 12%;">Giai đoạn</th>
-              <th style="width: 9%;">Mã hàng</th>
-              <th style="width: 24%;">Tên hàng</th>
-              <th style="width: 12%;">Số lô</th>
-              <th style="width: 9%;">Hạn dùng</th>
-              <th style="width: 9%;">Kho</th>
-              <th style="width: 8%; text-align: right;">Yêu cầu</th>
-              <th style="width: 8%; text-align: right;">Đã xuất</th>
-              <th style="width: 5%;">ĐVT</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${lines.map((line, idx) => {
-              const stage = (line.ProductionOrdersStage as any)?.Name ?? (line.ProductionOrdersStage as any)?.SequenceNumber ?? '';
-              const unit = (line.UnitOfMeasurement as any)?.Name ?? (line.UnitOfMeasurement as any)?.Code ?? '';
-              return `
-              <tr>
-                <td style="text-align: center;">${idx + 1}</td>
-                <td>${stage}</td>
-                <td style="font-weight: bold;">${(line as any).ItemNo ?? ''}</td>
-                <td style="white-space: normal; word-wrap: break-word;">${(line as any).ItemName ?? ''}</td>
-                <td style="white-space: normal; word-wrap: break-word;">${(line as any).U_SL ?? ''}</td>
-                <td>${formatDate((line as any).U_HSD)}</td>
-                <td>${(line as any).Warehouse ?? ''}</td>
-                <td style="text-align: right;">${formatNum((line as any).PlannedQuantity)}</td>
-                <td style="text-align: right;">${formatNum((line as any).IssuedQuantity)}</td>
-                <td>${unit}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      `;
+      const allRows = lines.map((line) => {
+        const stage = (line.ProductionOrdersStage as any)?.Name ?? (line.ProductionOrdersStage as any)?.SequenceNumber ?? '';
+        const unit = (line.UnitOfMeasurement as any)?.Name ?? (line.UnitOfMeasurement as any)?.Code ?? '';
+        return `<tr>
+          <td>${stage}</td>
+          <td style="font-weight: bold;">${(line as any).ItemNo ?? ''}</td>
+          <td style="white-space: normal; word-wrap: break-word;">${(line as any).ItemName ?? ''}</td>
+          <td style="white-space: normal; word-wrap: break-word;">${(line as any).U_SL ?? ''}</td>
+          <td>${formatDate((line as any).U_HSD)}</td>
+          <td>${(line as any).Warehouse ?? ''}</td>
+          <td style="text-align: right;">${formatNum((line as any).PlannedQuantity)}</td>
+          <td style="text-align: right;">${formatNum((line as any).IssuedQuantity)}</td>
+          <td>${unit}</td>
+        </tr>`;
+      });
+
+      for (let i = 0; i < allRows.length; i += ROWS_PER_PAGE) {
+        const chunk = allRows.slice(i, i + ROWS_PER_PAGE).join('');
+        linesHtml += buildPageSection(chunk);
+      }
     } else {
       linesHtml = `
-        <h2 style="text-align: center; margin-bottom: 4mm; text-transform: uppercase;">Thông tin dòng lệnh sản xuất</h2>
-        <p style="text-align: center; font-style: italic; margin-top: 10mm;">(Chưa có dữ liệu dòng lệnh)</p>
-      `;
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
+    </div>
+    <div style="margin-top: 15mm;">
+      <p style="text-align: center; font-style: italic;">(Chưa có dữ liệu dòng lệnh)</p>
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
     }
 
     const html = await renderProductionOrderReportHtml(
