@@ -43,6 +43,22 @@
       page-break-before: always;
     }
 
+    /* Trang có thể tự động tràn sang nhiều trang in */
+    .flow-section {
+      width: 210mm;
+      padding: 18mm 12.7mm 18mm 12.7mm;
+      page-break-before: always;
+    }
+
+    .flow-section table {
+      page-break-inside: auto;
+    }
+
+    .flow-section tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+
     .page-header {
       position: absolute;
       top: 5mm;
@@ -268,7 +284,7 @@
     <div class="page-header">
       <span style="flex: 1; text-align: left;">{{app_info}}</span>
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
-      <span style="flex: 1; text-align: right;">Supports 21 CFR 21 Compliance</span>
+      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
     </div>
     <table class="document-header" aria-label="Thông tin biểu mẫu">
       <tr>
@@ -367,23 +383,20 @@
       <span style="flex: 1; text-align: center;">{{printer_name}}</span>
     </div>
   </main>
-  <main class="report-page page-break">
-    <img class="watermark" src="{{watermark_data_uri}}" alt="Watermark" />
-    <div class="page-header">
-      <span style="flex: 1; text-align: left;">{{app_info}}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
-      <span style="flex: 1; text-align: right;">Supports 21 CFR 21 Compliance</span>
-    </div>
-    
-    <div style="padding-top: 5mm;">
-      {{deviations_html}}
+  <div class="flow-section">
+    <div style="text-align: left; font-size: 10pt; border-bottom: 1px solid #cbd5e1; padding-bottom: 2mm; margin-bottom: 5mm; display: flex; justify-content: space-between;">
+      <span>{{app_info}}</span>
+      <span>Báo cáo lô sản xuất</span>
+      <span>Supports 21 CFR 11 Compliance</span>
     </div>
 
-    <div class="page-footer">
-      <span style="flex: 1; text-align: left;">{{print_time}}</span>
-      <span style="flex: 1; text-align: center;">{{printer_name}}</span>
+    {{deviations_html}}
+
+    <div style="font-size: 10pt; border-top: 1px solid #cbd5e1; padding-top: 2mm; margin-top: 5mm; display: flex; justify-content: space-between;">
+      <span>{{print_time}}</span>
+      <span>{{printer_name}}</span>
     </div>
-  </main>
+  </div>
 </body>
 
 </html>

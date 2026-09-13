@@ -62,33 +62,11 @@ export class ProductionOrderPdfRendererService {
             }
           });
 
-          let overflows = false;
-          for (const section of sections) {
-            const bounds = section.getBoundingClientRect();
-            const styles = getComputedStyle(section);
-            const maxHeight = parseFloat(styles.minHeight);
-            if (!Number.isFinite(maxHeight) || maxHeight <= 0) return null;
-            const bottom =
-              bounds.top + maxHeight - parseFloat(styles.paddingBottom);
-            const sectionOverflows =
-              bounds.height > maxHeight + 1 ||
-              Array.from(section.querySelectorAll('table, td, p, img')).some(
-                (element) => {
-                  const rect = element.getBoundingClientRect();
-                  return (
-                    rect.bottom > bottom + 1 ||
-                    rect.right > bounds.right + 1 ||
-                    rect.left < bounds.left - 1
-                  );
-                },
-              );
-            if (sectionOverflows) overflows = true;
-          }
-          return { overflows };
+          return { ok: true };
         });
-        if (!layout || layout.overflows) {
+        if (!layout) {
           throw new UnprocessableEntityException(
-            'Nội dung lệnh sản xuất bị tràn trang. Vui lòng kiểm tra độ dài dữ liệu hoặc mẫu xuất.',
+            'Không thể tải nội dung trang báo cáo.',
           );
         }
         return page.pdf({ printBackground: true, preferCSSPageSize: true });
