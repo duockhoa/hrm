@@ -1500,6 +1500,8 @@ model ProductionOrderHardCapsuleLeakageChecks {
 }
 
 model ProductionOrderVolumeChecks {
+  lower_limit Decimal? @db.Decimal(10, 2)
+  upper_limit Decimal? @db.Decimal(10, 2)
   id                  Int                                @id @default(autoincrement())
   production_order_id Int
   productionOrder     ProductionOrders                   @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_volume_checks_po_id_fkey")
@@ -1580,6 +1582,8 @@ model ProductionOrderTenShellWeightChecks {
 }
 
 model ProductionOrderSemiFinishedProductGrossWeightChecks {
+  lower_limit Decimal? @db.Decimal(10, 3)
+  upper_limit Decimal? @db.Decimal(10, 3)
   id                   Int              @id @default(autoincrement())
   production_order_id  Int
   productionOrder      ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_semi_finished_gross_weight_po_fkey")
@@ -1605,6 +1609,8 @@ model ProductionOrderSemiFinishedProductGrossWeightChecks {
 }
 
 model ProductionOrderSemiFinishedProductNetWeightChecks {
+  lower_limit Decimal? @db.Decimal(10, 3)
+  upper_limit Decimal? @db.Decimal(10, 3)
   id                  Int              @id @default(autoincrement())
   production_order_id Int
   productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_semi_finished_net_weight_po_fkey")

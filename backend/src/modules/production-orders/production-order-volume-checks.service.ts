@@ -1,3 +1,4 @@
+import { normalizeCheckLimits } from './production-order-check-limits';
 import {
   BadRequestException,
   Injectable,
@@ -49,6 +50,8 @@ const volumeCheckInclude = {
 } satisfies Prisma.ProductionOrderVolumeChecksInclude;
 
 const volumeCheckValueSelect = {
+  lower_limit: true,
+  upper_limit: true,
   id: true,
   unit_1_volume: true,
   unit_2_volume: true,
@@ -147,6 +150,7 @@ export class ProductionOrderVolumeChecksService {
     return this.prismaService.productionOrderVolumeChecks.create({
       data: {
         production_order_id: productionOrderId,
+        ...normalizeCheckLimits(dto ?? {}, 2),
         package_type: this.normalizeOptionalPackageType(dto?.package_type),
         requirement: this.normalizeOptionalLongText(
           dto?.requirement,
@@ -287,6 +291,8 @@ export class ProductionOrderVolumeChecksService {
     const hasUnit6Volume = 'unit_6_volume' in updateDto;
 
     if (
+      !('lower_limit' in updateDto) &&
+      !('upper_limit' in updateDto) &&
       !hasPackageType &&
       !hasRequirement &&
       !hasDosageFormStage &&
@@ -300,7 +306,9 @@ export class ProductionOrderVolumeChecksService {
       throw new BadRequestException('At least one field is required');
     }
 
-    const data: Prisma.ProductionOrderVolumeChecksUpdateInput = {};
+    const data: Prisma.ProductionOrderVolumeChecksUpdateInput = {
+      ...normalizeCheckLimits(updateDto, 2, existingCheck),
+    };
 
     if (hasPackageType) {
       data.package_type = this.normalizeOptionalPackageType(

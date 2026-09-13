@@ -1,3 +1,4 @@
+import { normalizeCheckLimits } from './production-order-check-limits';
 import {
   BadRequestException,
   Injectable,
@@ -104,6 +105,7 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
       {
         data: {
           production_order_id: productionOrderId,
+          ...normalizeCheckLimits(dto ?? {}, 3),
           requirement: this.normalizeOptionalRequirement(dto?.requirement),
           dosage_form_stage: this.normalizeOptionalDosageFormStage(
             dto?.dosage_form_stage,
@@ -121,12 +123,12 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
     checkId: number,
     dto: UpdateProductionOrderSemiFinishedGrossWeightCheckDto,
   ) {
-    await this.ensureCheckExists(checkId);
+    const existingCheck = await this.ensureCheckExists(checkId);
 
     return this.prismaService.productionOrderSemiFinishedProductGrossWeightChecks.update(
       {
         where: { id: checkId },
-        data: this.normalizeUpdateData(dto),
+        data: this.normalizeUpdateData(dto, existingCheck),
         include: grossWeightCheckInclude,
       },
     );
@@ -192,10 +194,14 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
 
   private normalizeUpdateData(
     dto: UpdateProductionOrderSemiFinishedGrossWeightCheckDto,
+    existingCheck: {
+      lower_limit: Prisma.Decimal | null;
+      upper_limit: Prisma.Decimal | null;
+    },
   ) {
     const updateDto = dto ?? {};
     const data: Prisma.ProductionOrderSemiFinishedProductGrossWeightChecksUpdateInput =
-      {};
+      { ...normalizeCheckLimits(updateDto, 3, existingCheck) };
 
     if ('requirement' in updateDto) {
       data.requirement = this.normalizeOptionalRequirement(
@@ -386,7 +392,7 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
       await this.prismaService.productionOrderSemiFinishedProductGrossWeightChecks.findUnique(
         {
           where: { id: checkId },
-          select: { id: true },
+          select: { id: true, lower_limit: true, upper_limit: true },
         },
       );
 
@@ -395,6 +401,7 @@ export class ProductionOrderSemiFinishedGrossWeightChecksService {
         'Semi-finished product gross weight check not found',
       );
     }
+    return check;
   }
 
   private normalizeUserId(user?: AuthenticatedUser) {

@@ -104,6 +104,8 @@ describe('ProductionOrderSemiFinishedGrossWeightChecksService', () => {
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         data: {
+          lower_limit: null,
+          upper_limit: null,
           production_order_id: 2031,
           requirement: validDto.requirement,
           dosage_form_stage: 'film_coated_tablet',

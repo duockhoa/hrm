@@ -1,4 +1,6 @@
 export class UpdateProductionOrderSemiFinishedGrossWeightCheckDto {
+  lower_limit?: number | string | null;
+  upper_limit?: number | string | null;
   requirement?: string | null;
   dosage_form_stage?: string | null;
   unit?: string | null;

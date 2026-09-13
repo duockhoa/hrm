@@ -128,6 +128,8 @@ describe('ProductionOrderVolumeChecksService', () => {
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         data: {
+          lower_limit: null,
+          upper_limit: null,
           production_order_id: 2031,
           package_type: 'lo',
           requirement: 'The tich phai dat yeu cau',
@@ -166,6 +168,8 @@ describe('ProductionOrderVolumeChecksService', () => {
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         data: {
+          lower_limit: null,
+          upper_limit: null,
           production_order_id: 2031,
           package_type: null,
           requirement: null,

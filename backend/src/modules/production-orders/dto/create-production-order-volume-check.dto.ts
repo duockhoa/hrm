@@ -1,4 +1,6 @@
 export class CreateProductionOrderVolumeCheckDto {
+  lower_limit?: number | string | null;
+  upper_limit?: number | string | null;
   package_type?: string | null;
   requirement?: string | null;
   dosage_form_stage?: string | null;
