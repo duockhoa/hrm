@@ -16,6 +16,7 @@ const escapeHtml = (value: string) =>
 /** HTML and assets are owned by the backend; values are always plain text. */
 export async function renderProductionOrderReportHtml(
   data: Record<string, string>,
+  rawHtmlKeys: string[] = [],
 ) {
   const directory = path.join(process.cwd(), 'templates', 'batch-report');
   const [template, logo, watermark] = await Promise.all([
@@ -23,6 +24,7 @@ export async function renderProductionOrderReportHtml(
     fs.readFile(path.join(directory, 'logo.png')),
     fs.readFile(path.join(directory, 'logo-removebg.png')),
   ]);
+  const rawKeys = new Set(rawHtmlKeys);
   const values: Record<string, string> = {
     ...data,
     logo_data_uri: `data:image/png;base64,${logo.toString('base64')}`,
@@ -31,6 +33,6 @@ export async function renderProductionOrderReportHtml(
   return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
     if (!Object.hasOwn(values, key))
       throw new Error(`Unknown batch report field: ${key}`);
-    return escapeHtml(values[key]);
+    return rawKeys.has(key) ? values[key] : escapeHtml(values[key]);
   });
 }

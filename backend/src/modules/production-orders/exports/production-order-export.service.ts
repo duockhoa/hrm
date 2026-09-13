@@ -290,13 +290,16 @@ export class ProductionOrderExportService {
       `;
     }
 
-    const html = await renderProductionOrderReportHtml({
-      ...getTemplateData(productionOrder),
-      print_time: printTime,
-      printer_name: printerName,
-      app_info: appInfo,
-      deviations_html: linesHtml,
-    });
+    const html = await renderProductionOrderReportHtml(
+      {
+        ...getTemplateData(productionOrder),
+        print_time: printTime,
+        printer_name: printerName,
+        app_info: appInfo,
+        deviations_html: linesHtml,
+      },
+      ['deviations_html'],
+    );
     return {
       buffer: await this.pdfRenderer.render(html),
       contentType: 'application/pdf',
