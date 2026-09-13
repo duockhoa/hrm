@@ -1,5 +1,17 @@
+import {
+  buildSemiFinishedNetWeightChecksHtml,
+  type SemiFinishedNetWeightCheckForReport,
+} from './semi-finished-net-weight-checks-report-html';
+import {
+  buildSemiFinishedGrossWeightChecksHtml,
+  type SemiFinishedGrossWeightCheckForReport,
+} from './semi-finished-gross-weight-checks-report-html';
 import { buildVolumeChecksHtml, type VolumeCheckForReport } from './volume-checks-report-html';
 import { buildHygieneChecksHtml, type HygieneCheckForReport } from './hygiene-checks-report-html';
+import {
+  buildLeakTightnessChecksHtml,
+  type LeakTightnessCheckForReport,
+} from './leak-tightness-checks-report-html';
 import {
   buildEnvironmentChecksHtml,
   type EnvironmentCheckForReport,
@@ -43,6 +55,9 @@ type ProductionOrderForExport = ProductionOrders & {
   environmentChecks?: EnvironmentCheckForReport[];
   hygieneChecks?: HygieneCheckForReport[];
   volumeChecks?: VolumeCheckForReport[];
+  semiFinishedProductNetWeightChecks?: SemiFinishedNetWeightCheckForReport[];
+  semiFinishedProductGrossWeightChecks?: SemiFinishedGrossWeightCheckForReport[];
+  leakTightnessChecks?: LeakTightnessCheckForReport[];
   item?:
     | (Items & {
         registration?: RegistrationNumbers | null;
@@ -869,6 +884,20 @@ export class ProductionOrderExportService {
           productionOrder.volumeChecks ?? [],
           { appInfo, printTime, printerName, watermarkDataUri },
         ),
+        semi_finished_net_weight_checks_html:
+          buildSemiFinishedNetWeightChecksHtml(
+            productionOrder.semiFinishedProductNetWeightChecks ?? [],
+            { appInfo, printTime, printerName, watermarkDataUri },
+          ),
+        semi_finished_gross_weight_checks_html:
+          buildSemiFinishedGrossWeightChecksHtml(
+            productionOrder.semiFinishedProductGrossWeightChecks ?? [],
+            { appInfo, printTime, printerName, watermarkDataUri },
+          ),
+        leak_tightness_checks_html: buildLeakTightnessChecksHtml(
+          productionOrder.leakTightnessChecks ?? [],
+          { appInfo, printTime, printerName, watermarkDataUri },
+        ),
         hygiene_checks_html: buildHygieneChecksHtml(
           productionOrder.hygieneChecks ?? [],
           { appInfo, printTime, printerName, watermarkDataUri },
@@ -884,6 +913,9 @@ export class ProductionOrderExportService {
         'environment_checks_html',
         'hygiene_checks_html',
         'volume_checks_html',
+        'semi_finished_net_weight_checks_html',
+        'semi_finished_gross_weight_checks_html',
+        'leak_tightness_checks_html',
         'pyclm_status_html',
         'specifications_table_html',
       ],

@@ -99,6 +99,9 @@ export default function ApplicationAccessGuard({
           <p className="mt-6 text-2xl font-bold tracking-[0.08em] text-blue-700 sm:text-3xl sm:tracking-[0.12em] md:text-4xl">
             HỒ SƠ LÔ ĐIỆN TỬ
           </p>
+          <p className="mt-2 text-xs font-semibold tracking-[0.2em] text-gray-400 sm:text-sm md:text-base">
+            GMP COMPLIANCE
+          </p>
         </div>
         <footer className="absolute inset-x-0 bottom-6 z-10 px-4 text-center text-xs text-gray-500 sm:text-sm">
           Phiên bản {packageJson.version} | © {CURRENT_YEAR} DK Pharma. All

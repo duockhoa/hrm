@@ -41,13 +41,19 @@
 
     .environment-check-page,
     .hygiene-check-page,
-    .volume-check-page {
+    .volume-check-page,
+    .semi-finished-net-weight-check-page,
+    .semi-finished-gross-weight-check-page,
+    .leak-tightness-check-page {
       height: 297mm;
     }
 
     .environment-check-page td,
     .hygiene-check-page td,
-    .volume-check-page td {
+    .volume-check-page td,
+    .semi-finished-net-weight-check-page td,
+    .semi-finished-gross-weight-check-page td,
+    .leak-tightness-check-page td {
       overflow-wrap: anywhere;
       white-space: pre-wrap;
     }
@@ -572,6 +578,9 @@
   {{environment_checks_html}}
   {{hygiene_checks_html}}
   {{volume_checks_html}}
+  {{semi_finished_net_weight_checks_html}}
+  {{semi_finished_gross_weight_checks_html}}
+  {{leak_tightness_checks_html}}
 </body>
 
 </html>

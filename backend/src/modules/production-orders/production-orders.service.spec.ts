@@ -629,6 +629,24 @@ describe('ProductionOrdersService', () => {
               },
               orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
             },
+            semiFinishedProductNetWeightChecks: {
+              include: {
+                createdBy: { select: { name: true, username: true } },
+              },
+              orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+            },
+            semiFinishedProductGrossWeightChecks: {
+              include: {
+                createdBy: { select: { name: true, username: true } },
+              },
+              orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+            },
+            leakTightnessChecks: {
+              include: {
+                createdBy: { select: { name: true, username: true } },
+              },
+              orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+            },
             hygieneChecks: {
               include: {
                 createdBy: { select: { name: true, username: true } },
