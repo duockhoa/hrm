@@ -616,7 +616,10 @@ export class ProductionOrderExportService {
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
       <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
     </div>
-    <div style="margin-top: 15mm;">
+    <div style="margin-top: 5mm; margin-bottom: 5mm;">
+      <h2 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 6mm; text-transform: uppercase; color: #000;">
+        Thông tin phiếu xuất kho
+      </h2>
       <table class="deviations-table">${tableHead}<tbody>${rowsHtml}</tbody></table>
     </div>
     <div class="page-footer">
@@ -658,8 +661,13 @@ export class ProductionOrderExportService {
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
       <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
     </div>
-    <div style="margin-top: 15mm;">
-      <p style="text-align: center; font-style: italic;">(Chưa có dữ liệu dòng lệnh)</p>
+    <div style="margin-top: 5mm; margin-bottom: 5mm;">
+      <h2 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 6mm; text-transform: uppercase; color: #000;">
+        Thông tin phiếu xuất kho
+      </h2>
+      <div style="margin-top: 15mm;">
+        <p style="text-align: center; font-style: italic;">(Chưa có dữ liệu)</p>
+      </div>
     </div>
     <div class="page-footer">
       <span style="flex: 1; text-align: left;">${safePrintTime}</span>
