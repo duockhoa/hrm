@@ -294,91 +294,89 @@
       <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
     </div>
 
-    <div style="margin-top: 3mm; margin-bottom: 3mm;">
-      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 4mm; text-transform: uppercase; color: #1e293b;">
+    <div style="margin-top: 5mm; margin-bottom: 5mm;">
+      <h2 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 7mm; text-transform: uppercase; color: #000;">
         Thông tin lô sản xuất
       </h2>
 
-      <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 4.5mm 7mm; background-color: #ffffff;">
-        <table style="width: 100%; border-collapse: separate; border-spacing: 0 2.2mm; font-size: 9.5pt;">
-          <tr>
-            <td style="width: 38%; font-weight: 600; color: #475569; vertical-align: top;">Mã lệnh sản xuất</td>
-            <td style="color: #0f172a; vertical-align: top;">{{production_order_code}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Mã sản phẩm</td>
-            <td style="color: #0f172a; vertical-align: top;">{{item_code}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Trạng thái</td>
-            <td style="color: #0f172a; vertical-align: top;">{{status_label}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Loại</td>
-            <td style="color: #0f172a; vertical-align: top;">{{type_label}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Số lượng kế hoạch</td>
-            <td style="color: #0f172a; vertical-align: top;">{{planned_quantity_display}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Kho</td>
-            <td style="color: #0f172a; vertical-align: top;">{{warehouse}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Ngày tạo</td>
-            <td style="color: #0f172a; vertical-align: top;">{{display_creation_date}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Ngày bắt đầu</td>
-            <td style="color: #0f172a; vertical-align: top;">{{display_start_date}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Ngày sản xuất</td>
-            <td style="color: #0f172a; vertical-align: top;">{{display_date_manufacture}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Hạn sử dụng</td>
-            <td style="color: #0f172a; vertical-align: top;">{{display_expire_date}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Quy cách đóng gói</td>
-            <td style="color: #0f172a; vertical-align: top;">{{packing_specification}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Ghi chú</td>
-            <td style="color: #0f172a; vertical-align: top;">{{remarks}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Nội dung thay đổi</td>
-            <td style="color: #0f172a; vertical-align: top;">{{change_content}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Số đăng ký</td>
-            <td style="color: #0f172a; vertical-align: top;">{{registration_number}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Gửi PYCLM</td>
-            <td style="color: #0f172a; vertical-align: top;">{{pyclm_status_html}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Cấp hồ sơ lô giấy</td>
-            <td style="color: #0f172a; vertical-align: top;">{{doc_batch_record_issued}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Nhận hồ sơ lô giấy</td>
-            <td style="color: #0f172a; vertical-align: top;">{{doc_batch_record_received}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Nhận phiếu xuất kho</td>
-            <td style="color: #0f172a; vertical-align: top;">{{doc_warehouse_release_received}}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: 600; color: #475569; vertical-align: top;">Nhận phiếu kiểm nghiệm</td>
-            <td style="color: #0f172a; vertical-align: top;">{{doc_test_certificate_received}}</td>
-          </tr>
-        </table>
-      </div>
+      <table style="width: 100%; border-collapse: separate; border-spacing: 0 1.8mm; font-size: 12pt;">
+        <tr>
+          <td style="width: 38%; font-weight: bold; color: #000; vertical-align: top;">Mã lệnh sản xuất</td>
+          <td style="color: #000; vertical-align: top;">{{production_order_code}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Mã sản phẩm</td>
+          <td style="color: #000; vertical-align: top;">{{item_code}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Trạng thái</td>
+          <td style="color: #000; vertical-align: top;">{{status_label}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Loại</td>
+          <td style="color: #000; vertical-align: top;">{{type_label}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Số lượng kế hoạch</td>
+          <td style="color: #000; vertical-align: top;">{{planned_quantity_display}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Kho</td>
+          <td style="color: #000; vertical-align: top;">{{warehouse}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Ngày tạo</td>
+          <td style="color: #000; vertical-align: top;">{{display_creation_date}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Ngày bắt đầu</td>
+          <td style="color: #000; vertical-align: top;">{{display_start_date}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Ngày sản xuất</td>
+          <td style="color: #000; vertical-align: top;">{{display_date_manufacture}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Hạn sử dụng</td>
+          <td style="color: #000; vertical-align: top;">{{display_expire_date}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Quy cách đóng gói</td>
+          <td style="color: #000; vertical-align: top;">{{packing_specification}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Ghi chú</td>
+          <td style="color: #000; vertical-align: top;">{{remarks}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Nội dung thay đổi</td>
+          <td style="color: #000; vertical-align: top;">{{change_content}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Số đăng ký</td>
+          <td style="color: #000; vertical-align: top;">{{registration_number}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Gửi PYCLM</td>
+          <td style="color: #000; vertical-align: top;">{{pyclm_status_html}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Cấp hồ sơ lô giấy</td>
+          <td style="color: #000; vertical-align: top;">{{doc_batch_record_issued}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Nhận hồ sơ lô giấy</td>
+          <td style="color: #000; vertical-align: top;">{{doc_batch_record_received}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Nhận phiếu xuất kho</td>
+          <td style="color: #000; vertical-align: top;">{{doc_warehouse_release_received}}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #000; vertical-align: top;">Nhận phiếu kiểm nghiệm</td>
+          <td style="color: #000; vertical-align: top;">{{doc_test_certificate_received}}</td>
+        </tr>
+      </table>
     </div>
 
     <div class="page-footer">
