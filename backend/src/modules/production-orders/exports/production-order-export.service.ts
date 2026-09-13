@@ -209,6 +209,13 @@ const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
     productionOrder.item?.registration?.registration_number,
   ),
   remarks: normalizeTemplateValue(productionOrder.remarks),
+  status: normalizeTemplateValue(productionOrder.status),
+  order_type: normalizeTemplateValue(productionOrder.type),
+  planned_quantity: `${Number(productionOrder.planned_quatity || 0).toLocaleString('vi-VN')} ${normalizeTemplateValue(productionOrder.unit)}`,
+  warehouse: normalizeTemplateValue(productionOrder.warehouse),
+  creation_date: formatShortDate(productionOrder.creation_date?.toISOString?.() ?? ''),
+  start_date: formatShortDate(productionOrder.start_date?.toISOString?.() ?? ''),
+  change_content: normalizeTemplateValue(productionOrder.change_content),
 });
 
 @Injectable()
