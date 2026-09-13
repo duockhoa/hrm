@@ -42,6 +42,97 @@ type ProductionOrderForExport = ProductionOrders & {
   deviations?: (ProductionOrderDeviations & {
     reporter?: Users;
   })[];
+  documentControl?: any;
+  pyclm?: any;
+};
+
+const formatDisplayDate = (value: unknown) => {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return String(value);
+  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+};
+
+const formatDisplayDateTime = (value: unknown) => {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return String(value);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${hours}:${minutes} ${day}/${month}/${year}`;
+};
+
+const formatProductionOrderStatus = (
+  value: number | string | null | undefined,
+) => {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+
+  const statusLabels: Record<string, string> = {
+    boposPlanned: 'Đã lên kế hoạch',
+    boppPlanned: 'Đã lên kế hoạch',
+    Planned: 'Đã lên kế hoạch',
+    P: 'Đã lên kế hoạch',
+    boposReleased: 'Đã phát hành',
+    boppReleased: 'Đã phát hành',
+    Released: 'Đã phát hành',
+    R: 'Đã phát hành',
+    boposClosed: 'Đã đóng',
+    boppClosed: 'Đã đóng',
+    Closed: 'Đã đóng',
+    L: 'Đã đóng',
+    boposCancelled: 'Đã hủy',
+    boppCancelled: 'Đã hủy',
+    Cancelled: 'Đã hủy',
+    C: 'Đã hủy',
+  };
+
+  const key = String(value);
+  return statusLabels[key] ?? key;
+};
+
+const formatProductionOrderType = (
+  value: number | string | null | undefined,
+) => {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+
+  const typeLabels: Record<string, string> = {
+    bopotStandard: 'Tiêu chuẩn',
+    Standard: 'Tiêu chuẩn',
+    S: 'Tiêu chuẩn',
+    bopotSpecial: 'Đặc biệt',
+    Special: 'Đặc biệt',
+    P: 'Đặc biệt',
+    bopotDisassembly: 'Tháo rã',
+    Disassembly: 'Tháo rã',
+    D: 'Tháo rã',
+  };
+
+  const key = String(value);
+  return typeLabels[key] ?? key;
+};
+
+const getDocControlUserLabel = (user?: any) =>
+  user?.name ?? user?.full_name ?? user?.username ?? user?.email ?? '';
+
+const getDocControlStatusText = (
+  completedAt?: Date | string | null,
+  completedBy?: any,
+) => {
+  if (!completedAt) {
+    return 'Chưa thực hiện';
+  }
+
+  const userLabel = getDocControlUserLabel(completedBy);
+  return [formatDisplayDateTime(completedAt), userLabel && `- ${userLabel}`]
+    .filter(Boolean)
+    .join(' ');
 };
 
 const normalizeTemplateValue = (value: unknown) => {
@@ -336,15 +427,48 @@ export class ProductionOrderExportService {
   </main>`;
     }
 
+    const isPyclmSent = Boolean((productionOrder as any).pyclm?.isSent);
+    const pyclmStatusHtml = `<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${
+      isPyclmSent ? '#22c55e' : '#ef4444'
+    }; margin-right: 6px; vertical-align: middle;"></span><span>${
+      isPyclmSent ? 'Đã gửi' : 'Chưa gửi'
+    }</span>`;
+
+    const docControl = (productionOrder as any).documentControl;
+
     const html = await renderProductionOrderReportHtml(
       {
         ...getTemplateData(productionOrder),
         print_time: printTime,
         printer_name: printerName,
         app_info: appInfo,
+        status_label: formatProductionOrderStatus(productionOrder.status),
+        type_label: formatProductionOrderType(productionOrder.type),
+        planned_quantity_display: `${Number(productionOrder.planned_quatity || 0).toLocaleString('vi-VN')} ${normalizeTemplateValue(productionOrder.unit)}`.trim(),
+        display_creation_date: formatDisplayDate(productionOrder.creation_date),
+        display_start_date: formatDisplayDate(productionOrder.start_date),
+        display_date_manufacture: formatDisplayDate(productionOrder.date_manufacture),
+        display_expire_date: formatDisplayDate(productionOrder.expire_date),
+        pyclm_status_html: pyclmStatusHtml,
+        doc_batch_record_issued: getDocControlStatusText(
+          docControl?.batch_record_issued_at,
+          docControl?.batchRecordIssuedBy,
+        ),
+        doc_batch_record_received: getDocControlStatusText(
+          docControl?.batch_record_received_at,
+          docControl?.batchRecordReceivedBy,
+        ),
+        doc_warehouse_release_received: getDocControlStatusText(
+          docControl?.warehouse_release_received_at,
+          docControl?.warehouseReleaseReceivedBy,
+        ),
+        doc_test_certificate_received: getDocControlStatusText(
+          docControl?.test_certificate_received_at,
+          docControl?.testCertificateReceivedBy,
+        ),
         deviations_html: linesHtml,
       },
-      ['deviations_html'],
+      ['deviations_html', 'pyclm_status_html'],
     );
     return {
       buffer: await this.pdfRenderer.render(html),

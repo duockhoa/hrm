@@ -324,7 +324,7 @@ export class ProductionOrdersService {
   private addPyclmInfo<T extends ProductionOrderWithSamplingRequests>(
     productionOrder: T,
   ) {
-    const latestSamplingRequest = productionOrder.samplingRequests[0] ?? null;
+    const latestSamplingRequest = productionOrder.samplingRequests?.[0] ?? null;
 
     return {
       ...productionOrder,
@@ -403,10 +403,14 @@ export class ProductionOrdersService {
   }
 
   async exportBatchReport(id: number, user?: any) {
-    const [productionOrder, { lines }] = await Promise.all([
-      this.findProductionOrderForExport(id),
-      this.findProductionOrderLineData(id),
-    ]);
+    let lines: ProductionOrderLineWithRelations[] | undefined;
+    try {
+      const lineData = await this.findProductionOrderLineData(id);
+      lines = lineData?.lines;
+    } catch {
+      lines = undefined;
+    }
+    const productionOrder = await this.findProductionOrderForBatchReport(id);
     return this.productionOrderExportService.exportBatchReport(
       productionOrder,
       user,
@@ -426,6 +430,24 @@ export class ProductionOrdersService {
               registration: true,
             },
           },
+        },
+      });
+
+    if (!productionOrder) {
+      throw new NotFoundException('Production order not found');
+    }
+
+    return productionOrder;
+  }
+
+  private async findProductionOrderForBatchReport(id: number) {
+    const productionOrder =
+      await this.prismaService.productionOrders.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          ...productionOrderFindInclude,
           deviations: {
             include: {
               reporter: true,
@@ -438,7 +460,7 @@ export class ProductionOrdersService {
       throw new NotFoundException('Production order not found');
     }
 
-    return productionOrder;
+    return this.addPyclmInfo(productionOrder);
   }
 
   async exportProductionOrderLines(

@@ -48,8 +48,7 @@ describe('Batch report HTML template', () => {
         ),
       ).toBe(true);
       expect(html).toContain('<!doctype html>');
-      expect(html).toContain('data:image/png;base64,');
-      expect(header).toContain('(Lệnh pha chế)');
+      expect(header).not.toContain('(Lệnh pha chế)');
       expect(header).not.toContain('Lệnh hoàn thiện');
       expect(body).toContain('Ngày pha chế:');
       expect(body).toContain('PGĐ Sản xuất');

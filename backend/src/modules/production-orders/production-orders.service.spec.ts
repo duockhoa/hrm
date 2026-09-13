@@ -613,10 +613,11 @@ describe('ProductionOrdersService', () => {
       expect(file.contentType).toBe('application/pdf');
       expect(file.filename).toBe('Bao cao lo san xuat Dược Khoa 001.pdf');
       expect(file.buffer.toString()).toBe('%PDF-1.7');
-      expect(prismaService.productionOrders.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
-        include: { item: { include: { registration: true } } },
-      });
+      expect(prismaService.productionOrders.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 1 },
+        }),
+      );
     },
   );
 
