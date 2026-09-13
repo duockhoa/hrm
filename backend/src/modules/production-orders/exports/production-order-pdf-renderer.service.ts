@@ -45,7 +45,7 @@ export class ProductionOrderPdfRendererService {
           );
           // Measure rows after fonts load so long room/user names also paginate.
           for (const firstPage of Array.from(
-            document.querySelectorAll<HTMLElement>('.environment-check-page, .hygiene-check-page'),
+            document.querySelectorAll<HTMLElement>('.environment-check-page, .hygiene-check-page, .volume-check-page'),
           )) {
             let currentPage = firstPage;
             let body = currentPage.querySelector('tbody');

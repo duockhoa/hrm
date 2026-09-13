@@ -623,6 +623,12 @@ describe('ProductionOrdersService', () => {
         expect.objectContaining({
           where: { id: 1 },
           include: expect.objectContaining({
+            volumeChecks: {
+              include: {
+                createdBy: { select: { name: true, username: true } },
+              },
+              orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+            },
             hygieneChecks: {
               include: {
                 createdBy: { select: { name: true, username: true } },

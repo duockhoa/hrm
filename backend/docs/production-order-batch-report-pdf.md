@@ -33,6 +33,14 @@ ghi chú và người nhập. Giữ nguyên kết quả đã ghi nhận, bao g�
 Khi chưa có dữ liệu vẫn xuất trang thông báo. Ghi chú được giữ xuống dòng và
 escape HTML; các hàng tự chia trang, lặp tiêu đề và chân trang như phần nhiệt độ/độ ẩm.
 
+Phần **Kiểm tra thể tích** tiếp nối kiểm tra vệ sinh, lấy `volumeChecks` theo
+`created_at` và `id` tăng dần. Gồm thời điểm kiểm tra (giờ Việt Nam), dạng bao bì/
+dạng bào chế, yêu cầu, khoảng kiểm soát đã lưu (`lower_limit` – `upper_limit`),
+thể tích đơn vị 1–6 và người nhập. Số đo in kèm đơn vị, hai chữ số thập phân;
+đơn vị chưa đo hiển thị “—”, chưa có cả hai giới hạn hiển thị “Chưa có”.
+Không suy ra giới hạn từ nội dung yêu cầu. Phần này tự chia trang và có trang
+thông báo nếu chưa có bản ghi.
+
 Các hàng nhiệt độ/độ ẩm được đo chiều cao sau khi tải font và tự chia trang để
 không chồng lên chân trang. Mỗi trang lặp tiêu đề, tiêu đề bảng, watermark và
 thông tin in; số trang tính trên toàn báo cáo. Nếu một bản ghi riêng lẻ quá dài
@@ -77,7 +85,7 @@ PDF trả trực tiếp trong bộ nhớ và có `Cache-Control: private, no-sto
 
 ```bash
 npm test -- --runInBand production-orders.controller.spec.ts production-orders.service.spec.ts
-RUN_PDF_RENDER_TESTS=1 npm test -- --runInBand environment-checks-report-html.spec.ts hygiene-checks-report-html.spec.ts
+RUN_PDF_RENDER_TESTS=1 npm test -- --runInBand environment-checks-report-html.spec.ts hygiene-checks-report-html.spec.ts volume-checks-report-html.spec.ts
 npm run build
 ```
 

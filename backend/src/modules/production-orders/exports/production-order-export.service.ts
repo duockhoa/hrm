@@ -1,3 +1,4 @@
+import { buildVolumeChecksHtml, type VolumeCheckForReport } from './volume-checks-report-html';
 import { buildHygieneChecksHtml, type HygieneCheckForReport } from './hygiene-checks-report-html';
 import {
   buildEnvironmentChecksHtml,
@@ -41,6 +42,7 @@ const SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
 type ProductionOrderForExport = ProductionOrders & {
   environmentChecks?: EnvironmentCheckForReport[];
   hygieneChecks?: HygieneCheckForReport[];
+  volumeChecks?: VolumeCheckForReport[];
   item?:
     | (Items & {
         registration?: RegistrationNumbers | null;
@@ -863,6 +865,10 @@ export class ProductionOrderExportService {
         specifications_table_html: buildSpecificationsTableHtml(productionOrder),
         warehouse_release_html: linesHtml,
         deviations_html: buildDeviationsHtml(),
+        volume_checks_html: buildVolumeChecksHtml(
+          productionOrder.volumeChecks ?? [],
+          { appInfo, printTime, printerName, watermarkDataUri },
+        ),
         hygiene_checks_html: buildHygieneChecksHtml(
           productionOrder.hygieneChecks ?? [],
           { appInfo, printTime, printerName, watermarkDataUri },
@@ -877,6 +883,7 @@ export class ProductionOrderExportService {
         'deviations_html',
         'environment_checks_html',
         'hygiene_checks_html',
+        'volume_checks_html',
         'pyclm_status_html',
         'specifications_table_html',
       ],
