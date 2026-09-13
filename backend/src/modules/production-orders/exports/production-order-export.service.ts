@@ -608,7 +608,11 @@ export class ProductionOrderExportService {
         </tr>
       </thead>`;
 
-    const buildPageSection = (rowsHtml: string) => `
+    const buildPageSection = (
+      rowsHtml: string,
+      pageIndex = 0,
+      totalPages = 1,
+    ) => `
   <main class="report-page page-break">
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
@@ -616,9 +620,9 @@ export class ProductionOrderExportService {
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
       <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
     </div>
-    <div style="margin-top: 5mm; margin-bottom: 5mm;">
-      <h2 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 6mm; text-transform: uppercase; color: #000;">
-        Thông tin phiếu xuất kho
+    <div style="margin-top: 4mm; margin-bottom: 4mm;">
+      <h2 style="text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 5mm; text-transform: uppercase; color: #000;">
+        Thông tin phiếu xuất kho${totalPages > 1 && pageIndex > 0 ? ' (tiếp theo)' : ''}
       </h2>
       <table class="deviations-table">${tableHead}<tbody>${rowsHtml}</tbody></table>
     </div>
@@ -628,7 +632,7 @@ export class ProductionOrderExportService {
     </div>
   </main>`;
 
-    const ROWS_PER_PAGE = 15;
+    const ROWS_PER_PAGE = 8;
     let linesHtml = '';
 
     if (lines && lines.length > 0) {
@@ -648,9 +652,14 @@ export class ProductionOrderExportService {
         </tr>`;
       });
 
+      const totalPages = Math.ceil(allRows.length / ROWS_PER_PAGE);
       for (let i = 0; i < allRows.length; i += ROWS_PER_PAGE) {
         const chunk = allRows.slice(i, i + ROWS_PER_PAGE).join('');
-        linesHtml += buildPageSection(chunk);
+        linesHtml += buildPageSection(
+          chunk,
+          Math.floor(i / ROWS_PER_PAGE),
+          totalPages,
+        );
       }
     } else {
       linesHtml = `
