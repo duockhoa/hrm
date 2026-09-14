@@ -7,6 +7,10 @@ import {
 import { chromium } from 'playwright';
 import type { Browser } from 'playwright';
 
+// Keep rows close to the footer so a single normal-height row is not pushed
+// onto an otherwise empty final page. This still leaves a small visual gap.
+const FOOTER_ROW_CLEARANCE_PX = 2;
+
 /** Only local, server-generated HTML templates are accepted by this renderer. */
 @Injectable()
 export class ProductionOrderPdfRendererService {
@@ -38,7 +42,7 @@ export class ProductionOrderPdfRendererService {
       const task = async () => {
         await page.emulateMedia({ media: 'print' });
         await page.setContent(html, { waitUntil: 'load' });
-        const layout = await page.evaluate(async () => {
+        const layout = await page.evaluate(async (footerRowClearancePx) => {
           await document.fonts.ready;
           await Promise.all(
             Array.from(document.images).map((image) => image.decode()),
@@ -46,7 +50,7 @@ export class ProductionOrderPdfRendererService {
           // Measure rows after fonts load so long room/user names also paginate.
           for (const firstPage of Array.from(
             document.querySelectorAll<HTMLElement>(
-              '.environment-check-page, .hygiene-check-page, .volume-check-page, .semi-finished-net-weight-check-page, .semi-finished-gross-weight-check-page, .leak-tightness-check-page',
+              '.environment-check-page, .hygiene-check-page, .volume-check-page, .semi-finished-net-weight-check-page, .semi-finished-gross-weight-check-page, .leak-tightness-check-page, .warehouse-release-page',
             ),
           )) {
             let currentPage = firstPage;
@@ -58,7 +62,10 @@ export class ProductionOrderPdfRendererService {
               body.appendChild(row);
               const exceedsFooter = () => {
                 const footer = currentPage.querySelector<HTMLElement>('.page-footer')!;
-                return row.getBoundingClientRect().bottom > footer.getBoundingClientRect().top - 8;
+                return (
+                  row.getBoundingClientRect().bottom >
+                  footer.getBoundingClientRect().top - footerRowClearancePx
+                );
               };
               if (exceedsFooter() && body.rows.length > 1) {
                 row.remove();
@@ -92,7 +99,7 @@ export class ProductionOrderPdfRendererService {
           });
 
           return { ok: true };
-        });
+        }, FOOTER_ROW_CLEARANCE_PX);
         if (!layout) {
           throw new UnprocessableEntityException(
             'Không thể tải nội dung trang báo cáo.',

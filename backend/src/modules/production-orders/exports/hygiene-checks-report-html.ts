@@ -52,7 +52,7 @@ export function buildHygieneChecksHtml(
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${escapeHtml(metadata.appInfo)}</span>
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
-      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 5mm; margin-bottom: 5mm;">
       <h2 style="text-align: center; font-size: 16pt; margin-bottom: 6mm; text-transform: uppercase;">Kiểm tra vệ sinh</h2>

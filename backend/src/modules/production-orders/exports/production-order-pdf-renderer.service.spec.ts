@@ -29,6 +29,30 @@ const exampleOrder = (itemCode: string, remarks = 'Thể tích pha chế: 1060 L
 
 describe('Batch report HTML template', () => {
   afterEach(() => jest.restoreAllMocks());
+
+  it('leaves warehouse-release page breaks to measured PDF pagination', async () => {
+    const renderer = new ProductionOrderPdfRendererService();
+    const render = jest
+      .spyOn(renderer, 'render')
+      .mockResolvedValue(Buffer.from('%PDF-1.7'));
+    const exporter = new ProductionOrderExportService(renderer);
+    const lines = Array.from({ length: 25 }, (_, index) => ({
+      ItemNo: `NL${String(index + 1).padStart(4, '0')}`,
+      ItemName: `Nguyên liệu ${index + 1}`,
+      PlannedQuantity: index + 1,
+      ProductionOrdersStage: { Name: 'Cân nguyên liệu' },
+      UnitOfMeasurement: { Code: 'Kg' },
+    }));
+
+    await exporter.exportBatchReport(exampleOrder('TP001'), undefined, lines);
+
+    const html = render.mock.calls[0][0];
+    expect(
+      html.match(/<main class="report-page page-break warehouse-release-page">/g),
+    ).toHaveLength(1);
+    expect(html).toContain('NL0025');
+  });
+
   it.each(['TP001', 'BTP001'])(
     'uses the semi-finished template for %s without changing its data',
     async (itemCode) => {

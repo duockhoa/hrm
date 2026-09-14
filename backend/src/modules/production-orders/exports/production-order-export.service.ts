@@ -638,21 +638,21 @@ export class ProductionOrderExportService {
         </tr>
       </thead>`;
 
-    const buildPageSection = (
-      rowsHtml: string,
-      pageIndex = 0,
-      totalPages = 1,
-    ) => `
-  <main class="report-page page-break">
+    // The PDF renderer measures this table after fonts are loaded and moves a
+    // row to the next page only when it reaches the footer.  Do not split by a
+    // fixed row count here: item names, batch numbers and stages can wrap to a
+    // different number of lines, leaving a mostly empty final page.
+    const buildPageSection = (rowsHtml: string) => `
+  <main class="report-page page-break warehouse-release-page">
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
-      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
       <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">
-        Thông tin phiếu xuất kho${totalPages > 1 && pageIndex > 0 ? ' (tiếp theo)' : ''}
+        Thông tin phiếu xuất kho
       </h2>
       <table class="deviations-table">${tableHead}<tbody>${rowsHtml}</tbody></table>
     </div>
@@ -662,8 +662,6 @@ export class ProductionOrderExportService {
     </div>
   </main>`;
 
-    const SINGLE_PAGE_MAX_ROWS = 22;
-    const MULTI_PAGE_MAX_ROWS = 20;
     let linesHtml = '';
 
     if (lines && lines.length > 0) {
@@ -683,23 +681,7 @@ export class ProductionOrderExportService {
         </tr>`;
       });
 
-      const totalRows = allRows.length;
-
-      if (totalRows <= SINGLE_PAGE_MAX_ROWS) {
-        linesHtml = buildPageSection(allRows.join(''), 0, 1);
-      } else {
-        const totalPages = Math.ceil(totalRows / MULTI_PAGE_MAX_ROWS);
-        const rowsPerPage = Math.ceil(totalRows / totalPages);
-
-        for (let i = 0; i < totalRows; i += rowsPerPage) {
-          const chunk = allRows.slice(i, i + rowsPerPage).join('');
-          linesHtml += buildPageSection(
-            chunk,
-            Math.floor(i / rowsPerPage),
-            totalPages,
-          );
-        }
-      }
+      linesHtml = buildPageSection(allRows.join(''));
     } else {
       linesHtml = `
   <main class="report-page page-break">
@@ -707,7 +689,7 @@ export class ProductionOrderExportService {
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
-      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 5mm; margin-bottom: 5mm;">
       <h2 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 6mm; text-transform: uppercase; color: #000;">
@@ -734,7 +716,7 @@ export class ProductionOrderExportService {
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
-      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
       <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">
@@ -816,7 +798,7 @@ export class ProductionOrderExportService {
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
       <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
-      <span style="flex: 1; text-align: right;">Supports 21 CFR 11 Compliance</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
       <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">
