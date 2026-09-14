@@ -121,6 +121,7 @@ describe('DataExportService', () => {
           productionOrder: {
             id: 100,
             production_order_code: 'LSX-001',
+            change_content: 'Điều chỉnh quy cách đóng gói.',
             item: {
               item_code: 'TP001',
               item_name: 'Sản phẩm A',
@@ -158,6 +159,7 @@ describe('DataExportService', () => {
           createdBy: expect.objectContaining({ username: 'operator' }),
           productionOrder: expect.objectContaining({
             production_order_code: 'LSX-001',
+            change_content: 'Điều chỉnh quy cách đóng gói.',
             item: expect.objectContaining({
               productionSpecification: expect.objectContaining({
                 productLine: expect.objectContaining({

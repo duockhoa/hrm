@@ -61,6 +61,7 @@ const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
       production_order_code: true,
       remarks: true,
       internal_notes: true,
+      change_content: true,
       item: {
         select: ITEM_EXPORT_SELECT,
       },
