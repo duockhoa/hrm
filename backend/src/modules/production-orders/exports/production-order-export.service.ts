@@ -16,6 +16,10 @@ import {
   buildEnvironmentChecksHtml,
   type EnvironmentCheckForReport,
 } from './environment-checks-report-html';
+import {
+  buildSemiFinishedProductSummariesHtml,
+  type SemiFinishedProductSummaryForReport,
+} from './semi-finished-product-summaries-report-html';
 import { Injectable } from '@nestjs/common';
 import type {
   Items,
@@ -58,6 +62,7 @@ type ProductionOrderForExport = ProductionOrders & {
   semiFinishedProductNetWeightChecks?: SemiFinishedNetWeightCheckForReport[];
   semiFinishedProductGrossWeightChecks?: SemiFinishedGrossWeightCheckForReport[];
   leakTightnessChecks?: LeakTightnessCheckForReport[];
+  semiFinishedProductSummaries?: SemiFinishedProductSummaryForReport[];
   item?:
     | (Items & {
         registration?: RegistrationNumbers | null;
@@ -898,6 +903,11 @@ export class ProductionOrderExportService {
           productionOrder.leakTightnessChecks ?? [],
           { appInfo, printTime, printerName, watermarkDataUri },
         ),
+        semi_finished_product_summaries_html:
+          buildSemiFinishedProductSummariesHtml(
+            productionOrder.semiFinishedProductSummaries ?? [],
+            { appInfo, printTime, printerName, watermarkDataUri },
+          ),
         hygiene_checks_html: buildHygieneChecksHtml(
           productionOrder.hygieneChecks ?? [],
           { appInfo, printTime, printerName, watermarkDataUri },
@@ -916,6 +926,7 @@ export class ProductionOrderExportService {
         'semi_finished_net_weight_checks_html',
         'semi_finished_gross_weight_checks_html',
         'leak_tightness_checks_html',
+        'semi_finished_product_summaries_html',
         'pyclm_status_html',
         'specifications_table_html',
       ],

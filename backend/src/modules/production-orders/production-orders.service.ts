@@ -478,6 +478,12 @@ export class ProductionOrdersService {
             },
             orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
           },
+          semiFinishedProductSummaries: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
           hygieneChecks: {
             include: {
               createdBy: { select: { name: true, username: true } },

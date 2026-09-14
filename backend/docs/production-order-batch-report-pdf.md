@@ -63,6 +63,13 @@ Việt Nam), dạng kiểm tra (dạng bào chế/bao bì), yêu cầu, kết qu
 (Đạt / Không đạt / “—” khi chưa kiểm tra) và người nhập. Tự chia trang và có trang
 thông báo khi chưa có dữ liệu.
 
+Phần **Tổng kết sản lượng bán thành phẩm** tiếp nối kiểm tra độ kín, lấy
+`semiFinishedProductSummaries` theo `created_at` và `id` tăng dần. Gồm thời điểm
+ghi nhận (giờ Việt Nam), giai đoạn, lượng đầu vào, lượng đã đóng, lượng còn lại,
+lượng hao hụt, số tải / sọt lọ và người nhập. Số đo in kèm đơn vị (tối đa 3 chữ số
+thập phân); trường chưa có hiển thị “—”. Tự chia trang và có trang thông báo khi
+chưa có dữ liệu.
+
 Các hàng nhiệt độ/độ ẩm được đo chiều cao sau khi tải font và tự chia trang để
 không chồng lên chân trang. Mỗi trang lặp tiêu đề, tiêu đề bảng, watermark và
 thông tin in; số trang tính trên toàn báo cáo. Nếu một bản ghi riêng lẻ quá dài
@@ -107,7 +114,7 @@ PDF trả trực tiếp trong bộ nhớ và có `Cache-Control: private, no-sto
 
 ```bash
 npm test -- --runInBand production-orders.controller.spec.ts production-orders.service.spec.ts
-RUN_PDF_RENDER_TESTS=1 npm test -- --runInBand environment-checks-report-html.spec.ts hygiene-checks-report-html.spec.ts volume-checks-report-html.spec.ts semi-finished-net-weight-checks-report-html.spec.ts semi-finished-gross-weight-checks-report-html.spec.ts leak-tightness-checks-report-html.spec.ts
+RUN_PDF_RENDER_TESTS=1 npm test -- --runInBand environment-checks-report-html.spec.ts hygiene-checks-report-html.spec.ts volume-checks-report-html.spec.ts semi-finished-net-weight-checks-report-html.spec.ts semi-finished-gross-weight-checks-report-html.spec.ts leak-tightness-checks-report-html.spec.ts semi-finished-product-summaries-report-html.spec.ts
 npm run build
 ```
 
