@@ -17,6 +17,7 @@ import {
 import { DataExportApiKeyGuard } from './data-export-api-key.guard';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
+import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post-secondary-packaging-summaries.query.dto';
 import { DataExportService } from './data-export.service';
 
 @Controller('data-export')
@@ -54,5 +55,20 @@ export class DataExportController {
     @Query() query: ExportFinishedProductSummariesQueryDto,
   ) {
     return this.dataExportService.exportFinishedProductSummaries(query);
+  }
+
+  @Get('post-secondary-packaging-summaries')
+  @ApiOperation({
+    summary:
+      'Xuất dữ liệu tổng kết sau đóng gói thứ cấp cho Google Sheets',
+  })
+  @ApiOkResponse({
+    description: 'Danh sách tổng kết sau đóng gói thứ cấp theo trang',
+  })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportPostSecondaryPackagingSummaries(
+    @Query() query: ExportPostSecondaryPackagingSummariesQueryDto,
+  ) {
+    return this.dataExportService.exportPostSecondaryPackagingSummaries(query);
   }
 }

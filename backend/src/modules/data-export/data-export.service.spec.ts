@@ -10,6 +10,10 @@ describe('DataExportService', () => {
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    productionOrderPostSecondaryPackagingSummaries: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
   const service = new DataExportService(prisma as any);
@@ -234,6 +238,71 @@ describe('DataExportService', () => {
               }),
             }),
           }),
+        }),
+      }),
+    );
+  });
+
+  it('exports post-secondary packaging summaries with production orders', async () => {
+    prisma.productionOrderPostSecondaryPackagingSummaries.count.mockReturnValue(
+      'count-query',
+    );
+    prisma.productionOrderPostSecondaryPackagingSummaries.findMany.mockReturnValue(
+      'summaries-query',
+    );
+    prisma.$transaction.mockResolvedValue([
+      1,
+      [
+        {
+          id: 15,
+          production_order_id: 101,
+          semi_finished_product_order_id: 99,
+          received_bag_count: 8,
+          remaining_quantity: 2.5,
+          unit: 'kg',
+          productionOrder: {
+            id: 101,
+            production_order_code: 'TP001-001',
+            item: { item_code: 'TP001', item_name: 'Thành phẩm A' },
+          },
+          semiFinishedProductOrder: {
+            id: 99,
+            production_order_code: 'BTP001-001',
+          },
+          pendingProcessItems: [],
+          pendingCancellationItems: [],
+        },
+      ],
+    ]);
+
+    await expect(
+      service.exportPostSecondaryPackagingSummaries({ page: 1, limit: 500 }),
+    ).resolves.toMatchObject({
+      data: [
+        expect.objectContaining({
+          productionOrder: expect.objectContaining({
+            production_order_code: 'TP001-001',
+          }),
+          semiFinishedProductOrder: expect.objectContaining({
+            production_order_code: 'BTP001-001',
+          }),
+        }),
+      ],
+      pagination: expect.objectContaining({ total: 1 }),
+    });
+
+    expect(
+      prisma.productionOrderPostSecondaryPackagingSummaries.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip: 0,
+        take: 500,
+        include: expect.objectContaining({
+          productionOrder: expect.anything(),
+          semiFinishedProductOrder: expect.anything(),
+          pendingProcessItems: expect.anything(),
+          pendingCancellationItems: expect.anything(),
         }),
       }),
     );

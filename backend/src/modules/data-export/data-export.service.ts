@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
+import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post-secondary-packaging-summaries.query.dto';
 
 const ITEM_EXPORT_SELECT = {
   item_code: true,
@@ -36,6 +37,79 @@ const USER_EXPORT_SELECT = {
   department: true,
   position: true,
 };
+
+const POST_SECONDARY_PACKAGING_ITEM_EXPORT_SELECT = {
+  item_code: true,
+  item_name: true,
+  unit: true,
+  dk_code: true,
+  registration_id: true,
+  registration: true,
+  created_at: true,
+  update_at: true,
+  deleted_at: true,
+} satisfies Prisma.ItemsSelect;
+
+const POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT = {
+  id: true,
+  item_code: true,
+  status: true,
+  type: true,
+  planned_quatity: true,
+  creation_date: true,
+  origin: true,
+  warehouse: true,
+  unit: true,
+  start_date: true,
+  description: true,
+  date_manufacture: true,
+  expire_date: true,
+  lot_no: true,
+  packing_specification: true,
+  production_order_code: true,
+  remarks: true,
+  internal_notes: true,
+  change_content: true,
+  item: { select: POST_SECONDARY_PACKAGING_ITEM_EXPORT_SELECT },
+} satisfies Prisma.ProductionOrdersSelect;
+
+const POST_SECONDARY_PACKAGING_SUMMARY_EXPORT_INCLUDE = {
+  createdBy: { select: USER_EXPORT_SELECT },
+  productionOrder: {
+    select: POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
+  },
+  semiFinishedProductOrder: {
+    select: POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
+  },
+  pendingProcessItems: {
+    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    select: {
+      id: true,
+      summary_id: true,
+      pending_quantity: true,
+      pending_reason: true,
+      processing_plan: true,
+      created_by_id: true,
+      created_at: true,
+      updated_at: true,
+      createdBy: { select: USER_EXPORT_SELECT },
+    },
+  },
+  pendingCancellationItems: {
+    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    select: {
+      id: true,
+      summary_id: true,
+      cancellation_quantity: true,
+      cancellation_reason: true,
+      cancellation_plan: true,
+      created_by_id: true,
+      created_at: true,
+      updated_at: true,
+      createdBy: { select: USER_EXPORT_SELECT },
+    },
+  },
+} satisfies Prisma.ProductionOrderPostSecondaryPackagingSummariesInclude;
 
 const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
   createdBy: {
@@ -227,6 +301,42 @@ export class DataExportService {
       this.prisma.productionOrderFinishedProductSummaries.findMany({
         where,
         include: FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE,
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+      }),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  async exportPostSecondaryPackagingSummaries(
+    query: ExportPostSecondaryPackagingSummariesQueryDto,
+  ) {
+    const where: Prisma.ProductionOrderPostSecondaryPackagingSummariesWhereInput =
+      {};
+
+    if (query.updated_from) {
+      where.updated_at = { gte: new Date(query.updated_from) };
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.productionOrderPostSecondaryPackagingSummaries.count({
+        where,
+      }),
+      this.prisma.productionOrderPostSecondaryPackagingSummaries.findMany({
+        where,
+        include: POST_SECONDARY_PACKAGING_SUMMARY_EXPORT_INCLUDE,
         orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
         skip,
         take: query.limit,
