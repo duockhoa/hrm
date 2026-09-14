@@ -11,6 +11,18 @@ const ITEM_EXPORT_SELECT = {
   dk_code: true,
   registration_id: true,
   registration: true,
+  productionSpecification: {
+    select: {
+      product_line_id: true,
+      productLine: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+        },
+      },
+    },
+  },
   created_at: true,
   update_at: true,
   deleted_at: true,

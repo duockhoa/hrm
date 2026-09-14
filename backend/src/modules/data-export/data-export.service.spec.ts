@@ -121,7 +121,14 @@ describe('DataExportService', () => {
           productionOrder: {
             id: 100,
             production_order_code: 'LSX-001',
-            item: { item_code: 'TP001', item_name: 'Sản phẩm A' },
+            item: {
+              item_code: 'TP001',
+              item_name: 'Sản phẩm A',
+              productionSpecification: {
+                product_line_id: 2,
+                productLine: { id: 2, code: 'PX-01', name: 'Dây chuyền 01' },
+              },
+            },
             samplingRequests: [
               {
                 id: 12,
@@ -151,6 +158,14 @@ describe('DataExportService', () => {
           createdBy: expect.objectContaining({ username: 'operator' }),
           productionOrder: expect.objectContaining({
             production_order_code: 'LSX-001',
+            item: expect.objectContaining({
+              productionSpecification: expect.objectContaining({
+                productLine: expect.objectContaining({
+                  code: 'PX-01',
+                  name: 'Dây chuyền 01',
+                }),
+              }),
+            }),
             samplingRequests: [
               expect.objectContaining({ status: 'sent' }),
             ],
@@ -173,6 +188,21 @@ describe('DataExportService', () => {
         orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
         skip: 0,
         take: 10000,
+        include: expect.objectContaining({
+          productionOrder: expect.objectContaining({
+            select: expect.objectContaining({
+              item: expect.objectContaining({
+                select: expect.objectContaining({
+                  productionSpecification: expect.objectContaining({
+                    select: expect.objectContaining({
+                      productLine: expect.anything(),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        }),
       }),
     );
   });
