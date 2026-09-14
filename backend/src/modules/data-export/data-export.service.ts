@@ -62,6 +62,17 @@ const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
       remarks: true,
       internal_notes: true,
       change_content: true,
+      productionGuide: {
+        select: {
+          id: true,
+          production_order_id: true,
+          original_filename: true,
+          mime_type: true,
+          file_size: true,
+          created_at: true,
+          updated_at: true,
+        },
+      },
       item: {
         select: ITEM_EXPORT_SELECT,
       },
@@ -79,6 +90,22 @@ const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
           created_at: true,
           updated_at: true,
           sender: {
+            select: USER_EXPORT_SELECT,
+          },
+        },
+      },
+      samplingRecords: {
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          production_order_id: true,
+          sampling_type: true,
+          quantity: true,
+          unit: true,
+          created_by_id: true,
+          created_at: true,
+          updated_at: true,
+          createdBy: {
             select: USER_EXPORT_SELECT,
           },
         },

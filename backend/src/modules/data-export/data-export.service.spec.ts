@@ -122,6 +122,15 @@ describe('DataExportService', () => {
             id: 100,
             production_order_code: 'LSX-001',
             change_content: 'Điều chỉnh quy cách đóng gói.',
+            productionGuide: {
+              id: 44,
+              production_order_id: 100,
+              original_filename: 'Huong-dan-san-xuat-TP001.pdf',
+              mime_type: 'application/pdf',
+              file_size: 2048,
+              created_at: new Date('2026-01-01T00:00:00.000Z'),
+              updated_at: new Date('2026-01-02T00:00:00.000Z'),
+            },
             item: {
               item_code: 'TP001',
               item_name: 'Sản phẩm A',
@@ -135,6 +144,16 @@ describe('DataExportService', () => {
                 id: 12,
                 status: 'sent',
                 google_doc_url: 'https://docs.google.com/document/d/example',
+              },
+            ],
+            samplingRecords: [
+              {
+                id: 27,
+                sampling_type: 'Kiểm nghiệm thành phẩm',
+                quantity: 3,
+                unit: 'Hộp',
+                created_at: new Date('2026-01-03T00:00:00.000Z'),
+                createdBy: { id: 1, username: 'operator' },
               },
             ],
             documentControl: {
@@ -160,6 +179,10 @@ describe('DataExportService', () => {
           productionOrder: expect.objectContaining({
             production_order_code: 'LSX-001',
             change_content: 'Điều chỉnh quy cách đóng gói.',
+            productionGuide: expect.objectContaining({
+              original_filename: 'Huong-dan-san-xuat-TP001.pdf',
+              mime_type: 'application/pdf',
+            }),
             item: expect.objectContaining({
               productionSpecification: expect.objectContaining({
                 productLine: expect.objectContaining({
@@ -170,6 +193,13 @@ describe('DataExportService', () => {
             }),
             samplingRequests: [
               expect.objectContaining({ status: 'sent' }),
+            ],
+            samplingRecords: [
+              expect.objectContaining({
+                sampling_type: 'Kiểm nghiệm thành phẩm',
+                quantity: 3,
+                unit: 'Hộp',
+              }),
             ],
             documentControl: expect.objectContaining({
               batch_record_issued_at: expect.any(Date),
