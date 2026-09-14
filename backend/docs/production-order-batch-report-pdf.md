@@ -70,6 +70,27 @@ lượng hao hụt, số tải / sọt lọ và người nhập. Số đo in kè
 thập phân); trường chưa có hiển thị “—”. Tự chia trang và có trang thông báo khi
 chưa có dữ liệu.
 
+Phần **Kiểm tra khối lượng vỏ** tiếp nối tổng kết sản lượng bán thành phẩm, lấy
+`shellWeightChecks` theo `created_at` và `id` tăng dần. Gồm thời điểm kiểm tra
+(giờ Việt Nam), khối lượng 10 vỏ, đơn vị và người nhập. Số đo hiển thị hai chữ số
+thập phân; phần này cũng có trang thông báo khi chưa có dữ liệu.
+
+Phần **Pha chế chất sát khuẩn** tiếp nối kiểm tra khối lượng vỏ, lấy
+`disinfectantPreparations` theo `created_at` và `id` tăng dần. Gồm thời điểm,
+xưởng, chất sát khuẩn, mục đích, nguyên liệu gốc và hàm lượng, lượng nguyên liệu,
+thể tích pha chế, nồng độ thực tế cùng người nhập. Các giá trị số hiển thị tối đa
+bốn chữ số thập phân; phần này cũng có trang thông báo khi chưa có dữ liệu.
+
+Phần **Kiểm tra cốm sau đồng nhất** tiếp nối pha chế chất sát khuẩn, lấy
+`postHomogenizationGranuleChecks` theo `created_at` và `id` tăng dần. Gồm thời
+điểm kiểm tra, khối lượng riêng thô, khối lượng riêng gõ, chỉ số Carr, hàm ẩm và
+người nhập. Phần này cũng có trang thông báo khi chưa có dữ liệu.
+
+Phần **Kiểm tra cảm quan sản phẩm** tiếp nối kiểm tra cốm sau đồng nhất, lấy
+`tenUnitSensoryChecks` theo `created_at` và `id` tăng dần. Gồm thời điểm kiểm
+tra, dạng bào chế, kết quả Đạt / Không đạt của từng đơn vị 1–10 và người nhập;
+phần này cũng có trang thông báo khi chưa có dữ liệu.
+
 Các hàng nhiệt độ/độ ẩm được đo chiều cao sau khi tải font và tự chia trang để
 không chồng lên chân trang. Mỗi trang lặp tiêu đề, tiêu đề bảng, watermark và
 thông tin in; số trang tính trên toàn báo cáo. Nếu một bản ghi riêng lẻ quá dài

@@ -20,6 +20,22 @@ import {
   buildSemiFinishedProductSummariesHtml,
   type SemiFinishedProductSummaryForReport,
 } from './semi-finished-product-summaries-report-html';
+import {
+  buildShellWeightChecksHtml,
+  type ShellWeightCheckForReport,
+} from './shell-weight-checks-report-html';
+import {
+  buildDisinfectantPreparationsHtml,
+  type DisinfectantPreparationForReport,
+} from './disinfectant-preparations-report-html';
+import {
+  buildPostHomogenizationGranuleChecksHtml,
+  type PostHomogenizationGranuleCheckForReport,
+} from './post-homogenization-granule-checks-report-html';
+import {
+  buildSensoryChecksHtml,
+  type SensoryCheckForReport,
+} from './sensory-checks-report-html';
 import { Injectable } from '@nestjs/common';
 import type {
   Items,
@@ -63,6 +79,10 @@ type ProductionOrderForExport = ProductionOrders & {
   semiFinishedProductGrossWeightChecks?: SemiFinishedGrossWeightCheckForReport[];
   leakTightnessChecks?: LeakTightnessCheckForReport[];
   semiFinishedProductSummaries?: SemiFinishedProductSummaryForReport[];
+  shellWeightChecks?: ShellWeightCheckForReport[];
+  disinfectantPreparations?: DisinfectantPreparationForReport[];
+  postHomogenizationGranuleChecks?: PostHomogenizationGranuleCheckForReport[];
+  tenUnitSensoryChecks?: SensoryCheckForReport[];
   item?:
     | (Items & {
         registration?: RegistrationNumbers | null;
@@ -890,6 +910,23 @@ export class ProductionOrderExportService {
             productionOrder.semiFinishedProductSummaries ?? [],
             { appInfo, printTime, printerName, watermarkDataUri },
           ),
+        shell_weight_checks_html: buildShellWeightChecksHtml(
+          productionOrder.shellWeightChecks ?? [],
+          { appInfo, printTime, printerName, watermarkDataUri },
+        ),
+        disinfectant_preparations_html: buildDisinfectantPreparationsHtml(
+          productionOrder.disinfectantPreparations ?? [],
+          { appInfo, printTime, printerName, watermarkDataUri },
+        ),
+        post_homogenization_granule_checks_html:
+          buildPostHomogenizationGranuleChecksHtml(
+            productionOrder.postHomogenizationGranuleChecks ?? [],
+            { appInfo, printTime, printerName, watermarkDataUri },
+          ),
+        sensory_checks_html: buildSensoryChecksHtml(
+          productionOrder.tenUnitSensoryChecks ?? [],
+          { appInfo, printTime, printerName, watermarkDataUri },
+        ),
         hygiene_checks_html: buildHygieneChecksHtml(
           productionOrder.hygieneChecks ?? [],
           { appInfo, printTime, printerName, watermarkDataUri },
@@ -909,6 +946,10 @@ export class ProductionOrderExportService {
         'semi_finished_gross_weight_checks_html',
         'leak_tightness_checks_html',
         'semi_finished_product_summaries_html',
+        'shell_weight_checks_html',
+        'disinfectant_preparations_html',
+        'post_homogenization_granule_checks_html',
+        'sensory_checks_html',
         'pyclm_status_html',
         'specifications_table_html',
       ],

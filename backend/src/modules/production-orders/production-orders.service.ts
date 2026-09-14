@@ -484,6 +484,31 @@ export class ProductionOrdersService {
             },
             orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
           },
+          shellWeightChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          disinfectantPreparations: {
+            include: {
+              workshop: { select: { code: true, name: true } },
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          postHomogenizationGranuleChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          tenUnitSensoryChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
           hygieneChecks: {
             include: {
               createdBy: { select: { name: true, username: true } },
