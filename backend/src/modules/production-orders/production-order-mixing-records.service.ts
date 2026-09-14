@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -471,13 +472,7 @@ export class ProductionOrderMixingRecordsService {
       );
     }
 
-    const parameter =
-      await this.prismaService.productionOrderMixingRecordParameters.findUnique(
-        {
-          where: { id: parameterId },
-          select: { id: true, data_type: true, result_image_path: true },
-        },
-      );
+    const parameter = await this.findParameterForEntryOrThrow(parameterId);
 
     if (!parameter) {
       throw new NotFoundException(
@@ -543,16 +538,7 @@ export class ProductionOrderMixingRecordsService {
       throw new BadRequestException('image is required');
     }
 
-    const parameter =
-      await this.prismaService.productionOrderMixingRecordParameters.findUnique({
-        where: { id: parameterId },
-        select: { id: true, result_image_path: true },
-      });
-    if (!parameter) {
-      throw new NotFoundException(
-        'Production order mixing record parameter not found',
-      );
-    }
+    const parameter = await this.findParameterForEntryOrThrow(parameterId);
 
     const updated =
       await this.prismaService.productionOrderMixingRecordParameters.update({
@@ -630,6 +616,45 @@ export class ProductionOrderMixingRecordsService {
     if (!parameter) {
       throw new NotFoundException(
         'Production order mixing record parameter not found',
+      );
+    }
+
+    return parameter;
+  }
+
+  /** Prevent changes to recorded parameter values after IPC has signed the record. */
+  private async findParameterForEntryOrThrow(parameterId: number) {
+    const parameter =
+      await this.prismaService.productionOrderMixingRecordParameters.findUnique({
+        where: { id: parameterId },
+        select: {
+          id: true,
+          data_type: true,
+          result_image_path: true,
+          mixingRecordStep: {
+            select: {
+              mixingRecordStage: {
+                select: {
+                  mixingRecord: { select: { ipc_staff_approved_at: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+    if (!parameter) {
+      throw new NotFoundException(
+        'Production order mixing record parameter not found',
+      );
+    }
+
+    if (
+      parameter.mixingRecordStep.mixingRecordStage.mixingRecord
+        .ipc_staff_approved_at
+    ) {
+      throw new ForbiddenException(
+        'Parameter entries cannot be changed after IPC staff approval',
       );
     }
 
