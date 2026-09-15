@@ -335,16 +335,11 @@ const getProductionOrderTemplatePath = (
 
 const getRegistrationNumber = (productionOrder: ProductionOrderForExport) => {
   const itemReg = productionOrder.item?.registration?.registration_number?.trim();
-  const itemDk = (productionOrder.item as any)?.dk_code?.trim();
   const poReg =
     (productionOrder as any).registrationNumber?.registration_number?.trim() ||
     (productionOrder as any).registrationNumber?.registration?.registration_number?.trim();
 
-  const reg = itemReg || poReg;
-  if (reg && itemDk && reg !== itemDk && !reg.includes(itemDk) && !itemDk.includes(reg)) {
-    return `${reg} (${itemDk})`;
-  }
-  return reg || itemDk || '';
+  return itemReg || poReg || '';
 };
 
 const getProductLine = (productionOrder: ProductionOrderForExport) => {
