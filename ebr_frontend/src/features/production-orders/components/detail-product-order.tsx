@@ -313,7 +313,7 @@ function ExportBatchReportPDFButton({
     <div className="inline-flex flex-col items-center p-0.5 md:p-1">
       <button
         type="button"
-        title="Xuất báo cáo lô (PDF)"
+        title="Xuất báo cáo"
         disabled={isExporting}
         onClick={handleExport}
         className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-red-500 px-3 py-2 text-center text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
@@ -322,7 +322,7 @@ function ExportBatchReportPDFButton({
       </button>
       <div className="w-[68px] md:w-[90px]">
         <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-          Xuất báo cáo lô (PDF)
+          Xuất báo cáo
         </p>
       </div>
     </div>
