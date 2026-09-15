@@ -4,6 +4,7 @@ import { PrismaService } from 'src/prisma.service';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
 import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post-secondary-packaging-summaries.query.dto';
+import { ExportVolumeChecksQueryDto } from './dto/export-volume-checks.query.dto';
 
 const ITEM_EXPORT_SELECT = {
   item_code: true,
@@ -110,6 +111,25 @@ const POST_SECONDARY_PACKAGING_SUMMARY_EXPORT_INCLUDE = {
     },
   },
 } satisfies Prisma.ProductionOrderPostSecondaryPackagingSummariesInclude;
+
+const VOLUME_CHECK_EXPORT_INCLUDE = {
+  createdBy: { select: USER_EXPORT_SELECT },
+  productionOrder: {
+    select: POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
+  },
+  images: {
+    orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+    select: {
+      id: true,
+      volume_check_id: true,
+      image_path: true,
+      created_by_id: true,
+      created_at: true,
+      updated_at: true,
+      createdBy: { select: USER_EXPORT_SELECT },
+    },
+  },
+} satisfies Prisma.ProductionOrderVolumeChecksInclude;
 
 const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
   createdBy: {
@@ -353,6 +373,37 @@ export class DataExportService {
       this.prisma.productionOrderPostSecondaryPackagingSummaries.findMany({
         where,
         include: POST_SECONDARY_PACKAGING_SUMMARY_EXPORT_INCLUDE,
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+      }),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  async exportVolumeChecks(query: ExportVolumeChecksQueryDto) {
+    const where: Prisma.ProductionOrderVolumeChecksWhereInput = {};
+
+    if (query.updated_from) {
+      where.updated_at = { gte: new Date(query.updated_from) };
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.productionOrderVolumeChecks.count({ where }),
+      this.prisma.productionOrderVolumeChecks.findMany({
+        where,
+        include: VOLUME_CHECK_EXPORT_INCLUDE,
         orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
         skip,
         take: query.limit,

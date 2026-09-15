@@ -14,6 +14,10 @@ describe('DataExportService', () => {
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    productionOrderVolumeChecks: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
   const service = new DataExportService(prisma as any);
@@ -333,6 +337,58 @@ describe('DataExportService', () => {
           semiFinishedProductOrder: expect.anything(),
           pendingProcessItems: expect.anything(),
           pendingCancellationItems: expect.anything(),
+        }),
+      }),
+    );
+  });
+
+  it('exports volume checks with production order and item', async () => {
+    prisma.productionOrderVolumeChecks.count.mockReturnValue('count-query');
+    prisma.productionOrderVolumeChecks.findMany.mockReturnValue(
+      'volume-checks-query',
+    );
+    prisma.$transaction.mockResolvedValue([
+      1,
+      [
+        {
+          id: 9,
+          production_order_id: 100,
+          unit_1_volume: 100,
+          unit: 'ml',
+          productionOrder: {
+            id: 100,
+            production_order_code: 'TP001-001',
+            item: { item_code: 'TP001', item_name: 'Thành phẩm A' },
+          },
+          images: [],
+        },
+      ],
+    ]);
+
+    await expect(
+      service.exportVolumeChecks({ page: 1, limit: 500 }),
+    ).resolves.toMatchObject({
+      data: [
+        expect.objectContaining({
+          unit_1_volume: 100,
+          productionOrder: expect.objectContaining({
+            production_order_code: 'TP001-001',
+            item: expect.objectContaining({ item_code: 'TP001' }),
+          }),
+        }),
+      ],
+      pagination: expect.objectContaining({ total: 1 }),
+    });
+
+    expect(prisma.productionOrderVolumeChecks.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip: 0,
+        take: 500,
+        include: expect.objectContaining({
+          productionOrder: expect.anything(),
+          createdBy: expect.anything(),
+          images: expect.anything(),
         }),
       }),
     );

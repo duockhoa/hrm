@@ -18,6 +18,7 @@ import { DataExportApiKeyGuard } from './data-export-api-key.guard';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
 import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post-secondary-packaging-summaries.query.dto';
+import { ExportVolumeChecksQueryDto } from './dto/export-volume-checks.query.dto';
 import { DataExportService } from './data-export.service';
 
 @Controller('data-export')
@@ -69,5 +70,15 @@ export class DataExportController {
     @Query() query: ExportPostSecondaryPackagingSummariesQueryDto,
   ) {
     return this.dataExportService.exportPostSecondaryPackagingSummaries(query);
+  }
+
+  @Get('volume-checks')
+  @ApiOperation({
+    summary: 'Xuất dữ liệu kiểm tra thể tích cho Google Sheets',
+  })
+  @ApiOkResponse({ description: 'Danh sách kiểm tra thể tích theo trang' })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportVolumeChecks(@Query() query: ExportVolumeChecksQueryDto) {
+    return this.dataExportService.exportVolumeChecks(query);
   }
 }
