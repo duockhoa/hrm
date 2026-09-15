@@ -4,6 +4,7 @@ import { PrismaService } from 'src/prisma.service';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
 import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post-secondary-packaging-summaries.query.dto';
+import { ExportSemiFinishedWeightChecksQueryDto } from './dto/export-semi-finished-weight-checks.query.dto';
 import { ExportVolumeChecksQueryDto } from './dto/export-volume-checks.query.dto';
 
 const ITEM_EXPORT_SELECT = {
@@ -130,6 +131,13 @@ const VOLUME_CHECK_EXPORT_INCLUDE = {
     },
   },
 } satisfies Prisma.ProductionOrderVolumeChecksInclude;
+
+const SEMI_FINISHED_WEIGHT_CHECK_EXPORT_INCLUDE = {
+  createdBy: { select: USER_EXPORT_SELECT },
+  productionOrder: {
+    select: POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
+  },
+};
 
 const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
   createdBy: {
@@ -420,5 +428,118 @@ export class DataExportService {
         has_next_page: skip + data.length < total,
       },
     };
+  }
+
+  async exportSemiFinishedWeightChecks(
+    query: ExportSemiFinishedWeightChecksQueryDto,
+  ) {
+    const netWhere: Prisma.ProductionOrderSemiFinishedProductNetWeightChecksWhereInput =
+      {};
+    const grossWhere: Prisma.ProductionOrderSemiFinishedProductGrossWeightChecksWhereInput =
+      {};
+
+    if (query.updated_from) {
+      const updatedAt = { gte: new Date(query.updated_from) };
+      netWhere.updated_at = updatedAt;
+      grossWhere.updated_at = updatedAt;
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    // To form one consistently paginated, time-ordered list, each source only
+    // needs its first (skip + limit) rows before the merged list is sliced.
+    const sourceTake = skip + query.limit;
+
+    const [netTotal, grossTotal, netChecks, grossChecks] =
+      await this.prisma.$transaction([
+        this.prisma.productionOrderSemiFinishedProductNetWeightChecks.count({
+          where: netWhere,
+        }),
+        this.prisma.productionOrderSemiFinishedProductGrossWeightChecks.count({
+          where: grossWhere,
+        }),
+        this.prisma.productionOrderSemiFinishedProductNetWeightChecks.findMany({
+          where: netWhere,
+          include: SEMI_FINISHED_WEIGHT_CHECK_EXPORT_INCLUDE,
+          orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          take: sourceTake,
+        }),
+        this.prisma.productionOrderSemiFinishedProductGrossWeightChecks.findMany(
+          {
+            where: grossWhere,
+            include: SEMI_FINISHED_WEIGHT_CHECK_EXPORT_INCLUDE,
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+            take: sourceTake,
+          },
+        ),
+      ]);
+
+    const merged = [
+      ...netChecks.map((check) => this.normalizeWeightCheck(check, 'net')),
+      ...grossChecks.map((check) => this.normalizeWeightCheck(check, 'gross')),
+    ].sort((left, right) => {
+      const dateDifference =
+        new Date(left.created_at).getTime() -
+        new Date(right.created_at).getTime();
+
+      if (dateDifference !== 0) return dateDifference;
+      if (left.id !== right.id) return left.id - right.id;
+      return left.check_type.localeCompare(right.check_type);
+    });
+
+    const total = netTotal + grossTotal;
+    const data = merged.slice(skip, skip + query.limit);
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  private normalizeWeightCheck(
+    check: Record<string, any>,
+    checkType: 'net' | 'gross',
+  ) {
+    const weightSuffix = `${checkType}_weight`;
+
+    return {
+      id: check.id,
+      check_type: checkType,
+      production_order_id: check.production_order_id,
+      lower_limit: this.toExportNumber(check.lower_limit),
+      upper_limit: this.toExportNumber(check.upper_limit),
+      requirement: check.requirement,
+      dosage_form_stage: check.dosage_form_stage,
+      unit: check.unit,
+      created_by_id: check.created_by_id,
+      created_at: check.created_at,
+      updated_at: check.updated_at,
+      createdBy: check.createdBy,
+      productionOrder: check.productionOrder,
+      unit_1_weight: this.toExportNumber(check[`unit_1_${weightSuffix}`]),
+      unit_2_weight: this.toExportNumber(check[`unit_2_${weightSuffix}`]),
+      unit_3_weight: this.toExportNumber(check[`unit_3_${weightSuffix}`]),
+      unit_4_weight: this.toExportNumber(check[`unit_4_${weightSuffix}`]),
+      unit_5_weight: this.toExportNumber(check[`unit_5_${weightSuffix}`]),
+      unit_6_weight: this.toExportNumber(check[`unit_6_${weightSuffix}`]),
+      unit_7_weight: this.toExportNumber(check[`unit_7_${weightSuffix}`]),
+      unit_8_weight: this.toExportNumber(check[`unit_8_${weightSuffix}`]),
+      unit_9_weight: this.toExportNumber(check[`unit_9_${weightSuffix}`]),
+      unit_10_weight: this.toExportNumber(
+        check[`unit_10_${weightSuffix}`],
+      ),
+    };
+  }
+
+  private toExportNumber(value: unknown): number | null | undefined | unknown {
+    if (value === null || value === undefined) return value;
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : value;
   }
 }

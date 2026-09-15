@@ -18,6 +18,14 @@ describe('DataExportService', () => {
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    productionOrderSemiFinishedProductNetWeightChecks: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
+    productionOrderSemiFinishedProductGrossWeightChecks: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
   const service = new DataExportService(prisma as any);
@@ -390,6 +398,78 @@ describe('DataExportService', () => {
           createdBy: expect.anything(),
           images: expect.anything(),
         }),
+      }),
+    );
+  });
+
+  it('merges net and gross weight checks into one paginated dataset', async () => {
+    prisma.productionOrderSemiFinishedProductNetWeightChecks.count.mockReturnValue(
+      'net-count-query',
+    );
+    prisma.productionOrderSemiFinishedProductGrossWeightChecks.count.mockReturnValue(
+      'gross-count-query',
+    );
+    prisma.productionOrderSemiFinishedProductNetWeightChecks.findMany.mockReturnValue(
+      'net-checks-query',
+    );
+    prisma.productionOrderSemiFinishedProductGrossWeightChecks.findMany.mockReturnValue(
+      'gross-checks-query',
+    );
+    prisma.$transaction.mockResolvedValue([
+      1,
+      1,
+      [
+        {
+          id: 8,
+          production_order_id: 100,
+          unit_1_net_weight: 12.5,
+          unit: 'g',
+          created_at: new Date('2026-01-02T08:00:00.000Z'),
+          productionOrder: { item: { item_code: 'BTP001' } },
+        },
+      ],
+      [
+        {
+          id: 9,
+          production_order_id: 100,
+          unit_1_gross_weight: 13.1,
+          unit: 'g',
+          created_at: new Date('2026-01-01T08:00:00.000Z'),
+          productionOrder: { item: { item_code: 'BTP001' } },
+        },
+      ],
+    ]);
+
+    await expect(
+      service.exportSemiFinishedWeightChecks({ page: 1, limit: 500 }),
+    ).resolves.toMatchObject({
+      data: [
+        expect.objectContaining({
+          check_type: 'gross',
+          unit_1_weight: 13.1,
+        }),
+        expect.objectContaining({
+          check_type: 'net',
+          unit_1_weight: 12.5,
+        }),
+      ],
+      pagination: expect.objectContaining({ total: 2 }),
+    });
+
+    expect(
+      prisma.productionOrderSemiFinishedProductNetWeightChecks.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        take: 500,
+      }),
+    );
+    expect(
+      prisma.productionOrderSemiFinishedProductGrossWeightChecks.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        take: 500,
       }),
     );
   });
