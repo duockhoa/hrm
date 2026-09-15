@@ -4,6 +4,14 @@ import type {
   MixingActivityTemplateCreator,
 } from "@/features/mixing-activity-templates/types";
 
+export const MIXING_RECORD_TYPES = [
+  "mixing",
+  "primary_packaging_processing",
+  "other",
+] as const;
+
+export type MixingRecordType = (typeof MIXING_RECORD_TYPES)[number];
+
 export type ProductionOrderMixingRecordParameter = {
   id: number;
   production_order_mixing_record_step_id?: number;
@@ -44,6 +52,7 @@ export type ProductionOrderMixingRecord = {
   id: number;
   production_order_id?: string | number;
   mixing_activity_template_id?: number | null;
+  record_type: MixingRecordType;
   item_code?: string | null;
   version?: number | null;
   template_version?: number | null;
@@ -71,6 +80,7 @@ export type ProductionOrderMixingRecord = {
 
 export type CreateProductionOrderMixingRecordPayload = {
   mixing_activity_template_id: number;
+  record_type: MixingRecordType;
   description?: string | null;
 };
 

@@ -809,6 +809,7 @@ model ProductionOrderMixingRecords {
   productionOrder             ProductionOrders                    @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_mixing_records_order_id_fkey")
   mixing_activity_template_id Int?
   template_version            String?                             @db.VarChar(50)
+  record_type                 String                              @default("mixing") @db.VarChar(50)
   description                 String?                             @db.Text
   created_by_id               Int
   createdBy                   Users                               @relation("ProductionOrderMixingRecordCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "po_mixing_records_created_by_fkey")

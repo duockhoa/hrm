@@ -35,6 +35,12 @@ const DATA_TYPES = [
   'select',
 ] as const;
 
+const MIXING_RECORD_TYPES = [
+  'mixing',
+  'primary_packaging_processing',
+  'other',
+] as const;
+
 const userSelect = {
   id: true,
   username: true,
@@ -138,6 +144,7 @@ export class ProductionOrderMixingRecordsService {
         production_order_id: productionOrderId,
         mixing_activity_template_id: template.id,
         template_version: String(template.version),
+        record_type: this.normalizeRecordType(dto?.record_type),
         description: this.normalizeOptionalText(dto?.description, 'description'),
         created_by_id: this.normalizeUserId(user),
         stages: {
@@ -778,6 +785,21 @@ export class ProductionOrderMixingRecordsService {
     if (maxLength && normalizedValue.length > maxLength) {
       throw new BadRequestException(
         `${fieldName} must not exceed ${maxLength} characters`,
+      );
+    }
+
+    return normalizedValue;
+  }
+
+  private normalizeRecordType(value: unknown) {
+    const normalizedValue = this.normalizeRequiredText(value, 'record_type', 50);
+    if (
+      !MIXING_RECORD_TYPES.includes(
+        normalizedValue as (typeof MIXING_RECORD_TYPES)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        `record_type must be one of: ${MIXING_RECORD_TYPES.join(', ')}`,
       );
     }
 

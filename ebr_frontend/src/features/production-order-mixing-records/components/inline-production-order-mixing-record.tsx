@@ -32,7 +32,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
-import type { ProductionOrderMixingRecord } from "../types";
+import type { MixingRecordType, ProductionOrderMixingRecord } from "../types";
 import {
   formatRecordDateTime,
   getPersonLabel,
@@ -46,7 +46,19 @@ import ProductionOrderMixingRecordDetail from "./production-order-mixing-record-
 const getErrorMessage = (error: any, fallback: string) =>
   error?.response?.data?.message || error?.response?.data?.error || fallback;
 
-const DEFAULT_DESCRIPTION = "Phiếu theo dõi pha chế";
+const DEFAULT_RECORD_TYPE: MixingRecordType = "mixing";
+const MIXING_RECORD_TYPE_OPTIONS: Array<{ value: MixingRecordType; label: string }> = [
+  { value: "mixing", label: "Phiếu pha chế" },
+  {
+    value: "primary_packaging_processing",
+    label: "Phiếu xử lý bảo bì cấp 1",
+  },
+  { value: "other", label: "Khác" },
+];
+
+const getRecordTypeLabel = (recordType?: MixingRecordType) =>
+  MIXING_RECORD_TYPE_OPTIONS.find((option) => option.value === recordType)
+    ?.label ?? "Phiếu pha chế";
 
 const formatBatchSize = (value: number | string | null) => {
   if (value === null || value === "") return "";
@@ -80,7 +92,8 @@ export default function InlineProductionOrderMixingRecord({
     useState<ProductionOrderMixingRecord | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
-  const [description, setDescription] = useState(DEFAULT_DESCRIPTION);
+  const [recordType, setRecordType] = useState<MixingRecordType>(DEFAULT_RECORD_TYPE);
+  const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingRecord, setDeletingRecord] =
     useState<ProductionOrderMixingRecord | null>(null);
@@ -129,7 +142,8 @@ export default function InlineProductionOrderMixingRecord({
 
   const openCreateDialog = () => {
     setSelectedTemplateId("");
-    setDescription(DEFAULT_DESCRIPTION);
+    setRecordType(DEFAULT_RECORD_TYPE);
+    setDescription("");
     setIsCreateOpen(true);
   };
 
@@ -151,6 +165,7 @@ export default function InlineProductionOrderMixingRecord({
         productionOrderId,
         {
           mixing_activity_template_id: templateId,
+          record_type: recordType,
           description: normalizedDescription,
         },
       );
@@ -244,8 +259,7 @@ export default function InlineProductionOrderMixingRecord({
                     <FileText className="mt-0.5 size-5 shrink-0 text-slate-700" />
                     <div className="min-w-0">
                       <p className="break-words font-semibold text-slate-900">
-                        {getRecordDescription(record) ||
-                          "Phiếu pha chế của lệnh sản xuất"}
+                        {getRecordTypeLabel(record.record_type)} - {getRecordDescription(record) || "Phiếu pha chế của lệnh sản xuất"}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         Phiên bản {getRecordVersion(record) ?? "-"}
@@ -362,7 +376,10 @@ export default function InlineProductionOrderMixingRecord({
         onOpenChange={(open) => {
           if (!isSubmitting) {
             setIsCreateOpen(open);
-            if (!open) setDescription("");
+            if (!open) {
+              setRecordType(DEFAULT_RECORD_TYPE);
+              setDescription("");
+            }
           }
         }}
       >
@@ -376,6 +393,22 @@ export default function InlineProductionOrderMixingRecord({
           </DialogHeader>
 
           <div className="flex flex-col gap-2 py-2">
+            <label htmlFor="mixing-record-type" className="text-sm font-medium text-slate-800">
+              Loại phiếu <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="mixing-record-type"
+              value={recordType}
+              disabled={isSubmitting}
+              onChange={(event) => setRecordType(event.target.value as MixingRecordType)}
+              className="min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {MIXING_RECORD_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <label htmlFor="mixing-record-template" className="text-sm font-medium text-slate-800">
               Biểu mẫu pha chế <span className="text-red-500">*</span>
             </label>
@@ -409,7 +442,7 @@ export default function InlineProductionOrderMixingRecord({
               htmlFor="mixing-record-description"
               className="mt-2 text-sm font-medium text-slate-800"
             >
-              Mô tả phiếu pha <span className="text-red-500">*</span>
+              Mô tả <span className="text-red-500">*</span>
             </label>
             <Textarea
               id="mixing-record-description"
@@ -417,7 +450,6 @@ export default function InlineProductionOrderMixingRecord({
               rows={3}
               required
               disabled={isSubmitting}
-              placeholder="Ví dụ: Phiếu pha lô sản xuất buổi sáng"
               onChange={(event) => setDescription(event.target.value)}
             />
           </div>
@@ -429,6 +461,7 @@ export default function InlineProductionOrderMixingRecord({
               disabled={isSubmitting}
               onClick={() => {
                 setIsCreateOpen(false);
+                setRecordType(DEFAULT_RECORD_TYPE);
                 setDescription("");
               }}
             >
