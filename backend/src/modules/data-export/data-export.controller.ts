@@ -59,8 +59,7 @@ export class DataExportController {
 
   @Get('post-secondary-packaging-summaries')
   @ApiOperation({
-    summary:
-      'Xuất dữ liệu tổng kết sau đóng gói thứ cấp cho Google Sheets',
+    summary: 'Xuất dữ liệu tổng kết sau đóng gói thứ cấp cho Google Sheets',
   })
   @ApiOkResponse({
     description: 'Danh sách tổng kết sau đóng gói thứ cấp theo trang',

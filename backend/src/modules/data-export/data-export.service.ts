@@ -184,6 +184,14 @@ const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
           },
         },
       },
+      lineClearanceChecks: {
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        take: 1,
+        select: {
+          id: true,
+          created_at: true,
+        },
+      },
       documentControl: {
         select: {
           id: true,
