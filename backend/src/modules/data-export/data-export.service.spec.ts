@@ -166,6 +166,12 @@ describe('DataExportService', () => {
                 created_at: new Date('2026-01-02T08:30:00.000Z'),
               },
             ],
+            factoryReleaseReviews: [
+              {
+                id: 41,
+                created_at: new Date('2026-01-04T08:30:00.000Z'),
+              },
+            ],
             documentControl: {
               batch_record_issued_at: new Date('2026-01-03T00:00:00.000Z'),
               batch_record_received_at: null,
@@ -216,6 +222,11 @@ describe('DataExportService', () => {
                 created_at: expect.any(Date),
               }),
             ],
+            factoryReleaseReviews: [
+              expect.objectContaining({
+                created_at: expect.any(Date),
+              }),
+            ],
             documentControl: expect.objectContaining({
               batch_record_issued_at: expect.any(Date),
             }),
@@ -248,6 +259,10 @@ describe('DataExportService', () => {
                 }),
               }),
               lineClearanceChecks: expect.objectContaining({
+                take: 1,
+                orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+              }),
+              factoryReleaseReviews: expect.objectContaining({
                 take: 1,
                 orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
               }),
