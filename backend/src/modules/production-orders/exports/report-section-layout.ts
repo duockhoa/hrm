@@ -63,8 +63,17 @@ export async function imageRow(
   label: string,
   storedPath?: string | null,
 ): Promise<string> {
-  if (!storedPath) return row(label, '—');
+  return `<tr><td>${text(label)}</td><td>${await reportImage(label, storedPath)}</td></tr>`;
+}
+
+export async function reportImage(
+  label: string,
+  storedPath?: string | null,
+): Promise<string> {
+  if (!storedPath) return '—';
   const routes: Record<string, string> = {
+    '/production-orders/mixing-record-parameters/images/':
+      'production-order-mixing-record-parameters/images',
     '/production-orders/attachments/files/': 'production-order-attachments',
     '/production-orders/date-checks/images/':
       'production-order-date-checks/images',
@@ -80,7 +89,7 @@ export async function imageRow(
   const route = Object.keys(routes).find((prefix) =>
     storedPath.startsWith(prefix),
   );
-  if (!route) return row(label, 'Không thể tải tệp đính kèm');
+  if (!route) return 'Không thể tải tệp đính kèm';
   const filename = storedPath.slice(route.length);
   if (
     !filename ||
@@ -88,16 +97,16 @@ export async function imageRow(
     filename === '..' ||
     /[/\\\x00]/.test(filename)
   )
-    return row(label, 'Đường dẫn tệp không hợp lệ');
+    return 'Đường dẫn tệp không hợp lệ';
   if (/\.(pdf|docx?|xlsx?|txt|csv)$/i.test(filename))
-    return row(label, `Tệp đính kèm: ${filename}`);
+    return text(`Tệp đính kèm: ${filename}`);
   try {
     const directory = await fs.realpath(
       path.join(process.cwd(), 'uploads', routes[route]),
     );
     const file = await fs.realpath(path.join(directory, filename));
     if (!file.startsWith(directory + path.sep))
-      return row(label, 'Đường dẫn tệp không hợp lệ');
+      return 'Đường dẫn tệp không hợp lệ';
     const buffer = await sharp(file)
       .rotate()
       .resize({
@@ -108,8 +117,8 @@ export async function imageRow(
       })
       .png()
       .toBuffer();
-    return `<tr><td>${text(label)}</td><td><img src="data:image/png;base64,${buffer.toString('base64')}" alt="${text(label)}" style="max-width:100%;max-height:140mm;object-fit:contain"></td></tr>`;
+    return `<img src="data:image/png;base64,${buffer.toString('base64')}" alt="${text(label)}" style="max-width:100%;max-height:140mm;object-fit:contain">`;
   } catch {
-    return row(label, `Không thể hiển thị ảnh: ${filename}`);
+    return text(`Không thể hiển thị ảnh: ${filename}`);
   }
 }

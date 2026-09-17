@@ -95,6 +95,10 @@ import {
   type buildMaterialSummariesHtmlRecord,
 } from './material-summaries-report-html';
 import { Injectable } from '@nestjs/common';
+import {
+  buildMixingRecordsHtml,
+  type MixingRecordForReport,
+} from './mixing-records-report-html';
 import type {
   Items,
   ProductionOrders,
@@ -140,6 +144,7 @@ const SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
 );
 
 type ProductionOrderForExport = ProductionOrders & {
+  mixingRecords?: MixingRecordForReport[];
   secondaryPackagingChecks?: buildSecondaryPackagingChecksHtmlRecord[];
   preSecondaryPackagingChecks?: buildPreSecondaryPackagingChecksHtmlRecord[];
   postPreparationSolutionChecks?: buildPostPreparationSolutionChecksHtmlRecord[];
@@ -815,8 +820,9 @@ export class ProductionOrderExportService {
 
     // Read watermark for inline embedding in multi-page sections
     const directory = path.join(process.cwd(), 'templates', 'batch-report');
-    const [watermarkBuf] = await Promise.all([
+    const [watermarkBuf, logoBuf] = await Promise.all([
       fs.readFile(path.join(directory, 'logo-removebg.png')),
+      fs.readFile(path.join(directory, 'logo.png')),
     ]);
     const watermarkDataUri = `data:image/png;base64,${watermarkBuf.toString('base64')}`;
     const esc = (s: string) =>
@@ -1726,6 +1732,21 @@ export class ProductionOrderExportService {
           'warehouse_release_html',
           () => linesHtml,
         ),
+        mixing_records_html: productionOrder.featureConfig?.actions?.some(
+          (action) => action.key === 'view_mixing_record' && action.enabled,
+        )
+          ? await buildMixingRecordsHtml(
+              productionOrder.mixingRecords ?? [],
+              productionOrder,
+              {
+                appInfo,
+                printTime,
+                printerName,
+                watermarkDataUri,
+                logoDataUri: `data:image/png;base64,${logoBuf.toString('base64')}`,
+              },
+            )
+          : '',
         deviations_html: renderFeatureSection(
           productionOrder,
           'deviations_html',
@@ -1902,6 +1923,7 @@ export class ProductionOrderExportService {
         'primary_packaging_confirmations_html',
         'material_summaries_html',
         'warehouse_release_html',
+        'mixing_records_html',
         'deviations_html',
         'taste_checks_html',
         'vial_inspection_html',

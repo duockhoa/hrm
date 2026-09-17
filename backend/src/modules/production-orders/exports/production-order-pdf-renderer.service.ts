@@ -80,6 +80,81 @@ export class ProductionOrderPdfRendererService {
               if (exceedsFooter()) return { overflow: true };
             }
           }
+          // Mixing forms have a separate header/info table and six-column body.
+          // Paginate before merging step cells so a step may safely span pages.
+          for (const firstPage of Array.from(
+            document.querySelectorAll<HTMLElement>('.mixing-record-page'),
+          )) {
+            let currentPage = firstPage;
+            let body = currentPage.querySelector<HTMLTableSectionElement>(
+              '.mixing-content > tbody',
+            );
+            if (!body) continue;
+            const rows = Array.from(body.rows);
+            const stageHeaders = new Map(
+              rows
+                .filter((row) => row.dataset.stageHeader)
+                .map((row) => [row.dataset.stageHeader!, row.cloneNode(true)]),
+            );
+            body.replaceChildren();
+            const exceedsFooter = (row: HTMLElement) =>
+              row.getBoundingClientRect().bottom >
+              currentPage
+                .querySelector<HTMLElement>('.page-footer')!
+                .getBoundingClientRect().top -
+                footerRowClearancePx;
+            for (const row of rows) {
+              body.appendChild(row);
+              if (exceedsFooter(row) && body.rows.length > 1) {
+                row.remove();
+                // Move an orphaned stage heading together with its first step.
+                if (
+                  row.dataset.stageId &&
+                  body.lastElementChild instanceof HTMLElement &&
+                  body.lastElementChild.dataset.stageHeader ===
+                    row.dataset.stageId
+                )
+                  body.lastElementChild.remove();
+                if (!body.rows.length) return { overflow: true };
+                const nextPage = currentPage.cloneNode(true) as HTMLElement;
+                body = nextPage.querySelector<HTMLTableSectionElement>(
+                  '.mixing-content > tbody',
+                )!;
+                body.replaceChildren();
+                currentPage.after(nextPage);
+                currentPage = nextPage;
+                const stageHeader =
+                  row.dataset.stageId && stageHeaders.get(row.dataset.stageId);
+                if (stageHeader) body.appendChild(stageHeader.cloneNode(true));
+                body.appendChild(row);
+              }
+              if (exceedsFooter(row)) return { overflow: true };
+            }
+          }
+          for (const body of Array.from(
+            document.querySelectorAll<HTMLTableSectionElement>(
+              '.mixing-content > tbody',
+            ),
+          )) {
+            let firstCell: HTMLTableCellElement | undefined;
+            let stepId: string | undefined;
+            for (const row of Array.from(body.rows)) {
+              const cell =
+                row.querySelector<HTMLTableCellElement>('[data-step-cell]');
+              if (!cell) {
+                firstCell = undefined;
+                stepId = undefined;
+                continue;
+              }
+              if (firstCell && stepId === row.dataset.stepId) {
+                firstCell.rowSpan += 1;
+                cell.remove();
+              } else {
+                firstCell = cell;
+                stepId = row.dataset.stepId;
+              }
+            }
+          }
           const sections = Array.from(
             document.querySelectorAll<HTMLElement>('.report-page'),
           );

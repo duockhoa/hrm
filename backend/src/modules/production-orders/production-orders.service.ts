@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
+import { mixingRecordsReportInclude } from './exports/mixing-records-report-html';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
 import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
 import type {
@@ -454,6 +455,10 @@ export class ProductionOrdersService {
         },
         include: {
           ...productionOrderFindInclude,
+          mixingRecords: {
+            include: mixingRecordsReportInclude,
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
           secondaryPackagingChecks: {
             include: { checkedBy: { select: { name: true, username: true } } },
             orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
