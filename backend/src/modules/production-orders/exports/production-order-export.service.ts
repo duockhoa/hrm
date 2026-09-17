@@ -42,6 +42,16 @@ import type {
   ProductionOrders,
   RegistrationNumbers,
   ProductionOrderDeviations,
+  ProductionOrderVialInspectionChecks,
+  ProductionOrderHardCapsuleLeakageChecks,
+  ProductionOrderDisintegrationChecks,
+  ProductionOrderSprayDoseChecks,
+  ProductionOrderTabletThicknessChecks,
+  ProductionOrderLineClearanceChecks,
+  ProductionOrderHardnessChecks,
+  ProductionOrderDensityChecks,
+  ProductionOrderSensoryChecks,
+  ProductionOrderSamplingRecords,
   Users,
 } from '@prisma/client';
 import Docxtemplater from 'docxtemplater';
@@ -91,6 +101,37 @@ type ProductionOrderForExport = ProductionOrders & {
   deviations?: (ProductionOrderDeviations & {
     reporter?: Users | null;
     approver?: Users | null;
+  })[];
+  vialInspectionChecks?: (ProductionOrderVialInspectionChecks & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
+  })[];
+  hardCapsuleLeakageChecks?: (ProductionOrderHardCapsuleLeakageChecks & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
+  })[];
+  disintegrationChecks?: (ProductionOrderDisintegrationChecks & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
+  })[];
+  sprayDoseChecks?: (ProductionOrderSprayDoseChecks & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
+  })[];
+  tabletThicknessChecks?: (ProductionOrderTabletThicknessChecks & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
+  })[];
+  lineClearanceChecks?: (ProductionOrderLineClearanceChecks & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
+    previousProductionOrder?: Pick<ProductionOrders, 'description' | 'lot_no'> | null;
+  })[];
+  hardnessChecks?: (ProductionOrderHardnessChecks & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
+  })[];
+  densityChecks?: (ProductionOrderDensityChecks & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
+  })[];
+  samplingRecords?: (ProductionOrderSamplingRecords & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
+  })[];
+  sensoryChecks?: (ProductionOrderSensoryChecks & {
+    createdBy?: Pick<Users, 'name' | 'username'> | null;
   })[];
   documentControl?: any;
   pyclm?: any;
@@ -840,6 +881,464 @@ export class ProductionOrderExportService {
   </main>`;
     };
 
+    const buildTasteChecksHtml = () => {
+      const checks = productionOrder.sensoryChecks ?? [];
+      const rows = checks
+        .map(
+          (check, index) => `<tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="text-align: center;">${formatDisplayDateTime(check.created_at)}</td>
+            <td>${esc(check.color ?? '')}</td>
+            <td>${esc(check.smell ?? '')}</td>
+            <td>${esc(check.taste ?? '')}</td>
+            <td>${esc(check.note ?? '')}</td>
+            <td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
+          </tr>`,
+        )
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">Thử mùi vị</h2>
+      ${
+        checks.length
+          ? `<table class="deviations-table"><thead><tr>
+              <th style="width: 5%;">STT</th><th style="width: 15%;">Thời điểm</th><th style="width: 15%;">Màu sắc</th><th style="width: 15%;">Mùi</th><th style="width: 15%;">Vị</th><th style="width: 20%;">Ghi chú</th><th style="width: 15%;">Người nhập</th>
+            </tr></thead><tbody>${rows}</tbody></table>`
+          : '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu thử mùi vị)</p></div>'
+      }
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
+
+    const buildVialInspectionHtml = () => {
+      const checks = productionOrder.vialInspectionChecks ?? [];
+      const total = (key: keyof ProductionOrderVialInspectionChecks) =>
+        checks.reduce((sum, check) => sum + Number(check[key] ?? 0), 0);
+      const notes = checks
+        .map((check) => check.note?.trim())
+        .filter(Boolean)
+        .join('; ');
+      const renderPage = (title: string, content: string) => `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">${title}</h2>
+      ${content}
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+      const emptyState = '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu)</p></div>';
+      const inspectionTable = checks.length
+        ? `<table class="deviations-table"><thead><tr>
+            <th>Thời điểm</th><th>Bao số</th><th>Lọ có sợi</th><th>Vẩn</th><th>Hỏng</th><th>Lỗi khác</th><th>Ghi chú</th><th>Người nhập</th>
+          </tr></thead><tbody>${checks.map((check) => `<tr>
+            <td style="text-align: center;">${formatDisplayDateTime(check.created_at)}</td><td style="text-align: right;">${formatNum(check.bag_number)}</td><td style="text-align: right;">${formatNum(check.fiber_vial_count)}</td><td style="text-align: right;">${formatNum(check.particulate_count)}</td><td style="text-align: right;">${formatNum(check.damaged_count)}</td><td style="text-align: right;">${formatNum(check.other_defect_count)}</td><td>${esc(check.note ?? '')}</td><td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
+          </tr>`).join('')}</tbody></table>`
+        : emptyState;
+      const summaryTable = checks.length
+        ? `<table class="deviations-table"><thead><tr>
+            <th>Phạm vi</th><th>Bao số</th><th>Lọ có sợi</th><th>Vẩn</th><th>Hỏng</th><th>Lỗi khác</th><th>Ghi chú</th>
+          </tr></thead><tbody><tr>
+            <td>Toàn lô</td><td style="text-align: right;">${formatNum(total('bag_number'))}</td><td style="text-align: right;">${formatNum(total('fiber_vial_count'))}</td><td style="text-align: right;">${formatNum(total('particulate_count'))}</td><td style="text-align: right;">${formatNum(total('damaged_count'))}</td><td style="text-align: right;">${formatNum(total('other_defect_count'))}</td><td>${esc(notes)}</td>
+          </tr></tbody></table>`
+        : emptyState;
+
+      return `${renderPage('Soi lọ', inspectionTable)}${renderPage('Tổng kết soi lọ', summaryTable)}`;
+    };
+
+    const buildHardCapsuleLeakageHtml = () => {
+      const checks = productionOrder.hardCapsuleLeakageChecks ?? [];
+      const stageLabels: Record<string, string> = {
+        before_coating: 'Trước bao',
+        after_coating: 'Sau bao',
+      };
+      const rows = checks
+        .map((check, index) => {
+          const testedCount = Number(check.tested_capsule_count) || 0;
+          const leakedCount = Number(check.leaked_capsule_count) || 0;
+          const leakageRate = testedCount
+            ? `${((leakedCount / testedCount) * 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`
+            : '—';
+
+          return `<tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="text-align: center;">${formatDisplayDateTime(check.checked_at)}</td>
+            <td>${esc(stageLabels[check.stage] ?? check.stage)}</td>
+            <td style="text-align: right;">${formatNum(testedCount)}</td>
+            <td style="text-align: right;">${formatNum(leakedCount)}</td>
+            <td style="text-align: right;">${leakageRate}</td>
+            <td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
+          </tr>`;
+        })
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">Kiểm tra rò rỉ nang cứng</h2>
+      ${
+        checks.length
+          ? `<table class="deviations-table"><thead><tr>
+              <th>STT</th><th>Thời điểm</th><th>Công đoạn</th><th>Số viên kiểm tra</th><th>Số viên rò rỉ</th><th>Tỉ lệ rò rỉ</th><th>Người nhập</th>
+            </tr></thead><tbody>${rows}</tbody></table>`
+          : '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu kiểm tra rò rỉ nang cứng)</p></div>'
+      }
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
+
+    const buildSamplingRecordsHtml = () => {
+      const records = productionOrder.samplingRecords ?? [];
+      const rows = records
+        .map(
+          (record, index) => `<tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="text-align: center;">${formatDisplayDateTime(record.created_at)}</td>
+            <td>${esc(record.sampling_type)}</td>
+            <td style="text-align: right;">${formatNum(record.quantity)}</td>
+            <td>${esc(record.unit)}</td>
+            <td>${esc(record.createdBy?.name ?? record.createdBy?.username ?? '')}</td>
+          </tr>`,
+        )
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">Lấy mẫu</h2>
+      ${
+        records.length
+          ? `<table class="deviations-table"><thead><tr>
+              <th>STT</th><th>Thời điểm</th><th>Loại mẫu</th><th>Số lượng</th><th>Đơn vị tính</th><th>Người nhập</th>
+            </tr></thead><tbody>${rows}</tbody></table>`
+          : '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu lấy mẫu)</p></div>'
+      }
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
+
+    const buildDisintegrationChecksHtml = () => {
+      const checks = productionOrder.disintegrationChecks ?? [];
+      const stageLabels: Record<string, string> = {
+        tablet: 'Viên nén',
+        film_coated_tablet: 'Viên bao phim',
+        capsule: 'Viên nang',
+      };
+      const result = (value: boolean | null | undefined) =>
+        value === true ? 'Đạt' : value === false ? 'Không đạt' : '—';
+      const rows = checks
+        .map(
+          (check, index) => `<tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="text-align: center;">${formatDisplayDateTime(check.checked_at)}</td>
+            <td>${esc(stageLabels[check.dosage_form_stage] ?? check.dosage_form_stage)}</td>
+            <td style="text-align: center;">${result(check.unit_1_passed)}</td>
+            <td style="text-align: center;">${result(check.unit_2_passed)}</td>
+            <td style="text-align: center;">${result(check.unit_3_passed)}</td>
+            <td style="text-align: center;">${result(check.unit_4_passed)}</td>
+            <td style="text-align: center;">${result(check.unit_5_passed)}</td>
+            <td style="text-align: center;">${result(check.unit_6_passed)}</td>
+            <td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
+          </tr>`,
+        )
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">Kiểm tra độ rã</h2>
+      ${
+        checks.length
+          ? `<table class="deviations-table" style="font-size: 8pt;"><thead><tr>
+              <th>STT</th><th>Thời điểm</th><th>Dạng/công đoạn</th><th>Viên 1</th><th>Viên 2</th><th>Viên 3</th><th>Viên 4</th><th>Viên 5</th><th>Viên 6</th><th>Người nhập</th>
+            </tr></thead><tbody>${rows}</tbody></table>`
+          : '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu kiểm tra độ rã)</p></div>'
+      }
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
+
+    const buildSprayDoseChecksHtml = () => {
+      const checks = productionOrder.sprayDoseChecks ?? [];
+      const doseKeys = [
+        'bottle_1_spray_dose_count',
+        'bottle_2_spray_dose_count',
+        'bottle_3_spray_dose_count',
+        'bottle_4_spray_dose_count',
+        'bottle_5_spray_dose_count',
+        'bottle_6_spray_dose_count',
+      ] as const;
+      const rows = checks
+        .map(
+          (check, index) => `<tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="text-align: center;">${formatDisplayDateTime(check.created_at)}</td>
+            ${doseKeys.map((key) => `<td style="text-align: right;">${check[key] === null ? '—' : formatNum(check[key])}</td>`).join('')}
+            <td>${esc(check.unit)}</td>
+            <td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
+          </tr>`,
+        )
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">Kiểm tra số lượng liều xịt</h2>
+      ${
+        checks.length
+          ? `<table class="deviations-table" style="font-size: 8pt;"><thead><tr>
+              <th>STT</th><th>Thời điểm</th>${doseKeys.map((_, index) => `<th>Lọ ${index + 1} (liều)</th>`).join('')}<th>Đơn vị</th><th>Người kiểm tra</th>
+            </tr></thead><tbody>${rows}</tbody></table>`
+          : '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu kiểm tra số lượng liều xịt)</p></div>'
+      }
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
+
+    const buildTabletThicknessChecksHtml = () => {
+      const checks = productionOrder.tabletThicknessChecks ?? [];
+      const thicknessKeys = [
+        'unit_1_thickness', 'unit_2_thickness', 'unit_3_thickness',
+        'unit_4_thickness', 'unit_5_thickness', 'unit_6_thickness',
+        'unit_7_thickness', 'unit_8_thickness', 'unit_9_thickness',
+        'unit_10_thickness',
+      ] as const;
+      const rows = checks
+        .map(
+          (check, index) => `<tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="text-align: center;">${formatDisplayDateTime(check.created_at)}</td>
+            ${thicknessKeys.map((key) => `<td style="text-align: right;">${check[key] === null ? '—' : formatNum(check[key])}</td>`).join('')}
+            <td>${esc(check.unit)}</td>
+            <td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
+          </tr>`,
+        )
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">Kiểm tra độ dày viên</h2>
+      ${
+        checks.length
+          ? `<table class="deviations-table" style="font-size: 7pt;"><thead><tr>
+              <th>STT</th><th>Thời điểm</th>${thicknessKeys.map((_, index) => `<th>Viên ${index + 1}</th>`).join('')}<th>Đơn vị</th><th>Người nhập</th>
+            </tr></thead><tbody>${rows}</tbody></table>`
+          : '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu kiểm tra độ dày viên)</p></div>'
+      }
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
+
+    const buildLineClearanceChecksHtml = () => {
+      const checks = productionOrder.lineClearanceChecks ?? [];
+      const rows = checks
+        .map((check, index) => {
+          const previousOrder = check.previousProductionOrder;
+          const previousProduction = [
+            previousOrder?.description && esc(previousOrder.description),
+            previousOrder?.lot_no && `Lô: ${esc(previousOrder.lot_no)}`,
+            !previousOrder && check.previous_lot_no
+              ? `Lô: ${esc(check.previous_lot_no)}`
+              : '',
+          ]
+            .filter(Boolean)
+            .join('<br />');
+
+          return `<tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="text-align: center;">${formatDisplayDateTime(check.created_at)}</td>
+            <td>${esc(check.check_type)}</td>
+            <td>${previousProduction || '—'}</td>
+            <td>${esc(check.requirement)}</td>
+            <td style="text-align: center;">${esc(check.result)}</td>
+            <td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
+          </tr>`;
+        })
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">Dọn quang dây chuyền</h2>
+      ${
+        checks.length
+          ? `<table class="deviations-table"><thead><tr>
+              <th>STT</th><th>Thời điểm</th><th>Loại kiểm tra</th><th>Sản phẩm/lô trước</th><th>Yêu cầu</th><th>Kết quả</th><th>Người nhập</th>
+            </tr></thead><tbody>${rows}</tbody></table>`
+          : '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu dọn quang dây chuyền)</p></div>'
+      }
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
+
+    const buildHardnessChecksHtml = () => {
+      const checks = productionOrder.hardnessChecks ?? [];
+      const hardnessKeys = [
+        'unit_1_hardness', 'unit_2_hardness', 'unit_3_hardness',
+        'unit_4_hardness', 'unit_5_hardness', 'unit_6_hardness',
+        'unit_7_hardness', 'unit_8_hardness', 'unit_9_hardness',
+        'unit_10_hardness',
+      ] as const;
+      const rows = checks
+        .map(
+          (check, index) => `<tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="text-align: center;">${formatDisplayDateTime(check.created_at)}</td>
+            ${hardnessKeys.map((key) => `<td style="text-align: right;">${check[key] === null ? '—' : formatNum(check[key])}</td>`).join('')}
+            <td>${esc(check.unit)}</td>
+            <td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
+          </tr>`,
+        )
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">Kiểm tra độ cứng</h2>
+      ${
+        checks.length
+          ? `<table class="deviations-table" style="font-size: 7pt;"><thead><tr>
+              <th>STT</th><th>Thời điểm</th>${hardnessKeys.map((_, index) => `<th>Viên ${index + 1}</th>`).join('')}<th>Đơn vị</th><th>Người nhập</th>
+            </tr></thead><tbody>${rows}</tbody></table>`
+          : '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu kiểm tra độ cứng)</p></div>'
+      }
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
+
+    const buildDensityChecksHtml = () => {
+      const checks = productionOrder.densityChecks ?? [];
+      const rows = checks
+        .map(
+          (check, index) => `<tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="text-align: center;">${formatDisplayDateTime(check.created_at)}</td>
+            <td style="text-align: right;">${formatNum(check.empty_pycnometer_mass_g)}</td>
+            <td style="text-align: right;">${formatNum(check.solution_pycnometer_mass_g)}</td>
+            <td style="text-align: right;">${formatNum(check.water_pycnometer_mass_g)}</td>
+            <td style="text-align: right;">${formatNum(check.density)}</td>
+            <td style="text-align: right;">${check.apparent_density === null ? '—' : formatNum(check.apparent_density)}</td>
+            <td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
+          </tr>`,
+        )
+        .join('');
+
+      return `
+  <main class="report-page page-break">
+    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
+    <div class="page-header">
+      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
+      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
+    </div>
+    <div style="margin-top: 2mm; margin-bottom: 2mm;">
+      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">Kiểm tra tỷ trọng</h2>
+      ${
+        checks.length
+          ? `<table class="deviations-table"><thead><tr>
+              <th>STT</th><th>Thời điểm</th><th>Bình rỗng (g)</th><th>Bình chứa dung dịch (g)</th><th>Bình chứa nước (g)</th><th>Tỷ trọng</th><th>Tỷ trọng biểu kiến</th><th>Người nhập</th>
+            </tr></thead><tbody>${rows}</tbody></table>`
+          : '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu kiểm tra tỷ trọng)</p></div>'
+      }
+    </div>
+    <div class="page-footer">
+      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
+      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
+    </div>
+  </main>`;
+    };
+
     const isPyclmSent = Boolean((productionOrder as any).pyclm?.isSent);
     const pyclmStatusHtml = `<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${
       isPyclmSent ? '#22c55e' : '#ef4444'
@@ -882,6 +1381,16 @@ export class ProductionOrderExportService {
         specifications_table_html: buildSpecificationsTableHtml(productionOrder),
         warehouse_release_html: linesHtml,
         deviations_html: buildDeviationsHtml(),
+        taste_checks_html: buildTasteChecksHtml(),
+        vial_inspection_html: buildVialInspectionHtml(),
+        hard_capsule_leakage_html: buildHardCapsuleLeakageHtml(),
+        sampling_records_html: buildSamplingRecordsHtml(),
+        disintegration_checks_html: buildDisintegrationChecksHtml(),
+        spray_dose_checks_html: buildSprayDoseChecksHtml(),
+        tablet_thickness_checks_html: buildTabletThicknessChecksHtml(),
+        line_clearance_checks_html: buildLineClearanceChecksHtml(),
+        hardness_checks_html: buildHardnessChecksHtml(),
+        density_checks_html: buildDensityChecksHtml(),
         volume_checks_html: buildVolumeChecksHtml(
           productionOrder.volumeChecks ?? [],
           { appInfo, printTime, printerName, watermarkDataUri },
@@ -934,6 +1443,16 @@ export class ProductionOrderExportService {
       [
         'warehouse_release_html',
         'deviations_html',
+        'taste_checks_html',
+        'vial_inspection_html',
+        'hard_capsule_leakage_html',
+        'sampling_records_html',
+        'disintegration_checks_html',
+        'spray_dose_checks_html',
+        'tablet_thickness_checks_html',
+        'line_clearance_checks_html',
+        'hardness_checks_html',
+        'density_checks_html',
         'environment_checks_html',
         'hygiene_checks_html',
         'volume_checks_html',

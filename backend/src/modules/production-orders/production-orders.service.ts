@@ -538,6 +538,63 @@ export class ProductionOrdersService {
               created_at: 'asc',
             },
           },
+          vialInspectionChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          hardCapsuleLeakageChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ checked_at: 'asc' }, { id: 'asc' }],
+          },
+          disintegrationChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ checked_at: 'asc' }, { id: 'asc' }],
+          },
+          sprayDoseChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          tabletThicknessChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          lineClearanceChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+              previousProductionOrder: {
+                select: { description: true, lot_no: true },
+              },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          hardnessChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          densityChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          sensoryChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
         },
       });
 
