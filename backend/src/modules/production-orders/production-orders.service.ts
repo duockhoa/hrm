@@ -454,6 +454,70 @@ export class ProductionOrdersService {
         },
         include: {
           ...productionOrderFindInclude,
+          secondaryPackagingChecks: {
+            include: { checkedBy: { select: { name: true, username: true } } },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          preSecondaryPackagingChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+              images: { orderBy: { id: 'asc' } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          postPreparationSolutionChecks: {
+            include: { checkedBy: { select: { name: true, username: true } } },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          friabilityChecks: {
+            include: { createdBy: { select: { name: true, username: true } } },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          cylinderCalibration: {
+            include: { createdBy: { select: { name: true, username: true } } },
+          },
+          tenShellWeightCheck: {
+            include: { createdBy: { select: { name: true, username: true } } },
+          },
+          dateChecks: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+              approvedBy: { select: { name: true, username: true } },
+              images: { orderBy: { id: 'asc' } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          attachments: {
+            include: {
+              enteredBy: { select: { name: true, username: true } },
+              approvedBy: { select: { name: true, username: true } },
+              files: { orderBy: [{ sort_order: 'asc' }, { id: 'asc' }] },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          finishedProductSummaries: {
+            include: { createdBy: { select: { name: true, username: true } } },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          materialProcessSummaries: {
+            include: { createdBy: { select: { name: true, username: true } } },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          factoryReleaseReviews: {
+            include: { approvedBy: { select: { name: true, username: true } } },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          primaryPackagingConfirmations: {
+            include: { createdBy: { select: { name: true, username: true } } },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          materialSummaries: {
+            include: {
+              createdBy: { select: { name: true, username: true } },
+              summarizedBy: { select: { name: true, username: true } },
+            },
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
           volumeChecks: {
             include: {
               createdBy: { select: { name: true, username: true } },

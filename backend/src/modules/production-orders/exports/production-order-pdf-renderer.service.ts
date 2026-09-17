@@ -50,7 +50,7 @@ export class ProductionOrderPdfRendererService {
           // Measure rows after fonts load so long room/user names also paginate.
           for (const firstPage of Array.from(
             document.querySelectorAll<HTMLElement>(
-              '.environment-check-page, .hygiene-check-page, .volume-check-page, .semi-finished-net-weight-check-page, .semi-finished-gross-weight-check-page, .leak-tightness-check-page, .warehouse-release-page',
+              '.additional-report-page, .environment-check-page, .hygiene-check-page, .volume-check-page, .semi-finished-net-weight-check-page, .semi-finished-gross-weight-check-page, .leak-tightness-check-page, .warehouse-release-page',
             ),
           )) {
             let currentPage = firstPage;
@@ -61,7 +61,8 @@ export class ProductionOrderPdfRendererService {
             for (const row of rows) {
               body.appendChild(row);
               const exceedsFooter = () => {
-                const footer = currentPage.querySelector<HTMLElement>('.page-footer')!;
+                const footer =
+                  currentPage.querySelector<HTMLElement>('.page-footer')!;
                 return (
                   row.getBoundingClientRect().bottom >
                   footer.getBoundingClientRect().top - footerRowClearancePx
@@ -79,10 +80,11 @@ export class ProductionOrderPdfRendererService {
               if (exceedsFooter()) return { overflow: true };
             }
           }
-          const sections =
-            Array.from(document.querySelectorAll<HTMLElement>('.report-page'));
+          const sections = Array.from(
+            document.querySelectorAll<HTMLElement>('.report-page'),
+          );
           if (sections.length === 0) return null;
-          
+
           // Inject dynamic page numbers
           sections.forEach((section, index) => {
             const footer = section.querySelector<HTMLElement>('.page-footer');

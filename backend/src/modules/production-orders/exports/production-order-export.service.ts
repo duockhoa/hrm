@@ -42,6 +42,58 @@ import {
   buildSensoryChecksHtml,
   type SensoryCheckForReport,
 } from './sensory-checks-report-html';
+import {
+  buildSecondaryPackagingChecksHtml,
+  type buildSecondaryPackagingChecksHtmlRecord,
+} from './secondary-packaging-checks-report-html';
+import {
+  buildPreSecondaryPackagingChecksHtml,
+  type buildPreSecondaryPackagingChecksHtmlRecord,
+} from './pre-secondary-packaging-checks-report-html';
+import {
+  buildPostPreparationSolutionChecksHtml,
+  type buildPostPreparationSolutionChecksHtmlRecord,
+} from './post-preparation-solution-checks-report-html';
+import {
+  buildFriabilityChecksHtml,
+  type buildFriabilityChecksHtmlRecord,
+} from './friability-checks-report-html';
+import {
+  buildCylinderCalibrationHtml,
+  type buildCylinderCalibrationHtmlRecord,
+} from './cylinder-calibration-report-html';
+import {
+  buildTenShellWeightCheckHtml,
+  type buildTenShellWeightCheckHtmlRecord,
+} from './ten-shell-weight-check-report-html';
+import {
+  buildDateChecksHtml,
+  type buildDateChecksHtmlRecord,
+} from './date-checks-report-html';
+import {
+  buildProductionOrderAttachmentsHtml,
+  type buildProductionOrderAttachmentsHtmlRecord,
+} from './production-order-attachments-report-html';
+import {
+  buildFinishedProductSummaryHtml,
+  type buildFinishedProductSummaryHtmlRecord,
+} from './finished-product-summary-report-html';
+import {
+  buildMaterialProcessSummariesHtml,
+  type buildMaterialProcessSummariesHtmlRecord,
+} from './material-process-summaries-report-html';
+import {
+  buildFactoryReleaseReviewsHtml,
+  type buildFactoryReleaseReviewsHtmlRecord,
+} from './factory-release-reviews-report-html';
+import {
+  buildPrimaryPackagingConfirmationsHtml,
+  type buildPrimaryPackagingConfirmationsHtmlRecord,
+} from './primary-packaging-confirmations-report-html';
+import {
+  buildMaterialSummariesHtml,
+  type buildMaterialSummariesHtmlRecord,
+} from './material-summaries-report-html';
 import { Injectable } from '@nestjs/common';
 import type {
   Items,
@@ -88,6 +140,19 @@ const SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
 );
 
 type ProductionOrderForExport = ProductionOrders & {
+  secondaryPackagingChecks?: buildSecondaryPackagingChecksHtmlRecord[];
+  preSecondaryPackagingChecks?: buildPreSecondaryPackagingChecksHtmlRecord[];
+  postPreparationSolutionChecks?: buildPostPreparationSolutionChecksHtmlRecord[];
+  friabilityChecks?: buildFriabilityChecksHtmlRecord[];
+  cylinderCalibration?: buildCylinderCalibrationHtmlRecord | null;
+  tenShellWeightCheck?: buildTenShellWeightCheckHtmlRecord | null;
+  dateChecks?: buildDateChecksHtmlRecord[];
+  attachments?: buildProductionOrderAttachmentsHtmlRecord[];
+  finishedProductSummaries?: buildFinishedProductSummaryHtmlRecord[];
+  materialProcessSummaries?: buildMaterialProcessSummariesHtmlRecord[];
+  factoryReleaseReviews?: buildFactoryReleaseReviewsHtmlRecord[];
+  primaryPackagingConfirmations?: buildPrimaryPackagingConfirmationsHtmlRecord[];
+  materialSummaries?: buildMaterialSummariesHtmlRecord[];
   environmentChecks?: EnvironmentCheckForReport[];
   hygieneChecks?: HygieneCheckForReport[];
   volumeChecks?: VolumeCheckForReport[];
@@ -152,6 +217,19 @@ type ProductionOrderForExport = ProductionOrders & {
 };
 
 const REPORT_SECTION_FEATURE_KEYS = {
+  secondary_packaging_checks_html: 'secondary_packaging_checks',
+  pre_secondary_packaging_checks_html: 'pre_secondary_packaging_checks',
+  post_preparation_solution_checks_html: 'post_preparation_solution_checks',
+  friability_checks_html: 'friability_checks',
+  cylinder_calibration_html: 'cylinder_calibration',
+  ten_shell_weight_check_html: 'ten_shell_weight_check',
+  date_checks_html: 'date_checks',
+  production_order_attachments_html: 'production_order_attachments',
+  finished_product_summary_html: 'finished_product_summary',
+  material_process_summaries_html: 'material_process_summaries',
+  factory_release_reviews_html: 'factory_release_reviews',
+  primary_packaging_confirmations_html: 'primary_packaging_confirmations',
+  material_summaries_html: 'material_summaries',
   warehouse_release_html: 'production_order_lines',
   deviations_html: 'production_order_deviations',
   taste_checks_html: 'sensory_checks',
@@ -1520,6 +1598,129 @@ export class ProductionOrderExportService {
         ),
         specifications_table_html:
           buildSpecificationsTableHtml(productionOrder),
+        secondary_packaging_checks_html: isReportSectionEnabled(
+          productionOrder,
+          'secondary_packaging_checks_html',
+        )
+          ? await buildSecondaryPackagingChecksHtml(
+              productionOrder.secondaryPackagingChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        pre_secondary_packaging_checks_html: isReportSectionEnabled(
+          productionOrder,
+          'pre_secondary_packaging_checks_html',
+        )
+          ? await buildPreSecondaryPackagingChecksHtml(
+              productionOrder.preSecondaryPackagingChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        post_preparation_solution_checks_html: isReportSectionEnabled(
+          productionOrder,
+          'post_preparation_solution_checks_html',
+        )
+          ? await buildPostPreparationSolutionChecksHtml(
+              productionOrder.postPreparationSolutionChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        friability_checks_html: isReportSectionEnabled(
+          productionOrder,
+          'friability_checks_html',
+        )
+          ? await buildFriabilityChecksHtml(
+              productionOrder.friabilityChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        cylinder_calibration_html: isReportSectionEnabled(
+          productionOrder,
+          'cylinder_calibration_html',
+        )
+          ? await buildCylinderCalibrationHtml(
+              productionOrder.cylinderCalibration
+                ? [productionOrder.cylinderCalibration]
+                : [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        ten_shell_weight_check_html: isReportSectionEnabled(
+          productionOrder,
+          'ten_shell_weight_check_html',
+        )
+          ? await buildTenShellWeightCheckHtml(
+              productionOrder.tenShellWeightCheck
+                ? [productionOrder.tenShellWeightCheck]
+                : [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        date_checks_html: isReportSectionEnabled(
+          productionOrder,
+          'date_checks_html',
+        )
+          ? await buildDateChecksHtml(productionOrder.dateChecks ?? [], {
+              appInfo,
+              printTime,
+              printerName,
+              watermarkDataUri,
+            })
+          : '',
+        production_order_attachments_html: isReportSectionEnabled(
+          productionOrder,
+          'production_order_attachments_html',
+        )
+          ? await buildProductionOrderAttachmentsHtml(
+              productionOrder.attachments ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        finished_product_summary_html: isReportSectionEnabled(
+          productionOrder,
+          'finished_product_summary_html',
+        )
+          ? await buildFinishedProductSummaryHtml(
+              productionOrder.finishedProductSummaries ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        material_process_summaries_html: isReportSectionEnabled(
+          productionOrder,
+          'material_process_summaries_html',
+        )
+          ? await buildMaterialProcessSummariesHtml(
+              productionOrder.materialProcessSummaries ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        factory_release_reviews_html: isReportSectionEnabled(
+          productionOrder,
+          'factory_release_reviews_html',
+        )
+          ? await buildFactoryReleaseReviewsHtml(
+              productionOrder.factoryReleaseReviews ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        primary_packaging_confirmations_html: isReportSectionEnabled(
+          productionOrder,
+          'primary_packaging_confirmations_html',
+        )
+          ? await buildPrimaryPackagingConfirmationsHtml(
+              productionOrder.primaryPackagingConfirmations ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
+        material_summaries_html: isReportSectionEnabled(
+          productionOrder,
+          'material_summaries_html',
+        )
+          ? await buildMaterialSummariesHtml(
+              productionOrder.materialSummaries ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            )
+          : '',
         warehouse_release_html: renderFeatureSection(
           productionOrder,
           'warehouse_release_html',
@@ -1687,6 +1888,19 @@ export class ProductionOrderExportService {
         ),
       },
       [
+        'secondary_packaging_checks_html',
+        'pre_secondary_packaging_checks_html',
+        'post_preparation_solution_checks_html',
+        'friability_checks_html',
+        'cylinder_calibration_html',
+        'ten_shell_weight_check_html',
+        'date_checks_html',
+        'production_order_attachments_html',
+        'finished_product_summary_html',
+        'material_process_summaries_html',
+        'factory_release_reviews_html',
+        'primary_packaging_confirmations_html',
+        'material_summaries_html',
         'warehouse_release_html',
         'deviations_html',
         'taste_checks_html',
