@@ -4,6 +4,7 @@ import sharp from 'sharp';
 
 export type ReportMetadata = {
   appInfo: string;
+  headerTitle?: string;
   printTime: string;
   printerName: string;
   watermarkDataUri: string;
@@ -50,7 +51,7 @@ export function sectionPage(
 ) {
   return `<main class="report-page page-break additional-report-page" data-section-key="${text(key)}">
     ${metadata.watermarkDataUri ? `<img class="watermark" src="${text(metadata.watermarkDataUri)}" alt="Watermark">` : ''}
-    <div class="page-header"><span>${text(metadata.appInfo)}</span><span>Báo cáo lô sản xuất</span><span>Support 21 CFR 11</span></div>
+    <div class="page-header"><span>${text(metadata.appInfo)}</span><span>${text(metadata.headerTitle || '—')}</span><span>Support 21 CFR 11</span></div>
     <h2 style="text-align:center;font-size:16pt;margin:5mm 0 6mm;text-transform:uppercase">${text(title)}</h2>
     <table class="deviations-table" aria-label="${text(title)}"><thead><tr><th style="width:38%">Nội dung</th><th>Kết quả / thông tin</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="2" style="text-align:center">Chưa có dữ liệu.</td></tr>'}</tbody></table>

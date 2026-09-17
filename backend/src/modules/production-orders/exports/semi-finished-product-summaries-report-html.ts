@@ -29,6 +29,7 @@ export function buildSemiFinishedProductSummariesHtml(
   summaries: SemiFinishedProductSummaryForReport[],
   metadata: {
     appInfo: string;
+    headerTitle?: string;
     printTime: string;
     printerName: string;
     watermarkDataUri: string;
@@ -81,7 +82,7 @@ export function buildSemiFinishedProductSummariesHtml(
     <img class="watermark" src="${escapeHtml(metadata.watermarkDataUri)}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${escapeHtml(metadata.appInfo)}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${escapeHtml(metadata.headerTitle || '—')}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 5mm; margin-bottom: 5mm;">

@@ -817,6 +817,7 @@ export class ProductionOrderExportService {
     }).format(new Date());
     const printerName = user?.name || user?.full_name || user?.username || '';
     const appInfo = `${process.env.APP_NAME || 'EBR System'} - ${process.env.APP_VERSION || 'v1.0.0'}`;
+    const headerTitle = `Mã sản phẩm: ${normalizeTemplateValue(productionOrder.item_code)} | Số lô: ${normalizeTemplateValue(productionOrder.lot_no)}`;
 
     // Read watermark for inline embedding in multi-page sections
     const directory = path.join(process.cwd(), 'templates', 'batch-report');
@@ -838,6 +839,7 @@ export class ProductionOrderExportService {
           })[c] ?? c,
       );
     const safeAppInfo = esc(appInfo);
+    const safeHeaderTitle = esc(headerTitle);
     const safePrintTime = esc(printTime);
     const safePrinterName = esc(printerName);
 
@@ -878,7 +880,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -925,7 +927,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 5mm; margin-bottom: 5mm;">
@@ -952,7 +954,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1057,7 +1059,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1106,7 +1108,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1139,7 +1141,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1206,7 +1208,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1246,7 +1248,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1297,7 +1299,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1344,7 +1346,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1395,7 +1397,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1447,7 +1449,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1498,7 +1500,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1540,7 +1542,7 @@ export class ProductionOrderExportService {
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">Báo cáo lô sản xuất</span>
+      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
       <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
     </div>
     <div style="margin-top: 2mm; margin-bottom: 2mm;">
@@ -1575,6 +1577,7 @@ export class ProductionOrderExportService {
         print_time: printTime,
         printer_name: printerName,
         app_info: appInfo,
+        header_title: headerTitle,
         status_label: formatProductionOrderStatus(productionOrder.status),
         type_label: formatProductionOrderType(productionOrder.type),
         planned_quantity_display:
@@ -1610,7 +1613,7 @@ export class ProductionOrderExportService {
         )
           ? await buildSecondaryPackagingChecksHtml(
               productionOrder.secondaryPackagingChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         pre_secondary_packaging_checks_html: isReportSectionEnabled(
@@ -1619,7 +1622,7 @@ export class ProductionOrderExportService {
         )
           ? await buildPreSecondaryPackagingChecksHtml(
               productionOrder.preSecondaryPackagingChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         post_preparation_solution_checks_html: isReportSectionEnabled(
@@ -1628,7 +1631,7 @@ export class ProductionOrderExportService {
         )
           ? await buildPostPreparationSolutionChecksHtml(
               productionOrder.postPreparationSolutionChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         friability_checks_html: isReportSectionEnabled(
@@ -1637,7 +1640,7 @@ export class ProductionOrderExportService {
         )
           ? await buildFriabilityChecksHtml(
               productionOrder.friabilityChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         cylinder_calibration_html: isReportSectionEnabled(
@@ -1648,7 +1651,7 @@ export class ProductionOrderExportService {
               productionOrder.cylinderCalibration
                 ? [productionOrder.cylinderCalibration]
                 : [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         ten_shell_weight_check_html: isReportSectionEnabled(
@@ -1659,7 +1662,7 @@ export class ProductionOrderExportService {
               productionOrder.tenShellWeightCheck
                 ? [productionOrder.tenShellWeightCheck]
                 : [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         date_checks_html: isReportSectionEnabled(
@@ -1668,6 +1671,7 @@ export class ProductionOrderExportService {
         )
           ? await buildDateChecksHtml(productionOrder.dateChecks ?? [], {
               appInfo,
+              headerTitle,
               printTime,
               printerName,
               watermarkDataUri,
@@ -1679,7 +1683,7 @@ export class ProductionOrderExportService {
         )
           ? await buildProductionOrderAttachmentsHtml(
               productionOrder.attachments ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         finished_product_summary_html: isReportSectionEnabled(
@@ -1688,7 +1692,7 @@ export class ProductionOrderExportService {
         )
           ? await buildFinishedProductSummaryHtml(
               productionOrder.finishedProductSummaries ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         material_process_summaries_html: isReportSectionEnabled(
@@ -1697,7 +1701,7 @@ export class ProductionOrderExportService {
         )
           ? await buildMaterialProcessSummariesHtml(
               productionOrder.materialProcessSummaries ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         factory_release_reviews_html: isReportSectionEnabled(
@@ -1706,7 +1710,7 @@ export class ProductionOrderExportService {
         )
           ? await buildFactoryReleaseReviewsHtml(
               productionOrder.factoryReleaseReviews ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         primary_packaging_confirmations_html: isReportSectionEnabled(
@@ -1715,7 +1719,7 @@ export class ProductionOrderExportService {
         )
           ? await buildPrimaryPackagingConfirmationsHtml(
               productionOrder.primaryPackagingConfirmations ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         material_summaries_html: isReportSectionEnabled(
@@ -1724,7 +1728,7 @@ export class ProductionOrderExportService {
         )
           ? await buildMaterialSummariesHtml(
               productionOrder.materialSummaries ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             )
           : '',
         warehouse_release_html: renderFeatureSection(
@@ -1740,6 +1744,7 @@ export class ProductionOrderExportService {
               productionOrder,
               {
                 appInfo,
+                headerTitle,
                 printTime,
                 printerName,
                 watermarkDataUri,
@@ -1808,6 +1813,7 @@ export class ProductionOrderExportService {
           () =>
             buildVolumeChecksHtml(productionOrder.volumeChecks ?? [], {
               appInfo,
+              headerTitle,
               printTime,
               printerName,
               watermarkDataUri,
@@ -1819,7 +1825,7 @@ export class ProductionOrderExportService {
           () =>
             buildSemiFinishedNetWeightChecksHtml(
               productionOrder.semiFinishedProductNetWeightChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             ),
         ),
         semi_finished_gross_weight_checks_html: renderFeatureSection(
@@ -1828,7 +1834,7 @@ export class ProductionOrderExportService {
           () =>
             buildSemiFinishedGrossWeightChecksHtml(
               productionOrder.semiFinishedProductGrossWeightChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             ),
         ),
         leak_tightness_checks_html: renderFeatureSection(
@@ -1837,7 +1843,7 @@ export class ProductionOrderExportService {
           () =>
             buildLeakTightnessChecksHtml(
               productionOrder.leakTightnessChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             ),
         ),
         semi_finished_product_summaries_html: renderFeatureSection(
@@ -1846,7 +1852,7 @@ export class ProductionOrderExportService {
           () =>
             buildSemiFinishedProductSummariesHtml(
               productionOrder.semiFinishedProductSummaries ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             ),
         ),
         shell_weight_checks_html: renderFeatureSection(
@@ -1855,7 +1861,7 @@ export class ProductionOrderExportService {
           () =>
             buildShellWeightChecksHtml(
               productionOrder.shellWeightChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             ),
         ),
         disinfectant_preparations_html: renderFeatureSection(
@@ -1864,7 +1870,7 @@ export class ProductionOrderExportService {
           () =>
             buildDisinfectantPreparationsHtml(
               productionOrder.disinfectantPreparations ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             ),
         ),
         post_homogenization_granule_checks_html: renderFeatureSection(
@@ -1873,7 +1879,7 @@ export class ProductionOrderExportService {
           () =>
             buildPostHomogenizationGranuleChecksHtml(
               productionOrder.postHomogenizationGranuleChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             ),
         ),
         sensory_checks_html: renderFeatureSection(
@@ -1882,6 +1888,7 @@ export class ProductionOrderExportService {
           () =>
             buildSensoryChecksHtml(productionOrder.tenUnitSensoryChecks ?? [], {
               appInfo,
+              headerTitle,
               printTime,
               printerName,
               watermarkDataUri,
@@ -1893,6 +1900,7 @@ export class ProductionOrderExportService {
           () =>
             buildHygieneChecksHtml(productionOrder.hygieneChecks ?? [], {
               appInfo,
+              headerTitle,
               printTime,
               printerName,
               watermarkDataUri,
@@ -1904,7 +1912,7 @@ export class ProductionOrderExportService {
           () =>
             buildEnvironmentChecksHtml(
               productionOrder.environmentChecks ?? [],
-              { appInfo, printTime, printerName, watermarkDataUri },
+              { appInfo, headerTitle, printTime, printerName, watermarkDataUri },
             ),
         ),
       },

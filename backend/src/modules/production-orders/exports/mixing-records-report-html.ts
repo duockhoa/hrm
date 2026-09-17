@@ -69,7 +69,7 @@ export async function buildMixingRecordsHtml(
     id: number | '',
   ) => `<main class="report-page page-break mixing-record-page" data-action-key="view_mixing_record" data-record-id="${id}">
     <img class="watermark" src="${text(metadata.watermarkDataUri)}" alt="Watermark">
-    <div class="page-header"><span>${text(metadata.appInfo)}</span><span>Báo cáo lô sản xuất</span><span>Support 21 CFR 11</span></div>
+    <div class="page-header"><span>${text(metadata.appInfo)}</span><span>${text(metadata.headerTitle || '—')}</span><span>Support 21 CFR 11</span></div>
     ${content}
     <div class="page-footer"><span style="flex:1">${text(metadata.printTime)}</span><span style="flex:1;text-align:center">${text(metadata.printerName)}</span></div>
   </main>`;
