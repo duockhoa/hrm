@@ -32,6 +32,8 @@ import { API_ROUTES } from "@/lib/api-routes";
 import productionOrdersService from "@/services/product-orders.service";
 import {
   ROOM_OR_EQUIPMENT_HTTP_ERROR,
+  ROOM_OR_EQUIPMENT_DOLLAR_SIGN_ERROR,
+  containsDollarSign,
   containsHttp,
   HYGIENE_CLEANING_TYPE_OPTIONS,
   HYGIENE_RESULT_OPTIONS,
@@ -53,7 +55,11 @@ const formSchema = z.object({
     .trim()
     .min(1, "Vui lòng nhập phòng/thiết bị")
     .max(255, "Phòng/thiết bị tối đa 255 ký tự")
-    .refine((value) => !containsHttp(value), ROOM_OR_EQUIPMENT_HTTP_ERROR),
+    .refine((value) => !containsHttp(value), ROOM_OR_EQUIPMENT_HTTP_ERROR)
+    .refine(
+      (value) => !containsDollarSign(value),
+      ROOM_OR_EQUIPMENT_DOLLAR_SIGN_ERROR,
+    ),
   cleaning_type: z
     .string()
     .trim()
@@ -111,6 +117,11 @@ export default function FormProductionOrderHygieneCheck({
 
       if (containsHttp(scannedValue)) {
         toast.error(ROOM_OR_EQUIPMENT_HTTP_ERROR);
+        return;
+      }
+
+      if (containsDollarSign(scannedValue)) {
+        toast.error(ROOM_OR_EQUIPMENT_DOLLAR_SIGN_ERROR);
         return;
       }
 
@@ -176,6 +187,10 @@ export default function FormProductionOrderHygieneCheck({
                           onChange={(event) => {
                             if (containsHttp(event.target.value)) {
                               toast.error(ROOM_OR_EQUIPMENT_HTTP_ERROR);
+                              return;
+                            }
+                            if (containsDollarSign(event.target.value)) {
+                              toast.error(ROOM_OR_EQUIPMENT_DOLLAR_SIGN_ERROR);
                               return;
                             }
                             field.onChange(event);

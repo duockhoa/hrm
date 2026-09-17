@@ -1,6 +1,9 @@
 const ROOM_OR_EQUIPMENT_HTTP_ERROR = 'Phòng/thiết bị không được chứa "http".';
+const ROOM_OR_EQUIPMENT_DOLLAR_SIGN_ERROR =
+  'Phòng/thiết bị không được chứa ký tự "$".';
 
 const containsHttp = (value: string) => /http/i.test(value);
+const containsDollarSign = (value: string) => value.includes("$");
 
 const HYGIENE_CLEANING_TYPE_OPTIONS = [
   { value: "Đầu ca", label: "Đầu ca" },
@@ -127,6 +130,8 @@ const getUserLabel = (
 
 export {
   ROOM_OR_EQUIPMENT_HTTP_ERROR,
+  ROOM_OR_EQUIPMENT_DOLLAR_SIGN_ERROR,
+  containsDollarSign,
   containsHttp,
   HYGIENE_CLEANING_TYPE_OPTIONS,
   HYGIENE_RESULT_OPTIONS,
