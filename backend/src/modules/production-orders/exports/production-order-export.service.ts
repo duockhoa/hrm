@@ -6,8 +6,14 @@ import {
   buildSemiFinishedGrossWeightChecksHtml,
   type SemiFinishedGrossWeightCheckForReport,
 } from './semi-finished-gross-weight-checks-report-html';
-import { buildVolumeChecksHtml, type VolumeCheckForReport } from './volume-checks-report-html';
-import { buildHygieneChecksHtml, type HygieneCheckForReport } from './hygiene-checks-report-html';
+import {
+  buildVolumeChecksHtml,
+  type VolumeCheckForReport,
+} from './volume-checks-report-html';
+import {
+  buildHygieneChecksHtml,
+  type HygieneCheckForReport,
+} from './hygiene-checks-report-html';
 import {
   buildLeakTightnessChecksHtml,
   type LeakTightnessCheckForReport,
@@ -119,7 +125,10 @@ type ProductionOrderForExport = ProductionOrders & {
   })[];
   lineClearanceChecks?: (ProductionOrderLineClearanceChecks & {
     createdBy?: Pick<Users, 'name' | 'username'> | null;
-    previousProductionOrder?: Pick<ProductionOrders, 'description' | 'lot_no'> | null;
+    previousProductionOrder?: Pick<
+      ProductionOrders,
+      'description' | 'lot_no'
+    > | null;
   })[];
   hardnessChecks?: (ProductionOrderHardnessChecks & {
     createdBy?: Pick<Users, 'name' | 'username'> | null;
@@ -135,7 +144,72 @@ type ProductionOrderForExport = ProductionOrders & {
   })[];
   documentControl?: any;
   pyclm?: any;
+  featureConfig?: {
+    actions?: { key: string; enabled?: boolean }[];
+    sections?: { key: string; enabled?: boolean }[];
+    features?: { key: string; enabled?: boolean }[];
+  } | null;
 };
+
+const REPORT_SECTION_FEATURE_KEYS = {
+  warehouse_release_html: 'production_order_lines',
+  deviations_html: 'production_order_deviations',
+  taste_checks_html: 'sensory_checks',
+  vial_inspection_html: 'vial_inspection_checks',
+  hard_capsule_leakage_html: 'hard_capsule_leakage_checks',
+  sampling_records_html: 'sampling_records',
+  disintegration_checks_html: 'disintegration_checks',
+  spray_dose_checks_html: 'spray_dose_checks',
+  tablet_thickness_checks_html: 'tablet_thickness_checks',
+  line_clearance_checks_html: 'line_clearance_checks',
+  hardness_checks_html: 'hardness_checks',
+  density_checks_html: 'density_checks',
+  environment_checks_html: 'environment_checks',
+  hygiene_checks_html: 'hygiene_checks',
+  volume_checks_html: 'volume_checks',
+  semi_finished_net_weight_checks_html: 'semi_finished_net_weight_checks',
+  semi_finished_gross_weight_checks_html: 'semi_finished_gross_weight_checks',
+  leak_tightness_checks_html: 'leak_tightness_checks',
+  semi_finished_product_summaries_html: 'semi_finished_product_summaries',
+  shell_weight_checks_html: 'shell_weight_checks',
+  disinfectant_preparations_html: 'disinfectant_preparations',
+  post_homogenization_granule_checks_html: 'post_homogenization_granule_checks',
+  sensory_checks_html: 'product_sensory_checks',
+} as const;
+
+type ReportSectionKey = keyof typeof REPORT_SECTION_FEATURE_KEYS;
+
+const isReportSectionEnabled = (
+  productionOrder: ProductionOrderForExport,
+  sectionKey: ReportSectionKey,
+) => {
+  const featureConfig = productionOrder.featureConfig;
+  // Preserve compatibility for direct exporter callers that predate feature config.
+  if (featureConfig === undefined) return true;
+
+  const hasFeatureConfig = Boolean(
+    featureConfig &&
+    ((featureConfig.actions?.length ?? 0) > 0 ||
+      (featureConfig.sections?.length ?? 0) > 0 ||
+      (featureConfig.features?.length ?? 0) > 0),
+  );
+  const featureKey = REPORT_SECTION_FEATURE_KEYS[sectionKey];
+
+  if (!hasFeatureConfig) return featureKey === 'production_order_lines';
+
+  const configuredSection = featureConfig?.sections?.find(
+    (section) => section.key === featureKey,
+  );
+  return configuredSection
+    ? Boolean(configuredSection.enabled)
+    : featureKey === 'production_order_lines';
+};
+
+const renderFeatureSection = (
+  productionOrder: ProductionOrderForExport,
+  sectionKey: ReportSectionKey,
+  render: () => string,
+) => (isReportSectionEnabled(productionOrder, sectionKey) ? render() : '');
 
 const formatDisplayDate = (value: unknown) => {
   if (!value) return '';
@@ -375,10 +449,13 @@ const getProductionOrderTemplatePath = (
     : SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH;
 
 const getRegistrationNumber = (productionOrder: ProductionOrderForExport) => {
-  const itemReg = productionOrder.item?.registration?.registration_number?.trim();
+  const itemReg =
+    productionOrder.item?.registration?.registration_number?.trim();
   const poReg =
     (productionOrder as any).registrationNumber?.registration_number?.trim() ||
-    (productionOrder as any).registrationNumber?.registration?.registration_number?.trim();
+    (
+      productionOrder as any
+    ).registrationNumber?.registration?.registration_number?.trim();
 
   return itemReg || poReg || '';
 };
@@ -631,8 +708,12 @@ const getTemplateData = (productionOrder: ProductionOrderForExport) => ({
   order_type: normalizeTemplateValue(productionOrder.type),
   planned_quantity: `${Number(productionOrder.planned_quatity || 0).toLocaleString('vi-VN')} ${normalizeTemplateValue(productionOrder.unit)}`,
   warehouse: normalizeTemplateValue(productionOrder.warehouse),
-  creation_date: formatShortDate(productionOrder.creation_date?.toISOString?.() ?? ''),
-  start_date: formatShortDate(productionOrder.start_date?.toISOString?.() ?? ''),
+  creation_date: formatShortDate(
+    productionOrder.creation_date?.toISOString?.() ?? '',
+  ),
+  start_date: formatShortDate(
+    productionOrder.start_date?.toISOString?.() ?? '',
+  ),
   change_content: normalizeTemplateValue(productionOrder.change_content),
 });
 
@@ -660,11 +741,21 @@ export class ProductionOrderExportService {
       fs.readFile(path.join(directory, 'logo-removebg.png')),
     ]);
     const watermarkDataUri = `data:image/png;base64,${watermarkBuf.toString('base64')}`;
-    const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
+    const esc = (s: string) =>
+      s.replace(
+        /[&<>"']/g,
+        (c) =>
+          ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+          })[c] ?? c,
+      );
     const safeAppInfo = esc(appInfo);
     const safePrintTime = esc(printTime);
     const safePrinterName = esc(printerName);
-
 
     const formatNum = (v: unknown) => {
       if (v === null || v === undefined || v === '') return '';
@@ -722,8 +813,14 @@ export class ProductionOrderExportService {
 
     if (lines && lines.length > 0) {
       const allRows = lines.map((line) => {
-        const stage = (line.ProductionOrdersStage as any)?.Name ?? (line.ProductionOrdersStage as any)?.SequenceNumber ?? '';
-        const unit = (line.UnitOfMeasurement as any)?.Name ?? (line.UnitOfMeasurement as any)?.Code ?? '';
+        const stage =
+          (line.ProductionOrdersStage as any)?.Name ??
+          (line.ProductionOrdersStage as any)?.SequenceNumber ??
+          '';
+        const unit =
+          (line.UnitOfMeasurement as any)?.Name ??
+          (line.UnitOfMeasurement as any)?.Code ??
+          '';
         return `<tr>
           <td>${stage}</td>
           <td style="font-weight: bold;">${(line as any).ItemNo ?? ''}</td>
@@ -794,24 +891,44 @@ export class ProductionOrderExportService {
       const rows = deviations
         .map((dev: any, index: number) => {
           const time = formatDisplayDateTime(dev.created_at);
-          const reporterName = esc(dev.reporter?.name ?? dev.reporter?.username ?? '');
-          const approverName = esc(dev.approver?.name ?? dev.approver?.username ?? '');
+          const reporterName = esc(
+            dev.reporter?.name ?? dev.reporter?.username ?? '',
+          );
+          const approverName = esc(
+            dev.approver?.name ?? dev.approver?.username ?? '',
+          );
 
           let quantityHtml = '';
-          if (dev.affected_quantity !== null && dev.affected_quantity !== undefined && dev.affected_quantity !== '') {
+          if (
+            dev.affected_quantity !== null &&
+            dev.affected_quantity !== undefined &&
+            dev.affected_quantity !== ''
+          ) {
             quantityHtml += `<div><span style="color: #64748b;">Ảnh hưởng:</span> <b>${formatNum(dev.affected_quantity)}</b> ${esc(dev.affected_quantity_unit ?? '')}</div>`;
           }
-          if (dev.handled_quantity !== null && dev.handled_quantity !== undefined && dev.handled_quantity !== '') {
+          if (
+            dev.handled_quantity !== null &&
+            dev.handled_quantity !== undefined &&
+            dev.handled_quantity !== ''
+          ) {
             quantityHtml += `<div><span style="color: #64748b;">Đã xử lý:</span> <b>${formatNum(dev.handled_quantity)}</b> ${esc(dev.handled_quantity_unit ?? '')}</div>`;
           }
-          if (dev.destroyed_quantity !== null && dev.destroyed_quantity !== undefined && dev.destroyed_quantity !== '') {
+          if (
+            dev.destroyed_quantity !== null &&
+            dev.destroyed_quantity !== undefined &&
+            dev.destroyed_quantity !== ''
+          ) {
             quantityHtml += `<div><span style="color: #dc2626;">Đã hủy:</span> <b>${formatNum(dev.destroyed_quantity)}</b> ${esc(dev.destroyed_quantity_unit ?? '')}</div>`;
           }
 
           const causeClassification = dev.cause_classification
             ? `<div style="font-size: 8pt; color: #64748b; font-style: italic; margin-bottom: 1mm;">[${esc(dev.cause_classification)}]</div>`
             : '';
-          const causeContent = dev.cause ? esc(dev.cause) : (dev.cause_classification ? '' : '—');
+          const causeContent = dev.cause
+            ? esc(dev.cause)
+            : dev.cause_classification
+              ? ''
+              : '—';
 
           const handlingPlan = dev.handling_plan
             ? `<div><span style="font-weight: bold;">PA:</span> ${esc(dev.handling_plan)}</div>`
@@ -819,7 +936,10 @@ export class ProductionOrderExportService {
           const handlingResult = dev.handling_result
             ? `<div style="margin-top: 1mm;"><span style="font-weight: bold;">KQ:</span> ${esc(dev.handling_result)}</div>`
             : '';
-          const handlingCombined = handlingPlan || handlingResult ? `${handlingPlan}${handlingResult}` : '—';
+          const handlingCombined =
+            handlingPlan || handlingResult
+              ? `${handlingPlan}${handlingResult}`
+              : '—';
 
           const personnelHtml =
             `<div><span style="color: #64748b;">Báo cáo:</span> ${reporterName || '—'}</div>` +
@@ -947,13 +1067,18 @@ export class ProductionOrderExportService {
       <span style="flex: 1; text-align: center;">${safePrinterName}</span>
     </div>
   </main>`;
-      const emptyState = '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu)</p></div>';
+      const emptyState =
+        '<div style="margin-top: 15mm; text-align: center;"><p style="font-size: 11pt; font-style: italic; color: #475569;">(Chưa có dữ liệu)</p></div>';
       const inspectionTable = checks.length
         ? `<table class="deviations-table"><thead><tr>
             <th>Thời điểm</th><th>Bao số</th><th>Lọ có sợi</th><th>Vẩn</th><th>Hỏng</th><th>Lỗi khác</th><th>Ghi chú</th><th>Người nhập</th>
-          </tr></thead><tbody>${checks.map((check) => `<tr>
+          </tr></thead><tbody>${checks
+            .map(
+              (check) => `<tr>
             <td style="text-align: center;">${formatDisplayDateTime(check.created_at)}</td><td style="text-align: right;">${formatNum(check.bag_number)}</td><td style="text-align: right;">${formatNum(check.fiber_vial_count)}</td><td style="text-align: right;">${formatNum(check.particulate_count)}</td><td style="text-align: right;">${formatNum(check.damaged_count)}</td><td style="text-align: right;">${formatNum(check.other_defect_count)}</td><td>${esc(check.note ?? '')}</td><td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
-          </tr>`).join('')}</tbody></table>`
+          </tr>`,
+            )
+            .join('')}</tbody></table>`
         : emptyState;
       const summaryTable = checks.length
         ? `<table class="deviations-table"><thead><tr>
@@ -1158,9 +1283,15 @@ export class ProductionOrderExportService {
     const buildTabletThicknessChecksHtml = () => {
       const checks = productionOrder.tabletThicknessChecks ?? [];
       const thicknessKeys = [
-        'unit_1_thickness', 'unit_2_thickness', 'unit_3_thickness',
-        'unit_4_thickness', 'unit_5_thickness', 'unit_6_thickness',
-        'unit_7_thickness', 'unit_8_thickness', 'unit_9_thickness',
+        'unit_1_thickness',
+        'unit_2_thickness',
+        'unit_3_thickness',
+        'unit_4_thickness',
+        'unit_5_thickness',
+        'unit_6_thickness',
+        'unit_7_thickness',
+        'unit_8_thickness',
+        'unit_9_thickness',
         'unit_10_thickness',
       ] as const;
       const rows = checks
@@ -1255,9 +1386,15 @@ export class ProductionOrderExportService {
     const buildHardnessChecksHtml = () => {
       const checks = productionOrder.hardnessChecks ?? [];
       const hardnessKeys = [
-        'unit_1_hardness', 'unit_2_hardness', 'unit_3_hardness',
-        'unit_4_hardness', 'unit_5_hardness', 'unit_6_hardness',
-        'unit_7_hardness', 'unit_8_hardness', 'unit_9_hardness',
+        'unit_1_hardness',
+        'unit_2_hardness',
+        'unit_3_hardness',
+        'unit_4_hardness',
+        'unit_5_hardness',
+        'unit_6_hardness',
+        'unit_7_hardness',
+        'unit_8_hardness',
+        'unit_9_hardness',
         'unit_10_hardness',
       ] as const;
       const rows = checks
@@ -1356,10 +1493,13 @@ export class ProductionOrderExportService {
         app_info: appInfo,
         status_label: formatProductionOrderStatus(productionOrder.status),
         type_label: formatProductionOrderType(productionOrder.type),
-        planned_quantity_display: `${Number(productionOrder.planned_quatity || 0).toLocaleString('vi-VN')} ${normalizeTemplateValue(productionOrder.unit)}`.trim(),
+        planned_quantity_display:
+          `${Number(productionOrder.planned_quatity || 0).toLocaleString('vi-VN')} ${normalizeTemplateValue(productionOrder.unit)}`.trim(),
         display_creation_date: formatDisplayDate(productionOrder.creation_date),
         display_start_date: formatDisplayDate(productionOrder.start_date),
-        display_date_manufacture: formatDisplayDate(productionOrder.date_manufacture),
+        display_date_manufacture: formatDisplayDate(
+          productionOrder.date_manufacture,
+        ),
         display_expire_date: formatDisplayDate(productionOrder.expire_date),
         pyclm_status_html: pyclmStatusHtml,
         doc_batch_record_issued: getDocControlStatusText(
@@ -1378,66 +1518,172 @@ export class ProductionOrderExportService {
           docControl?.test_certificate_received_at,
           docControl?.testCertificateReceivedBy,
         ),
-        specifications_table_html: buildSpecificationsTableHtml(productionOrder),
-        warehouse_release_html: linesHtml,
-        deviations_html: buildDeviationsHtml(),
-        taste_checks_html: buildTasteChecksHtml(),
-        vial_inspection_html: buildVialInspectionHtml(),
-        hard_capsule_leakage_html: buildHardCapsuleLeakageHtml(),
-        sampling_records_html: buildSamplingRecordsHtml(),
-        disintegration_checks_html: buildDisintegrationChecksHtml(),
-        spray_dose_checks_html: buildSprayDoseChecksHtml(),
-        tablet_thickness_checks_html: buildTabletThicknessChecksHtml(),
-        line_clearance_checks_html: buildLineClearanceChecksHtml(),
-        hardness_checks_html: buildHardnessChecksHtml(),
-        density_checks_html: buildDensityChecksHtml(),
-        volume_checks_html: buildVolumeChecksHtml(
-          productionOrder.volumeChecks ?? [],
-          { appInfo, printTime, printerName, watermarkDataUri },
+        specifications_table_html:
+          buildSpecificationsTableHtml(productionOrder),
+        warehouse_release_html: renderFeatureSection(
+          productionOrder,
+          'warehouse_release_html',
+          () => linesHtml,
         ),
-        semi_finished_net_weight_checks_html:
-          buildSemiFinishedNetWeightChecksHtml(
-            productionOrder.semiFinishedProductNetWeightChecks ?? [],
-            { appInfo, printTime, printerName, watermarkDataUri },
-          ),
-        semi_finished_gross_weight_checks_html:
-          buildSemiFinishedGrossWeightChecksHtml(
-            productionOrder.semiFinishedProductGrossWeightChecks ?? [],
-            { appInfo, printTime, printerName, watermarkDataUri },
-          ),
-        leak_tightness_checks_html: buildLeakTightnessChecksHtml(
-          productionOrder.leakTightnessChecks ?? [],
-          { appInfo, printTime, printerName, watermarkDataUri },
+        deviations_html: renderFeatureSection(
+          productionOrder,
+          'deviations_html',
+          buildDeviationsHtml,
         ),
-        semi_finished_product_summaries_html:
-          buildSemiFinishedProductSummariesHtml(
-            productionOrder.semiFinishedProductSummaries ?? [],
-            { appInfo, printTime, printerName, watermarkDataUri },
-          ),
-        shell_weight_checks_html: buildShellWeightChecksHtml(
-          productionOrder.shellWeightChecks ?? [],
-          { appInfo, printTime, printerName, watermarkDataUri },
+        taste_checks_html: renderFeatureSection(
+          productionOrder,
+          'taste_checks_html',
+          buildTasteChecksHtml,
         ),
-        disinfectant_preparations_html: buildDisinfectantPreparationsHtml(
-          productionOrder.disinfectantPreparations ?? [],
-          { appInfo, printTime, printerName, watermarkDataUri },
+        vial_inspection_html: renderFeatureSection(
+          productionOrder,
+          'vial_inspection_html',
+          buildVialInspectionHtml,
         ),
-        post_homogenization_granule_checks_html:
-          buildPostHomogenizationGranuleChecksHtml(
-            productionOrder.postHomogenizationGranuleChecks ?? [],
-            { appInfo, printTime, printerName, watermarkDataUri },
-          ),
-        sensory_checks_html: buildSensoryChecksHtml(
-          productionOrder.tenUnitSensoryChecks ?? [],
-          { appInfo, printTime, printerName, watermarkDataUri },
+        hard_capsule_leakage_html: renderFeatureSection(
+          productionOrder,
+          'hard_capsule_leakage_html',
+          buildHardCapsuleLeakageHtml,
         ),
-        hygiene_checks_html: buildHygieneChecksHtml(
-          productionOrder.hygieneChecks ?? [],
-          { appInfo, printTime, printerName, watermarkDataUri },
+        sampling_records_html: renderFeatureSection(
+          productionOrder,
+          'sampling_records_html',
+          buildSamplingRecordsHtml,
         ),
-        environment_checks_html: buildEnvironmentChecksHtml(
-          productionOrder.environmentChecks ?? [],
-          { appInfo, printTime, printerName, watermarkDataUri },
+        disintegration_checks_html: renderFeatureSection(
+          productionOrder,
+          'disintegration_checks_html',
+          buildDisintegrationChecksHtml,
+        ),
+        spray_dose_checks_html: renderFeatureSection(
+          productionOrder,
+          'spray_dose_checks_html',
+          buildSprayDoseChecksHtml,
+        ),
+        tablet_thickness_checks_html: renderFeatureSection(
+          productionOrder,
+          'tablet_thickness_checks_html',
+          buildTabletThicknessChecksHtml,
+        ),
+        line_clearance_checks_html: renderFeatureSection(
+          productionOrder,
+          'line_clearance_checks_html',
+          buildLineClearanceChecksHtml,
+        ),
+        hardness_checks_html: renderFeatureSection(
+          productionOrder,
+          'hardness_checks_html',
+          buildHardnessChecksHtml,
+        ),
+        density_checks_html: renderFeatureSection(
+          productionOrder,
+          'density_checks_html',
+          buildDensityChecksHtml,
+        ),
+        volume_checks_html: renderFeatureSection(
+          productionOrder,
+          'volume_checks_html',
+          () =>
+            buildVolumeChecksHtml(productionOrder.volumeChecks ?? [], {
+              appInfo,
+              printTime,
+              printerName,
+              watermarkDataUri,
+            }),
+        ),
+        semi_finished_net_weight_checks_html: renderFeatureSection(
+          productionOrder,
+          'semi_finished_net_weight_checks_html',
+          () =>
+            buildSemiFinishedNetWeightChecksHtml(
+              productionOrder.semiFinishedProductNetWeightChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            ),
+        ),
+        semi_finished_gross_weight_checks_html: renderFeatureSection(
+          productionOrder,
+          'semi_finished_gross_weight_checks_html',
+          () =>
+            buildSemiFinishedGrossWeightChecksHtml(
+              productionOrder.semiFinishedProductGrossWeightChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            ),
+        ),
+        leak_tightness_checks_html: renderFeatureSection(
+          productionOrder,
+          'leak_tightness_checks_html',
+          () =>
+            buildLeakTightnessChecksHtml(
+              productionOrder.leakTightnessChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            ),
+        ),
+        semi_finished_product_summaries_html: renderFeatureSection(
+          productionOrder,
+          'semi_finished_product_summaries_html',
+          () =>
+            buildSemiFinishedProductSummariesHtml(
+              productionOrder.semiFinishedProductSummaries ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            ),
+        ),
+        shell_weight_checks_html: renderFeatureSection(
+          productionOrder,
+          'shell_weight_checks_html',
+          () =>
+            buildShellWeightChecksHtml(
+              productionOrder.shellWeightChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            ),
+        ),
+        disinfectant_preparations_html: renderFeatureSection(
+          productionOrder,
+          'disinfectant_preparations_html',
+          () =>
+            buildDisinfectantPreparationsHtml(
+              productionOrder.disinfectantPreparations ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            ),
+        ),
+        post_homogenization_granule_checks_html: renderFeatureSection(
+          productionOrder,
+          'post_homogenization_granule_checks_html',
+          () =>
+            buildPostHomogenizationGranuleChecksHtml(
+              productionOrder.postHomogenizationGranuleChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            ),
+        ),
+        sensory_checks_html: renderFeatureSection(
+          productionOrder,
+          'sensory_checks_html',
+          () =>
+            buildSensoryChecksHtml(productionOrder.tenUnitSensoryChecks ?? [], {
+              appInfo,
+              printTime,
+              printerName,
+              watermarkDataUri,
+            }),
+        ),
+        hygiene_checks_html: renderFeatureSection(
+          productionOrder,
+          'hygiene_checks_html',
+          () =>
+            buildHygieneChecksHtml(productionOrder.hygieneChecks ?? [], {
+              appInfo,
+              printTime,
+              printerName,
+              watermarkDataUri,
+            }),
+        ),
+        environment_checks_html: renderFeatureSection(
+          productionOrder,
+          'environment_checks_html',
+          () =>
+            buildEnvironmentChecksHtml(
+              productionOrder.environmentChecks ?? [],
+              { appInfo, printTime, printerName, watermarkDataUri },
+            ),
         ),
       },
       [

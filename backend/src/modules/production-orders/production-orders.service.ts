@@ -620,7 +620,14 @@ export class ProductionOrdersService {
       }
     }
 
-    return this.addPyclmInfo(productionOrder);
+    const featureConfig = await this.featuresService.findConfigByItemCode(
+      productionOrder.item_code,
+    );
+
+    return {
+      ...this.addPyclmInfo(productionOrder),
+      featureConfig,
+    };
   }
 
   async exportProductionOrderLines(

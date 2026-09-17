@@ -21,7 +21,12 @@ const metadata = {
   watermarkDataUri: '',
 };
 
-async function reportHtml(checks: EnvironmentCheckForReport[]) {
+async function reportHtml(
+  checks: EnvironmentCheckForReport[],
+  featureConfig?: {
+    sections: { key: string; enabled: boolean }[];
+  },
+) {
   const renderer = new ProductionOrderPdfRendererService();
   const render = jest
     .spyOn(renderer, 'render')
@@ -34,6 +39,7 @@ async function reportHtml(checks: EnvironmentCheckForReport[]) {
     unit: 'Lọ',
     item: { item_name: 'Sản phẩm thử' },
     environmentChecks: checks,
+    featureConfig,
   } as Parameters<ProductionOrderExportService['exportBatchReport']>[0]);
   return render.mock.calls[0][0];
 }
@@ -66,6 +72,24 @@ describe('Environment checks batch report', () => {
     expect(html).toContain('Nhiệt độ (°C)');
     expect(html).toContain('Độ ẩm (%)');
   });
+
+  it('only renders report sections enabled by production detail features', async () => {
+    const html = await reportHtml([check], {
+      sections: [{ key: 'environment_checks', enabled: true }],
+    });
+
+    expect(html).toContain('Theo dõi nhiệt độ, độ ẩm');
+    expect(html).not.toContain('Thông tin sai lệch');
+    expect(html).not.toContain('Thử mùi vị');
+  });
+
+  it('does not render a report section when its feature is disabled', async () => {
+    const html = await reportHtml([check], {
+      sections: [{ key: 'environment_checks', enabled: false }],
+    });
+
+    expect(html).not.toContain('Theo dõi nhiệt độ, độ ẩm');
+  });
 });
 
 const describeBrowser =
@@ -86,7 +110,12 @@ describeBrowser('Environment report pagination in Chromium', () => {
       fullHtml.indexOf(
         '<main class="report-page page-break environment-check-page"',
       ),
-      fullHtml.indexOf('</main>', fullHtml.indexOf('<main class="report-page page-break environment-check-page"')) + '</main>'.length,
+      fullHtml.indexOf(
+        '</main>',
+        fullHtml.indexOf(
+          '<main class="report-page page-break environment-check-page"',
+        ),
+      ) + '</main>'.length,
     );
     const html = `<html><head><style>${styles}</style></head><body>${section}</body></html>`;
     const browser = await chromium.launch({ headless: true });
