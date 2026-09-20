@@ -18,6 +18,7 @@ import { DataExportApiKeyGuard } from './data-export-api-key.guard';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
 import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post-secondary-packaging-summaries.query.dto';
+import { ExportSemiFinishedProductSummariesQueryDto } from './dto/export-semi-finished-product-summaries.query.dto';
 import { ExportSemiFinishedWeightChecksQueryDto } from './dto/export-semi-finished-weight-checks.query.dto';
 import { ExportVolumeChecksQueryDto } from './dto/export-volume-checks.query.dto';
 import { DataExportService } from './data-export.service';
@@ -81,6 +82,18 @@ export class DataExportController {
   @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
   exportVolumeChecks(@Query() query: ExportVolumeChecksQueryDto) {
     return this.dataExportService.exportVolumeChecks(query);
+  }
+
+  @Get('semi-finished-product-summaries')
+  @ApiOperation({
+    summary: 'Xuất dữ liệu tổng kết bán thành phẩm cho Google Sheets',
+  })
+  @ApiOkResponse({ description: 'Danh sách tổng kết bán thành phẩm theo trang' })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportSemiFinishedProductSummaries(
+    @Query() query: ExportSemiFinishedProductSummariesQueryDto,
+  ) {
+    return this.dataExportService.exportSemiFinishedProductSummaries(query);
   }
 
   @Get('semi-finished-weight-checks')

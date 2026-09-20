@@ -4,6 +4,7 @@ import { PrismaService } from 'src/prisma.service';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
 import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post-secondary-packaging-summaries.query.dto';
+import { ExportSemiFinishedProductSummariesQueryDto } from './dto/export-semi-finished-product-summaries.query.dto';
 import { ExportSemiFinishedWeightChecksQueryDto } from './dto/export-semi-finished-weight-checks.query.dto';
 import { ExportVolumeChecksQueryDto } from './dto/export-volume-checks.query.dto';
 
@@ -138,6 +139,80 @@ const SEMI_FINISHED_WEIGHT_CHECK_EXPORT_INCLUDE = {
     select: POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
   },
 };
+
+const SEMI_FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
+  createdBy: { select: USER_EXPORT_SELECT },
+  productionOrder: {
+    select: {
+      ...POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
+      registrationNumber: {
+        select: {
+          id: true,
+          production_order_id: true,
+          registration_id: true,
+          registration_number: true,
+          created_at: true,
+          updated_at: true,
+        },
+      },
+      hygieneChecks: {
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        take: 1,
+        select: {
+          created_at: true,
+        },
+      },
+      deviations: {
+        where: { deleted_at: null },
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        select: {
+          deviation_content: true,
+        },
+      },
+      samplingRecords: {
+        select: {
+          quantity: true,
+        },
+      },
+      samplingRequests: {
+        orderBy: [{ sent_at: 'desc' }, { id: 'desc' }],
+        select: {
+          id: true,
+          production_order_id: true,
+          sender_id: true,
+          location: true,
+          google_doc_url: true,
+          status: true,
+          sent_at: true,
+          created_at: true,
+          updated_at: true,
+          sender: { select: USER_EXPORT_SELECT },
+        },
+      },
+      documentControl: {
+        select: {
+          id: true,
+          production_order_id: true,
+          batch_record_issued_by_id: true,
+          batch_record_issued_at: true,
+          batch_record_received_by_id: true,
+          batch_record_received_at: true,
+          test_certificate_received_by_id: true,
+          test_certificate_received_at: true,
+          warehouse_release_received_by_id: true,
+          warehouse_release_received_at: true,
+          created_at: true,
+          updated_at: true,
+          deleted_at: true,
+          batchRecordIssuedBy: { select: USER_EXPORT_SELECT },
+          batchRecordReceivedBy: { select: USER_EXPORT_SELECT },
+          testCertificateReceivedBy: { select: USER_EXPORT_SELECT },
+          warehouseReleaseReceivedBy: { select: USER_EXPORT_SELECT },
+        },
+      },
+    },
+  },
+} satisfies Prisma.ProductionOrderSemiFinishedProductSummariesInclude;
 
 const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
   createdBy: {
@@ -420,6 +495,63 @@ export class DataExportService {
 
     return {
       data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  async exportSemiFinishedProductSummaries(
+    query: ExportSemiFinishedProductSummariesQueryDto,
+  ) {
+    const where: Prisma.ProductionOrderSemiFinishedProductSummariesWhereInput =
+      {};
+
+    if (query.updated_from) {
+      where.updated_at = { gte: new Date(query.updated_from) };
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.productionOrderSemiFinishedProductSummaries.count({ where }),
+      this.prisma.productionOrderSemiFinishedProductSummaries.findMany({
+        where,
+        include: SEMI_FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE,
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+      }),
+    ]);
+
+    return {
+      data: data.map(({ productionOrder, ...summary }) => {
+        const {
+          hygieneChecks,
+          deviations,
+          samplingRecords,
+          ...productionOrderData
+        } = productionOrder;
+
+        return {
+          ...summary,
+          productionOrder: {
+            ...productionOrderData,
+            first_hygiene_check_at: hygieneChecks[0]?.created_at ?? null,
+            deviation_contents: deviations
+              .map(({ deviation_content }) => deviation_content.trim())
+              .filter(Boolean)
+              .join(', '),
+            total_sampling_quantity: samplingRecords.reduce(
+              (total, { quantity }) => total + Number(quantity),
+              0,
+            ),
+          },
+        };
+      }),
       pagination: {
         page: query.page,
         limit: query.limit,

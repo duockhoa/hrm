@@ -18,6 +18,10 @@ describe('DataExportService', () => {
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    productionOrderSemiFinishedProductSummaries: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
     productionOrderSemiFinishedProductNetWeightChecks: {
       count: jest.fn(),
       findMany: jest.fn(),
@@ -397,6 +401,139 @@ describe('DataExportService', () => {
           productionOrder: expect.anything(),
           createdBy: expect.anything(),
           images: expect.anything(),
+        }),
+      }),
+    );
+  });
+
+  it('exports semi-finished product summaries with their production orders', async () => {
+    prisma.productionOrderSemiFinishedProductSummaries.count.mockReturnValue(
+      'count-query',
+    );
+    prisma.productionOrderSemiFinishedProductSummaries.findMany.mockReturnValue(
+      'summaries-query',
+    );
+    prisma.$transaction.mockResolvedValue([
+      1,
+      [
+        {
+          id: 16,
+          production_order_id: 100,
+          stage: 'Dập viên',
+          input_quantity: 25,
+          input_unit: 'kg',
+          createdBy: { id: 1, username: 'operator' },
+          productionOrder: {
+            id: 100,
+            production_order_code: 'BTP001-001',
+            item: { item_code: 'BTP001', item_name: 'Bán thành phẩm A' },
+            registrationNumber: {
+              id: 22,
+              production_order_id: 100,
+              registration_id: 583,
+              registration_number: 'VD-12345-26',
+            },
+            hygieneChecks: [
+              { created_at: new Date('2026-01-02T08:30:00.000Z') },
+            ],
+            deviations: [
+              { deviation_content: 'Sai lệch thứ nhất' },
+              { deviation_content: 'Sai lệch thứ hai' },
+            ],
+            samplingRecords: [{ quantity: 2.5 }, { quantity: 1.5 }],
+            samplingRequests: [
+              {
+                id: 12,
+                production_order_id: 100,
+                sender_id: 1,
+                location: 'Kho QC',
+                google_doc_url: 'https://docs.google.com/document/d/example',
+                status: 'sent',
+                sent_at: new Date('2026-01-02T09:00:00.000Z'),
+                created_at: new Date('2026-01-02T09:00:00.000Z'),
+                updated_at: new Date('2026-01-02T09:00:00.000Z'),
+                sender: { id: 1, username: 'operator' },
+              },
+            ],
+            documentControl: {
+              id: 30,
+              production_order_id: 100,
+              batch_record_issued_by_id: 1,
+              batch_record_issued_at: new Date('2026-01-03T08:00:00.000Z'),
+              batch_record_received_by_id: 2,
+              batch_record_received_at: new Date('2026-01-04T08:00:00.000Z'),
+              test_certificate_received_by_id: 3,
+              test_certificate_received_at: new Date(
+                '2026-01-05T08:00:00.000Z',
+              ),
+              warehouse_release_received_by_id: 4,
+              warehouse_release_received_at: new Date(
+                '2026-01-06T08:00:00.000Z',
+              ),
+              batchRecordIssuedBy: { id: 1, username: 'issuer' },
+              batchRecordReceivedBy: { id: 2, username: 'receiver' },
+              testCertificateReceivedBy: { id: 3, username: 'qc' },
+              warehouseReleaseReceivedBy: { id: 4, username: 'warehouse' },
+            },
+          },
+        },
+      ],
+    ]);
+
+    await expect(
+      service.exportSemiFinishedProductSummaries({ page: 1, limit: 500 }),
+    ).resolves.toMatchObject({
+      data: [
+        expect.objectContaining({
+          stage: 'Dập viên',
+          createdBy: expect.objectContaining({ username: 'operator' }),
+          productionOrder: expect.objectContaining({
+            production_order_code: 'BTP001-001',
+            item: expect.objectContaining({ item_code: 'BTP001' }),
+            registrationNumber: expect.objectContaining({
+              registration_number: 'VD-12345-26',
+            }),
+            first_hygiene_check_at: new Date('2026-01-02T08:30:00.000Z'),
+            deviation_contents: 'Sai lệch thứ nhất, Sai lệch thứ hai',
+            total_sampling_quantity: 4,
+            samplingRequests: [
+              expect.objectContaining({
+                status: 'sent',
+                location: 'Kho QC',
+                sender: expect.objectContaining({ username: 'operator' }),
+              }),
+            ],
+            documentControl: expect.objectContaining({
+              batch_record_issued_at: new Date('2026-01-03T08:00:00.000Z'),
+              batch_record_received_at: new Date(
+                '2026-01-04T08:00:00.000Z',
+              ),
+              test_certificate_received_at: new Date(
+                '2026-01-05T08:00:00.000Z',
+              ),
+              warehouse_release_received_at: new Date(
+                '2026-01-06T08:00:00.000Z',
+              ),
+              batchRecordIssuedBy: expect.objectContaining({
+                username: 'issuer',
+              }),
+            }),
+          }),
+        }),
+      ],
+      pagination: expect.objectContaining({ total: 1 }),
+    });
+
+    expect(
+      prisma.productionOrderSemiFinishedProductSummaries.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip: 0,
+        take: 500,
+        include: expect.objectContaining({
+          productionOrder: expect.anything(),
+          createdBy: expect.anything(),
         }),
       }),
     );
