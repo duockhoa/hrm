@@ -99,10 +99,12 @@ function xuatTongKetBanThanhPham() {
     const maHang = hangHoa.item_code || po.item_code || "";
     const soLo = po.lot_no || "";
 
-    const noiDungSaiLech = (po.deviations || [])
-      .map((deviation) => deviation.deviation_content)
-      .filter(Boolean)
-      .join(", ");
+    const noiDungSaiLech =
+      po.deviation_contents ||
+      (po.deviations || [])
+        .map((deviation) => deviation.deviation_content)
+        .filter(Boolean)
+        .join(", ");
 
     return [
       formatDateTime(item.created_at), // A: Thời điểm nhập thành phẩm
@@ -118,7 +120,23 @@ function xuatTongKetBanThanhPham() {
       formatDate(po.start_date), // K: Ngày bắt đầu sản xuất
       po.remarks || "", // L: Ghi chú
       productLine.name || productLine.code || "", // M: Dòng sản phẩm
-      ...Array(17).fill(""), // N:AD để trống
+      item.stage || "", // N: Giai đoạn
+      item.input_quantity ?? "", // O: Số lượng đầu vào
+      item.packed_quantity ?? "", // P: Số lượng đóng gói
+      item.leftover_quantity ?? "", // Q: Số lượng tồn
+      item.waste_quantity ?? "", // R: Số lượng hao hụt
+      item.load_quantity ?? "", // S: Số lượng nạp
+      item.createdBy?.name || item.createdBy?.username || "", // T: Người nhập
+      formatDateTime(documentControl.batch_record_issued_at), // U: Cấp HSL giấy
+      formatDateTime(documentControl.batch_record_received_at), // V: Nhận HSL giấy
+      formatDateTime(documentControl.test_certificate_received_at), // W: Nhận phiếu kiểm nghiệm
+      formatDateTime(po.samplingRequests?.[0]?.sent_at), // X: Gửi PYC lấy mẫu
+      po.production_order_code || "", // Y: Mã lệnh
+      noiDungSaiLech, // Z: Nội dung sai lệch
+      po.change_content || "", // AA: Nội dung thay đổi
+      po.total_sampling_quantity ?? "", // AB: Tổng số lượng mẫu lấy
+      formatDateTime(po.first_hygiene_check_at), // AC: Thời điểm kiểm tra vệ sinh
+      "", // AD: Để trống
     ];
   });
 
