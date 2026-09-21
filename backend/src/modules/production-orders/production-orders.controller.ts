@@ -2071,7 +2071,7 @@ export class ProductionOrdersController {
     return this.productionOrderDateChecksService.delete(checkId);
   }
 
-  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.UPDATE)
   @Post('date-checks/:checkId/images')
   @UseInterceptors(
     FileFieldsInterceptor(

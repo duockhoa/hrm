@@ -7748,8 +7748,8 @@ Tất cả API trong nhóm này cần `Auth: Bearer` và permission riêng tươ
 | Key quyền                                  | API được phép gọi                              |
 | ------------------------------------------ | ---------------------------------------------- |
 | `production-orders.date-checks.read`       | Toàn bộ API `GET` theo dõi in date             |
-| `production-orders.date-checks.create`     | Toàn bộ API `POST` theo dõi in date            |
-| `production-orders.date-checks.update`     | Toàn bộ API `PATCH` theo dõi in date, gồm duyệt |
+| `production-orders.date-checks.create`     | Tạo phiếu theo dõi in date                     |
+| `production-orders.date-checks.update`     | Cập nhật/duyệt phiếu và thêm ảnh kiểm tra      |
 | `production-orders.date-checks.delete`     | Toàn bộ API `DELETE` theo dõi in date          |
 
 Nhóm API này dùng để tạo phiếu kiểm tra nội dung in date trên sản phẩm/bao bì thuộc một lệnh sản xuất. Nội dung yêu cầu in date nằm trong file `request_file`, DB chỉ lưu đường dẫn file.
