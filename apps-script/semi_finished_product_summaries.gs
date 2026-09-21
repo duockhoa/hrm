@@ -118,27 +118,7 @@ function xuatTongKetBanThanhPham() {
       formatDate(po.start_date), // K: Ngày bắt đầu sản xuất
       po.remarks || "", // L: Ghi chú
       productLine.name || productLine.code || "", // M: Dòng sản phẩm
-      calculateFinishedQuantity(
-        item.package_count,
-        item.boxes_per_package,
-        item.loose_box_count,
-      ), // N: Số lượng TP
-      hangHoa.unit || po.unit || "", // O: Đơn vị tính
-      item.package_count ?? "", // P: Số kiện
-      item.boxes_per_package ?? "", // Q: Số hộp trên kiện
-      item.loose_box_count ?? "", // R: Số hộp lẻ
-      item.createdBy?.name || item.createdBy?.username || "", // S: Người nhập TP
-      formatDateTime(documentControl.batch_record_issued_at), // T: Cấp HSL giấy
-      formatDateTime(documentControl.batch_record_received_at), // U: Nhận HSL giấy
-      formatDateTime(documentControl.test_certificate_received_at), // V: Nhận PKN
-      formatDateTime(po.samplingRequests?.[0]?.sent_at), // W: Gửi PYC lấy mẫu
-      po.production_order_code || "", // X: Mã lệnh sản xuất
-      noiDungSaiLech, // Y: Sai lệch
-      po.change_content || "", // Z: Thay đổi
-      formatDateTime(po.productionGuide?.created_at), // AA: Tải hướng dẫn hoàn thiện
-      totalSampleQuantity(po.samplingRecords), // AB: Số lượng lấy mẫu
-      formatDateTime(po.lineClearanceChecks?.[0]?.created_at), // AC: Ngày dọn quang dây chuyền
-      formatDateTime(po.factoryReleaseReviews?.[0]?.created_at), // AD: Ngày duyệt xuất xưởng
+      ...Array(17).fill(""), // N:AD để trống
     ];
   });
 
