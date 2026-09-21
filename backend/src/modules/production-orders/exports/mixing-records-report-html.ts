@@ -116,10 +116,14 @@ export async function buildMixingRecordsHtml(
         primary_packaging_processing: 'Phiếu xử lý bao bì cấp 1',
         other: 'Khác',
       }[record.record_type] ?? record.record_type;
+    const formTitle =
+      record.record_type === 'primary_packaging_processing'
+        ? 'Phiếu theo dõi quá trình xử lý bao bì cấp 1'
+        : 'Theo dõi quá trình<br>Pha chế';
     html += page(
       `<table class="mixing-form-header"><colgroup><col style="width:22%"><col><col style="width:24%"></colgroup><tbody>
       <tr><td rowspan="3" style="text-align:center"><img src="${text(metadata.logoDataUri)}" alt="DK Pharma" style="width:32mm;max-width:100%"></td>
-      <th rowspan="3" style="text-align:center;font-size:16pt;text-transform:uppercase">Theo dõi quá trình<br>Pha chế</th><td>Mã hiệu: BMDB004.01</td></tr>
+      <th rowspan="3" style="text-align:center;font-size:16pt;text-transform:uppercase">${formTitle}</th><td>Mã hiệu: BMDB004.01</td></tr>
       <tr><td>Ngày ban hành:<br>23/08/2026</td></tr><tr><td>Lần ban hành: 02</td></tr></tbody></table>
       <table class="mixing-info"><colgroup><col style="width:22%"><col><col style="width:16%"><col style="width:24%"></colgroup><tbody>
         <tr><th>Tên sản phẩm:</th><td><strong>${text(order.item?.item_name ?? order.description)}</strong></td><th>Mã sản phẩm:</th><td>${text(order.item_code)}</td></tr>

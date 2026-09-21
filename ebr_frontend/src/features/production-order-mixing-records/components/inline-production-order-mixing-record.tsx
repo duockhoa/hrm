@@ -51,7 +51,7 @@ const MIXING_RECORD_TYPE_OPTIONS: Array<{ value: MixingRecordType; label: string
   { value: "mixing", label: "Phiếu pha chế" },
   {
     value: "primary_packaging_processing",
-    label: "Phiếu xử lý bảo bì cấp 1",
+    label: "Phiếu xử lý bao bì cấp 1",
   },
   { value: "other", label: "Khác" },
 ];

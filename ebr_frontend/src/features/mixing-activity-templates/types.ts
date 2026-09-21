@@ -115,6 +115,9 @@ export const MIXING_ACTIVITY_PARAMETER_UNITS = [
   "Độ C",
   "Hz",
   "Vòng/phút",
+  "rpm",
+  "psi",
+  "cm",
   "%",
   "ppm",
 ] as const;

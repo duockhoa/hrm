@@ -155,6 +155,10 @@ export default function ProductionOrderMixingRecordDetail({
   const isIpcStaffApproved = Boolean(record.ipc_staff_approved_at);
   const isParameterEntryDisabled = !isQaStaffApproved || isIpcStaffApproved;
   const isStructureEditorOpen = isEditingStructure && !isQaStaffApproved;
+  const formTitle =
+    record.record_type === "primary_packaging_processing"
+      ? "Phiếu theo dõi quá trình xử lý bao bì cấp 1"
+      : "Theo dõi quá trình Pha chế";
 
   const openDescriptionEditor = () => {
     setDescriptionDraft(record.description ?? "");
@@ -277,9 +281,7 @@ export default function ProductionOrderMixingRecordDetail({
                   rowSpan={3}
                   className="h-40 border border-black px-6 py-3 text-center align-middle text-xl font-bold uppercase leading-8"
                 >
-                  Theo dõi quá trình
-                  <br />
-                  Pha chế
+                  {formTitle}
                 </td>
                 <td className="h-[52px] border border-black px-2 py-1.5 align-middle leading-5">
                   Mã hiệu: BMDB004.01

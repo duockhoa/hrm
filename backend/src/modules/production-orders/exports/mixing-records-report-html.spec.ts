@@ -137,6 +137,7 @@ describe('Mixing record report form', () => {
     const html = await htmlFor([record(), second]);
     expect(html.match(/data-action-key="view_mixing_record"/g)).toHaveLength(2);
     expect(html).toContain('Phiếu xử lý bao bì cấp 1');
+    expect(html).toContain('Phiếu theo dõi quá trình xử lý bao bì cấp 1');
     expect(html).toContain('Phiếu thứ hai');
     expect(await htmlFor([])).toContain('Lệnh sản xuất chưa có phiếu pha chế.');
   });
