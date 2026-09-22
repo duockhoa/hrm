@@ -24,6 +24,7 @@ import { FeaturesModule } from './modules/features/features.module';
 import { ProductLinesModule } from './modules/product-lines/product-lines.module';
 import { ProductionWorkshopsModule } from './modules/production-workshops/production-workshops.module';
 import { EquipmentModule } from './modules/equipment/equipment.module';
+import { EquipmentSyncModule } from './modules/equipment-sync/equipment-sync.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { RegistrationNumbersSyncModule } from './modules/registration-numbers-sync/registration-numbers-sync.module';
 import { RegistrationNumbersModule } from './modules/registration-numbers/registration-numbers.module';
@@ -61,6 +62,7 @@ import { DataExportModule } from './modules/data-export/data-export.module';
     ProductLinesModule,
     ProductionWorkshopsModule,
     EquipmentModule,
+    EquipmentSyncModule,
     ApplicationsModule,
     RegistrationNumbersSyncModule,
     RegistrationNumbersModule,

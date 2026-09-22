@@ -9,5 +9,6 @@ import { RegistrationNumbersSyncService } from './registration-numbers-sync.serv
     RegistrationNumbersSyncService,
     PrismaService,
   ],
+  exports: [RegistrationNumbersAuthService],
 })
 export class RegistrationNumbersSyncModule {}

@@ -43,29 +43,16 @@ import { toast } from "sonner";
 import useSWR from "swr";
 import type {
   CreateEquipmentParameterPayload,
-  CreateEquipmentPayload,
-  Equipment,
   EquipmentParameter,
   EquipmentParameterDataType,
   UpdateEquipmentParameterPayload,
-  UpdateEquipmentPayload,
 } from "../types";
-
-type EquipmentFormState = {
-  code: string;
-  name: string;
-};
 
 type ParameterFormState = {
   name: string;
   data_type: EquipmentParameterDataType;
   unit: string;
   is_required: boolean;
-};
-
-const emptyEquipmentForm: EquipmentFormState = {
-  code: "",
-  name: "",
 };
 
 const emptyParameterForm: ParameterFormState = {
@@ -101,32 +88,6 @@ const formatDateTime = (value?: string) => {
 const getDataTypeLabel = (dataType: EquipmentParameterDataType) =>
   DATA_TYPE_OPTIONS.find((option) => option.value === dataType)?.label ??
   dataType;
-
-const buildCreateEquipmentPayload = (
-  form: EquipmentFormState,
-): CreateEquipmentPayload => ({
-  code: form.code.trim(),
-  name: form.name.trim(),
-});
-
-const buildUpdateEquipmentPayload = (
-  form: EquipmentFormState,
-  equipment: Equipment,
-): UpdateEquipmentPayload => {
-  const payload: UpdateEquipmentPayload = {};
-  const code = form.code.trim();
-  const name = form.name.trim();
-
-  if (code !== equipment.code) {
-    payload.code = code;
-  }
-
-  if (name !== equipment.name) {
-    payload.name = name;
-  }
-
-  return payload;
-};
 
 const buildCreateParameterPayload = (
   form: ParameterFormState,
@@ -169,11 +130,7 @@ const buildUpdateParameterPayload = (
   return payload;
 };
 
-function DataTypeBadge({
-  dataType,
-}: {
-  dataType: EquipmentParameterDataType;
-}) {
+function DataTypeBadge({ dataType }: { dataType: EquipmentParameterDataType }) {
   return <Badge variant="outline">{getDataTypeLabel(dataType)}</Badge>;
 }
 
@@ -182,14 +139,6 @@ export default function EquipmentPage() {
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<number | null>(
     null,
   );
-  const [isEquipmentFormOpen, setIsEquipmentFormOpen] = useState(false);
-  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(
-    null,
-  );
-  const [deletingEquipment, setDeletingEquipment] =
-    useState<Equipment | null>(null);
-  const [equipmentForm, setEquipmentForm] =
-    useState<EquipmentFormState>(emptyEquipmentForm);
   const [isParameterFormOpen, setIsParameterFormOpen] = useState(false);
   const [editingParameter, setEditingParameter] =
     useState<EquipmentParameter | null>(null);
@@ -242,7 +191,7 @@ export default function EquipmentPage() {
           return true;
         }
 
-        return [item.code, item.name, item.createdBy?.name, item.createdBy?.username]
+        return [item.code, item.name]
           .filter(Boolean)
           .some((value) =>
             String(value).toLowerCase().includes(normalizedKeyword),
@@ -250,21 +199,6 @@ export default function EquipmentPage() {
       })
       .sort((first, second) => first.code.localeCompare(second.code));
   }, [equipment, keyword]);
-
-  const openCreateEquipmentForm = () => {
-    setEditingEquipment(null);
-    setEquipmentForm(emptyEquipmentForm);
-    setIsEquipmentFormOpen(true);
-  };
-
-  const openEditEquipmentForm = (item: Equipment) => {
-    setEditingEquipment(item);
-    setEquipmentForm({
-      code: item.code,
-      name: item.name,
-    });
-    setIsEquipmentFormOpen(true);
-  };
 
   const openCreateParameterForm = () => {
     setEditingParameter(null);
@@ -281,33 +215,6 @@ export default function EquipmentPage() {
       is_required: parameter.is_required,
     });
     setIsParameterFormOpen(true);
-  };
-
-  const validateEquipmentForm = () => {
-    const code = equipmentForm.code.trim();
-    const name = equipmentForm.name.trim();
-
-    if (!code) {
-      toast.error("Vui lòng nhập mã thiết bị.");
-      return false;
-    }
-
-    if (code.length > 100) {
-      toast.error("Mã thiết bị tối đa 100 ký tự.");
-      return false;
-    }
-
-    if (!name) {
-      toast.error("Vui lòng nhập tên thiết bị.");
-      return false;
-    }
-
-    if (name.length > 255) {
-      toast.error("Tên thiết bị tối đa 255 ký tự.");
-      return false;
-    }
-
-    return true;
   };
 
   const validateParameterForm = () => {
@@ -330,69 +237,6 @@ export default function EquipmentPage() {
     }
 
     return true;
-  };
-
-  const handleEquipmentSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!validateEquipmentForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      if (editingEquipment) {
-        const payload = buildUpdateEquipmentPayload(
-          equipmentForm,
-          editingEquipment,
-        );
-
-        if (Object.keys(payload).length === 0) {
-          toast.info("Không có thay đổi để lưu.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        await equipmentService.updateEquipment(editingEquipment.id, payload);
-        toast.success("Đã cập nhật thiết bị.");
-      } else {
-        const created = await equipmentService.createEquipment(
-          buildCreateEquipmentPayload(equipmentForm),
-        );
-        setSelectedEquipmentId(created.id);
-        toast.success("Đã tạo thiết bị.");
-      }
-
-      setIsEquipmentFormOpen(false);
-      await mutateEquipment();
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể lưu thiết bị."));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteEquipment = async () => {
-    if (!deletingEquipment) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await equipmentService.deleteEquipment(deletingEquipment.id);
-      toast.success("Đã xóa thiết bị.");
-
-      if (effectiveSelectedEquipmentId === deletingEquipment.id) {
-        setSelectedEquipmentId(null);
-      }
-
-      setDeletingEquipment(null);
-      await mutateEquipment();
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể xóa thiết bị."));
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleParameterSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -463,7 +307,8 @@ export default function EquipmentPage() {
           <div>
             <h1 className="text-xl font-semibold">Thiết bị</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Quản lý danh sách thiết bị và các thông số cần nhập theo từng thiết bị.
+              Danh sách thiết bị được đồng bộ từ QLTB và các thông số cần nhập
+              theo từng thiết bị.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -479,10 +324,6 @@ export default function EquipmentPage() {
             >
               <RefreshCw className="size-4" />
             </Button>
-            <Button onClick={openCreateEquipmentForm}>
-              <Plus className="size-4" />
-              Thêm thiết bị
-            </Button>
           </div>
         </div>
 
@@ -492,7 +333,7 @@ export default function EquipmentPage() {
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
             className="pl-9"
-            placeholder="Tìm theo mã, tên thiết bị hoặc người tạo"
+            placeholder="Tìm theo mã hoặc tên thiết bị"
           />
         </div>
       </div>
@@ -510,16 +351,14 @@ export default function EquipmentPage() {
                   <TableHead className="w-20">ID</TableHead>
                   <TableHead className="w-36">Mã</TableHead>
                   <TableHead>Tên thiết bị</TableHead>
-                  <TableHead className="w-36">Người tạo</TableHead>
                   <TableHead className="w-40">Cập nhật</TableHead>
-                  <TableHead className="w-24 text-right">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isEquipmentLoading ? (
                   Array.from({ length: 8 }).map((_, index) => (
                     <TableRow key={index}>
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={4}>
                         <div className="h-8 animate-pulse rounded bg-gray-100" />
                       </TableCell>
                     </TableRow>
@@ -530,7 +369,8 @@ export default function EquipmentPage() {
                       key={item.id}
                       className={cn(
                         "cursor-pointer",
-                        effectiveSelectedEquipmentId === item.id && "bg-blue-50",
+                        effectiveSelectedEquipmentId === item.id &&
+                          "bg-blue-50",
                       )}
                       onClick={() => setSelectedEquipmentId(item.id)}
                     >
@@ -540,40 +380,14 @@ export default function EquipmentPage() {
                       </TableCell>
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell className="text-sm text-gray-500">
-                        {item.createdBy?.name ??
-                          item.createdBy?.username ??
-                          item.created_by_id ??
-                          ""}
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-500">
                         {formatDateTime(item.updated_at)}
-                      </TableCell>
-                      <TableCell onClick={(event) => event.stopPropagation()}>
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => openEditEquipmentForm(item)}
-                            title="Sửa"
-                          >
-                            <Edit2 className="size-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => setDeletingEquipment(item)}
-                            title="Xóa"
-                          >
-                            <Trash2 className="size-4 text-red-600" />
-                          </Button>
-                        </div>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={4}
                       className="h-32 text-center text-sm text-gray-500"
                     >
                       Chưa có thiết bị phù hợp.
@@ -704,110 +518,7 @@ export default function EquipmentPage() {
         </section>
       </div>
 
-      <Dialog
-        open={isEquipmentFormOpen}
-        onOpenChange={setIsEquipmentFormOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingEquipment ? "Cập nhật thiết bị" : "Thêm thiết bị"}
-            </DialogTitle>
-            <DialogDescription>
-              Mã thiết bị và tên thiết bị là bắt buộc.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form className="space-y-4" onSubmit={handleEquipmentSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="equipment-code">Mã thiết bị</Label>
-              <Input
-                id="equipment-code"
-                value={equipmentForm.code}
-                maxLength={100}
-                disabled={isSubmitting}
-                onChange={(event) =>
-                  setEquipmentForm((current) => ({
-                    ...current,
-                    code: event.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="equipment-name">Tên thiết bị</Label>
-              <Input
-                id="equipment-name"
-                value={equipmentForm.name}
-                maxLength={255}
-                disabled={isSubmitting}
-                onChange={(event) =>
-                  setEquipmentForm((current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsEquipmentFormOpen(false)}
-                disabled={isSubmitting}
-              >
-                Hủy
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Đang lưu..." : "Lưu"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(deletingEquipment)}
-        onOpenChange={(open) => !open && setDeletingEquipment(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xóa thiết bị</DialogTitle>
-            <DialogDescription>
-              API sẽ trả về thiết bị vừa xóa sau khi thao tác thành công.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="rounded border bg-gray-50 p-3">
-            <div className="font-medium">{deletingEquipment?.name}</div>
-            <div className="mt-1 font-mono text-xs text-gray-500">
-              {deletingEquipment?.code}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeletingEquipment(null)}
-              disabled={isSubmitting}
-            >
-              Hủy
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteEquipment}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Đang xóa..." : "Xóa"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={isParameterFormOpen}
-        onOpenChange={setIsParameterFormOpen}
-      >
+      <Dialog open={isParameterFormOpen} onOpenChange={setIsParameterFormOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
