@@ -18,12 +18,7 @@ export type Equipment = {
 };
 
 export type EquipmentParameterDataType =
-  | "text"
-  | "number"
-  | "boolean"
-  | "date"
-  | "datetime"
-  | "select";
+  "text" | "number" | "boolean" | "date" | "datetime" | "select";
 
 export type EquipmentParameter = {
   id: number;
@@ -69,13 +64,12 @@ export type CreateEquipmentMonitoringRecordPayload = {
   values: EquipmentMonitoringValuePayload[];
 };
 
-export type UpdateEquipmentMonitoringRecordPayload =
-  Partial<
-    Omit<
-      CreateEquipmentMonitoringRecordPayload,
-      "production_order_id" | "equipment_id"
-    >
-  >;
+export type UpdateEquipmentMonitoringRecordPayload = Partial<
+  Omit<
+    CreateEquipmentMonitoringRecordPayload,
+    "production_order_id" | "equipment_id"
+  >
+>;
 
 export type EquipmentMonitoringRecordValue = {
   id: number;
@@ -106,6 +100,16 @@ export type EquipmentMonitoringRecord = {
   created_at?: string;
   updated_at?: string;
   equipment?: Equipment;
+  productionOrder?: {
+    id: number;
+    production_order_code?: string | null;
+    lot_no?: string | null;
+    item_code?: string | null;
+    item?: {
+      item_code: string;
+      item_name: string;
+    } | null;
+  } | null;
   values?: EquipmentMonitoringRecordValue[];
   images?: EquipmentMonitoringRecordImage[];
   createdBy?: EquipmentCreatedBy;

@@ -6,6 +6,7 @@ const protectedPaths = [
   "/",
   "/home",
   "/cleaning-checklists",
+  "/equipment-operation-records",
   "/features",
   "/filter-usage-records",
   "/finished-product-production-orders",

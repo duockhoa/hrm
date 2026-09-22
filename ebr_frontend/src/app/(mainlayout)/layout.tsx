@@ -70,6 +70,12 @@ const data = [
     url: "/cleaning-checklists",
   },
   {
+    id: "equipment-operation-records",
+    name: "Sổ theo dõi vận hành thiết bị",
+    icon: <ClipboardList className="size-5 shrink-0" />,
+    url: "/equipment-operation-records",
+  },
+  {
     id: "6",
     name: "Tổng hợp lô sản xuất",
     icon: <ListChecks className="size-5 shrink-0" />,
