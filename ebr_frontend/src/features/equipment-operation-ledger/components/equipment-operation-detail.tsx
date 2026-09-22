@@ -275,14 +275,6 @@ export default function EquipmentOperationDetail({
         <dl className="mt-2">
           <DetailRow label="Mã thiết bị" value={equipment.code} />
           <DetailRow label="Tên thiết bị" value={equipment.name} />
-          <DetailRow
-            label="Ngày tạo"
-            value={formatDateTime(equipment.created_at)}
-          />
-          <DetailRow
-            label="Cập nhật"
-            value={formatDateTime(equipment.updated_at)}
-          />
         </dl>
       </section>
 
@@ -336,6 +328,64 @@ export default function EquipmentOperationDetail({
         ) : (
           <p className="mt-3 text-sm text-gray-500">
             Thiết bị chưa có thông số theo dõi.
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-lg border bg-white p-4">
+        <div className="flex items-center gap-2">
+          <TriangleAlert className="size-4 text-red-600" />
+          <h2 className="text-base font-semibold">Báo cáo sự cố</h2>
+        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          Các sự cố đã được ghi nhận cho thiết bị này.
+        </p>
+
+        {incidentReportsError ? (
+          <p className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            Không thể tải báo cáo sự cố.
+          </p>
+        ) : isIncidentReportsLoading ? (
+          <div className="mt-3 space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-28 w-full" />
+            ))}
+          </div>
+        ) : (incidentReports ?? []).length > 0 ? (
+          <div className="mt-3 space-y-3">
+            {(incidentReports ?? []).map((report) => (
+              <article key={report.id} className="rounded-md border p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <h3 className="break-words text-sm font-semibold text-gray-900">
+                      {report.title}
+                    </h3>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <IncidentPriorityBadge priority={report.priority} />
+                      <Badge variant="outline">
+                        {incidentStatusLabels[report.status]}
+                      </Badge>
+                    </div>
+                  </div>
+                  <time className="shrink-0 text-xs text-gray-500">
+                    {formatDateTime(report.created_at)}
+                  </time>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-sm text-gray-600">
+                  {report.description}
+                </p>
+                {report.createdBy?.name || report.createdBy?.username ? (
+                  <p className="mt-3 text-xs text-gray-500">
+                    Người báo cáo:{" "}
+                    {report.createdBy.name || report.createdBy.username}
+                  </p>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-gray-500">
+            Chưa có báo cáo sự cố cho thiết bị này.
           </p>
         )}
       </section>
@@ -408,64 +458,6 @@ export default function EquipmentOperationDetail({
         ) : (
           <p className="mt-3 text-sm text-gray-500">
             Chưa có dữ liệu vận hành cho thiết bị này.
-          </p>
-        )}
-      </section>
-
-      <section className="rounded-lg border bg-white p-4">
-        <div className="flex items-center gap-2">
-          <TriangleAlert className="size-4 text-red-600" />
-          <h2 className="text-base font-semibold">Báo cáo sự cố</h2>
-        </div>
-        <p className="mt-1 text-sm text-gray-500">
-          Các sự cố đã được ghi nhận cho thiết bị này.
-        </p>
-
-        {incidentReportsError ? (
-          <p className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            Không thể tải báo cáo sự cố.
-          </p>
-        ) : isIncidentReportsLoading ? (
-          <div className="mt-3 space-y-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-28 w-full" />
-            ))}
-          </div>
-        ) : (incidentReports ?? []).length > 0 ? (
-          <div className="mt-3 space-y-3">
-            {(incidentReports ?? []).map((report) => (
-              <article key={report.id} className="rounded-md border p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <h3 className="break-words text-sm font-semibold text-gray-900">
-                      {report.title}
-                    </h3>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <IncidentPriorityBadge priority={report.priority} />
-                      <Badge variant="outline">
-                        {incidentStatusLabels[report.status]}
-                      </Badge>
-                    </div>
-                  </div>
-                  <time className="shrink-0 text-xs text-gray-500">
-                    {formatDateTime(report.created_at)}
-                  </time>
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm text-gray-600">
-                  {report.description}
-                </p>
-                {report.createdBy?.name || report.createdBy?.username ? (
-                  <p className="mt-3 text-xs text-gray-500">
-                    Người báo cáo:{" "}
-                    {report.createdBy.name || report.createdBy.username}
-                  </p>
-                ) : null}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-gray-500">
-            Chưa có báo cáo sự cố cho thiết bị này.
           </p>
         )}
       </section>
