@@ -85,6 +85,7 @@ model Users {
   receivedProductionOrderWarehouseReleaseControls       ProductionOrderDocumentControls[]                               @relation("ProductionOrderWarehouseReleaseReceiver")
   updatedProductionSpecifications                       ProductionSpecifications[]                                      @relation("ProductionSpecificationUpdater")
   createdEquipment                                      Equipment[]                                                     @relation("EquipmentCreator")
+  createdEquipmentIncidentReports                       EquipmentIncidentReports[]                                      @relation("EquipmentIncidentReportCreator")
   createdEquipmentParameters                            EquipmentParameters[]                                           @relation("EquipmentParameterCreator")
   createdEquipmentMonitoringRecords                     EquipmentMonitoringRecords[]                                    @relation("EquipmentMonitoringRecordCreator")
   createdEquipmentMonitoringRecordImages                EquipmentMonitoringRecordImages[]                               @relation("EquipmentMonitoringRecordImageCreator")
@@ -505,6 +506,7 @@ model Equipment {
   createdBy         Users                        @relation("EquipmentCreator", fields: [created_by_id], references: [id], map: "equipment_created_by_id_fkey")
   parameters        EquipmentParameters[]
   monitoringRecords EquipmentMonitoringRecords[]
+  incidentReports   EquipmentIncidentReports[]
   itemEquipment     ItemEquipment[]
   created_at        DateTime                     @default(now())
   updated_at        DateTime                     @default(now()) @updatedAt
@@ -512,6 +514,25 @@ model Equipment {
   @@index([name], map: "equipment_name_idx")
   @@index([created_by_id], map: "equipment_created_by_id_idx")
   @@map("equipment")
+}
+
+model EquipmentIncidentReports {
+  id            Int       @id @default(autoincrement())
+  equipment_id  Int
+  equipment     Equipment @relation(fields: [equipment_id], references: [id], onDelete: Restrict, map: "equipment_incident_reports_equipment_id_fkey")
+  title         String    @db.VarChar(255)
+  description   String    @db.Text
+  priority      String    @default("MEDIUM") @db.VarChar(20)
+  status        String    @default("OPEN") @db.VarChar(20)
+  created_by_id Int
+  createdBy     Users     @relation("EquipmentIncidentReportCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "equipment_incident_reports_created_by_id_fkey")
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now()) @updatedAt
+
+  @@index([equipment_id, status], map: "equipment_incident_reports_equipment_status_idx")
+  @@index([created_by_id], map: "equipment_incident_reports_created_by_id_idx")
+  @@index([created_at], map: "equipment_incident_reports_created_at_idx")
+  @@map("equipment_incident_reports")
 }
 
 model EquipmentParameters {
@@ -1501,8 +1522,8 @@ model ProductionOrderHardCapsuleLeakageChecks {
 }
 
 model ProductionOrderVolumeChecks {
-  lower_limit Decimal? @db.Decimal(10, 2)
-  upper_limit Decimal? @db.Decimal(10, 2)
+  lower_limit         Decimal?                           @db.Decimal(10, 2)
+  upper_limit         Decimal?                           @db.Decimal(10, 2)
   id                  Int                                @id @default(autoincrement())
   production_order_id Int
   productionOrder     ProductionOrders                   @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_volume_checks_po_id_fkey")
@@ -1583,8 +1604,8 @@ model ProductionOrderTenShellWeightChecks {
 }
 
 model ProductionOrderSemiFinishedProductGrossWeightChecks {
-  lower_limit Decimal? @db.Decimal(10, 3)
-  upper_limit Decimal? @db.Decimal(10, 3)
+  lower_limit          Decimal?         @db.Decimal(10, 3)
+  upper_limit          Decimal?         @db.Decimal(10, 3)
   id                   Int              @id @default(autoincrement())
   production_order_id  Int
   productionOrder      ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_semi_finished_gross_weight_po_fkey")
@@ -1610,8 +1631,8 @@ model ProductionOrderSemiFinishedProductGrossWeightChecks {
 }
 
 model ProductionOrderSemiFinishedProductNetWeightChecks {
-  lower_limit Decimal? @db.Decimal(10, 3)
-  upper_limit Decimal? @db.Decimal(10, 3)
+  lower_limit         Decimal?         @db.Decimal(10, 3)
+  upper_limit         Decimal?         @db.Decimal(10, 3)
   id                  Int              @id @default(autoincrement())
   production_order_id Int
   productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_semi_finished_net_weight_po_fkey")
