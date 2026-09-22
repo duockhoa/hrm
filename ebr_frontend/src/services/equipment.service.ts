@@ -1,10 +1,12 @@
 import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 import type {
+  CreateEquipmentIncidentReportPayload,
   CreateEquipmentMonitoringRecordPayload,
   CreateEquipmentParameterPayload,
   CreateEquipmentPayload,
   Equipment,
+  EquipmentIncidentReport,
   EquipmentMonitoringRecord,
   EquipmentParameter,
   UpdateEquipmentMonitoringRecordPayload,
@@ -17,9 +19,7 @@ const fetchEquipment = async (): Promise<Equipment[]> => {
   return response.data;
 };
 
-const fetchEquipmentById = async (
-  id: string | number,
-): Promise<Equipment> => {
+const fetchEquipmentById = async (id: string | number): Promise<Equipment> => {
   const response = await axiosClient.get(API_ROUTES.equipment.detail(id));
   return response.data;
 };
@@ -96,13 +96,37 @@ const deleteEquipmentParameter = async (
   return response.data;
 };
 
+const fetchEquipmentIncidentReports = async (params?: {
+  equipment_id?: string | number;
+  status?: string;
+  priority?: string;
+}): Promise<EquipmentIncidentReport[]> => {
+  const response = await axiosClient.get(API_ROUTES.equipment.incidentReports, {
+    params,
+  });
+  return response.data;
+};
+
+const createEquipmentIncidentReport = async (
+  payload: CreateEquipmentIncidentReportPayload,
+): Promise<EquipmentIncidentReport> => {
+  const response = await axiosClient.post(
+    API_ROUTES.equipment.incidentReports,
+    payload,
+  );
+  return response.data;
+};
+
 const fetchEquipmentMonitoringRecords = async (params?: {
   production_order_id?: string | number;
   equipment_id?: string | number;
 }): Promise<EquipmentMonitoringRecord[]> => {
-  const response = await axiosClient.get(API_ROUTES.equipment.monitoringRecords, {
-    params,
-  });
+  const response = await axiosClient.get(
+    API_ROUTES.equipment.monitoringRecords,
+    {
+      params,
+    },
+  );
   return response.data;
 };
 
@@ -174,6 +198,8 @@ const equipmentService = {
   createEquipmentParameter,
   updateEquipmentParameter,
   deleteEquipmentParameter,
+  fetchEquipmentIncidentReports,
+  createEquipmentIncidentReport,
   fetchEquipmentMonitoringRecords,
   fetchEquipmentMonitoringRecordById,
   createEquipmentMonitoringRecord,

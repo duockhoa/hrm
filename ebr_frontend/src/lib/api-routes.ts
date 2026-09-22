@@ -238,8 +238,7 @@ const PRODUCTION_ORDERS = {
     `/production-orders/date-checks/${checkId}/images`,
   dateCheckImage: (imageId: string | number) =>
     `/production-orders/date-checks/images/${imageId}`,
-  attachments: (id: string | number) =>
-    `/production-orders/${id}/attachments`,
+  attachments: (id: string | number) => `/production-orders/${id}/attachments`,
   attachmentDetail: (attachmentId: string | number) =>
     `/production-orders/attachments/${attachmentId}`,
   attachmentApproval: (attachmentId: string | number) =>
@@ -360,6 +359,9 @@ const EQUIPMENT = {
   parameters: (id: string | number) => `/equipment/${id}/parameters`,
   parameterDetail: (parameterId: string | number) =>
     `/equipment/parameters/${parameterId}`,
+  incidentReports: "/equipment/incident-reports",
+  incidentReportDetail: (reportId: string | number) =>
+    `/equipment/incident-reports/${reportId}`,
   monitoringRecords: "/equipment/monitoring-records",
   monitoringRecordDetail: (recordId: string | number) =>
     `/equipment/monitoring-records/${recordId}`,
@@ -408,7 +410,6 @@ export const API_ROUTES = {
   equipment: EQUIPMENT,
   cleaningObjects: CLEANING_OBJECTS,
   cleaningRequirements: CLEANING_REQUIREMENTS,
-  secondaryPackagingStageRequirements:
-    SECONDARY_PACKAGING_STAGE_REQUIREMENTS,
+  secondaryPackagingStageRequirements: SECONDARY_PACKAGING_STAGE_REQUIREMENTS,
   dosageForms: DOSAGE_FORMS,
 };
