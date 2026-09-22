@@ -22,6 +22,7 @@ import {
   PackageCheck,
   PackageSearch,
   TriangleAlert,
+  Wrench,
 } from "lucide-react";
 import { useEffect } from "react";
 import useSWR from "swr";
@@ -72,7 +73,7 @@ const data = [
   {
     id: "equipment-operation-records",
     name: "Sổ theo dõi vận hành thiết bị",
-    icon: <ClipboardList className="size-5 shrink-0" />,
+    icon: <Wrench className="size-5 shrink-0" />,
     url: "/equipment-operation-records",
   },
   {
