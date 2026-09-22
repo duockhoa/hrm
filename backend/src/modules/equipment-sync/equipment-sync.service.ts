@@ -73,14 +73,6 @@ export class EquipmentSyncService {
         return;
       }
 
-      const limit = this.getEquipmentSyncLimit();
-      if (!this.isCompleteSnapshot(response.data, records.length, limit)) {
-        this.logger.warn(
-          'Skipped QLTB equipment sync: API response may be incomplete; refusing to remove local equipment',
-        );
-        return;
-      }
-
       const existingEquipment = await this.prismaService.equipment.findMany({
         select: {
           id: true,
@@ -106,10 +98,6 @@ export class EquipmentSyncService {
           equipmentToUpdate.push({ id: existing.id, name: equipment.name });
         }
       }
-
-      const codesToDelete = existingEquipment
-        .filter((equipment) => !equipmentByCode.has(equipment.code))
-        .map((equipment) => equipment.code);
 
       const createdById =
         equipmentToCreate.length > 0 ? this.getCreatedById() : null;
@@ -137,18 +125,10 @@ export class EquipmentSyncService {
             data: { name: equipment.name },
           });
         }
-
-        if (codesToDelete.length > 0) {
-          await transaction.equipment.deleteMany({
-            where: {
-              code: { in: codesToDelete },
-            },
-          });
-        }
       });
 
       this.logger.log(
-        `QLTB equipment sync completed: created ${equipmentToCreate.length}, updated ${equipmentToUpdate.length}, deleted ${codesToDelete.length}`,
+        `QLTB equipment sync completed: created ${equipmentToCreate.length}, updated ${equipmentToUpdate.length}`,
       );
     } catch (error) {
       this.logger.error(
@@ -247,73 +227,6 @@ export class EquipmentSyncService {
     }
 
     return equipmentByCode;
-  }
-
-  private isCompleteSnapshot(
-    payload: unknown,
-    recordCount: number,
-    requestedLimit: number,
-  ) {
-    const total = this.extractTotal(payload);
-
-    if (total !== null) {
-      return recordCount >= total;
-    }
-
-    return recordCount < requestedLimit;
-  }
-
-  private extractTotal(payload: unknown): number | null {
-    if (!this.isObject(payload)) {
-      return null;
-    }
-
-    const candidates = [
-      payload.total,
-      payload.totalItems,
-      payload.totalCount,
-      this.isObject(payload.meta) ? payload.meta.total : undefined,
-      this.isObject(payload.meta) ? payload.meta.totalItems : undefined,
-      this.isObject(payload.meta) ? payload.meta.totalCount : undefined,
-      this.isObject(payload.pagination) ? payload.pagination.total : undefined,
-      this.isObject(payload.pagination)
-        ? payload.pagination.totalItems
-        : undefined,
-      this.isObject(payload.pagination)
-        ? payload.pagination.totalCount
-        : undefined,
-      this.isObject(payload.data) ? payload.data.total : undefined,
-      this.isObject(payload.data) ? payload.data.totalItems : undefined,
-      this.isObject(payload.data) ? payload.data.totalCount : undefined,
-      this.isObject(payload.data) && this.isObject(payload.data.meta)
-        ? payload.data.meta.total
-        : undefined,
-      this.isObject(payload.data) && this.isObject(payload.data.meta)
-        ? payload.data.meta.totalItems
-        : undefined,
-      this.isObject(payload.data) && this.isObject(payload.data.meta)
-        ? payload.data.meta.totalCount
-        : undefined,
-      this.isObject(payload.data) && this.isObject(payload.data.pagination)
-        ? payload.data.pagination.total
-        : undefined,
-      this.isObject(payload.data) && this.isObject(payload.data.pagination)
-        ? payload.data.pagination.totalItems
-        : undefined,
-      this.isObject(payload.data) && this.isObject(payload.data.pagination)
-        ? payload.data.pagination.totalCount
-        : undefined,
-    ];
-
-    for (const candidate of candidates) {
-      const total = Number(candidate);
-
-      if (Number.isInteger(total) && total >= 0) {
-        return total;
-      }
-    }
-
-    return null;
   }
 
   private normalizeString(value: unknown, maxLength: number) {

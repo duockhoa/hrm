@@ -76,7 +76,7 @@ describe('EquipmentSyncService', () => {
     process.env = originalEnv;
   });
 
-  it('creates missing equipment, updates names by code, and deletes absent equipment', async () => {
+  it('creates missing equipment and updates names by code without deleting local equipment', async () => {
     mockedAxiosGet.mockResolvedValue({
       data: {
         data: [
@@ -112,11 +112,7 @@ describe('EquipmentSyncService', () => {
       where: { id: 2 },
       data: { name: 'Máy rửa lọ' },
     });
-    expect(transactionEquipment.deleteMany).toHaveBeenCalledWith({
-      where: {
-        code: { in: ['TBSX004'] },
-      },
-    });
+    expect(transactionEquipment.deleteMany).not.toHaveBeenCalled();
   });
 
   it('does not change local equipment when API returns no usable code', async () => {
@@ -134,23 +130,6 @@ describe('EquipmentSyncService', () => {
 
   it('does not change local equipment when the response has no equipment list', async () => {
     mockedAxiosGet.mockResolvedValue({ data: { success: true } });
-
-    await service.handleCronSyncEquipment();
-
-    expect(prismaService.equipment.findMany).not.toHaveBeenCalled();
-    expect(prismaService.$transaction).not.toHaveBeenCalled();
-  });
-
-  it('does not delete equipment from a possibly truncated API response', async () => {
-    process.env.QLTB_EQUIPMENT_SYNC_LIMIT = '2';
-    mockedAxiosGet.mockResolvedValue({
-      data: {
-        data: [
-          { code: 'TBSX001', name: 'Thiết bị 1' },
-          { code: 'TBSX002', name: 'Thiết bị 2' },
-        ],
-      },
-    });
 
     await service.handleCronSyncEquipment();
 
