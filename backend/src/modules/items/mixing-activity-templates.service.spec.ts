@@ -4,14 +4,18 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
+import { UpdateMixingActivityTemplateDto } from './dto/update-mixing-activity-template.dto';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 
 describe('MixingActivityTemplatesService detail loading', () => {
   const findUnique = jest.fn();
   const findMany = jest.fn();
   const update = jest.fn();
+  const create = jest.fn();
+  const findItem = jest.fn();
   const service = new MixingActivityTemplatesService({
-    mixingActivityTemplates: { findUnique, findMany, update },
+    mixingActivityTemplates: { findUnique, findMany, update, create },
+    items: { findUnique: findItem },
   } as unknown as PrismaService);
 
   beforeEach(() => jest.resetAllMocks());
@@ -53,6 +57,57 @@ describe('MixingActivityTemplatesService detail loading', () => {
     expect(findUnique.mock.calls[0][0].include.stages).toBeUndefined();
     expect(update.mock.calls[0][0].include.stages).toBeUndefined();
   });
+
+  it('updates a template status to inactive', async () => {
+    findUnique.mockResolvedValue({ id: 1 });
+    update.mockResolvedValue({ id: 1, status: 'inactive' });
+
+    await expect(service.update(1, { status: 'inactive' })).resolves.toEqual({
+      id: 1,
+      status: 'inactive',
+    });
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: { status: 'inactive' },
+      }),
+    );
+  });
+
+  it('always creates a new template with active status', async () => {
+    findItem.mockResolvedValue({ item_code: 'TP00001' });
+    create.mockResolvedValue({ id: 1, status: 'active' });
+
+    await service.create(
+      'TP00001',
+      {
+        batch_size: 100,
+        unit_of_measure: 'kg',
+        description: 'Biểu mẫu mới',
+      },
+      { id: 9 },
+    );
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'active' }),
+      }),
+    );
+  });
+
+  it.each([undefined, null, 'stopped', true])(
+    'rejects an invalid template status %p',
+    async (status) => {
+      findUnique.mockResolvedValue({ id: 1 });
+      const invalidDto = {
+        status,
+      } as unknown as UpdateMixingActivityTemplateDto;
+      await expect(service.update(1, invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
 
   it('rejects a missing template', async () => {
     findUnique.mockResolvedValue(null);
@@ -178,6 +233,7 @@ describe('MixingActivityTemplatesService.copyFromTemplate', () => {
       batch_size: 125.5,
       unit_of_measure: 'kg',
       description: 'Phiếu pha nguồn',
+      status: 'active',
       created_by_id: 9,
       stages: {
         create: [
@@ -254,6 +310,7 @@ describe('MixingActivityTemplatesService.copyFromTemplate', () => {
       batch_size: 200,
       unit_of_measure: 'L',
       description: null,
+      status: 'active',
     });
   });
 

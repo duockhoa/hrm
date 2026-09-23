@@ -635,6 +635,7 @@ model MixingActivityTemplates {
   batch_size      Decimal                        @db.Decimal(18, 3)
   unit_of_measure String                         @db.VarChar(50)
   description     String?                        @db.Text
+  status          String                         @default("active") @db.VarChar(20)
   created_by_id   Int
   createdBy       Users                          @relation("MixingActivityTemplateCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "mixing_activity_templates_created_by_id_fkey")
   created_at      DateTime                       @default(now())
@@ -642,6 +643,7 @@ model MixingActivityTemplates {
   stages          MixingActivityTemplateStages[]
 
   @@index([item_code], map: "mixing_activity_templates_item_code_idx")
+  @@index([status], map: "mixing_activity_templates_status_idx")
   @@index([created_by_id], map: "mixing_activity_templates_created_by_id_idx")
   @@map("mixing_activity_templates")
 }

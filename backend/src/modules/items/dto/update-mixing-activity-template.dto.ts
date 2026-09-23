@@ -3,4 +3,5 @@ export class UpdateMixingActivityTemplateDto {
   batch_size?: number | string | null;
   unit_of_measure?: string | null;
   description?: string | null;
+  status?: string | null;
 }

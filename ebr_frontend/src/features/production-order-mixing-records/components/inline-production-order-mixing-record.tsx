@@ -123,6 +123,9 @@ export default function InlineProductionOrderMixingRecord({
         : null,
       () => mixingActivityTemplatesService.fetchByItemCode(itemCode),
     );
+  const activeTemplates = (templates ?? []).filter(
+    (template) => template.status !== "inactive",
+  );
 
   if (selectedRecord) {
     return (
@@ -422,7 +425,7 @@ export default function InlineProductionOrderMixingRecord({
               <option value="">
                 {loadingTemplates ? "Đang tải biểu mẫu..." : "Chọn biểu mẫu"}
               </option>
-              {(templates ?? []).map((template) => (
+              {activeTemplates.map((template) => (
                 <option key={template.id} value={template.id}>
                   Phiên bản {template.version} - {template.description || "Biểu mẫu pha chế"} - {formatBatchSize(template.batch_size)} {template.unit_of_measure}
                 </option>
@@ -433,9 +436,9 @@ export default function InlineProductionOrderMixingRecord({
                 {getErrorMessage(templatesError, "Không thể tải danh sách biểu mẫu.")}
               </p>
             ) : null}
-            {!loadingTemplates && !templatesError && templates?.length === 0 ? (
+            {!loadingTemplates && !templatesError && activeTemplates.length === 0 ? (
               <p className="text-sm text-amber-700">
-                Mã hàng này chưa có biểu mẫu pha chế để sử dụng.
+                Mã hàng này chưa có biểu mẫu pha chế đang active để sử dụng.
               </p>
             ) : null}
             <label

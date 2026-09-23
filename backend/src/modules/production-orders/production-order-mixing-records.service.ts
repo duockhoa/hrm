@@ -133,6 +133,10 @@ export class ProductionOrderMixingRecordsService {
       throw new NotFoundException('Mixing activity template not found');
     }
 
+    if (template.status !== 'active') {
+      throw new BadRequestException('Mixing activity template is inactive');
+    }
+
     if (template.item_code !== productionOrder.item_code) {
       throw new BadRequestException(
         'Mixing activity template does not belong to production order item',

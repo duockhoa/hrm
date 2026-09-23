@@ -12,6 +12,9 @@ import { UpdateMixingActivityTemplateDto } from './dto/update-mixing-activity-te
 
 type AuthenticatedUser = { id?: number | string | null };
 
+const ACTIVE_MIXING_ACTIVITY_TEMPLATE_STATUS = 'active';
+const INACTIVE_MIXING_ACTIVITY_TEMPLATE_STATUS = 'inactive';
+
 const creatorSelect = {
   id: true,
   username: true,
@@ -113,6 +116,7 @@ export class MixingActivityTemplatesService {
           50,
         ),
         description: this.normalizeDescription(dto?.description),
+        status: ACTIVE_MIXING_ACTIVITY_TEMPLATE_STATUS,
         created_by_id: this.normalizeUserId(user),
       },
       include: mixingActivityTemplateInclude,
@@ -188,6 +192,7 @@ export class MixingActivityTemplatesService {
                 ? source.description
                 : dto.description,
             ),
+            status: ACTIVE_MIXING_ACTIVITY_TEMPLATE_STATUS,
             created_by_id: userId,
             stages: {
               create: source.stages.map((stage) => ({
@@ -271,6 +276,10 @@ export class MixingActivityTemplatesService {
       data.description = this.normalizeDescription(updateDto.description);
     }
 
+    if ('status' in updateDto) {
+      data.status = this.normalizeStatus(updateDto.status);
+    }
+
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('At least one field is required');
     }
@@ -336,6 +345,22 @@ export class MixingActivityTemplatesService {
 
     const normalizedValue = String(value).trim();
     return normalizedValue || null;
+  }
+
+  private normalizeStatus(value: unknown) {
+    if (typeof value !== 'string') {
+      throw new BadRequestException('status must be active or inactive');
+    }
+
+    const normalizedValue = value.trim().toLowerCase();
+    if (
+      normalizedValue !== ACTIVE_MIXING_ACTIVITY_TEMPLATE_STATUS &&
+      normalizedValue !== INACTIVE_MIXING_ACTIVITY_TEMPLATE_STATUS
+    ) {
+      throw new BadRequestException('status must be active or inactive');
+    }
+
+    return normalizedValue;
   }
 
   private async ensureItemExists(

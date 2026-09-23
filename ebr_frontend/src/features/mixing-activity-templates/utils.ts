@@ -1,5 +1,12 @@
 import type { MixingActivityTemplate } from "./types";
 
+const isMixingActivityTemplateActive = (template: MixingActivityTemplate) =>
+  template.status !== "inactive";
+
+const getMixingActivityTemplateStatusLabel = (
+  template: MixingActivityTemplate,
+) => (isMixingActivityTemplateActive(template) ? "Active" : "Ngừng sử dụng");
+
 const getCreatorLabel = (template: MixingActivityTemplate) =>
   template.createdBy?.full_name ??
   template.createdBy?.name ??
@@ -18,4 +25,10 @@ const formatBatchSize = (value: number | string) => {
     : String(value);
 };
 
-export { formatBatchSize, formatDateTime, getCreatorLabel };
+export {
+  formatBatchSize,
+  formatDateTime,
+  getCreatorLabel,
+  getMixingActivityTemplateStatusLabel,
+  isMixingActivityTemplateActive,
+};

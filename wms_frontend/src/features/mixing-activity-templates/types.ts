@@ -19,6 +19,14 @@ export type MixingActivityTemplateItem = {
   updated_at?: string | null;
 };
 
+export const MIXING_ACTIVITY_TEMPLATE_STATUSES = [
+  "active",
+  "inactive",
+] as const;
+
+export type MixingActivityTemplateStatus =
+  (typeof MIXING_ACTIVITY_TEMPLATE_STATUSES)[number];
+
 export type MixingActivityTemplate = {
   id: number;
   item_code?: string;
@@ -26,6 +34,7 @@ export type MixingActivityTemplate = {
   batch_size: number | string;
   unit_of_measure: string;
   description?: string | null;
+  status?: MixingActivityTemplateStatus;
   item?: MixingActivityTemplateItem | null;
   created_by_id?: string | number | null;
   createdBy?: MixingActivityTemplateCreator | null;
@@ -42,7 +51,9 @@ export type CreateMixingActivityTemplatePayload = {
 
 export type UpdateMixingActivityTemplatePayload = Partial<
   CreateMixingActivityTemplatePayload
->;
+> & {
+  status?: MixingActivityTemplateStatus;
+};
 
 export type MixingActivityTemplateStage = {
   id: number;

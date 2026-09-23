@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -30,6 +31,7 @@ import { API_ROUTES } from "@/lib/api-routes";
 import { mixingActivityTemplatesService } from "@/services/index.service";
 import {
   ArrowLeft,
+  CircleOff,
   Copy,
   Edit2,
   EllipsisVertical,
@@ -43,7 +45,12 @@ import type {
   MixingActivityTemplate,
   UpdateMixingActivityTemplatePayload,
 } from "../types";
-import { formatBatchSize, getCreatorLabel } from "../utils";
+import {
+  formatBatchSize,
+  getCreatorLabel,
+  getMixingActivityTemplateStatusLabel,
+  isMixingActivityTemplateActive,
+} from "../utils";
 import { TemplateTreeContext } from "./template-tree-context";
 import MixingActivityTemplateDetail from "./mixing-activity-template-detail";
 
@@ -95,6 +102,8 @@ export default function InlineMixingActivityTemplates({
   const [cloningTemplate, setCloningTemplate] =
     useState<MixingActivityTemplate | null>(null);
   const [deletingTemplate, setDeletingTemplate] =
+    useState<MixingActivityTemplate | null>(null);
+  const [deactivatingTemplate, setDeactivatingTemplate] =
     useState<MixingActivityTemplate | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
     null,
@@ -392,6 +401,42 @@ export default function InlineMixingActivityTemplates({
     }
   };
 
+  const handleDeactivate = async () => {
+    if (!deactivatingTemplate) return;
+
+    setIsSubmitting(true);
+    try {
+      const updated = await mixingActivityTemplatesService.update(
+        deactivatingTemplate.id,
+        { status: "inactive" },
+      );
+      await mutate(
+        (current) =>
+          current?.map((template) =>
+            template.id === updated.id ? updated : template,
+          ),
+        { revalidate: false },
+      );
+      if (selectedTemplateId === updated.id) {
+        await mutateDetail(
+          (current) => (current ? { ...current, ...updated } : current),
+          { revalidate: false },
+        );
+      }
+      setDeactivatingTemplate(null);
+      toast.success("Đã ngừng sử dụng biểu mẫu theo dõi pha chế.");
+    } catch (deactivateError) {
+      toast.error(
+        getErrorMessage(
+          deactivateError,
+          "Không thể ngừng sử dụng biểu mẫu theo dõi pha chế.",
+        ),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-4xl pb-24">
       {detailTemplate ? (
@@ -420,6 +465,8 @@ export default function InlineMixingActivityTemplates({
             onClose={() => setSelectedTemplateId(null)}
             onEdit={() => openEditForm(detailTemplate)}
             onDelete={() => setDeletingTemplate(detailTemplate)}
+            onDeactivate={() => setDeactivatingTemplate(detailTemplate)}
+            isSubmitting={isSubmitting}
           />
         </TemplateTreeContext.Provider>
       ) : (
@@ -507,9 +554,21 @@ export default function InlineMixingActivityTemplates({
                   <p className="truncate text-sm font-bold text-gray-900">
                     {template.description || "Biểu mẫu theo dõi hoạt động pha"}
                   </p>
-                  <p className="mt-1 truncate text-sm text-gray-600">
-                    Phiên bản {template.version}
-                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="truncate text-sm text-gray-600">
+                      Phiên bản {template.version}
+                    </p>
+                    <Badge
+                      variant="outline"
+                      className={
+                        isMixingActivityTemplateActive(template)
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 bg-slate-100 text-slate-600"
+                      }
+                    >
+                      {getMixingActivityTemplateStatusLabel(template)}
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="shrink-0 text-right">
@@ -546,6 +605,14 @@ export default function InlineMixingActivityTemplates({
                       <Edit2 className="size-4" />
                       Sửa
                     </DropdownMenuItem>
+                    {isMixingActivityTemplateActive(template) ? (
+                      <DropdownMenuItem
+                        onSelect={() => setDeactivatingTemplate(template)}
+                      >
+                        <CircleOff className="size-4" />
+                        Ngừng sử dụng
+                      </DropdownMenuItem>
+                    ) : null}
                     <DropdownMenuItem
                       variant="destructive"
                       onSelect={() => setDeletingTemplate(template)}
@@ -565,6 +632,42 @@ export default function InlineMixingActivityTemplates({
         )}
       </section>
       )}
+
+      <Dialog
+        open={Boolean(deactivatingTemplate)}
+        onOpenChange={(open) => {
+          if (!isSubmitting && !open) setDeactivatingTemplate(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ngừng sử dụng biểu mẫu?</DialogTitle>
+            <DialogDescription>
+              Biểu mẫu này sẽ không còn được chọn để tạo phiếu pha chế mới.
+              Dữ liệu và các phiếu pha chế đã tạo vẫn được giữ nguyên.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSubmitting}
+              onClick={() => setDeactivatingTemplate(null)}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isSubmitting}
+              onClick={() => void handleDeactivate()}
+            >
+              <CircleOff className="size-4" />
+              {isSubmitting ? "Đang cập nhật..." : "Ngừng sử dụng"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isCopyFromOpen}

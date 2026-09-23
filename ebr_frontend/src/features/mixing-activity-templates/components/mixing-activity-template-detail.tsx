@@ -1,10 +1,17 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit2, Trash2 } from "lucide-react";
+import { ArrowLeft, CircleOff, Edit2, Trash2 } from "lucide-react";
 import Image from "next/image";
 import type { MixingActivityTemplate } from "../types";
-import { formatBatchSize, formatDateTime, getCreatorLabel } from "../utils";
+import {
+  formatBatchSize,
+  formatDateTime,
+  getCreatorLabel,
+  getMixingActivityTemplateStatusLabel,
+  isMixingActivityTemplateActive,
+} from "../utils";
 import MixingActivityTemplateStages from "./mixing-activity-template-stages";
 
 export default function MixingActivityTemplateDetail({
@@ -16,6 +23,8 @@ export default function MixingActivityTemplateDetail({
   onClose,
   onEdit,
   onDelete,
+  onDeactivate,
+  isSubmitting = false,
 }: {
   template: MixingActivityTemplate;
   itemCode: string;
@@ -25,7 +34,11 @@ export default function MixingActivityTemplateDetail({
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onDeactivate: () => void;
+  isSubmitting?: boolean;
 }) {
+  const isActive = isMixingActivityTemplateActive(template);
+
   return (
     <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
       <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -49,14 +62,45 @@ export default function MixingActivityTemplateDetail({
               {itemCode}
               {itemName ? ` - ${itemName}` : ""}
             </p>
+            <Badge
+              variant="outline"
+              className={`mt-2 ${
+                isActive
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-slate-200 bg-slate-100 text-slate-600"
+              }`}
+            >
+              {getMixingActivityTemplateStatusLabel(template)}
+            </Badge>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-          <Button type="button" variant="outline" onClick={onEdit} disabled={isLoading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onEdit}
+            disabled={isLoading || isSubmitting}
+          >
             <Edit2 className="size-4" />
             Sửa
           </Button>
-          <Button type="button" variant="destructive" onClick={onDelete}>
+          {isActive ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onDeactivate}
+              disabled={isLoading || isSubmitting}
+            >
+              <CircleOff className="size-4" />
+              Ngừng sử dụng
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onDelete}
+            disabled={isSubmitting}
+          >
             <Trash2 className="size-4" />
             Xóa
           </Button>
@@ -173,6 +217,17 @@ export default function MixingActivityTemplateDetail({
                   className="h-12 whitespace-pre-wrap break-words border border-black px-2 py-2 align-middle leading-6"
                 >
                   {template.description || ""}
+                </td>
+              </tr>
+              <tr>
+                <th className="h-12 border border-black px-2 py-2 text-left align-middle font-semibold leading-6">
+                  Trạng thái:
+                </th>
+                <td
+                  colSpan={3}
+                  className="h-12 border border-black px-2 py-2 align-middle leading-6"
+                >
+                  {getMixingActivityTemplateStatusLabel(template)}
                 </td>
               </tr>
               <tr>
