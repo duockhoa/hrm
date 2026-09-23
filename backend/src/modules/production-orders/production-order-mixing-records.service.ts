@@ -154,20 +154,27 @@ export class ProductionOrderMixingRecordsService {
         stages: {
           create: template.stages.map((stage) => ({
             source_template_stage_id: stage.id,
-            stage_name: stage.stage_name,
+            stage_name: this.unwrapTemplatePlaceholder(stage.stage_name),
             stage_order: stage.stage_order,
             steps: {
               create: stage.steps.map((step) => ({
                 source_template_step_id: step.id,
-                step_name: step.step_name,
+                step_name: this.unwrapTemplatePlaceholder(step.step_name),
                 step_order: step.step_order,
                 parameters: {
                   create: step.parameters.map((parameter) => ({
                     source_template_parameter_id: parameter.id,
-                    parameter_name: parameter.parameter_name,
+                    parameter_name: this.unwrapTemplatePlaceholder(
+                      parameter.parameter_name,
+                    ),
                     data_type: parameter.data_type,
-                    unit: parameter.unit,
-                    requirement: parameter.requirement,
+                    unit:
+                      parameter.unit === null
+                        ? null
+                        : this.unwrapTemplatePlaceholder(parameter.unit),
+                    requirement: this.unwrapTemplatePlaceholder(
+                      parameter.requirement,
+                    ),
                     parameter_order: parameter.parameter_order,
                   })),
                 },
@@ -843,6 +850,10 @@ export class ProductionOrderMixingRecordsService {
     }
 
     return normalizedValue;
+  }
+
+  private unwrapTemplatePlaceholder(value: string) {
+    return value.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, '$1');
   }
 
   private normalizeResultValue(value: unknown, dataType: string) {
