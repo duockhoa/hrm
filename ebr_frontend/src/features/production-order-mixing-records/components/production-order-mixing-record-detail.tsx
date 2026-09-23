@@ -302,14 +302,12 @@ export default function ProductionOrderMixingRecordDetail({
             </tbody>
           </table>
 
-          {isParameterEntryDisabled ? (
+          {isParameterEntryDisabled && !isIpcStaffApproved ? (
             <div
               role="status"
               className="mt-6 border border-amber-300 bg-amber-50 px-3 py-2 font-sans text-sm font-medium text-amber-900"
             >
-              {isIpcStaffApproved
-                ? "Phiếu đã được nhân viên IPC ký duyệt nên không thể sửa kết quả thực tế, ghi chú hoặc hình ảnh."
-                : "Chưa thể nhập thông số. Nhân viên ĐBCL cần ký duyệt phiếu trước khi nhập kết quả thực tế, ghi chú hoặc hình ảnh."}
+              Chưa thể nhập thông số. Nhân viên ĐBCL cần ký duyệt phiếu trước khi nhập kết quả thực tế, ghi chú hoặc hình ảnh.
             </div>
           ) : null}
 
