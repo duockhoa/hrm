@@ -41,6 +41,7 @@ import {
 import { type FormEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
+import { MIXING_ACTIVITY_TEMPLATE_UNITS } from "../types";
 import type {
   MixingActivityTemplate,
   UpdateMixingActivityTemplatePayload,
@@ -74,6 +75,9 @@ const emptyForm = (): TemplateFormState => ({
   unitOfMeasure: "",
   description: "",
 });
+
+const isTemplateUnitOption = (value: string) =>
+  MIXING_ACTIVITY_TEMPLATE_UNITS.some((unit) => unit === value);
 
 const getErrorMessage = (error: any, fallback: string) => {
   const message = error?.response?.data?.message ?? error?.message;
@@ -250,12 +254,8 @@ export default function InlineMixingActivityTemplates({
       toast.error("Cỡ lô phải là số dương.");
       return false;
     }
-    if (!form.unitOfMeasure.trim()) {
-      toast.error("Vui lòng nhập đơn vị tính.");
-      return false;
-    }
-    if (form.unitOfMeasure.trim().length > 50) {
-      toast.error("Đơn vị tính tối đa 50 ký tự.");
+    if (!form.unitOfMeasure) {
+      toast.error("Vui lòng chọn đơn vị tính.");
       return false;
     }
     if (!form.description.trim()) {
@@ -844,22 +844,41 @@ export default function InlineMixingActivityTemplates({
             </div>
             <div className="space-y-2">
               <Label htmlFor="mixing-template-unit">Đơn vị tính *</Label>
-              <Input
+              <select
                 id="mixing-template-unit"
                 value={form.unitOfMeasure}
-                maxLength={50}
                 disabled={isSubmitting}
-                placeholder="kg"
+                required
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
                     unitOfMeasure: event.target.value,
                   }))
                 }
-              />
-              <p className="text-right text-xs text-gray-400">
-                {form.unitOfMeasure.length}/50
-              </p>
+              >
+                <option value="" disabled>
+                  Chọn đơn vị tính
+                </option>
+                {form.unitOfMeasure &&
+                !isTemplateUnitOption(form.unitOfMeasure) ? (
+                  <option value={form.unitOfMeasure} disabled>
+                    {form.unitOfMeasure} (đơn vị cũ)
+                  </option>
+                ) : null}
+                {MIXING_ACTIVITY_TEMPLATE_UNITS.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
+              {form.unitOfMeasure &&
+              !isTemplateUnitOption(form.unitOfMeasure) ? (
+                <p className="text-xs text-amber-700">
+                  Đây là đơn vị của dữ liệu cũ. Hãy chọn một đơn vị cố định khi
+                  cần thay đổi.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="mixing-template-description">Mô tả *</Label>

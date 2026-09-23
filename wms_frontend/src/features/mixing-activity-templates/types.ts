@@ -19,6 +19,14 @@ export type MixingActivityTemplateItem = {
   updated_at?: string | null;
 };
 
+export const MIXING_ACTIVITY_TEMPLATE_UNITS = [
+  "kg",
+  "Lít",
+  "gói",
+  "lọ",
+  "tuýp",
+] as const;
+
 export const MIXING_ACTIVITY_TEMPLATE_STATUSES = [
   "active",
   "inactive",
