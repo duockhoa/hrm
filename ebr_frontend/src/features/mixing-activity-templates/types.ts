@@ -25,6 +25,7 @@ export const MIXING_ACTIVITY_TEMPLATE_UNITS = [
   "gói",
   "lọ",
   "tuýp",
+  "viên",
 ] as const;
 
 export const MIXING_ACTIVITY_TEMPLATE_STATUSES = [
