@@ -35,6 +35,7 @@ import type {
   FilterCatalog,
   UpdateFilterCatalogPayload,
 } from "../types";
+import { formatFilterCatalogSensoryRequirement } from "../utils";
 import FilterCatalogDetail from "./filter-catalog-detail";
 
 type FilterCatalogFormState = {
@@ -74,6 +75,7 @@ const INTEGRITY_REQUIREMENT_OPTIONS = [
   "Độ sụt áp < 28.3 mbar trong 3 phút",
   "Độ sút áp < 45.1 mbar trong 3 phút",
   "Điểm sủi bọt không quá 52 Psi",
+  "- Nếu P ≥ 50 psi: Đạt\n- Nếu P < 50 psi: Không đạt\n- Nếu áp suất đầu vào ≥ 60 psi thì ngừng test và kết luận đạt",
 ] as const;
 const NO_INTEGRITY_REQUIREMENT_VALUE = "__none__";
 const PRE_FILTER_SENSORY_REQUIREMENT_OPTIONS = [
@@ -341,13 +343,17 @@ export default function FilterCatalogsPage() {
                     <TableCell className="text-right">
                       {filterCatalog.production_order_filtration_checks_count ?? 0}
                     </TableCell>
-                    <TableCell className="max-w-64 whitespace-normal break-words leading-5">
-                      {filterCatalog.pre_filter_sensory_requirement ?? ""}
+                    <TableCell className="max-w-64 whitespace-pre-line break-words leading-5">
+                      {formatFilterCatalogSensoryRequirement(
+                        filterCatalog.pre_filter_sensory_requirement,
+                      )}
                     </TableCell>
-                    <TableCell className="max-w-64 whitespace-normal break-words leading-5">
-                      {filterCatalog.post_filter_sensory_requirement ?? ""}
+                    <TableCell className="max-w-64 whitespace-pre-line break-words leading-5">
+                      {formatFilterCatalogSensoryRequirement(
+                        filterCatalog.post_filter_sensory_requirement,
+                      )}
                     </TableCell>
-                    <TableCell className="max-w-64 whitespace-normal break-words leading-5">
+                    <TableCell className="max-w-64 whitespace-pre-line break-words leading-5">
                       {filterCatalog.integrity_requirement ?? ""}
                     </TableCell>
                     <TableCell className="max-w-80 whitespace-normal break-words leading-5">
@@ -493,7 +499,7 @@ export default function FilterCatalogsPage() {
               >
                 <SelectTrigger
                   id="sensory-requirement"
-                  className="min-h-9 w-full items-start whitespace-normal py-2 text-left data-[size=default]:h-auto [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal [&_[data-slot=select-value]]:leading-5"
+                  className="min-h-9 w-full items-start whitespace-pre-line py-2 text-left data-[size=default]:h-auto [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-pre-line [&_[data-slot=select-value]]:leading-5"
                 >
                   <SelectValue placeholder="Chọn yêu cầu cảm quan trước lọc" />
                 </SelectTrigger>
@@ -508,9 +514,9 @@ export default function FilterCatalogsPage() {
                     <SelectItem
                       key={requirement}
                       value={requirement}
-                      className="h-auto min-h-9 items-start whitespace-normal py-2 leading-5"
+                      className="h-auto min-h-9 items-start whitespace-pre-line py-2 leading-5"
                     >
-                      {requirement}
+                      {formatFilterCatalogSensoryRequirement(requirement)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -536,7 +542,7 @@ export default function FilterCatalogsPage() {
               >
                 <SelectTrigger
                   id="post-filter-sensory-requirement"
-                  className="min-h-9 w-full items-start whitespace-normal py-2 text-left data-[size=default]:h-auto [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal [&_[data-slot=select-value]]:leading-5"
+                  className="min-h-9 w-full items-start whitespace-pre-line py-2 text-left data-[size=default]:h-auto [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-pre-line [&_[data-slot=select-value]]:leading-5"
                 >
                   <SelectValue placeholder="Chọn yêu cầu cảm quan sau lọc" />
                 </SelectTrigger>
@@ -551,9 +557,9 @@ export default function FilterCatalogsPage() {
                     <SelectItem
                       key={requirement}
                       value={requirement}
-                      className="h-auto min-h-9 items-start whitespace-normal py-2 leading-5"
+                      className="h-auto min-h-9 items-start whitespace-pre-line py-2 leading-5"
                     >
-                      {requirement}
+                      {formatFilterCatalogSensoryRequirement(requirement)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -576,15 +582,22 @@ export default function FilterCatalogsPage() {
                   }))
                 }
               >
-                <SelectTrigger id="integrity-requirement" className="w-full">
+                <SelectTrigger
+                  id="integrity-requirement"
+                  className="min-h-9 w-full items-start whitespace-pre-line py-2 text-left data-[size=default]:h-auto [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-pre-line [&_[data-slot=select-value]]:leading-5"
+                >
                   <SelectValue placeholder="Chọn yêu cầu toàn vẹn" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] [&_[data-radix-select-viewport]]:h-auto">
                   <SelectItem value={NO_INTEGRITY_REQUIREMENT_VALUE}>
                     Không có yêu cầu
                   </SelectItem>
                   {INTEGRITY_REQUIREMENT_OPTIONS.map((requirement) => (
-                    <SelectItem key={requirement} value={requirement}>
+                    <SelectItem
+                      key={requirement}
+                      value={requirement}
+                      className="h-auto min-h-9 items-start whitespace-pre-line py-2 leading-5"
+                    >
                       {requirement}
                     </SelectItem>
                   ))}

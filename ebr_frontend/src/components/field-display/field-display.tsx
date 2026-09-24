@@ -12,7 +12,7 @@ export default function FieldDisplay({
       </div>
 
       <div className="min-w-0 flex-1 text-left text-gray-800">
-        <p className="wrap-anywhere">{value}</p>
+        <p className="whitespace-pre-line wrap-anywhere">{value}</p>
       </div>
     </div>
   );

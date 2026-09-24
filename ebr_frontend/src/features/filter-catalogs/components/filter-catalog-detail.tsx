@@ -16,6 +16,7 @@ import { API_ROUTES } from "@/lib/api-routes";
 import filterCatalogsService from "@/services/filter-catalogs.service";
 import { memo } from "react";
 import type { FilterCatalog, FilterCatalogFiltrationCheck } from "../types";
+import { formatFilterCatalogSensoryRequirement } from "../utils";
 
 const formatDateTime = (value?: string | null) =>
   value
@@ -104,8 +105,14 @@ export default function FilterCatalogDetail({
     ["Mã cột lọc", data.filter_code],
     ["Loại lọc", data.filter_type],
     ["Số lần hấp cho phép", data.usable_steam_cycles],
-    ["Yêu cầu cảm quan trước lọc", data.pre_filter_sensory_requirement],
-    ["Yêu cầu cảm quan sau lọc", data.post_filter_sensory_requirement],
+    [
+      "Yêu cầu cảm quan trước lọc",
+      formatFilterCatalogSensoryRequirement(data.pre_filter_sensory_requirement),
+    ],
+    [
+      "Yêu cầu cảm quan sau lọc",
+      formatFilterCatalogSensoryRequirement(data.post_filter_sensory_requirement),
+    ],
     ["Yêu cầu toàn vẹn", data.integrity_requirement],
     ["Mô tả", data.description],
   ].flatMap(([label, value]) =>

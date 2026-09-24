@@ -26,3 +26,9 @@ export const isFilterCatalogExpired = (filterCatalog: FilterCatalog) => {
 
 export const isFilterCatalogUsable = (filterCatalog: FilterCatalog) =>
   !isFilterCatalogExpired(filterCatalog);
+
+export const formatFilterCatalogSensoryRequirement = (value?: string | null) =>
+  (value ?? "").replace(
+    /\.\s+(?=(?:Tình trạng sợi vải|Màu sắc|Gioăng cao su|Tính nguyên vẹn|Lớp màng lọc xếp nếp bên trong):)/g,
+    ".\n",
+  );
