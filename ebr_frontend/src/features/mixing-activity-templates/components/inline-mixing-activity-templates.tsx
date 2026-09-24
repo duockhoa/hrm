@@ -800,7 +800,7 @@ export default function InlineMixingActivityTemplates({
             </DialogTitle>
             <DialogDescription>
               {cloningTemplate
-                ? `Chỉnh sửa thông tin bản sao. Toàn bộ giai đoạn, bước và thông số từ biểu mẫu phiên bản ${cloningTemplate.version} sẽ được sao chép.`
+                ? `Chỉnh sửa thông tin bản sao. Toàn bộ giai đoạn, bước và thông số từ biểu mẫu phiên bản ${cloningTemplate.version} sẽ được sao chép. Nếu giữ nguyên đơn vị, các số dạng {{100}} sẽ được nhân theo tỷ lệ cỡ lô mới.`
                 : `Thiết lập phiên bản và cỡ lô áp dụng cho mã hàng ${itemCode}.`}
             </DialogDescription>
           </DialogHeader>

@@ -167,6 +167,33 @@ export class MixingActivityTemplatesService {
                 _max: { version: true },
               })
             : null;
+        const batchSize = this.normalizePositiveNumber(
+          dto.batch_size === undefined ? source.batch_size : dto.batch_size,
+          'batch_size',
+        );
+        const unitOfMeasure = this.normalizeRequiredString(
+          dto.unit_of_measure === undefined
+            ? source.unit_of_measure
+            : dto.unit_of_measure,
+          'unit_of_measure',
+          50,
+        );
+        const sourceBatchSize = new Prisma.Decimal(source.batch_size);
+        const scaleFactor =
+          source.item_code === normalizedItemCode &&
+          source.unit_of_measure.trim() === unitOfMeasure &&
+          sourceBatchSize.greaterThan(0) &&
+          !sourceBatchSize.equals(batchSize)
+            ? new Prisma.Decimal(batchSize).div(sourceBatchSize)
+            : null;
+        const description = this.scaleNumericPlaceholders(
+          this.normalizeDescription(
+            dto.description === undefined
+              ? source.description
+              : dto.description,
+          ),
+          scaleFactor,
+        );
 
         // A nested create writes the entire tree atomically with new IDs.
         return tx.mixingActivityTemplates.create({
@@ -176,40 +203,42 @@ export class MixingActivityTemplatesService {
               dto.version ?? (latestVersion?._max.version ?? 0) + 1,
               'version',
             ),
-            batch_size: this.normalizePositiveNumber(
-              dto.batch_size === undefined ? source.batch_size : dto.batch_size,
-              'batch_size',
-            ),
-            unit_of_measure: this.normalizeRequiredString(
-              dto.unit_of_measure === undefined
-                ? source.unit_of_measure
-                : dto.unit_of_measure,
-              'unit_of_measure',
-              50,
-            ),
-            description: this.normalizeDescription(
-              dto.description === undefined
-                ? source.description
-                : dto.description,
-            ),
+            batch_size: batchSize,
+            unit_of_measure: unitOfMeasure,
+            description,
             status: ACTIVE_MIXING_ACTIVITY_TEMPLATE_STATUS,
             created_by_id: userId,
             stages: {
               create: source.stages.map((stage) => ({
-                stage_name: stage.stage_name,
+                stage_name: this.scaleNumericPlaceholders(
+                  stage.stage_name,
+                  scaleFactor,
+                ),
                 stage_order: stage.stage_order,
                 created_by_id: userId,
                 steps: {
                   create: stage.steps.map((step) => ({
-                    step_name: step.step_name,
+                    step_name: this.scaleNumericPlaceholders(
+                      step.step_name,
+                      scaleFactor,
+                    ),
                     step_order: step.step_order,
                     created_by_id: userId,
                     parameters: {
                       create: step.parameters.map((parameter) => ({
-                        parameter_name: parameter.parameter_name,
+                        parameter_name: this.scaleNumericPlaceholders(
+                          parameter.parameter_name,
+                          scaleFactor,
+                        ),
                         data_type: parameter.data_type,
-                        unit: parameter.unit,
-                        requirement: parameter.requirement,
+                        unit: this.scaleNumericPlaceholders(
+                          parameter.unit,
+                          scaleFactor,
+                        ),
+                        requirement: this.scaleNumericPlaceholders(
+                          parameter.requirement,
+                          scaleFactor,
+                        ),
                         parameter_order: parameter.parameter_order,
                         created_by_id: userId,
                       })),
@@ -345,6 +374,29 @@ export class MixingActivityTemplatesService {
 
     const normalizedValue = String(value).trim();
     return normalizedValue || null;
+  }
+
+  private scaleNumericPlaceholders<T extends string | null>(
+    value: T,
+    scaleFactor: Prisma.Decimal | null,
+  ): T {
+    if (value === null || scaleFactor === null) {
+      return value;
+    }
+
+    return value.replace(
+      /\{\{\s*(-?\d+(?:[.,]\d+)?)\s*\}\}/g,
+      (_, rawNumber: string) => {
+        const scaledValue = new Prisma.Decimal(rawNumber.replace(',', '.'))
+          .mul(scaleFactor)
+          .toFixed();
+        const formattedValue = rawNumber.includes(',')
+          ? scaledValue.replace('.', ',')
+          : scaledValue;
+
+        return `{{${formattedValue}}}`;
+      },
+    ) as T;
   }
 
   private normalizeStatus(value: unknown) {

@@ -314,6 +314,114 @@ describe('MixingActivityTemplatesService.copyFromTemplate', () => {
     });
   });
 
+  it('scales numeric placeholders only in a same-item copy with the same unit', async () => {
+    const sourceWithPlaceholders = {
+      ...source,
+      description: 'Cỡ lô {{125,5}}',
+      stages: [
+        {
+          ...source.stages[0],
+          stage_name: 'Pha {{20}}',
+          steps: [
+            {
+              ...source.stages[0].steps[0],
+              step_name: 'Khuấy {{1.25}}',
+              parameters: [
+                {
+                  ...source.stages[0].steps[0].parameters[0],
+                  parameter_name: 'Tốc độ {{100}}',
+                  unit: '{{rpm}}',
+                  requirement: 'Giới hạn 10; {{50}} rpm; {{không phải số}}',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    tx.mixingActivityTemplates.findUnique.mockResolvedValue(
+      sourceWithPlaceholders,
+    );
+
+    await service.copyFromTemplate(
+      'BTP-SOURCE',
+      {
+        source_template_id: 17,
+        version: 21,
+        batch_size: '251',
+        unit_of_measure: 'kg',
+      },
+      { id: 9 },
+    );
+
+    expect(
+      tx.mixingActivityTemplates.create.mock.calls[0][0].data,
+    ).toMatchObject({
+      batch_size: 251,
+      unit_of_measure: 'kg',
+      description: 'Cỡ lô {{251}}',
+      stages: {
+        create: [
+          {
+            stage_name: 'Pha {{40}}',
+            steps: {
+              create: [
+                {
+                  step_name: 'Khuấy {{2.5}}',
+                  parameters: {
+                    create: [
+                      {
+                        parameter_name: 'Tốc độ {{200}}',
+                        unit: '{{rpm}}',
+                        requirement:
+                          'Giới hạn 10; {{100}} rpm; {{không phải số}}',
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+    expect(sourceWithPlaceholders.stages[0].stage_name).toBe('Pha {{20}}');
+  });
+
+  it('does not scale numeric placeholders when the copied unit changes', async () => {
+    tx.mixingActivityTemplates.findUnique.mockResolvedValue({
+      ...source,
+      description: 'Cỡ lô {{125.5}}',
+      stages: [
+        {
+          ...source.stages[0],
+          stage_name: 'Pha {{20}}',
+          steps: [],
+        },
+      ],
+    });
+
+    await service.copyFromTemplate(
+      'BTP-SOURCE',
+      {
+        source_template_id: 17,
+        version: 21,
+        batch_size: '251',
+        unit_of_measure: 'Lít',
+      },
+      { id: 9 },
+    );
+
+    expect(
+      tx.mixingActivityTemplates.create.mock.calls[0][0].data,
+    ).toMatchObject({
+      description: 'Cỡ lô {{125.5}}',
+      stages: {
+        create: [expect.objectContaining({ stage_name: 'Pha {{20}}' })],
+      },
+    });
+  });
+
   it('copies an empty template to the first version of a target item', async () => {
     tx.mixingActivityTemplates.findUnique.mockResolvedValue({
       ...source,
