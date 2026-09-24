@@ -7,6 +7,7 @@ import rolesService from "./roles.service";
 import permissionsService from "./permissions.service";
 import applicationsService from "./applications.service";
 import userLoginSessionsService from "./user-login-sessions.service";
+import auditLogsService from "./audit-logs.service";
 
 export {
   userService,
@@ -17,4 +18,5 @@ export {
   permissionsService,
   applicationsService,
   userLoginSessionsService,
+  auditLogsService,
 };

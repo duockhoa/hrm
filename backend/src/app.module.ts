@@ -36,6 +36,7 @@ import { DosageFormsModule } from './modules/dosage-forms/dosage-forms.module';
 import { UserLoginSessionsModule } from './modules/user-login-sessions/user-login-sessions.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { DataExportModule } from './modules/data-export/data-export.module';
+import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { DataExportModule } from './modules/data-export/data-export.module';
     UserLoginSessionsModule,
     NotificationsModule,
     DataExportModule,
+    AuditLogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

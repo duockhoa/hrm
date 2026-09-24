@@ -7,6 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model AuditLogs {
+  id          BigInt   @id @default(autoincrement()) @db.BigInt
+  entity_type String   @db.VarChar(100)
+  entity_id   BigInt   @db.BigInt
+  entity_name String?  @db.VarChar(255)
+  action      String   @db.VarChar(30)
+  old_values  Json?
+  new_values  Json?
+  actor_id    BigInt?  @db.BigInt
+  actor_name  String?  @db.VarChar(255)
+  reason      String?  @db.Text
+  request_id  String?  @db.Char(36)
+  ip_address  String?  @db.VarChar(45)
+  user_agent  String?  @db.Text
+  created_at  DateTime @default(now()) @db.DateTime(3)
+
+  @@index([entity_type, entity_id, created_at(sort: Desc)], map: "idx_audit_logs_entity")
+  @@index([actor_id, created_at(sort: Desc)], map: "idx_audit_logs_actor")
+  @@map("audit_logs")
+}
+
 model Users {
   id                                                    Int                                                             @id @default(autoincrement())
   username                                              String                                                          @unique

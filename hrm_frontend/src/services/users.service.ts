@@ -7,6 +7,13 @@ const fetcherUsers = async () => {
   return response.data;
 };
 
+const fetcherMyPermissionKeys = async (): Promise<{
+  permissionKeys: string[];
+}> => {
+  const response = await axiosClient.get(`${API_ROUTES.users.me}/permissions`);
+  return response.data;
+};
+
 const fetcherUserRoles = async (userId: number) => {
   const response = await axiosClient.get(
     `${API_ROUTES.users.base}/${userId}/roles`,
@@ -57,6 +64,7 @@ const syncUserApplications = async (
 
 export default {
   fetcherUsers,
+  fetcherMyPermissionKeys,
   fetcherUserRoles,
   syncUserRoles,
   addUserRole,

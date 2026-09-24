@@ -66,6 +66,13 @@ const data = [
     icon: <MdHistory />,
     url: "/login-history",
   },
+  {
+    id: "8",
+    name: "Lịch sử thay đổi",
+    icon: <MdHistory />,
+    url: "/audit-logs",
+    permission: "permissions.list",
+  },
 ];
 
 export default function MainLayout({
@@ -120,6 +127,16 @@ function MainLayoutContent({
     API_ROUTES.companies.base,
     companiesService.fetcherCompanies,
   );
+  const { data: myPermissions } = useSWR(
+    `${API_ROUTES.users.me}/permissions`,
+    usersService.fetcherMyPermissionKeys,
+  );
+  const visibleMenu = data.filter(
+    (item) =>
+      !("permission" in item) ||
+      (item.permission !== undefined &&
+        myPermissions?.permissionKeys.includes(item.permission)),
+  );
   useEffect(() => {
     setCompaniesLoading(isCompaniesLoading);
     if (companies) {
@@ -142,7 +159,7 @@ function MainLayoutContent({
     <div className="flex h-screen flex-col">
       <Header />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar isOpen={isOpen} data={data} isMobile={isMobile} />
+        <Sidebar isOpen={isOpen} data={visibleMenu} isMobile={isMobile} />
         <div className="flex-1 overflow-auto p-2 bg-blue-50">{children}</div>
       </div>
     </div>

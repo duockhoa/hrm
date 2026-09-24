@@ -39,6 +39,10 @@ const USER_LOGIN_SESSIONS = {
   base: "/user-login-sessions",
 };
 
+const AUDIT_LOGS = {
+  base: "/audit-logs",
+};
+
 const APPLICATIONS = {
   base: "/applications",
 };
@@ -52,5 +56,6 @@ export const API_ROUTES = {
   roles: ROLES,
   permissions: PERMISSIONS,
   userLoginSessions: USER_LOGIN_SESSIONS,
+  auditLogs: AUDIT_LOGS,
   applications: APPLICATIONS,
 };
