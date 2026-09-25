@@ -96,15 +96,6 @@ export default function AuditLogsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md">
-      <div className="shrink-0 border-b border-gray-200 px-4 py-3">
-        <h1 className="text-xl font-semibold text-gray-900">
-          Lịch sử thay đổi
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Theo dõi dữ liệu được tạo, cập nhật hoặc xóa trong hệ thống.
-        </p>
-      </div>
-
       <form
         className="grid shrink-0 gap-3 border-b border-gray-200 p-4 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_220px_180px_auto]"
         onSubmit={(event) => {
@@ -178,10 +169,9 @@ export default function AuditLogsPage() {
       </form>
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <Table className="min-w-[1600px]">
+        <Table className="min-w-[1350px]">
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
               <TableHead>Thời gian</TableHead>
               <TableHead>Người thao tác</TableHead>
               <TableHead>Bảng</TableHead>
@@ -190,17 +180,16 @@ export default function AuditLogsPage() {
               <TableHead>Giá trị cũ</TableHead>
               <TableHead>Giá trị mới</TableHead>
               <TableHead>Lý do</TableHead>
-              <TableHead>Request ID</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={10}>Đang tải lịch sử thay đổi...</TableCell>
+                <TableCell colSpan={8}>Đang tải lịch sử thay đổi...</TableCell>
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-red-600">
+                <TableCell colSpan={8} className="text-red-600">
                   {forbidden
                     ? "Bạn không có quyền xem lịch sử thay đổi."
                     : "Không thể tải lịch sử thay đổi. Vui lòng thử lại."}
@@ -208,16 +197,13 @@ export default function AuditLogsPage() {
               </TableRow>
             ) : logs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-gray-500">
+                <TableCell colSpan={8} className="text-gray-500">
                   Chưa có lịch sử thay đổi phù hợp.
                 </TableCell>
               </TableRow>
             ) : (
               logs.map((log) => (
                 <TableRow key={log.id}>
-                  <TableCell className="font-mono text-xs text-gray-500">
-                    {log.id}
-                  </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {formatDateTime(log.created_at)}
                   </TableCell>
@@ -250,9 +236,6 @@ export default function AuditLogsPage() {
                   <TableCell className="max-w-60 break-words">
                     {log.reason || "—"}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-gray-500">
-                    {log.request_id || "—"}
-                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -260,34 +243,31 @@ export default function AuditLogsPage() {
         </Table>
       </div>
 
-      {meta && (
-        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-gray-200 px-4 py-3">
-          <span className="text-sm text-gray-500">{meta.total} thay đổi</span>
-          {meta.total_pages > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((current) => current - 1)}
-                disabled={page === 1}
-              >
-                <ChevronLeft />
-                Trước
-              </Button>
-              <span className="text-sm text-gray-600">
-                Trang {meta.page}/{meta.total_pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((current) => current + 1)}
-                disabled={page >= meta.total_pages}
-              >
-                Sau
-                <ChevronRight />
-              </Button>
-            </div>
-          )}
+      {meta && meta.total_pages > 1 && (
+        <div className="flex shrink-0 justify-end border-t border-gray-200 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((current) => current - 1)}
+              disabled={page === 1}
+            >
+              <ChevronLeft />
+              Trước
+            </Button>
+            <span className="text-sm text-gray-600">
+              Trang {meta.page}/{meta.total_pages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((current) => current + 1)}
+              disabled={page >= meta.total_pages}
+            >
+              Sau
+              <ChevronRight />
+            </Button>
+          </div>
         </div>
       )}
     </div>
