@@ -191,7 +191,7 @@ export default function MixingRecordResultInput({
         </label>
         <div className="ml-auto flex items-center gap-2">
           {parameter.unit ? (
-            <span className="font-medium text-slate-600">{parameter.unit}</span>
+            <span className="font-medium text-blue-600">{parameter.unit}</span>
           ) : null}
           {isSaving ? (
             <Loader2 className="size-4 animate-spin text-blue-600" />
