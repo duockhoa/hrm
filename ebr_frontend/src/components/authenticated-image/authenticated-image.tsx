@@ -358,10 +358,11 @@ export function ImagePreviewDialog({
 
           <Button
             type="button"
-            size="sm"
+            size="icon-sm"
             variant="outline"
             disabled={!downloadUrl}
             title={downloadUrl ? "Tải ảnh gốc xuống" : "Đang tải ảnh gốc"}
+            aria-label={downloadUrl ? "Tải ảnh gốc xuống" : "Đang tải ảnh gốc"}
             onClick={handleDownload}
           >
             {downloadUrl ? (
@@ -369,9 +370,6 @@ export function ImagePreviewDialog({
             ) : (
               <Loader2 className="size-4 animate-spin" />
             )}
-            <span className="hidden sm:inline">
-              {downloadUrl ? "Tải ảnh gốc" : "Đang tải ảnh gốc"}
-            </span>
           </Button>
         </div>
 
