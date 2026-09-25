@@ -160,7 +160,7 @@ export default function MixingRecordResultInput({
 
   if (parameter.data_type === "boolean") {
     return (
-      <div className="relative flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 px-1 py-1.5 font-sans text-sm">
+      <div className="relative flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 px-1 py-1.5 font-sans text-sm text-blue-600">
         <label
           className={`inline-flex items-center gap-1.5 ${
             disabled ? "cursor-default" : "cursor-pointer"
@@ -204,7 +204,7 @@ export default function MixingRecordResultInput({
   }
 
   const sharedClassName =
-    "min-w-0 flex-1 border-0 bg-transparent px-2 py-2 font-sans text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:bg-blue-50/50 disabled:cursor-default disabled:opacity-100";
+    "min-w-0 flex-1 border-0 bg-transparent px-2 py-2 font-sans text-sm text-blue-600 outline-none placeholder:text-slate-400 focus:bg-blue-50/50 disabled:cursor-default disabled:opacity-100";
 
   return (
     <div className="flex min-h-10 items-stretch">
@@ -266,7 +266,7 @@ export default function MixingRecordResultInput({
         </span>
       ) : null}
       {parameter.unit ? (
-        <span className="flex max-w-20 shrink-0 items-center break-words bg-transparent px-2 py-1 font-sans text-xs font-medium text-slate-900">
+        <span className="flex max-w-20 shrink-0 items-center break-words bg-transparent px-2 py-1 font-sans text-xs font-medium text-blue-600">
           {parameter.unit}
         </span>
       ) : null}
