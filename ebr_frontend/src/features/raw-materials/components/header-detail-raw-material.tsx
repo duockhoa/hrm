@@ -9,9 +9,11 @@ import { AiOutlineRight } from "react-icons/ai";
 export default function DetailRawMaterialHeader({
   rawMaterial,
   onOpenMixingActivityTemplates,
+  onOpenDatePrintTemplates,
 }: {
   rawMaterial: any;
   onOpenMixingActivityTemplates?: () => void;
+  onOpenDatePrintTemplates?: () => void;
 }) {
   const router = useRouter();
 
@@ -34,6 +36,15 @@ export default function DetailRawMaterialHeader({
         >
           <FileText className="size-4" />
           BM Pha chế
+        </Button>
+        <Button
+          type="button"
+          className="h-9 bg-gray-950 px-3 text-white hover:bg-gray-800"
+          disabled={!rawMaterial}
+          onClick={onOpenDatePrintTemplates}
+        >
+          <FileText className="size-4" />
+          BM in date
         </Button>
         <Button
           type="button"

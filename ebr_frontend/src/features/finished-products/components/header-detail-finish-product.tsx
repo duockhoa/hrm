@@ -17,9 +17,11 @@ import { AiOutlineRight } from "react-icons/ai";
 export default function DetailFinishProductHeader({
   finishProduct,
   onOpenMixingActivityTemplates,
+  onOpenDatePrintTemplates,
 }: {
   finishProduct: any;
   onOpenMixingActivityTemplates?: () => void;
+  onOpenDatePrintTemplates?: () => void;
 }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const router = useRouter();
@@ -43,6 +45,15 @@ export default function DetailFinishProductHeader({
         >
           <FileText className="size-4" />
           BM Pha chế
+        </Button>
+        <Button
+          type="button"
+          className="h-9 bg-gray-950 px-3 text-white hover:bg-gray-800"
+          disabled={!finishProduct}
+          onClick={onOpenDatePrintTemplates}
+        >
+          <FileText className="size-4" />
+          BM in date
         </Button>
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <Button

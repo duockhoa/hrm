@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { ItemEquipmentService } from './item-equipment.service';
+import { DATE_PRINT_TEMPLATE_PERMISSIONS } from './date-print-templates.permissions';
+import { DatePrintTemplatesService } from './date-print-templates.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
 import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
@@ -26,6 +28,17 @@ describe('ItemsController', () => {
     create: jest.Mock;
     copyFromItem: jest.Mock;
     delete: jest.Mock;
+  };
+  let datePrintTemplatesService: {
+    findAll: jest.Mock;
+    findById: jest.Mock;
+    findAllByItem: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+    uploadImage: jest.Mock;
+    deleteImage: jest.Mock;
+    delete: jest.Mock;
+    findImageFile: jest.Mock;
   };
   let mixingActivityTemplatesService: {
     copyFromTemplate: jest.Mock;
@@ -80,6 +93,17 @@ describe('ItemsController', () => {
       copyFromItem: jest.fn(),
       delete: jest.fn(),
     };
+    datePrintTemplatesService = {
+      findAll: jest.fn(),
+      findById: jest.fn(),
+      findAllByItem: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      uploadImage: jest.fn(),
+      deleteImage: jest.fn(),
+      delete: jest.fn(),
+      findImageFile: jest.fn(),
+    };
     mixingActivityTemplatesService = {
       copyFromTemplate: jest.fn(),
       findAll: jest.fn(),
@@ -127,6 +151,10 @@ describe('ItemsController', () => {
         {
           provide: ItemEquipmentService,
           useValue: itemEquipmentService,
+        },
+        {
+          provide: DatePrintTemplatesService,
+          useValue: datePrintTemplatesService,
         },
         {
           provide: MixingActivityTemplatesService,
@@ -187,6 +215,36 @@ describe('ItemsController', () => {
     ['deleteItemEquipment'].forEach((method) =>
       expect(metadata(method as keyof ItemsController)).toEqual([
         ITEM_PERMISSIONS.DELETE,
+      ]),
+    );
+
+    [
+      'findAllDatePrintTemplates',
+      'getDatePrintTemplateImage',
+      'findDatePrintTemplateById',
+      'findDatePrintTemplates',
+    ].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        DATE_PRINT_TEMPLATE_PERMISSIONS.READ,
+      ]),
+    );
+    ['createDatePrintTemplate'].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        DATE_PRINT_TEMPLATE_PERMISSIONS.CREATE,
+      ]),
+    );
+    [
+      'updateDatePrintTemplate',
+      'uploadDatePrintTemplateImage',
+      'deleteDatePrintTemplateImage',
+    ].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        DATE_PRINT_TEMPLATE_PERMISSIONS.UPDATE,
+      ]),
+    );
+    ['deleteDatePrintTemplate'].forEach((method) =>
+      expect(metadata(method as keyof ItemsController)).toEqual([
+        DATE_PRINT_TEMPLATE_PERMISSIONS.DELETE,
       ]),
     );
 
@@ -255,8 +313,10 @@ describe('ItemsController', () => {
     for (const [suffix, service] of routes) {
       service.duplicate.mockResolvedValue(result);
       service.move.mockResolvedValue(result);
-      const duplicate = controller[`duplicateMixingActivityTemplate${suffix}`].bind(controller);
-      const move = controller[`moveMixingActivityTemplate${suffix}`].bind(controller);
+      const duplicate =
+        controller[`duplicateMixingActivityTemplate${suffix}`].bind(controller);
+      const move =
+        controller[`moveMixingActivityTemplate${suffix}`].bind(controller);
       await expect(duplicate(17, { user })).resolves.toBe(result);
       await expect(move(17, { direction: 'down' })).resolves.toBe(result);
       expect(service.duplicate).toHaveBeenCalledWith(17, user);
@@ -273,9 +333,9 @@ describe('ItemsController', () => {
     await expect(
       controller.copyMixingActivityTemplate('BTP002', dto, { user }),
     ).resolves.toBe(result);
-    expect(mixingActivityTemplatesService.copyFromTemplate).toHaveBeenCalledWith(
-      'BTP002', dto, user,
-    );
+    expect(
+      mixingActivityTemplatesService.copyFromTemplate,
+    ).toHaveBeenCalledWith('BTP002', dto, user);
   });
 
   it('gets item detail by code', async () => {
@@ -315,6 +375,42 @@ describe('ItemsController', () => {
       templates,
     );
     expect(mixingActivityTemplatesService.findAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('gets all date print templates with their items', async () => {
+    const templates = [
+      {
+        id: 1,
+        item_code: 'TP00001',
+        version: 1,
+        print_content: 'NSX: {{manufacturing_date}}',
+      },
+    ];
+    datePrintTemplatesService.findAll.mockResolvedValue(templates);
+
+    await expect(controller.findAllDatePrintTemplates()).resolves.toBe(
+      templates,
+    );
+    expect(datePrintTemplatesService.findAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates a date print template using the authenticated user', async () => {
+    const dto = {
+      version: 1,
+      print_content: 'NSX: {{manufacturing_date}}',
+    };
+    const user = { id: 9 };
+    const result = { id: 17, item_code: 'TP00001', ...dto };
+    datePrintTemplatesService.create.mockResolvedValue(result);
+
+    await expect(
+      controller.createDatePrintTemplate('TP00001', dto, { user }),
+    ).resolves.toBe(result);
+    expect(datePrintTemplatesService.create).toHaveBeenCalledWith(
+      'TP00001',
+      dto,
+      user,
+    );
   });
 
   it('updates item registration_id', async () => {

@@ -3,6 +3,7 @@
 import ProductDetail from "@/components/detail-product/detail-product";
 import { InlineItemFeatureSettings } from "@/features/features";
 import { InlineItemEquipmentSettings } from "@/features/item-equipment";
+import { InlineDatePrintTemplates } from "@/features/date-print-templates";
 import { InlineMixingActivityTemplates } from "@/features/mixing-activity-templates";
 import { DetailFinishProductHeader } from "@/features/finished-products";
 import {
@@ -23,7 +24,9 @@ export default function DetailFinishedProductPage() {
   const params: any = useParams();
   const isMobile = useMobile();
   const isTablet = useTablet();
-  const [isMixingTemplatesOpen, setIsMixingTemplatesOpen] = useState(false);
+  const [templateView, setTemplateView] = useState<"mixing" | "date" | null>(
+    null,
+  );
 
   const { data, error } = useSWR(`${API_ROUTES.items.base}/${params.id}`, () =>
     itemsService.fetchItemById(params.id),
@@ -53,21 +56,28 @@ export default function DetailFinishedProductPage() {
           className="min-h-0 min-w-0 overflow-auto p-4"
           minSize={0}
         >
-          {isMixingTemplatesOpen ? (
+          {templateView === "mixing" ? (
             <div className="flex flex-col items-center rounded">
               <InlineMixingActivityTemplates
                 itemCode={data?.item_code}
                 itemName={data?.item_name}
-                onClose={() => setIsMixingTemplatesOpen(false)}
+                onClose={() => setTemplateView(null)}
+              />
+            </div>
+          ) : templateView === "date" ? (
+            <div className="flex flex-col items-center rounded">
+              <InlineDatePrintTemplates
+                itemCode={data?.item_code}
+                itemName={data?.item_name}
+                onClose={() => setTemplateView(null)}
               />
             </div>
           ) : (
             <>
               <DetailFinishProductHeader
                 finishProduct={data}
-                onOpenMixingActivityTemplates={() =>
-                  setIsMixingTemplatesOpen(true)
-                }
+                onOpenMixingActivityTemplates={() => setTemplateView("mixing")}
+                onOpenDatePrintTemplates={() => setTemplateView("date")}
               />
               <div className="mt-4 flex flex-col items-center gap-4 rounded">
                 <ProductDetail product={data} showDosageForm={false} />

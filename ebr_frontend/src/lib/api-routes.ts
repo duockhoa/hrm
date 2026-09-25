@@ -31,6 +31,15 @@ const ITEMS = {
   finishedProducts: "/items/finished-products",
   semiFinishedProducts: "/items/semi-finished-products",
   rawMaterials: "/items/raw-materials",
+  allDatePrintTemplates: "/items/date-print-templates",
+  datePrintTemplates: (itemCode: string) =>
+    `/items/${encodeURIComponent(itemCode)}/date-print-templates`,
+  datePrintTemplateDetail: (templateId: string | number) =>
+    `/items/date-print-templates/${templateId}`,
+  datePrintTemplateImage: (templateId: string | number) =>
+    `/items/date-print-templates/${templateId}/image`,
+  datePrintTemplateImageFile: (filename: string) =>
+    `/items/date-print-templates/images/${encodeURIComponent(filename)}`,
   allMixingActivityTemplates: "/items/mixing-activity-templates",
   mixingActivityTemplates: (itemCode: string) =>
     `/items/${encodeURIComponent(itemCode)}/mixing-activity-templates`,

@@ -983,6 +983,17 @@ Các API template, stage, step và parameter cần `Auth: Bearer` cùng quyền 
 | `mixing-activity-templates.update` | Toàn bộ API `PATCH` của mixing activity template  |
 | `mixing-activity-templates.delete` | Toàn bộ API `DELETE` của mixing activity template |
 
+### Date Print Templates
+
+Template lệnh in date được gắn theo mã hàng, có một ảnh minh họa và cần `Auth: Bearer`.
+
+| Key quyền                     | API được phép gọi                           |
+| ----------------------------- | ------------------------------------------- |
+| `date-print-templates.read`   | Toàn bộ API `GET` của template lệnh in date |
+| `date-print-templates.create` | API tạo template lệnh in date               |
+| `date-print-templates.update` | API cập nhật template và ảnh                |
+| `date-print-templates.delete` | API xóa template                            |
+
 ### Lấy danh sách item
 
 ```http
@@ -1342,6 +1353,76 @@ Lỗi thường gặp:
 - `401 Authenticated user not found`
 - `404 Item not found`
 - `404 Mixing activity template not found`
+
+## Date Print Templates
+
+Mỗi template thuộc một item và cặp `item_code` + `version` là duy nhất. Response
+template luôn bao gồm `item` và `createdBy`. `status` chỉ nhận `active` hoặc
+`inactive`.
+
+### Lấy danh sách template
+
+```http
+GET /items/date-print-templates
+GET /items/:item_code/date-print-templates
+```
+
+Danh sách toàn bộ được sắp xếp theo `item_code` tăng dần, sau đó `version` giảm dần.
+Danh sách theo item được sắp xếp theo `version` giảm dần.
+
+### Tạo template
+
+```http
+POST /items/:item_code/date-print-templates
+Content-Type: application/json
+```
+
+```json
+{
+  "version": 1,
+  "description": "Mẫu in nhãn chai 500 ml",
+  "print_content": "NSX: {{manufacturing_date}}\nHSD: {{expiry_date}}"
+}
+```
+
+`version` là số nguyên dương, mặc định là `1`; `print_content` bắt buộc. Template
+mới luôn có `status: "active"`.
+
+### Lấy và cập nhật template
+
+```http
+GET /items/date-print-templates/:templateId
+PATCH /items/date-print-templates/:templateId
+Content-Type: application/json
+```
+
+Ví dụ body cập nhật:
+
+```json
+{
+  "print_content": "NSX: {{manufacturing_date}}\nHSD: {{expiry_date}}\nSố lô: {{batch_number}}",
+  "status": "inactive"
+}
+```
+
+### Upload hoặc xóa ảnh minh họa
+
+```http
+POST /items/date-print-templates/:templateId/image
+Content-Type: multipart/form-data
+```
+
+Gửi một file tại field `image` (JPG, PNG, WEBP hoặc GIF; tối đa 20 MB). Upload mới
+tự thay thế và xóa file ảnh cũ. Ảnh được thu nhỏ để xem trước; thêm `?original=true`
+khi cần file gốc.
+
+```http
+GET /items/date-print-templates/images/:filename
+DELETE /items/date-print-templates/:templateId/image
+DELETE /items/date-print-templates/:templateId
+```
+
+Xóa template cũng xóa file ảnh đã lưu.
 
 ## Mixing Activity Template Stages
 

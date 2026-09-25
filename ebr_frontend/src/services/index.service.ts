@@ -17,6 +17,7 @@ import cleaningRequirementsService from "./cleaning-requirements.service";
 import secondaryPackagingStageRequirementsService from "./secondary-packaging-stage-requirements.service";
 import dosageFormsService from "./dosage-forms.service";
 import mixingActivityTemplatesService from "./mixing-activity-templates.service";
+import datePrintTemplatesService from "./date-print-templates.service";
 import mixingActivityTemplateStagesService from "./mixing-activity-template-stages.service";
 import mixingActivityTemplateStageStepsService from "./mixing-activity-template-stage-steps.service";
 import mixingActivityTemplateStageStepParametersService from "./mixing-activity-template-stage-step-parameters.service";
@@ -41,6 +42,7 @@ export {
   secondaryPackagingStageRequirementsService,
   dosageFormsService,
   mixingActivityTemplatesService,
+  datePrintTemplatesService,
   mixingActivityTemplateStagesService,
   mixingActivityTemplateStageStepsService,
   mixingActivityTemplateStageStepParametersService,

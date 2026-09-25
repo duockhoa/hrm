@@ -1,19 +1,36 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Patch,
   ParseIntPipe,
   Post,
   Query,
   Request,
+  Res,
+  StreamableFile,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { createReadStream } from 'fs';
+import type { Response } from 'express';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
+import {
+  datePrintTemplateImageUploadOptions,
+  getDatePrintTemplateImagePath,
+  removeUploadedDatePrintTemplateImage,
+} from './date-print-template-image-upload.config';
+import { DATE_PRINT_TEMPLATE_PERMISSIONS } from './date-print-templates.permissions';
+import { DatePrintTemplatesService } from './date-print-templates.service';
+import { CreateDatePrintTemplateDto } from './dto/create-date-print-template.dto';
 import { CreateItemEquipmentDto } from './dto/create-item-equipment.dto';
 import { CopyItemEquipmentDto } from './dto/copy-item-equipment.dto';
 import { CreateMixingActivityTemplateDto } from './dto/create-mixing-activity-template.dto';
@@ -23,6 +40,7 @@ import { CreateMixingActivityTemplateStageDto } from './dto/create-mixing-activi
 import { CreateMixingActivityTemplateStageStepDto } from './dto/create-mixing-activity-template-stage-step.dto';
 import { CreateMixingActivityTemplateStageStepParameterDto } from './dto/create-mixing-activity-template-stage-step-parameter.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
+import { UpdateDatePrintTemplateDto } from './dto/update-date-print-template.dto';
 import { UpdateMixingActivityTemplateDto } from './dto/update-mixing-activity-template.dto';
 import { UpdateMixingActivityTemplateStageDto } from './dto/update-mixing-activity-template-stage.dto';
 import { UpdateMixingActivityTemplateStageStepDto } from './dto/update-mixing-activity-template-stage-step.dto';
@@ -42,6 +60,7 @@ export class ItemsController {
   constructor(
     private readonly itemsService: ItemsService,
     private readonly itemEquipmentService: ItemEquipmentService,
+    private readonly datePrintTemplatesService: DatePrintTemplatesService,
     private readonly mixingActivityTemplatesService: MixingActivityTemplatesService,
     private readonly mixingActivityTemplateStagesService: MixingActivityTemplateStagesService,
     private readonly mixingActivityTemplateStageStepsService: MixingActivityTemplateStageStepsService,
@@ -88,6 +107,92 @@ export class ItemsController {
     return this.itemEquipmentService.delete(itemEquipmentId);
   }
 
+  @Get('date-print-templates')
+  @Permissions(DATE_PRINT_TEMPLATE_PERMISSIONS.READ)
+  async findAllDatePrintTemplates() {
+    return this.datePrintTemplatesService.findAll();
+  }
+
+  @Get('date-print-templates/images/:filename')
+  @Permissions(DATE_PRINT_TEMPLATE_PERMISSIONS.READ)
+  async getDatePrintTemplateImage(
+    @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const imageFile = await this.datePrintTemplatesService.findImageFile(
+      filename,
+      original === 'true',
+    );
+    if (!imageFile) {
+      throw new NotFoundException('Date print template image not found');
+    }
+
+    response.set({
+      'Cache-Control': 'private, max-age=300',
+      'Content-Length': imageFile.size,
+      'Content-Type': imageFile.contentType,
+    });
+    return new StreamableFile(createReadStream(imageFile.filePath));
+  }
+
+  @Get('date-print-templates/:templateId')
+  @Permissions(DATE_PRINT_TEMPLATE_PERMISSIONS.READ)
+  async findDatePrintTemplateById(
+    @Param('templateId', ParseIntPipe) templateId: number,
+  ) {
+    return this.datePrintTemplatesService.findById(templateId);
+  }
+
+  @Patch('date-print-templates/:templateId')
+  @Permissions(DATE_PRINT_TEMPLATE_PERMISSIONS.UPDATE)
+  async updateDatePrintTemplate(
+    @Param('templateId', ParseIntPipe) templateId: number,
+    @Body() updateDto: UpdateDatePrintTemplateDto,
+  ) {
+    return this.datePrintTemplatesService.update(templateId, updateDto);
+  }
+
+  @Post('date-print-templates/:templateId/image')
+  @Permissions(DATE_PRINT_TEMPLATE_PERMISSIONS.UPDATE)
+  @UseInterceptors(
+    FileInterceptor('image', datePrintTemplateImageUploadOptions),
+  )
+  async uploadDatePrintTemplateImage(
+    @Param('templateId', ParseIntPipe) templateId: number,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    if (!image) {
+      throw new BadRequestException('image is required');
+    }
+
+    try {
+      return await this.datePrintTemplatesService.uploadImage(
+        templateId,
+        getDatePrintTemplateImagePath(image)!,
+      );
+    } catch (error) {
+      await removeUploadedDatePrintTemplateImage(image);
+      throw error;
+    }
+  }
+
+  @Delete('date-print-templates/:templateId/image')
+  @Permissions(DATE_PRINT_TEMPLATE_PERMISSIONS.UPDATE)
+  async deleteDatePrintTemplateImage(
+    @Param('templateId', ParseIntPipe) templateId: number,
+  ) {
+    return this.datePrintTemplatesService.deleteImage(templateId);
+  }
+
+  @Delete('date-print-templates/:templateId')
+  @Permissions(DATE_PRINT_TEMPLATE_PERMISSIONS.DELETE)
+  async deleteDatePrintTemplate(
+    @Param('templateId', ParseIntPipe) templateId: number,
+  ) {
+    return this.datePrintTemplatesService.delete(templateId);
+  }
+
   @Get('mixing-activity-templates')
   @Permissions(MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ)
   async findAllMixingActivityTemplates() {
@@ -125,7 +230,10 @@ export class ItemsController {
     @Param('stageId', ParseIntPipe) stageId: number,
     @Request() req: any,
   ) {
-    return this.mixingActivityTemplateStagesService.duplicate(stageId, req.user);
+    return this.mixingActivityTemplateStagesService.duplicate(
+      stageId,
+      req.user,
+    );
   }
 
   @Patch('mixing-activity-template-stages/:stageId/move')
@@ -134,7 +242,10 @@ export class ItemsController {
     @Param('stageId', ParseIntPipe) stageId: number,
     @Body() dto: MoveMixingActivityTemplateNodeDto,
   ) {
-    return this.mixingActivityTemplateStagesService.move(stageId, dto?.direction);
+    return this.mixingActivityTemplateStagesService.move(
+      stageId,
+      dto?.direction,
+    );
   }
 
   @Get('mixing-activity-template-stages/:stageId')
@@ -168,7 +279,10 @@ export class ItemsController {
     @Param('stepId', ParseIntPipe) stepId: number,
     @Request() req: any,
   ) {
-    return this.mixingActivityTemplateStageStepsService.duplicate(stepId, req.user);
+    return this.mixingActivityTemplateStageStepsService.duplicate(
+      stepId,
+      req.user,
+    );
   }
 
   @Patch('mixing-activity-template-stage-steps/:stepId/move')
@@ -177,7 +291,10 @@ export class ItemsController {
     @Param('stepId', ParseIntPipe) stepId: number,
     @Body() dto: MoveMixingActivityTemplateNodeDto,
   ) {
-    return this.mixingActivityTemplateStageStepsService.move(stepId, dto?.direction);
+    return this.mixingActivityTemplateStageStepsService.move(
+      stepId,
+      dto?.direction,
+    );
   }
 
   @Get('mixing-activity-template-stage-steps/:stepId')
@@ -214,7 +331,10 @@ export class ItemsController {
     @Param('parameterId', ParseIntPipe) parameterId: number,
     @Request() req: any,
   ) {
-    return this.mixingActivityTemplateStageStepParametersService.duplicate(parameterId, req.user);
+    return this.mixingActivityTemplateStageStepParametersService.duplicate(
+      parameterId,
+      req.user,
+    );
   }
 
   @Patch('mixing-activity-template-stage-step-parameters/:parameterId/move')
@@ -223,7 +343,10 @@ export class ItemsController {
     @Param('parameterId', ParseIntPipe) parameterId: number,
     @Body() dto: MoveMixingActivityTemplateNodeDto,
   ) {
-    return this.mixingActivityTemplateStageStepParametersService.move(parameterId, dto?.direction);
+    return this.mixingActivityTemplateStageStepParametersService.move(
+      parameterId,
+      dto?.direction,
+    );
   }
 
   @Get('mixing-activity-template-stage-step-parameters/:parameterId')
@@ -340,6 +463,12 @@ export class ItemsController {
     return this.mixingActivityTemplatesService.findAllByItem(itemCode);
   }
 
+  @Get(':item_code/date-print-templates')
+  @Permissions(DATE_PRINT_TEMPLATE_PERMISSIONS.READ)
+  async findDatePrintTemplates(@Param('item_code') itemCode: string) {
+    return this.datePrintTemplatesService.findAllByItem(itemCode);
+  }
+
   @Post(':item_code/equipment')
   @Permissions(ITEM_PERMISSIONS.CREATE)
   async createItemEquipment(
@@ -357,11 +486,7 @@ export class ItemsController {
     @Body() copyDto: CopyItemEquipmentDto,
     @Request() req: any,
   ) {
-    return this.itemEquipmentService.copyFromItem(
-      itemCode,
-      copyDto,
-      req.user,
-    );
+    return this.itemEquipmentService.copyFromItem(itemCode, copyDto, req.user);
   }
 
   @Post(':item_code/mixing-activity-templates/copy')
@@ -390,6 +515,16 @@ export class ItemsController {
       createDto,
       req.user,
     );
+  }
+
+  @Post(':item_code/date-print-templates')
+  @Permissions(DATE_PRINT_TEMPLATE_PERMISSIONS.CREATE)
+  async createDatePrintTemplate(
+    @Param('item_code') itemCode: string,
+    @Body() createDto: CreateDatePrintTemplateDto,
+    @Request() req: any,
+  ) {
+    return this.datePrintTemplatesService.create(itemCode, createDto, req.user);
   }
 
   @Get(':item_code')

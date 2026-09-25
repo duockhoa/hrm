@@ -5,6 +5,7 @@ import { RolesGuard } from 'src/guards/roles.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { PrismaService } from 'src/prisma.service';
 import { ItemEquipmentService } from './item-equipment.service';
+import { DatePrintTemplatesService } from './date-print-templates.service';
 import { MixingActivityTemplatesService } from './mixing-activity-templates.service';
 import { MixingActivityTemplateStagesService } from './mixing-activity-template-stages.service';
 import { MixingActivityTemplateStageStepsService } from './mixing-activity-template-stage-steps.service';
@@ -15,6 +16,7 @@ import { MixingActivityTemplateStageStepParametersService } from './mixing-activ
   providers: [
     ItemsService,
     ItemEquipmentService,
+    DatePrintTemplatesService,
     MixingActivityTemplatesService,
     MixingActivityTemplateStagesService,
     MixingActivityTemplateStageStepsService,
