@@ -119,8 +119,10 @@ export default function InlineDatePrintTemplates({
     null,
   );
   const [form, setForm] = useState<TemplateFormState>(emptyForm);
+  const [formImage, setFormImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const formImageInputRef = useRef<HTMLInputElement | null>(null);
 
   const listRoute = itemCode
     ? API_ROUTES.items.datePrintTemplates(itemCode)
@@ -166,6 +168,8 @@ export default function InlineDatePrintTemplates({
     setIsFormOpen(false);
     setEditingTemplate(null);
     setForm(emptyForm());
+    setFormImage(null);
+    if (formImageInputRef.current) formImageInputRef.current.value = "";
   };
 
   const openCreateForm = () => {
@@ -177,13 +181,30 @@ export default function InlineDatePrintTemplates({
       ) + 1;
     setEditingTemplate(null);
     setForm({ ...emptyForm(), version: String(nextVersion) });
+    setFormImage(null);
+    if (formImageInputRef.current) formImageInputRef.current.value = "";
     setIsFormOpen(true);
   };
 
   const openEditForm = (template: DatePrintTemplate) => {
     setEditingTemplate(template);
     setForm(toFormState(template));
+    setFormImage(null);
+    if (formImageInputRef.current) formImageInputRef.current.value = "";
     setIsFormOpen(true);
+  };
+
+  const validateImageFile = (file: File) => {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      toast.error("Ảnh phải có định dạng JPG, PNG, WEBP hoặc GIF.");
+      return false;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error("Dung lượng ảnh tối đa là 20 MB.");
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -198,6 +219,9 @@ export default function InlineDatePrintTemplates({
     }
     if (!printContent) {
       toast.error("Vui lòng nhập nội dung in.");
+      return;
+    }
+    if (!editingTemplate && formImage && !validateImageFile(formImage)) {
       return;
     }
 
@@ -242,10 +266,35 @@ export default function InlineDatePrintTemplates({
           itemCode,
           payload,
         );
-        await mutate((current) => [createdTemplate, ...(current ?? [])], {
+        let templateToAdd = createdTemplate;
+        if (formImage) {
+          try {
+            templateToAdd = await datePrintTemplatesService.uploadImage(
+              createdTemplate.id,
+              formImage,
+            );
+          } catch (uploadError) {
+            await mutate((current) => [createdTemplate, ...(current ?? [])], {
+              revalidate: false,
+            });
+            toast.error(
+              getErrorMessage(
+                uploadError,
+                "Đã tạo biểu mẫu nhưng không thể tải ảnh lên.",
+              ),
+            );
+            closeForm();
+            return;
+          }
+        }
+        await mutate((current) => [templateToAdd, ...(current ?? [])], {
           revalidate: false,
         });
-        toast.success("Đã tạo biểu mẫu in date.");
+        toast.success(
+          formImage
+            ? "Đã tạo biểu mẫu in date kèm ảnh minh họa."
+            : "Đã tạo biểu mẫu in date.",
+        );
       }
 
       closeForm();
@@ -331,12 +380,7 @@ export default function InlineDatePrintTemplates({
     const template = imageTarget;
     if (!file || !template) return;
 
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      toast.error("Ảnh phải có định dạng JPG, PNG, WEBP hoặc GIF.");
-      return;
-    }
-    if (file.size > MAX_IMAGE_SIZE) {
-      toast.error("Dung lượng ảnh tối đa là 20 MB.");
+    if (!validateImageFile(file)) {
       return;
     }
 
@@ -720,6 +764,29 @@ export default function InlineDatePrintTemplates({
                 }
               />
             </div>
+            {!editingTemplate ? (
+              <div className="space-y-2">
+                <Label htmlFor="date-print-template-image">Ảnh minh họa</Label>
+                <Input
+                  ref={formImageInputRef}
+                  id="date-print-template-image"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  disabled={isSubmitting}
+                  onChange={(event) =>
+                    setFormImage(event.target.files?.[0] ?? null)
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  JPG, PNG, WEBP hoặc GIF; tối đa 20 MB.
+                </p>
+                {formImage ? (
+                  <p className="text-xs text-slate-600">
+                    Đã chọn: {formImage.name}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <DialogFooter>
               <Button
                 type="button"

@@ -119,14 +119,9 @@ export default function DatePrintTemplateDetail({
         />
         <FieldDisplay lable="Phiên bản" value={String(template.version)} />
         <FieldDisplay
-          lable="Trạng thái"
-          value={isActive ? "Đang sử dụng" : "Ngừng sử dụng"}
-        />
-        <FieldDisplay
           lable="Vị trí in date"
           value={template.print_position || "Chưa cập nhật"}
         />
-        <FieldDisplay lable="Người tạo" value={creatorLabel} />
         <FieldDisplay lable="Nội dung in" value={template.print_content} />
 
         <div className="flex w-full justify-start gap-3 md:gap-4">
@@ -177,6 +172,7 @@ export default function DatePrintTemplateDetail({
             )}
           </div>
         </div>
+        <FieldDisplay lable="Người tạo" value={creatorLabel} />
       </div>
     </section>
   );
