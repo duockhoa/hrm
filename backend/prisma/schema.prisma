@@ -672,18 +672,19 @@ model MixingActivityTemplates {
 }
 
 model DatePrintTemplates {
-  id            Int      @id @default(autoincrement())
-  item_code     String
-  item          Items    @relation(fields: [item_code], references: [item_code], onDelete: Cascade, map: "date_print_templates_item_code_fkey")
-  version       Int      @default(1)
-  description   String?  @db.Text
-  print_content String   @db.Text
-  status        String   @default("active") @db.VarChar(20)
-  image_path    String?  @db.Text
-  created_by_id Int
-  createdBy     Users    @relation("DatePrintTemplateCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "date_print_templates_created_by_id_fkey")
-  created_at    DateTime @default(now())
-  updated_at    DateTime @default(now()) @updatedAt
+  id             Int      @id @default(autoincrement())
+  item_code      String
+  item           Items    @relation(fields: [item_code], references: [item_code], onDelete: Cascade, map: "date_print_templates_item_code_fkey")
+  version        Int      @default(1)
+  description    String?  @db.Text
+  print_content  String   @db.Text
+  print_position String?  @db.VarChar(255)
+  status         String   @default("active") @db.VarChar(20)
+  image_path     String?  @db.Text
+  created_by_id  Int
+  createdBy      Users    @relation("DatePrintTemplateCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "date_print_templates_created_by_id_fkey")
+  created_at     DateTime @default(now())
+  updated_at     DateTime @default(now()) @updatedAt
 
   @@unique([item_code, version], map: "date_print_templates_item_version_key")
   @@index([item_code], map: "date_print_templates_item_code_idx")

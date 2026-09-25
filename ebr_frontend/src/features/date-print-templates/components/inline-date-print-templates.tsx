@@ -1,6 +1,8 @@
 "use client";
 
-import { ImagePreviewDialog } from "@/components/authenticated-image/authenticated-image";
+import AuthenticatedImage, {
+  ImagePreviewDialog,
+} from "@/components/authenticated-image/authenticated-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,17 +13,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { API_ROUTES } from "@/lib/api-routes";
 import { datePrintTemplatesService } from "@/services/index.service";
 import {
   ArrowLeft,
+  CircleCheck,
+  CircleOff,
+  EllipsisVertical,
   Eye,
-  FileImage,
   ImageUp,
+  ImageIcon,
   Loader2,
   Pencil,
   Plus,
@@ -35,6 +45,7 @@ import type {
   DatePrintTemplate,
   UpdateDatePrintTemplatePayload,
 } from "../types";
+import DatePrintTemplateDetail from "./date-print-template-detail";
 
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = [
@@ -48,18 +59,21 @@ type TemplateFormState = {
   version: string;
   description: string;
   printContent: string;
+  printPosition: string;
 };
 
 const emptyForm = (): TemplateFormState => ({
   version: "1",
   description: "",
   printContent: "",
+  printPosition: "",
 });
 
 const toFormState = (template: DatePrintTemplate): TemplateFormState => ({
   version: String(template.version),
   description: template.description ?? "",
   printContent: template.print_content,
+  printPosition: template.print_position ?? "",
 });
 
 const getErrorMessage = (error: any, fallback: string) => {
@@ -96,6 +110,9 @@ export default function InlineDatePrintTemplates({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] =
     useState<DatePrintTemplate | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
+    null,
+  );
   const [previewTemplate, setPreviewTemplate] =
     useState<DatePrintTemplate | null>(null);
   const [imageTarget, setImageTarget] = useState<DatePrintTemplate | null>(
@@ -123,6 +140,14 @@ export default function InlineDatePrintTemplates({
           second.version - first.version || second.id - first.id,
       ),
     [data],
+  );
+  const selectedTemplate = useMemo(
+    () =>
+      selectedTemplateId === null
+        ? null
+        : (templates.find((template) => template.id === selectedTemplateId) ??
+          null),
+    [selectedTemplateId, templates],
   );
 
   if (!itemCode) return null;
@@ -190,6 +215,11 @@ export default function InlineDatePrintTemplates({
           payload.description = description;
         }
 
+        const printPosition = form.printPosition.trim() || null;
+        if (printPosition !== (editingTemplate.print_position ?? null)) {
+          payload.print_position = printPosition;
+        }
+
         if (Object.keys(payload).length > 0) {
           const updatedTemplate = await datePrintTemplatesService.update(
             editingTemplate.id,
@@ -206,6 +236,7 @@ export default function InlineDatePrintTemplates({
           version,
           description: form.description.trim() || null,
           print_content: printContent,
+          print_position: form.printPosition.trim() || null,
         };
         const createdTemplate = await datePrintTemplatesService.create(
           itemCode,
@@ -279,6 +310,7 @@ export default function InlineDatePrintTemplates({
         (current) => current?.filter(({ id }) => id !== template.id),
         { revalidate: false },
       );
+      if (selectedTemplateId === template.id) setSelectedTemplateId(null);
       if (previewTemplate?.id === template.id) setPreviewTemplate(null);
       toast.success("Đã xóa biểu mẫu in date.");
     } catch (deleteError) {
@@ -356,7 +388,7 @@ export default function InlineDatePrintTemplates({
   const previewFilename = getImageFilename(previewTemplate?.image_path);
 
   return (
-    <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+    <>
       <input
         ref={imageInputRef}
         type="file"
@@ -365,181 +397,243 @@ export default function InlineDatePrintTemplates({
         onChange={(event) => void handleImageSelected(event.target.files?.[0])}
       />
 
-      <div className="mb-4 flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-2">
-          {onClose ? (
+      {selectedTemplate ? (
+        <DatePrintTemplateDetail
+          template={selectedTemplate}
+          itemCode={itemCode}
+          itemName={itemName}
+          creatorLabel={getCreatorLabel(selectedTemplate)}
+          isSubmitting={isSubmitting}
+          onClose={() => setSelectedTemplateId(null)}
+          onEdit={() => openEditForm(selectedTemplate)}
+          onStatusChange={() =>
+            void handleStatusChange(
+              selectedTemplate,
+              selectedTemplate.status !== "active",
+            )
+          }
+          onDelete={() => void handleDelete(selectedTemplate)}
+          onSelectImage={() => selectImage(selectedTemplate)}
+          onDeleteImage={() => void handleDeleteImage(selectedTemplate)}
+        />
+      ) : (
+        <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+          <div className="mb-4 flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-2">
+              {onClose ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="mt-0.5 shrink-0"
+                  onClick={onClose}
+                  title="Quay lại chi tiết mã hàng"
+                  aria-label="Quay lại chi tiết mã hàng"
+                >
+                  <ArrowLeft className="size-5" />
+                </Button>
+              ) : null}
+              <div className="min-w-0">
+                <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
+                  Biểu mẫu in date
+                </h2>
+                <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
+                  {itemCode}
+                  {itemName ? ` - ${itemName}` : ""}
+                </p>
+              </div>
+            </div>
             <Button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="mt-0.5 shrink-0"
-              onClick={onClose}
-              title="Quay lại chi tiết mã hàng"
-              aria-label="Quay lại chi tiết mã hàng"
+              className="self-end sm:self-auto"
+              onClick={openCreateForm}
             >
-              <ArrowLeft className="size-5" />
+              <Plus className="size-4" />
+              Thêm
             </Button>
-          ) : null}
-          <div className="min-w-0">
-            <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
-              Biểu mẫu in date
-            </h2>
-            <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
-              {itemCode}
-              {itemName ? ` - ${itemName}` : ""}
-            </p>
           </div>
-        </div>
-        <Button
-          type="button"
-          className="self-end sm:self-auto"
-          onClick={openCreateForm}
-        >
-          <Plus className="size-4" />
-          Thêm
-        </Button>
-      </div>
 
-      {error ? (
-        <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {getErrorMessage(error, "Không thể tải danh sách biểu mẫu in date.")}
-        </div>
-      ) : isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div
-              key={index}
-              className="h-40 animate-pulse rounded-md border bg-slate-50"
-            />
-          ))}
-        </div>
-      ) : templates.length === 0 ? (
-        <div className="rounded-md border border-dashed p-8 text-center text-sm text-slate-500">
-          Chưa có biểu mẫu in date cho mã hàng này.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {templates.map((template) => {
-            const imageFilename = getImageFilename(template.image_path);
-            const isActive = template.status === "active";
+          {error ? (
+            <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {getErrorMessage(
+                error,
+                "Không thể tải danh sách biểu mẫu in date.",
+              )}
+            </div>
+          ) : isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-40 animate-pulse rounded-md border bg-slate-50"
+                />
+              ))}
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="rounded-md border border-dashed p-8 text-center text-sm text-slate-500">
+              Chưa có biểu mẫu in date cho mã hàng này.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200 border-y border-gray-200">
+              {templates.map((template) => {
+                const imageFilename = getImageFilename(template.image_path);
+                const isActive = template.status === "active";
 
-            return (
-              <article key={template.id} className="rounded-md border p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-slate-900">
-                        {template.description || "Biểu mẫu in date"}
-                      </h3>
-                      <Badge
-                        variant="outline"
-                        className={
-                          isActive
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-slate-200 bg-slate-100 text-slate-600"
-                        }
-                      >
-                        {isActive ? "Đang sử dụng" : "Ngừng sử dụng"}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Phiên bản {template.version} · {getCreatorLabel(template)}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Switch
-                        checked={isActive}
-                        disabled={isSubmitting}
-                        aria-label={`Trạng thái biểu mẫu phiên bản ${template.version}`}
-                        onCheckedChange={(checked) =>
-                          void handleStatusChange(template, checked)
-                        }
+                return (
+                  <article
+                    key={template.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedTemplateId(template.id)}
+                    onKeyDown={(event) => {
+                      if (
+                        event.target === event.currentTarget &&
+                        (event.key === "Enter" || event.key === " ")
+                      ) {
+                        event.preventDefault();
+                        setSelectedTemplateId(template.id);
+                      }
+                    }}
+                    className="flex min-h-[100px] cursor-pointer items-center gap-4 px-3 py-4 outline-none transition-colors hover:bg-gray-50 focus-visible:bg-blue-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                  >
+                    {imageFilename ? (
+                      <AuthenticatedImage
+                        src={template.image_path}
+                        alt={`Ảnh minh họa biểu mẫu phiên bản ${template.version}`}
+                        className="h-20 w-20 shrink-0"
+                        width={80}
+                        height={80}
+                        loading="lazy"
+                        objectFit="cover"
+                        previewTitle={`Ảnh minh họa biểu mẫu phiên bản ${template.version}`}
                       />
-                      <span>{isActive ? "Dùng" : "Ngừng"}</span>
+                    ) : (
+                      <div
+                        className="flex h-20 w-20 shrink-0 items-center justify-center rounded border bg-slate-50 text-slate-400"
+                        title="Chưa có ảnh minh họa"
+                      >
+                        <ImageIcon className="size-7" />
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-gray-900">
+                        {template.description || "Biểu mẫu in date"}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <p className="truncate text-sm text-gray-600">
+                          Phiên bản {template.version}
+                        </p>
+                        <Badge
+                          variant="outline"
+                          className={
+                            isActive
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200 bg-slate-100 text-slate-600"
+                          }
+                        >
+                          {isActive ? "Đang sử dụng" : "Ngừng sử dụng"}
+                        </Badge>
+                      </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isSubmitting}
-                      onClick={() => openEditForm(template)}
-                    >
-                      <Pencil className="size-4" />
-                      Sửa
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isSubmitting}
-                      onClick={() => void handleDelete(template)}
-                    >
-                      <Trash2 className="size-4" />
-                      Xóa
-                    </Button>
-                  </div>
-                </div>
 
-                <div className="mt-3 rounded-md bg-slate-50 p-3">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Nội dung in
-                  </p>
-                  <p className="whitespace-pre-wrap break-words font-mono text-sm text-slate-800">
-                    {template.print_content}
-                  </p>
-                </div>
+                    <div className="min-w-0 shrink-0 text-right">
+                      <p
+                        className="max-w-32 truncate text-sm text-gray-700 sm:max-w-52"
+                        title={template.print_position ?? undefined}
+                      >
+                        {template.print_position || "Chưa cập nhật vị trí"}
+                      </p>
+                      <p className="mt-1 max-w-32 truncate text-xs font-semibold text-amber-600 sm:max-w-52">
+                        {getCreatorLabel(template)}
+                      </p>
+                    </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {imageFilename ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPreviewTemplate(template)}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="shrink-0"
+                          onClick={(event) => event.stopPropagation()}
+                          aria-label={`Thao tác biểu mẫu phiên bản ${template.version}`}
+                        >
+                          <EllipsisVertical className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        onClick={(event) => event.stopPropagation()}
                       >
-                        <Eye className="size-4" />
-                        Xem ảnh
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={isSubmitting}
-                        onClick={() => selectImage(template)}
-                      >
-                        <ImageUp className="size-4" />
-                        Thay ảnh
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={isSubmitting}
-                        onClick={() => void handleDeleteImage(template)}
-                      >
-                        <Trash2 className="size-4" />
-                        Xóa ảnh
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isSubmitting}
-                      onClick={() => selectImage(template)}
-                    >
-                      <FileImage className="size-4" />
-                      Thêm ảnh
-                    </Button>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                        <DropdownMenuItem
+                          onSelect={() => openEditForm(template)}
+                        >
+                          <Pencil className="size-4" />
+                          Sửa
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={isSubmitting}
+                          onSelect={() =>
+                            void handleStatusChange(template, !isActive)
+                          }
+                        >
+                          {isActive ? (
+                            <CircleOff className="size-4" />
+                          ) : (
+                            <CircleCheck className="size-4" />
+                          )}
+                          {isActive ? "Ngừng sử dụng" : "Đưa vào sử dụng"}
+                        </DropdownMenuItem>
+                        {imageFilename ? (
+                          <>
+                            <DropdownMenuItem
+                              onSelect={() => setPreviewTemplate(template)}
+                            >
+                              <Eye className="size-4" />
+                              Xem ảnh
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={isSubmitting}
+                              onSelect={() => selectImage(template)}
+                            >
+                              <ImageUp className="size-4" />
+                              Thay ảnh
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              disabled={isSubmitting}
+                              onSelect={() => void handleDeleteImage(template)}
+                            >
+                              <Trash2 className="size-4" />
+                              Xóa ảnh
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem
+                            disabled={isSubmitting}
+                            onSelect={() => selectImage(template)}
+                          >
+                            <ImageUp className="size-4" />
+                            Thêm ảnh
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={isSubmitting}
+                          onSelect={() => void handleDelete(template)}
+                        >
+                          <Trash2 className="size-4" />
+                          Xóa
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
       )}
 
       <Dialog
@@ -586,6 +680,23 @@ export default function InlineDatePrintTemplates({
                   setForm((current) => ({
                     ...current,
                     description: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date-print-template-position">
+                Vị trí in date
+              </Label>
+              <Input
+                id="date-print-template-position"
+                value={form.printPosition}
+                maxLength={255}
+                placeholder="Ví dụ: Mặt đáy chai hoặc mép hàn túi"
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    printPosition: event.target.value,
                   }))
                 }
               />
@@ -655,6 +766,6 @@ export default function InlineDatePrintTemplates({
           }
         />
       ) : null}
-    </section>
+    </>
   );
 }

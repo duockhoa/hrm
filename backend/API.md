@@ -1381,12 +1381,13 @@ Content-Type: application/json
 {
   "version": 1,
   "description": "Mẫu in nhãn chai 500 ml",
-  "print_content": "NSX: {{manufacturing_date}}\nHSD: {{expiry_date}}"
+  "print_content": "NSX: {{manufacturing_date}}\nHSD: {{expiry_date}}",
+  "print_position": "Mặt đáy chai"
 }
 ```
 
 `version` là số nguyên dương, mặc định là `1`; `print_content` bắt buộc. Template
-mới luôn có `status: "active"`.
+mới luôn có `status: "active"`. `print_position` không bắt buộc và có tối đa 255 ký tự.
 
 ### Lấy và cập nhật template
 
@@ -1401,6 +1402,7 @@ Ví dụ body cập nhật:
 ```json
 {
   "print_content": "NSX: {{manufacturing_date}}\nHSD: {{expiry_date}}\nSố lô: {{batch_number}}",
+  "print_position": "Mép hàn túi",
   "status": "inactive"
 }
 ```

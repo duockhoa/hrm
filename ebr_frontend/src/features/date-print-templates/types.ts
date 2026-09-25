@@ -21,6 +21,7 @@ export type DatePrintTemplate = {
   version: number;
   description?: string | null;
   print_content: string;
+  print_position?: string | null;
   status: DatePrintTemplateStatus;
   image_path?: string | null;
   item?: DatePrintTemplateItem | null;
@@ -33,6 +34,7 @@ export type CreateDatePrintTemplatePayload = {
   version?: number;
   description?: string | null;
   print_content: string;
+  print_position?: string | null;
 };
 
 export type UpdateDatePrintTemplatePayload =

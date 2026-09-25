@@ -41,6 +41,7 @@ describe('DatePrintTemplatesService', () => {
           version: '2',
           description: ' Mẫu in date ',
           print_content: ' NSX: {{manufacturing_date}} ',
+          print_position: ' Mặt đáy chai ',
         },
         { id: '9' },
       ),
@@ -61,6 +62,7 @@ describe('DatePrintTemplatesService', () => {
           version: 2,
           description: 'Mẫu in date',
           print_content: 'NSX: {{manufacturing_date}}',
+          print_position: 'Mặt đáy chai',
           status: 'active',
           created_by_id: 9,
         },
@@ -82,7 +84,7 @@ describe('DatePrintTemplatesService', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('updates the allowed status and print content', async () => {
+  it('updates the allowed status, print content and print position', async () => {
     findUnique.mockResolvedValue({
       id: 1,
       item_code: 'TP00001',
@@ -92,17 +94,20 @@ describe('DatePrintTemplatesService', () => {
       id: 1,
       status: 'inactive',
       print_content: 'HSD: {{expiry_date}}',
+      print_position: 'Cạnh bên bao bì',
     });
 
     await expect(
       service.update(1, {
         status: 'inactive',
         print_content: ' HSD: {{expiry_date}} ',
+        print_position: ' Cạnh bên bao bì ',
       }),
     ).resolves.toEqual({
       id: 1,
       status: 'inactive',
       print_content: 'HSD: {{expiry_date}}',
+      print_position: 'Cạnh bên bao bì',
     });
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -110,6 +115,7 @@ describe('DatePrintTemplatesService', () => {
         data: {
           status: 'inactive',
           print_content: 'HSD: {{expiry_date}}',
+          print_position: 'Cạnh bên bao bì',
         },
       }),
     );

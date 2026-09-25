@@ -115,6 +115,7 @@ export class DatePrintTemplatesService {
           dto?.print_content,
           'print_content',
         ),
+        print_position: this.normalizePrintPosition(dto?.print_position),
         status: ACTIVE_DATE_PRINT_TEMPLATE_STATUS,
         created_by_id: this.normalizeUserId(user),
       },
@@ -203,6 +204,12 @@ export class DatePrintTemplatesService {
       );
     }
 
+    if ('print_position' in updateDto) {
+      data.print_position = this.normalizePrintPosition(
+        updateDto.print_position,
+      );
+    }
+
     if ('status' in updateDto) {
       data.status = this.normalizeStatus(updateDto.status);
     }
@@ -250,6 +257,21 @@ export class DatePrintTemplatesService {
     }
 
     const normalizedValue = String(value).trim();
+    return normalizedValue || null;
+  }
+
+  private normalizePrintPosition(value: unknown) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    const normalizedValue = String(value).trim();
+    if (normalizedValue.length > 255) {
+      throw new BadRequestException(
+        'print_position must not exceed 255 characters',
+      );
+    }
+
     return normalizedValue || null;
   }
 
