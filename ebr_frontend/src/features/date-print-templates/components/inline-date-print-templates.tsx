@@ -459,6 +459,16 @@ export default function InlineDatePrintTemplates({
           onDelete={() => void handleDelete(selectedTemplate)}
           onSelectImage={() => selectImage(selectedTemplate)}
           onDeleteImage={() => void handleDeleteImage(selectedTemplate)}
+          onSaveImage={async (file) => {
+            setIsSubmitting(true);
+            try {
+              const updated = await datePrintTemplatesService.uploadImage(selectedTemplate.id, file);
+              await replaceTemplate(updated);
+              if (previewTemplate?.id === updated.id) setPreviewTemplate(updated);
+            } finally {
+              setIsSubmitting(false);
+            }
+          }}
         />
       ) : (
         <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">

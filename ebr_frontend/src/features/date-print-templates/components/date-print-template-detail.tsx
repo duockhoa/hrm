@@ -1,6 +1,8 @@
 "use client";
 
-import AuthenticatedImage from "@/components/authenticated-image/authenticated-image";
+import AuthenticatedImage, {
+  ImagePreviewDialog,
+} from "@/components/authenticated-image/authenticated-image";
 import FieldDisplay from "@/components/field-display/field-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,8 @@ import {
   Trash2,
 } from "lucide-react";
 import type { DatePrintTemplate } from "../types";
+import { useState } from "react";
+import DatePrintImageEditor from "./date-print-image-editor";
 
 export default function DatePrintTemplateDetail({
   template,
@@ -27,6 +31,7 @@ export default function DatePrintTemplateDetail({
   onDelete,
   onSelectImage,
   onDeleteImage,
+  onSaveImage,
 }: {
   template: DatePrintTemplate;
   itemCode: string;
@@ -39,8 +44,10 @@ export default function DatePrintTemplateDetail({
   onDelete: () => void;
   onSelectImage: () => void;
   onDeleteImage: () => void;
+  onSaveImage: (file: File) => Promise<void>;
 }) {
   const isActive = template.status === "active";
+  const [imageMode, setImageMode] = useState<"preview" | "edit" | null>(null);
 
   return (
     <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
@@ -162,7 +169,8 @@ export default function DatePrintTemplateDetail({
                 width={720}
                 height={256}
                 objectFit="contain"
-                previewTitle={`Ảnh minh họa biểu mẫu phiên bản ${template.version}`}
+                preview={false}
+                onClick={() => setImageMode("preview")}
               />
             ) : (
               <div className="flex h-40 flex-col items-center justify-center gap-2 rounded border border-dashed bg-slate-50 text-sm text-slate-500">
@@ -174,6 +182,35 @@ export default function DatePrintTemplateDetail({
         </div>
         <FieldDisplay lable="Người tạo" value={creatorLabel} />
       </div>
+      {imageMode === "preview" && template.image_path && (
+        <ImagePreviewDialog
+          open
+          src={template.image_path}
+          alt={`Ảnh minh họa biểu mẫu phiên bản ${template.version}`}
+          title={`Ảnh minh họa biểu mẫu phiên bản ${template.version}`}
+          onOpenChange={(open) => {
+            if (!open) setImageMode(null);
+          }}
+          footer={
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSubmitting}
+              onClick={() => setImageMode("edit")}
+            >
+              <Pencil className="size-4" />
+              Sửa ảnh
+            </Button>
+          }
+        />
+      )}
+      {imageMode === "edit" && template.image_path && (
+        <DatePrintImageEditor
+          src={template.image_path}
+          onClose={() => setImageMode("preview")}
+          onSave={onSaveImage}
+        />
+      )}
     </section>
   );
 }
