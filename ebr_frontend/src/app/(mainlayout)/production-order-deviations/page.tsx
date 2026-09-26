@@ -482,7 +482,7 @@ export default function ProductionOrderDeviationsPage() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 justify-center overflow-auto p-2 md:p-4">
+      <div className="min-h-0 flex-1 overflow-auto p-2 md:p-4">
         <ProductionOrderDeviationDetail
           id={selectedDeviationId}
           onClose={() => setSelectedDeviationId(null)}
@@ -516,7 +516,7 @@ export default function ProductionOrderDeviationsPage() {
             <ResizablePanel
               defaultSize={45}
               minSize={30}
-              className="min-h-0 min-w-0 overflow-auto bg-blue-50"
+              className="min-h-0 min-w-0 overflow-hidden bg-blue-50"
             >
               {detailPanel}
             </ResizablePanel>

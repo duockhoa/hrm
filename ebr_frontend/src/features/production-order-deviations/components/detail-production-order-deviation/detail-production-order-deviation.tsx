@@ -41,6 +41,15 @@ type DeviationUser = {
   email?: string | null;
 };
 
+type DeviationProductionOrder = {
+  lot_no?: string | null;
+  description?: string | null;
+  item_code?: string | null;
+  item?: {
+    item_name?: string | null;
+  } | null;
+};
+
 type DeviationImage =
   | string
   | {
@@ -54,6 +63,8 @@ type DeviationImage =
 type ProductionOrderDeviation = {
   id?: number | string;
   production_order_id?: number | string | null;
+  productionOrder?: DeviationProductionOrder | null;
+  production_order?: DeviationProductionOrder | null;
   deviation_content?: string | null;
   handling_plan?: string | null;
   handling_result?: string | null;
@@ -97,6 +108,20 @@ const formatText = (value: string | number | null | undefined) => {
 
 const getUserLabel = (user: DeviationUser | null | undefined) =>
   user?.name ?? user?.username ?? user?.email ?? "";
+
+const getProductionOrder = (data: ProductionOrderDeviation) =>
+  data.productionOrder ?? data.production_order ?? null;
+
+const getProductLabel = (data: ProductionOrderDeviation) => {
+  const productionOrder = getProductionOrder(data);
+
+  return (
+    productionOrder?.item?.item_name ??
+    productionOrder?.description ??
+    productionOrder?.item_code ??
+    ""
+  );
+};
 
 const getErrorMessage = (error: any, fallback: string) =>
   error?.response?.data?.message ?? error?.message ?? fallback;
@@ -220,7 +245,7 @@ function DeviationImagePreview({
 
 function ProductionOrderDeviationDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full min-w-0 rounded border bg-white p-4 text-center shadow-md">
       <Skeleton className="h-9 w-36" />
       <Skeleton className="mx-auto mt-4 h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
@@ -1015,7 +1040,12 @@ export default function ProductionOrderDeviationDetail({
         </DialogContent>
       </Dialog>
 
-      <div className="mt-4 flex flex-col gap-4">
+      <div className="mt-4 flex flex-col gap-4 text-left">
+        <FieldDisplay lable="Tên sản phẩm" value={getProductLabel(data)} />
+        <FieldDisplay
+          lable="Số lô"
+          value={formatText(getProductionOrder(data)?.lot_no)}
+        />
         <FieldDisplay
           lable="Mã lệnh sản xuất"
           value={formatText(data.production_order_id)}
