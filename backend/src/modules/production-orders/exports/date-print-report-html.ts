@@ -21,8 +21,9 @@ const escapeHtml = (text: string) =>
 export async function renderDatePrintHtml(
   order: Parameters<typeof datePrintData>[0],
   template: Parameters<typeof datePrintData>[1],
+  note = '',
 ) {
-  const data = datePrintData(order, template);
+  const data = datePrintData(order, template, note);
   const directory = path.join(
     process.cwd(),
     'templates/date-coding-work-order-template',
@@ -52,8 +53,8 @@ export async function renderDatePrintHtml(
     const image = await sharp(file.filePath)
       .rotate()
       .resize({
-        width: 600,
-        height: 280,
+        width: 1800,
+        height: 1200,
         fit: 'inside',
         withoutEnlargement: true,
       })

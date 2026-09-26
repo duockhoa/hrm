@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import productionOrdersService from "@/services/product-orders.service";
 
 export default function FormExportDatePrint({
@@ -18,6 +19,7 @@ export default function FormExportDatePrint({
 }) {
   const [selectedId, setSelectedId] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [note, setNote] = useState("");
   const [format, setFormat] = useState<'word' | 'pdf'>('pdf');
   const { data, error, isLoading, mutate } = useSWR(
     ["date-print-export-templates", productionOrderId],
@@ -37,6 +39,7 @@ export default function FormExportDatePrint({
         productionOrderId,
         selected.id,
         format,
+        note.trim(),
       );
       const url = URL.createObjectURL(response.data as Blob);
       const link = document.createElement("a");
@@ -129,6 +132,10 @@ export default function FormExportDatePrint({
           <option value="word">Word (.docx)</option>
           <option value="pdf">PDF (.pdf)</option>
         </select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="date-print-export-note">Ghi chú (nếu có)</Label>
+        <Textarea id="date-print-export-note" value={note} onChange={(event) => setNote(event.target.value)} disabled={exporting} rows={3} maxLength={2000} placeholder="Nhập ghi chú cho phiếu xuất…" />
       </div>
       <Button
         type="submit"

@@ -32,6 +32,14 @@ const template = {
 } as Parameters<typeof exportDatePrint>[1];
 
 describe('date print Word export', () => {
+  it('fills the note in the updated Word template and defaults to blank', async () => {
+    const output = await exportDatePrint(order, template, 'Kiểm tra A & B\nDòng thứ hai');
+    const xml = new PizZip(output.buffer).file('word/document.xml')!.asText();
+    expect(xml).toContain('Kiểm tra A &amp; B');
+    expect(xml).toContain('Dòng thứ hai');
+    expect(xml).not.toContain('{{');
+    expect(datePrintData(order, template).note).toBe('');
+  });
   it('renders custom date fields independently and preserves print content', () => {
     const result = datePrintData(order, { ...template,
       manufacturing_date_format: '{{mfg_dd}}/{{mfg_mm}}/{{mfg_yyyy}} - {{batch_number}}',

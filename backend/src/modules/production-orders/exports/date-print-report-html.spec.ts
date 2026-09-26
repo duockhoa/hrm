@@ -21,6 +21,13 @@ const template = {
 } as Parameters<typeof renderDatePrintHtml>[1];
 
 describe('date print PDF template', () => {
+  it('escapes optional notes and places them before the print position', async () => {
+    const html = await renderDatePrintHtml(order, template, '<b>Kiểm tra</b>\nDòng 2');
+    expect(html).toContain('&lt;b&gt;Kiểm tra&lt;/b&gt;\nDòng 2');
+    expect(html.indexOf('<p class="note')).toBeLessThan(html.indexOf('<p class="position'));
+    const pdf = await new ProductionOrderPdfRendererService().render(html);
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+  }, 60000);
   it('embeds the illustration instead of loading an authenticated URL in Chromium', async () => {
     const spy = jest.spyOn(imageFiles, 'resolveDatePrintTemplateImageFile').mockResolvedValue({ filePath: path.join(process.cwd(), 'templates/batch-report/logo.png'), contentType: 'image/png' });
     try {

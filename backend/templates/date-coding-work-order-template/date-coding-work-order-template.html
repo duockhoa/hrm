@@ -28,9 +28,11 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .content td { height: 49pt; }
 .multiline { white-space: pre-wrap; overflow-wrap: anywhere; }
 .position { margin: 21.9pt 0 8pt; }
+.note { margin: 8pt 0 0; }
+.note + .position { margin-top: 8pt; }
 .caption { margin: 0 0 8pt; font-weight: bold; }
-.illustration { width: 467.5pt; border: .5pt solid black; height: 324.85pt; padding: 13.9pt 5.4pt 0; }
-.illustration img { display: block; max-width: 100%; max-height: 74mm; object-fit: contain; }
+.illustration { width: 467.5pt; border: .5pt solid black; height: 324.85pt; padding: 5.4pt; display: flex; align-items: center; justify-content: center; }
+.illustration img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .footer { position: absolute; bottom: 16.9mm; left: 25.4mm; right: 25.4mm; text-align: center; color: #808080; font-weight: bold; line-height: normal; }
 .footer span:last-child { position: absolute; right: 0; }
 </style></head>
@@ -47,6 +49,7 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 <table class="content"><colgroup><col style="width:30.9%"><col style="width:24.6%"><col style="width:22.7%"><col style="width:21.8%"></colgroup>
 <tr><th>Nội dung in yêu cầu</th><th>Nội dung in thực tế</th><th>Người in date</th><th>Ngày/IPC xác<br>nhận</th></tr>
 <tr><td class="multiline">{{required_print_content}}</td><td></td><td></td><td></td></tr></table>
+<p class="note multiline"><b>Ghi chú( Nếu có): </b>{{note}}</p>
 <p class="position multiline"><b>Mô tả vị trí in: </b>{{print_position_description}}</p>
 <p class="caption">Hình ảnh minh họa cho yêu cầu:</p>
 <div class="illustration">{{illustration}}</div>

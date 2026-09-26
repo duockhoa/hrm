@@ -412,7 +412,10 @@ export class ProductionOrdersService {
     });
   }
 
-  async exportDatePrint(id: number, templateId: number, format = 'word') {
+  async exportDatePrint(id: number, templateId: number, format = 'word', note = '') {
+    if (typeof note !== 'string' || note.length > 2000) {
+      throw new BadRequestException('Ghi chú phải là chuỗi tối đa 2000 ký tự.');
+    }
     if (format !== 'word' && format !== 'pdf') {
       throw new BadRequestException('Định dạng xuất phải là word hoặc pdf.');
     }
@@ -426,8 +429,8 @@ export class ProductionOrdersService {
       );
     }
     return format === 'pdf'
-      ? this.productionOrderExportService.exportDatePrintPdf(order, template)
-      : exportDatePrint(order, template);
+      ? this.productionOrderExportService.exportDatePrintPdf(order, template, note.trim())
+      : exportDatePrint(order, template, note.trim());
   }
 
   async exportProductionOrder(id: number) {

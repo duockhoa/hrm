@@ -51,6 +51,7 @@ export function datePrintParts(value: string | null, label: string) {
 export function datePrintData(
   order: ProductionOrders & { item: { item_name: string } },
   template: DatePrintTemplates,
+  note = '',
 ) {
   const mfg = datePrintParts(order.date_manufacture, 'Ngày sản xuất');
   const exp = datePrintParts(order.expire_date, 'Hạn dùng');
@@ -80,6 +81,7 @@ export function datePrintData(
   );
   return {
     item_name: order.item.item_name,
+    note,
     item_code: order.item_code,
     lot_no: order.lot_no,
     date_manufacture: template.manufacturing_date_format?.trim()
@@ -94,8 +96,9 @@ export function datePrintData(
 export async function exportDatePrint(
   order: ProductionOrders & { item: { item_name: string } },
   template: DatePrintTemplates,
+  note = '',
 ) {
-  const data = datePrintData(order, template);
+  const data = datePrintData(order, template, note);
   const source = await fs.readFile(
     path.join(
       process.cwd(),
@@ -126,8 +129,8 @@ export async function exportDatePrint(
     const { data: image, info } = await sharp(file.filePath)
       .rotate()
       .resize({
-        width: 600,
-        height: 280,
+        width: 1800,
+        height: 1200,
         fit: 'inside',
         withoutEnlargement: true,
       })
@@ -153,8 +156,10 @@ export async function exportDatePrint(
         '<Override PartName="/word/media/date-print-example.png" ContentType="image/png"/></Types>',
       ),
     );
-    const cx = info.width * 9525,
-      cy = info.height * 9525;
+    // Fit the image into the Word illustration cell, independently of pixel density.
+    const scale = Math.min((456 * 12700) / info.width, (280 * 12700) / info.height);
+    const cx = Math.round(info.width * scale),
+      cy = Math.round(info.height * scale);
     const drawing = `<w:p><w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="99001" name="Date print example"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="99001" name="date-print-example.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rIdDatePrintExample"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
     const xml = zip.file('word/document.xml')!.asText();
     // The final table cell in the supplied Word template is the illustration box.
@@ -162,10 +167,11 @@ export async function exportDatePrint(
     if (imageCellEnd < 0) {
       throw new BadRequestException('Mẫu Word thiếu ô chứa ảnh minh họa.');
     }
-    zip.file(
-      'word/document.xml',
-      xml.slice(0, imageCellEnd) + drawing + xml.slice(imageCellEnd),
-    );
+    const cellStart = xml.lastIndexOf('<w:tc>', imageCellEnd);
+    const propertiesEnd = xml.indexOf('</w:tcPr>', cellStart) + '</w:tcPr>'.length;
+    const cellProperties = xml.slice(cellStart, propertiesEnd).replace('</w:tcPr>', '<w:vAlign w:val="center"/></w:tcPr>');
+    const centeredDrawing = drawing.replace('<w:p>', '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>');
+    zip.file('word/document.xml', xml.slice(0, cellStart) + cellProperties + centeredDrawing + xml.slice(imageCellEnd));
   }
   return {
     buffer: zip.generate({
