@@ -58,7 +58,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./hrm_frontend
       args:
         NEXT_PUBLIC_BACKEND_API_URL: ${NEXT_PUBLIC_BACKEND_API_URL:-http://localhost:3012}
         NEXT_PUBLIC_COOKIE_DOMAIN: ${NEXT_PUBLIC_COOKIE_DOMAIN:-}
