@@ -672,6 +672,8 @@ model MixingActivityTemplates {
 }
 
 model DatePrintTemplates {
+  manufacturing_date_format String? @db.Text
+  expiry_date_format        String? @db.Text
   id             Int      @id @default(autoincrement())
   item_code      String
   item           Items    @relation(fields: [item_code], references: [item_code], onDelete: Cascade, map: "date_print_templates_item_code_fkey")

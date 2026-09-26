@@ -1,4 +1,6 @@
 export class CreateDatePrintTemplateDto {
+  manufacturing_date_format?: string | null;
+  expiry_date_format?: string | null;
   version?: number | string | null;
   description?: string | null;
   print_content?: string | null;

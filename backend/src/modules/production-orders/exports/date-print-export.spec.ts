@@ -32,6 +32,17 @@ const template = {
 } as Parameters<typeof exportDatePrint>[1];
 
 describe('date print Word export', () => {
+  it('renders custom date fields independently and preserves print content', () => {
+    const result = datePrintData(order, { ...template,
+      manufacturing_date_format: '{{mfg_dd}}/{{mfg_mm}}/{{mfg_yyyy}} - {{batch_number}}',
+      expiry_date_format: 'Xem trên nhãn: {{exp_mm}}/{{exp_yyyy}}',
+    });
+    expect(result.date_manufacture).toBe('03/09/2026 - LO001');
+    expect(result.expire_date).toBe('Xem trên nhãn: 09/2028');
+    expect(result.required_print_content).toBe(datePrintData(order, template).required_print_content);
+    expect(datePrintData(order, { ...template, manufacturing_date_format: '   ', expiry_date_format: null })).toMatchObject({ date_manufacture: '030926', expire_date: '030928' });
+    expect(() => datePrintData(order, { ...template, expiry_date_format: '{{invalid}}' })).toThrow('invalid');
+  });
   it.each([
     '2026-09-03',
     '03/09/2026',

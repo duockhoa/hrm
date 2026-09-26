@@ -67,7 +67,7 @@ export function datePrintData(
     expiry_date: `${exp.dd}/${exp.mm}/${exp.yyyy}`,
     batch_number: order.lot_no,
   };
-  const content = template.print_content.replace(
+  const render = (value: string) => value.replace(
     /{{\s*([^{}]+?)\s*}}/g,
     (_, key: string) => {
       if (!Object.prototype.hasOwnProperty.call(variables, key)) {
@@ -82,9 +82,11 @@ export function datePrintData(
     item_name: order.item.item_name,
     item_code: order.item_code,
     lot_no: order.lot_no,
-    date_manufacture: `${mfg.dd}${mfg.mm}${mfg.yy}`,
-    expire_date: `${exp.dd}${exp.mm}${exp.yy}`,
-    required_print_content: content,
+    date_manufacture: template.manufacturing_date_format?.trim()
+      ? render(template.manufacturing_date_format) : `${mfg.dd}${mfg.mm}${mfg.yy}`,
+    expire_date: template.expiry_date_format?.trim()
+      ? render(template.expiry_date_format) : `${exp.dd}${exp.mm}${exp.yy}`,
+    required_print_content: render(template.print_content),
     print_position_description: template.print_position ?? '',
   };
 }

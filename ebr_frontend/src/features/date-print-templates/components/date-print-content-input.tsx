@@ -45,10 +45,12 @@ function matchesVariable(name: string, query: string) {
 export default function DatePrintContentInput({
   value,
   onValueChange,
+  variablePrefix,
   ...props
 }: Omit<ComponentProps<"textarea">, "value" | "onChange"> & {
   value: string;
   onValueChange: (value: string) => void;
+  variablePrefix?: "mfg" | "exp";
 }) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -56,7 +58,10 @@ export default function DatePrintContentInput({
   const [token, setToken] = useState<Token | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const suggestions = token
-    ? VARIABLES.filter((variable) => matchesVariable(variable.name, token.query))
+    ? VARIABLES.filter((variable) =>
+        (!variablePrefix || variable.name.startsWith(`${variablePrefix}_`)) &&
+        matchesVariable(variable.name, token.query),
+      )
     : [];
   const isOpen = token !== null && suggestions.length > 0;
 

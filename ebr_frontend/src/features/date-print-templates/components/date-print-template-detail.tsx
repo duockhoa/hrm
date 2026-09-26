@@ -180,6 +180,8 @@ export default function DatePrintTemplateDetail({
             )}
           </div>
         </div>
+        <FieldDisplay lable="NSX khi xuất phiếu" value={template.manufacturing_date_format || "Mặc định: ddmmyy"} />
+        <FieldDisplay lable="HSD khi xuất phiếu" value={template.expiry_date_format || "Mặc định: ddmmyy"} />
         <FieldDisplay lable="Người tạo" value={creatorLabel} />
       </div>
       {imageMode === "preview" && template.image_path && (

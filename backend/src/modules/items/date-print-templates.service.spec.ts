@@ -29,6 +29,14 @@ describe('DatePrintTemplatesService', () => {
 
   beforeEach(() => jest.resetAllMocks());
 
+  it('saves custom date formats and clears them back to defaults', async () => {
+    findUnique.mockResolvedValue({ id: 1, item_code: 'TP00001' });
+    await service.update(1, { manufacturing_date_format: ' {{mfg_mm}}/{{mfg_yyyy}} ', expiry_date_format: ' Xem trên nhãn ' });
+    expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ data: { manufacturing_date_format: '{{mfg_mm}}/{{mfg_yyyy}}', expiry_date_format: 'Xem trên nhãn' } }));
+    await service.update(1, { manufacturing_date_format: '', expiry_date_format: null });
+    expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ data: { manufacturing_date_format: null, expiry_date_format: null } }));
+  });
+
   it('creates an active template with normalized data and its creator', async () => {
     findItem.mockResolvedValue({ item_code: 'TP00001' });
     findFirst.mockResolvedValue(null);
@@ -59,6 +67,8 @@ describe('DatePrintTemplatesService', () => {
       expect.objectContaining({
         data: {
           item_code: 'TP00001',
+          manufacturing_date_format: null,
+          expiry_date_format: null,
           version: 2,
           description: 'Mẫu in date',
           print_content: 'NSX: {{manufacturing_date}}',

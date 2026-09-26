@@ -109,6 +109,8 @@ export class DatePrintTemplatesService {
     return this.prismaService.datePrintTemplates.create({
       data: {
         item_code: normalizedItemCode,
+        manufacturing_date_format: this.normalizeDateFormat(dto?.manufacturing_date_format),
+        expiry_date_format: this.normalizeDateFormat(dto?.expiry_date_format),
         version,
         description: this.normalizeDescription(dto?.description),
         print_content: this.normalizeRequiredText(
@@ -185,6 +187,12 @@ export class DatePrintTemplatesService {
   private normalizeUpdateData(dto: UpdateDatePrintTemplateDto) {
     const updateDto = dto ?? {};
     const data: Prisma.DatePrintTemplatesUpdateInput = {};
+    if ('manufacturing_date_format' in updateDto) {
+      data.manufacturing_date_format = this.normalizeDateFormat(updateDto.manufacturing_date_format);
+    }
+    if ('expiry_date_format' in updateDto) {
+      data.expiry_date_format = this.normalizeDateFormat(updateDto.expiry_date_format);
+    }
 
     if ('version' in updateDto) {
       data.version = this.normalizePositiveInteger(
@@ -219,6 +227,12 @@ export class DatePrintTemplatesService {
     }
 
     return data;
+  }
+
+  private normalizeDateFormat(value: unknown) {
+    if (value == null) return null;
+    if (typeof value !== 'string') throw new BadRequestException('Định dạng ngày phải là chuỗi.');
+    return value.trim() || null;
   }
 
   private normalizeItemCode(value: unknown) {

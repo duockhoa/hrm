@@ -56,6 +56,8 @@ const ACCEPTED_IMAGE_TYPES = [
 ];
 
 type TemplateFormState = {
+  manufacturingDateFormat: string;
+  expiryDateFormat: string;
   version: string;
   description: string;
   printContent: string;
@@ -63,6 +65,8 @@ type TemplateFormState = {
 };
 
 const emptyForm = (): TemplateFormState => ({
+  manufacturingDateFormat: "",
+  expiryDateFormat: "",
   version: "1",
   description: "",
   printContent: "",
@@ -70,6 +74,8 @@ const emptyForm = (): TemplateFormState => ({
 });
 
 const toFormState = (template: DatePrintTemplate): TemplateFormState => ({
+  manufacturingDateFormat: template.manufacturing_date_format ?? "",
+  expiryDateFormat: template.expiry_date_format ?? "",
   version: String(template.version),
   description: template.description ?? "",
   printContent: template.print_content,
@@ -229,6 +235,10 @@ export default function InlineDatePrintTemplates({
     try {
       if (editingTemplate) {
         const payload: UpdateDatePrintTemplatePayload = {};
+        const manufacturingDateFormat = form.manufacturingDateFormat.trim() || null;
+        const expiryDateFormat = form.expiryDateFormat.trim() || null;
+        if (manufacturingDateFormat !== (editingTemplate.manufacturing_date_format ?? null)) payload.manufacturing_date_format = manufacturingDateFormat;
+        if (expiryDateFormat !== (editingTemplate.expiry_date_format ?? null)) payload.expiry_date_format = expiryDateFormat;
         if (version !== editingTemplate.version) payload.version = version;
         if (printContent !== editingTemplate.print_content) {
           payload.print_content = printContent;
@@ -257,6 +267,8 @@ export default function InlineDatePrintTemplates({
         }
       } else {
         const payload: CreateDatePrintTemplatePayload = {
+          manufacturing_date_format: form.manufacturingDateFormat.trim() || null,
+          expiry_date_format: form.expiryDateFormat.trim() || null,
           version,
           description: form.description.trim() || null,
           print_content: printContent,
@@ -798,6 +810,15 @@ export default function InlineDatePrintTemplates({
                 ) : null}
               </div>
             ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="date-print-manufacturing-format">Ngày sản xuất khi xuất phiếu (tùy chỉnh)</Label>
+              <DatePrintContentInput id="date-print-manufacturing-format" rows={1} wrap="off" variablePrefix="mfg" className="h-9 min-h-9 resize-none field-sizing-fixed font-mono" value={form.manufacturingDateFormat} placeholder="{{mfg_dd}}/{{mfg_mm}}/{{mfg_yyyy}}" onValueChange={(value) => setForm((current) => ({ ...current, manufacturingDateFormat: value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date-print-expiry-format">Hạn dùng khi xuất phiếu (tùy chỉnh)</Label>
+              <DatePrintContentInput id="date-print-expiry-format" rows={1} wrap="off" variablePrefix="exp" className="h-9 min-h-9 resize-none field-sizing-fixed font-mono" value={form.expiryDateFormat} placeholder="{{exp_dd}}/{{exp_mm}}/{{exp_yyyy}}" onValueChange={(value) => setForm((current) => ({ ...current, expiryDateFormat: value }))} />
+              <p className="text-xs text-muted-foreground">Để trống để dùng ddmmyy. Có thể nhập chữ và các biến giống phần Nội dung in.</p>
+            </div>
             <DialogFooter>
               <Button
                 type="button"

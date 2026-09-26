@@ -16,6 +16,8 @@ export type DatePrintTemplateItem = {
 };
 
 export type DatePrintTemplate = {
+  manufacturing_date_format?: string | null;
+  expiry_date_format?: string | null;
   id: number;
   item_code: string;
   version: number;
@@ -31,6 +33,8 @@ export type DatePrintTemplate = {
 };
 
 export type CreateDatePrintTemplatePayload = {
+  manufacturing_date_format?: string | null;
+  expiry_date_format?: string | null;
   version?: number;
   description?: string | null;
   print_content: string;
