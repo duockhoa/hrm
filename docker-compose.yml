@@ -80,6 +80,42 @@ services:
       backend:
         condition: service_healthy
 
+  ebr_frontend:
+    build:
+      context: ./ebr_frontend
+      args:
+        NEXT_PUBLIC_BACKEND_API_URL: ${NEXT_PUBLIC_BACKEND_API_URL:-http://localhost:3012}
+        NEXT_PUBLIC_COOKIE_DOMAIN: ${NEXT_PUBLIC_COOKIE_DOMAIN:-}
+        NEXT_PUBLIC_ALL_APPLICATIONS_URL: ${NEXT_PUBLIC_ALL_APPLICATIONS_URL:-http://localhost:3000}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      COOKIE_HTTP_ONLY: ${COOKIE_HTTP_ONLY:-true}
+      NEXT_PUBLIC_COOKIE_DOMAIN: ${NEXT_PUBLIC_COOKIE_DOMAIN:-}
+    ports:
+      - "${EBR_FRONTEND_PORT:-3002}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  wms_frontend:
+    build:
+      context: ./wms_frontend
+      args:
+        NEXT_PUBLIC_BACKEND_API_URL: ${NEXT_PUBLIC_BACKEND_API_URL:-http://localhost:3012}
+        NEXT_PUBLIC_COOKIE_DOMAIN: ${NEXT_PUBLIC_COOKIE_DOMAIN:-}
+        NEXT_PUBLIC_ALL_APPLICATIONS_URL: ${NEXT_PUBLIC_ALL_APPLICATIONS_URL:-http://localhost:3000}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      COOKIE_HTTP_ONLY: ${COOKIE_HTTP_ONLY:-true}
+      NEXT_PUBLIC_COOKIE_DOMAIN: ${NEXT_PUBLIC_COOKIE_DOMAIN:-}
+    ports:
+      - "${WMS_FRONTEND_PORT:-3007}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   mysql_data:
   backend_uploads:
