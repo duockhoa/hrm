@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import DatePrintContentInput from "./date-print-content-input";
 import { API_ROUTES } from "@/lib/api-routes";
 import { datePrintTemplatesService } from "@/services/index.service";
 import {
@@ -748,7 +748,7 @@ export default function InlineDatePrintTemplates({
             </div>
             <div className="space-y-2">
               <Label htmlFor="date-print-template-content">Nội dung in</Label>
-              <Textarea
+              <DatePrintContentInput
                 id="date-print-template-content"
                 value={form.printContent}
                 rows={8}
@@ -757,10 +757,10 @@ export default function InlineDatePrintTemplates({
                   "NSX: {{mfg_dd}}{{mfg_mm}}{{mfg_yy}}\nHSD: {{exp_dd}}{{exp_mm}}{{exp_yy}}\nLSX: {{batch_number}}"
                 }
                 className="font-mono"
-                onChange={(event) =>
+                onValueChange={(value) =>
                   setForm((current) => ({
                     ...current,
-                    printContent: event.target.value,
+                    printContent: value,
                   }))
                 }
               />

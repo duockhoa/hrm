@@ -2208,6 +2208,22 @@ export class ProductionOrdersController {
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT)
+  @Get(':id/date-print/export/:templateId')
+  async exportDatePrint(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('templateId', ParseIntPipe) templateId: number,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.productionOrdersService.exportDatePrint(id, templateId);
+    response.set({
+      'Content-Disposition': `attachment; filename="${file.filename}"`,
+      'Content-Length': file.buffer.length,
+      'Content-Type': file.contentType,
+    });
+    return new StreamableFile(file.buffer);
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT)
   @Get(':id/batch-report/pdf')
   @ApiOperation({
     summary: 'Xuất PDF báo cáo lô sản xuất',

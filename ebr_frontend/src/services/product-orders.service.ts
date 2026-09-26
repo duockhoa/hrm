@@ -2472,6 +2472,12 @@ const exportPostWeighingMaterialCheck = async (
   return response;
 };
 
+const exportDatePrint = (id: string | number, templateId: number) =>
+  axiosClient.get(
+    `${API_ROUTES.productionOrders.base}/${id}/date-print/export/${templateId}`,
+    { responseType: "blob" },
+  );
+
 const exportProductionOrder = async (id: string | number) => {
   const response = await axiosClient.get(
     `${API_ROUTES.productionOrders.base}/${id}/export`,
@@ -2718,6 +2724,7 @@ const productOrdersService = {
   exportWeighingTicket,
   exportPostWeighingMaterialCheck,
   exportProductionOrder,
+  exportDatePrint,
   exportProductionOrderBatchReportPDF,
 };
 

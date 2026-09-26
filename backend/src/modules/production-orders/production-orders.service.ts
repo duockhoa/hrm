@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
+import { exportDatePrint } from './exports/date-print-export';
 import { mixingRecordsReportInclude } from './exports/mixing-records-report-html';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
 import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
@@ -401,6 +402,19 @@ export class ProductionOrdersService {
     const { lines } = await this.findProductionOrderLineData(id);
 
     return lines;
+  }
+
+  async exportDatePrint(id: number, templateId: number) {
+    const order = await this.findProductionOrderForExport(id);
+    const template = await this.prismaService.datePrintTemplates.findFirst({
+      where: { id: templateId, item_code: order.item_code, status: 'active' },
+    });
+    if (!template) {
+      throw new BadRequestException(
+        'Biểu mẫu in date không thuộc mã hàng này hoặc đã ngừng sử dụng.',
+      );
+    }
+    return exportDatePrint(order, template);
   }
 
   async exportProductionOrder(id: number) {

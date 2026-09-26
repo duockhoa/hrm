@@ -1,6 +1,7 @@
 "use client";
 
 import OpenFormButton from "@/components/button-open-form/button-open-form";
+import FormExportDatePrint from "./form-export-date-print";
 import DispensedMaterialLabelForm from "@/components/form-dispensed-material-label/form-dispensed-material-label";
 import {
   isProductionOrderFeatureEnabled,
@@ -854,6 +855,18 @@ export default function ProductOrderDetail({
               <ExportProductionOrderButton
                 productionOrderId={productionOrderId}
               />
+              {productionOrderId != null && productOrderItemCode && (
+                <OpenFormButton
+                  icon={<FaFileExport />}
+                  name="Xuất theo dõi in date"
+                  form={
+                    <FormExportDatePrint
+                      productionOrderId={productionOrderId}
+                      itemCode={productOrderItemCode}
+                    />
+                  }
+                />
+              )}
               <ExportBatchReportPDFButton
                 productionOrderId={productionOrderId}
               />
