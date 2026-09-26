@@ -412,7 +412,10 @@ export class ProductionOrdersService {
     });
   }
 
-  async exportDatePrint(id: number, templateId: number) {
+  async exportDatePrint(id: number, templateId: number, format = 'word') {
+    if (format !== 'word' && format !== 'pdf') {
+      throw new BadRequestException('Định dạng xuất phải là word hoặc pdf.');
+    }
     const order = await this.findProductionOrderForExport(id);
     const template = await this.prismaService.datePrintTemplates.findFirst({
       where: { id: templateId, item_code: order.item_code, status: 'active' },
@@ -422,7 +425,9 @@ export class ProductionOrdersService {
         'Biểu mẫu in date không thuộc mã hàng này hoặc đã ngừng sử dụng.',
       );
     }
-    return exportDatePrint(order, template);
+    return format === 'pdf'
+      ? this.productionOrderExportService.exportDatePrintPdf(order, template)
+      : exportDatePrint(order, template);
   }
 
   async exportProductionOrder(id: number) {

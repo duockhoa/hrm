@@ -2213,8 +2213,9 @@ export class ProductionOrdersController {
     @Param('id', ParseIntPipe) id: number,
     @Param('templateId', ParseIntPipe) templateId: number,
     @Res({ passthrough: true }) response: Response,
+    @Query('format') format = 'word',
   ) {
-    const file = await this.productionOrdersService.exportDatePrint(id, templateId);
+    const file = await this.productionOrdersService.exportDatePrint(id, templateId, format);
     response.set({
       'Content-Disposition': `attachment; filename="${file.filename}"`,
       'Content-Length': file.buffer.length,

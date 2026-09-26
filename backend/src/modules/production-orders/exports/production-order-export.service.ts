@@ -121,6 +121,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import PizZip from 'pizzip';
 import { ProductionOrderPdfRendererService } from './production-order-pdf-renderer.service';
+import { renderDatePrintHtml } from './date-print-report-html';
 import { renderProductionOrderReportHtml } from './production-order-report-html';
 import type { ProductionOrderLineWithRelations } from '../production-orders.service';
 
@@ -805,6 +806,14 @@ export class ProductionOrderExportService {
   constructor(
     private readonly pdfRenderer: ProductionOrderPdfRendererService,
   ) {}
+
+  async exportDatePrintPdf(...args: Parameters<typeof renderDatePrintHtml>) {
+    return {
+      buffer: await this.pdfRenderer.render(await renderDatePrintHtml(...args)),
+      contentType: 'application/pdf',
+      filename: `Theo-doi-in-date-${args[0].id}-v${args[1].version}.pdf`,
+    };
+  }
 
   async exportBatchReport(
     productionOrder: ProductionOrderForExport,

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><title>Phiếu theo dõi in date</title>
+<style>
+@import url('https://fonts.cdnfonts.com/css/times-new-roman');
+@page { size: 215.9mm 279.4mm; margin: 0; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #000; font-family: 'Times New Roman', 'Liberation Serif', serif; font-size: 12pt; line-height: 1.15833; }
+.report-page { position: relative; width: 215.9mm; height: 279.4mm; padding: 12.7mm 25.4mm 20mm; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+/* Widths/heights are converted from the Word template's twips (20 twips = 1pt). */
+.heading { width: 495pt; height: 20mm; color: #808080; margin-bottom: 10.4mm; line-height: normal; }
+.heading td { border: .5pt solid #808080; padding: 0 5.4pt; vertical-align: middle; }
+.logo { width: 126pt; text-align: center; }
+.logo img { display: block; margin: auto; width: 35.086mm; height: 13.229mm; object-fit: contain; }
+.title { width: 234pt; text-align: center; font-size: 16pt; font-weight: bold; white-space: nowrap; }
+.meta { width: 135pt; font-size: 12pt; }
+.meta div { margin: 0 -5.4pt; padding: 0 5.4pt; }
+.meta div + div { border-top: .5pt solid #808080; }
+.info td { padding: 0 5.4pt; vertical-align: middle; overflow-wrap: anywhere; line-height: normal; }
+.info { width: 494.75pt; margin-bottom: 21.9pt; }
+.info tr:nth-child(1) { height: 17.5pt; }
+.info tr:nth-child(2) { height: 21.1pt; }
+.info tr:nth-child(3) { height: 22.9pt; }
+.content { width: 494.75pt; line-height: normal; }
+.content td, .content th { border: .5pt solid black; padding: 0 5.4pt; overflow-wrap: anywhere; text-align: center; vertical-align: middle; }
+.content th { height: 36.85pt; font-weight: bold; }
+.content td { height: 49pt; }
+.multiline { white-space: pre-wrap; overflow-wrap: anywhere; }
+.position { margin: 21.9pt 0 8pt; }
+.caption { margin: 0 0 8pt; font-weight: bold; }
+.illustration { width: 467.5pt; border: .5pt solid black; height: 324.85pt; padding: 13.9pt 5.4pt 0; }
+.illustration img { display: block; max-width: 100%; max-height: 74mm; object-fit: contain; }
+.footer { position: absolute; bottom: 16.9mm; left: 25.4mm; right: 25.4mm; text-align: center; color: #808080; font-weight: bold; line-height: normal; }
+.footer span:last-child { position: absolute; right: 0; }
+</style></head>
+<body><section class="report-page date-print-page">
+<table class="heading"><tr>
+<td class="logo"><img src="{{logo}}" alt="DK Pharma"></td>
+<td class="title">PHIẾU THEO DÕI IN DATE</td>
+<td class="meta"><div>Mã số: BMDB</div><div>Ngày ban hành:<br>25/09/2026</div><div>Lần ban hành: 02</div></td>
+</tr></table>
+<table class="info"><colgroup><col style="width:17.2%"><col style="width:30%"><col style="width:15.5%"><col style="width:37.3%"></colgroup>
+<tr><td>Tên sản phẩm:</td><td colspan="3"><b>{{item_name}}</b></td></tr>
+<tr><td>Mã sản phẩm:</td><td><b>{{item_code}}</b></td><td>Số lô:</td><td><b>{{lot_no}}</b></td></tr>
+<tr><td>Ngày sản xuất:</td><td><b>{{date_manufacture}}</b></td><td>Hạn dùng:</td><td><b>{{expire_date}}</b></td></tr></table>
+<table class="content"><colgroup><col style="width:30.9%"><col style="width:24.6%"><col style="width:22.7%"><col style="width:21.8%"></colgroup>
+<tr><th>Nội dung in yêu cầu</th><th>Nội dung in thực tế</th><th>Người in date</th><th>Ngày/IPC xác<br>nhận</th></tr>
+<tr><td class="multiline">{{required_print_content}}</td><td></td><td></td><td></td></tr></table>
+<p class="position multiline"><b>Mô tả vị trí in: </b>{{print_position_description}}</p>
+<p class="caption">Hình ảnh minh họa cho yêu cầu:</p>
+<div class="illustration">{{illustration}}</div>
+<footer class="footer"><span>Phòng ĐBCL</span><span>1 / 1</span></footer>
+</section></body></html>

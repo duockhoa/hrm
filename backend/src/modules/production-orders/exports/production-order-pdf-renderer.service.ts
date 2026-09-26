@@ -48,6 +48,13 @@ export class ProductionOrderPdfRendererService {
             Array.from(document.images).map((image) => image.decode()),
           );
           // Measure rows after fonts load so long room/user names also paginate.
+          for (const sheet of Array.from(document.querySelectorAll<HTMLElement>('.date-print-page'))) {
+            const illustration = sheet.querySelector<HTMLElement>('.illustration');
+            const footer = sheet.querySelector<HTMLElement>('.footer');
+            if (illustration && footer && illustration.getBoundingClientRect().bottom > footer.getBoundingClientRect().top - footerRowClearancePx) {
+              return { overflow: true };
+            }
+          }
           for (const firstPage of Array.from(
             document.querySelectorAll<HTMLElement>(
               '.additional-report-page, .environment-check-page, .hygiene-check-page, .volume-check-page, .semi-finished-net-weight-check-page, .semi-finished-gross-weight-check-page, .leak-tightness-check-page, .warehouse-release-page',

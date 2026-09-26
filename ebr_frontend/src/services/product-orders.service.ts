@@ -2479,10 +2479,10 @@ const fetchDatePrintExportTemplates = async (id: string | number) => {
   return response.data;
 };
 
-const exportDatePrint = (id: string | number, templateId: number) =>
+const exportDatePrint = (id: string | number, templateId: number, format: 'word' | 'pdf' = 'word') =>
   axiosClient.get(
     `${API_ROUTES.productionOrders.base}/${id}/date-print/export/${templateId}`,
-    { responseType: "blob" },
+    { responseType: "blob", params: { format } },
   );
 
 const exportProductionOrder = async (id: string | number) => {

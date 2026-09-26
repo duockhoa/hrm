@@ -18,6 +18,7 @@ export default function FormExportDatePrint({
 }) {
   const [selectedId, setSelectedId] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [format, setFormat] = useState<'word' | 'pdf'>('pdf');
   const { data, error, isLoading, mutate } = useSWR(
     ["date-print-export-templates", productionOrderId],
     () => productionOrdersService.fetchDatePrintExportTemplates(productionOrderId),
@@ -35,11 +36,12 @@ export default function FormExportDatePrint({
       const response = await productionOrdersService.exportDatePrint(
         productionOrderId,
         selected.id,
+        format,
       );
       const url = URL.createObjectURL(response.data as Blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Theo-doi-in-date-${productionOrderId}-v${selected.version}.docx`;
+      link.download = `Theo-doi-in-date-${productionOrderId}-v${selected.version}.${format === 'pdf' ? 'pdf' : 'docx'}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -121,11 +123,18 @@ export default function FormExportDatePrint({
           </pre>
         </div>
       )}
+      <div className="space-y-2">
+        <Label htmlFor="date-print-export-format">Định dạng xuất</Label>
+        <select id="date-print-export-format" className="w-full rounded-md border bg-background p-2" value={format} disabled={exporting} onChange={(event) => setFormat(event.target.value as 'word' | 'pdf')}>
+          <option value="word">Word (.docx)</option>
+          <option value="pdf">PDF (.pdf)</option>
+        </select>
+      </div>
       <Button
         type="submit"
         disabled={!selected || exporting || Boolean(error) || isLoading}
       >
-        {exporting ? "Đang xuất…" : "Xuất Word"}
+        {exporting ? "Đang xuất…" : format === 'pdf' ? "Xuất PDF" : "Xuất Word"}
       </Button>
     </form>
   );

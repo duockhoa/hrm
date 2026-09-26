@@ -22,6 +22,11 @@ describe('production order date print template selection', () => {
 
   beforeEach(() => jest.resetAllMocks());
 
+  it('rejects unsupported export formats before reading data', async () => {
+    await expect(service.exportDatePrint(1, 22, 'html')).rejects.toThrow('Định dạng xuất');
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+  });
+
   it('lists only active templates for the production order item', async () => {
     prisma.productionOrders.findUnique.mockResolvedValue({ id: 1, item_code: 'SP01' });
     prisma.datePrintTemplates.findMany.mockResolvedValue([]);
