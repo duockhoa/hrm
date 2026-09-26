@@ -855,23 +855,24 @@ export default function ProductOrderDetail({
               <ExportProductionOrderButton
                 productionOrderId={productionOrderId}
               />
-              {productionOrderId != null && productOrderItemCode && (
-                <OpenFormButton
-                  icon={<FaFileExport />}
-                  name="Xuất theo dõi in date"
-                  form={
-                    <FormExportDatePrint
-                      productionOrderId={productionOrderId}
-                      itemCode={productOrderItemCode}
-                    />
-                  }
-                />
-              )}
               <ExportBatchReportPDFButton
                 productionOrderId={productionOrderId}
               />
             </>
           )}
+          {isActionEnabled("export_date_print", "production-orders.export-date-print") &&
+            productionOrderId != null && productOrderItemCode && (
+              <OpenFormButton
+                icon={<FaFileExport />}
+                name="Xuất theo dõi in date"
+                form={
+                  <FormExportDatePrint
+                    productionOrderId={productionOrderId}
+                    itemCode={productOrderItemCode}
+                  />
+                }
+              />
+            )}
           <ProductionOrderDocumentControlActions
             productionOrderId={productionOrderId}
             featureConfig={featureConfig}

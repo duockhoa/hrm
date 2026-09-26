@@ -404,6 +404,14 @@ export class ProductionOrdersService {
     return lines;
   }
 
+  async findDatePrintExportTemplates(id: number) {
+    const order = await this.findProductionOrderForExport(id);
+    return this.prismaService.datePrintTemplates.findMany({
+      where: { item_code: order.item_code, status: 'active' },
+      orderBy: { version: 'desc' },
+    });
+  }
+
   async exportDatePrint(id: number, templateId: number) {
     const order = await this.findProductionOrderForExport(id);
     const template = await this.prismaService.datePrintTemplates.findFirst({

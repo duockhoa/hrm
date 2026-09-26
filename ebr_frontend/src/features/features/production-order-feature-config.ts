@@ -29,6 +29,7 @@ const FRONTEND_ALWAYS_ENABLED_KEYS: Record<
     "export_warehouse_release",
     "export_weighing_ticket",
     "export_production_order",
+    "export_date_print",
     "create_semi_finished_product_label",
     "create_dispensed_material_label",
     "create_equipment_monitoring_record",

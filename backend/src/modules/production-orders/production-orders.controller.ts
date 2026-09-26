@@ -2207,7 +2207,7 @@ export class ProductionOrdersController {
     return new StreamableFile(exportedFile.buffer);
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT)
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT)
   @Get(':id/date-print/export/:templateId')
   async exportDatePrint(
     @Param('id', ParseIntPipe) id: number,
@@ -2221,6 +2221,12 @@ export class ProductionOrdersController {
       'Content-Type': file.contentType,
     });
     return new StreamableFile(file.buffer);
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT)
+  @Get(':id/date-print/templates')
+  async findDatePrintExportTemplates(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrdersService.findDatePrintExportTemplates(id);
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT)

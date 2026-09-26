@@ -2472,6 +2472,13 @@ const exportPostWeighingMaterialCheck = async (
   return response;
 };
 
+const fetchDatePrintExportTemplates = async (id: string | number) => {
+  const response = await axiosClient.get<
+    import("@/features/date-print-templates/types").DatePrintTemplate[]
+  >(`${API_ROUTES.productionOrders.base}/${id}/date-print/templates`);
+  return response.data;
+};
+
 const exportDatePrint = (id: string | number, templateId: number) =>
   axiosClient.get(
     `${API_ROUTES.productionOrders.base}/${id}/date-print/export/${templateId}`,
@@ -2725,6 +2732,7 @@ const productOrdersService = {
   exportPostWeighingMaterialCheck,
   exportProductionOrder,
   exportDatePrint,
+  fetchDatePrintExportTemplates,
   exportProductionOrderBatchReportPDF,
 };
 

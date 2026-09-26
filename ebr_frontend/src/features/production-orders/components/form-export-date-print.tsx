@@ -5,7 +5,6 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import datePrintTemplatesService from "@/services/date-print-templates.service";
 import productionOrdersService from "@/services/product-orders.service";
 
 export default function FormExportDatePrint({
@@ -20,8 +19,8 @@ export default function FormExportDatePrint({
   const [selectedId, setSelectedId] = useState("");
   const [exporting, setExporting] = useState(false);
   const { data, error, isLoading, mutate } = useSWR(
-    itemCode ? ["date-print-export-templates", itemCode] : null,
-    () => datePrintTemplatesService.fetchByItemCode(itemCode),
+    ["date-print-export-templates", productionOrderId],
+    () => productionOrdersService.fetchDatePrintExportTemplates(productionOrderId),
   );
   const templates =
     data?.filter((template) => template.status === "active") ?? [];

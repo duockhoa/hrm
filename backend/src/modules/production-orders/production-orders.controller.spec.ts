@@ -1011,6 +1011,8 @@ describe('ProductionOrdersController', () => {
         PRODUCTION_ORDER_PERMISSIONS.EXPORT_WEIGHING_TICKET,
       ],
       ['exportProductionOrder', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
+      ['exportDatePrint', PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT],
+      ['findDatePrintExportTemplates', PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT],
       ['exportBatchReport', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
       [
         'exportProductionOrderLines',
