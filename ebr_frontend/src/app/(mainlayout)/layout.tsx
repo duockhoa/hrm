@@ -72,8 +72,8 @@ const data = [
   },
   {
     id: "equipment-operation-records",
-    name: "Sổ theo dõi vận hành thiết bị",
-    icon: <Wrench className="size-5 shrink-0" />,
+    name: "Báo cáo sự cố thiết bị",
+    icon: <TriangleAlert className="size-5 shrink-0" />,
     url: "/equipment-operation-records",
   },
   {
