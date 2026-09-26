@@ -68,6 +68,17 @@ describe('date print Word export', () => {
       datePrintData(order, { ...template, print_content: '{{typo}}' }),
     ).toThrow('typo');
   });
+  it('formats the production and expiry date fields as ddmmyy', () => {
+    expect(datePrintData({
+      ...order,
+      date_manufacture: '2026-10-02',
+      expire_date: '2028-10-02',
+    }, template)).toMatchObject({
+      date_manufacture: '021026',
+      expire_date: '021028',
+    });
+  });
+
   it('renders the real Word template, preserving headers and escaping XML', async () => {
     const output = await exportDatePrint(order, template);
     const zip = new PizZip(output.buffer);

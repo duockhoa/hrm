@@ -82,8 +82,8 @@ export function datePrintData(
     item_name: order.item.item_name,
     item_code: order.item_code,
     lot_no: order.lot_no,
-    date_manufacture: variables.manufacturing_date,
-    expire_date: variables.expiry_date,
+    date_manufacture: `${mfg.dd}${mfg.mm}${mfg.yy}`,
+    expire_date: `${exp.dd}${exp.mm}${exp.yy}`,
     required_print_content: content,
     print_position_description: template.print_position ?? '',
   };
