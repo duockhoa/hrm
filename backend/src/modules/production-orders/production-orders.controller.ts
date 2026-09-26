@@ -2226,6 +2226,26 @@ export class ProductionOrdersController {
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT)
+  @Post(':id/date-print/export/:templateId')
+  async exportDatePrintWithOverrides(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('templateId', ParseIntPipe) templateId: number,
+    @Res({ passthrough: true }) response: Response,
+    @Body() body: { format?: string; note?: string; print_position?: string; print_content?: string },
+  ) {
+    const file = await this.productionOrdersService.exportDatePrint(
+      id, templateId, body.format, body.note,
+      { print_position: body.print_position, print_content: body.print_content },
+    );
+    response.set({
+      'Content-Disposition': `attachment; filename="${file.filename}"`,
+      'Content-Length': file.buffer.length,
+      'Content-Type': file.contentType,
+    });
+    return new StreamableFile(file.buffer);
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT)
   @Get(':id/date-print/templates')
   async findDatePrintExportTemplates(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findDatePrintExportTemplates(id);

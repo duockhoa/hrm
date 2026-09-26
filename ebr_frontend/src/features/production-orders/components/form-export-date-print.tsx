@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import productionOrdersService from "@/services/product-orders.service";
 
@@ -24,6 +25,8 @@ export default function FormExportDatePrint({
   const [selectedId, setSelectedId] = useState("");
   const [exporting, setExporting] = useState(false);
   const [note, setNote] = useState("");
+  const [printPosition, setPrintPosition] = useState("");
+  const [printContent, setPrintContent] = useState("");
   const [format, setFormat] = useState<'word' | 'pdf'>('pdf');
   const { data, error, isLoading, mutate } = useSWR(
     ["date-print-export-templates", productionOrderId],
@@ -46,6 +49,7 @@ export default function FormExportDatePrint({
         selected.id,
         exportFormat,
         note.trim(),
+        { print_position: printPosition, print_content: printContent },
       );
       const filename = `Theo-doi-in-date-${productionOrderId}-v${selected.version}.${exportFormat === 'pdf' ? 'pdf' : 'docx'}`;
       const file = new File([response.data as Blob], filename, {
@@ -121,7 +125,12 @@ export default function FormExportDatePrint({
             id="date-print-export-template"
             className="w-full rounded-md border bg-background p-2"
             value={selectedId}
-            onChange={(event) => setSelectedId(event.target.value)}
+            onChange={(event) => {
+              const template = templates.find((item) => String(item.id) === event.target.value);
+              setSelectedId(event.target.value);
+              setPrintPosition(template?.print_position ?? "");
+              setPrintContent(template?.print_content ?? "");
+            }}
             disabled={exporting}
             required
           >
@@ -136,11 +145,22 @@ export default function FormExportDatePrint({
         </div>
       )}
       {selected && (
-        <div className="space-y-2 rounded-md border p-3 text-sm">
-          <p>Vị trí in: {selected.print_position || "Chưa cập nhật"}</p>
-          <pre className="whitespace-pre-wrap break-words font-mono">
-            {selected.print_content}
-          </pre>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="date-print-position">Vị trí in date</Label>
+            <Input id="date-print-position" value={printPosition}
+              onChange={(event) => setPrintPosition(event.target.value)}
+              disabled={exporting} maxLength={2000} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="date-print-content">Nội dung in date</Label>
+            <Textarea id="date-print-content" value={printContent}
+              onChange={(event) => setPrintContent(event.target.value)}
+              disabled={exporting} rows={5} maxLength={20000} />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Chỉnh sửa chỉ áp dụng cho phiếu xuất lần này, không thay đổi mẫu gốc.
+          </p>
         </div>
       )}
       {!onPdfGenerated && <div className="space-y-2">

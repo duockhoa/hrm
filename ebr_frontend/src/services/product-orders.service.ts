@@ -2479,10 +2479,11 @@ const fetchDatePrintExportTemplates = async (id: string | number) => {
   return response.data;
 };
 
-const exportDatePrint = (id: string | number, templateId: number, format: 'word' | 'pdf' = 'word', note = '') =>
-  axiosClient.get(
+const exportDatePrint = (id: string | number, templateId: number, format: 'word' | 'pdf' = 'word', note = '', overrides?: { print_position: string; print_content: string }) =>
+  axiosClient.post(
     `${API_ROUTES.productionOrders.base}/${id}/date-print/export/${templateId}`,
-    { responseType: "blob", params: { format, note } },
+    { format, note, ...overrides },
+    { responseType: "blob" },
   );
 
 const exportProductionOrder = async (id: string | number) => {

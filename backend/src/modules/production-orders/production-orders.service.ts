@@ -412,7 +412,13 @@ export class ProductionOrdersService {
     });
   }
 
-  async exportDatePrint(id: number, templateId: number, format = 'word', note = '') {
+  async exportDatePrint(id: number, templateId: number, format = 'word', note = '', overrides: { print_position?: string; print_content?: string } = {}) {
+    for (const [key, limit] of [['print_position', 2000], ['print_content', 20000]] as const) {
+      const value = overrides[key];
+      if (value !== undefined && (typeof value !== 'string' || value.length > limit)) {
+        throw new BadRequestException(`${key} phải là chuỗi tối đa ${limit} ký tự.`);
+      }
+    }
     if (typeof note !== 'string' || note.length > 2000) {
       throw new BadRequestException('Ghi chú phải là chuỗi tối đa 2000 ký tự.');
     }
@@ -428,9 +434,14 @@ export class ProductionOrdersService {
         'Biểu mẫu in date không thuộc mã hàng này hoặc đã ngừng sử dụng.',
       );
     }
+    const exportTemplate = {
+      ...template,
+      print_position: overrides.print_position ?? template.print_position,
+      print_content: overrides.print_content ?? template.print_content,
+    };
     return format === 'pdf'
-      ? this.productionOrderExportService.exportDatePrintPdf(order, template, note.trim())
-      : exportDatePrint(order, template, note.trim());
+      ? this.productionOrderExportService.exportDatePrintPdf(order, exportTemplate, note.trim())
+      : exportDatePrint(order, exportTemplate, note.trim());
   }
 
   async exportProductionOrder(id: number) {

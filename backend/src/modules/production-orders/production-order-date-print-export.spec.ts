@@ -4,23 +4,53 @@ import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { ProductionOrdersController } from './production-orders.controller';
+import { ProductionOrderExportService } from './exports/production-order-export.service';
 
 describe('production order date print template selection', () => {
   const prisma = {
     productionOrders: { findUnique: jest.fn() },
     datePrintTemplates: { findFirst: jest.fn(), findMany: jest.fn() },
   };
+  const exporter = { exportDatePrintPdf: jest.fn() };
   const service = new ProductionOrdersService(
     prisma as unknown as PrismaService,
     null!,
     null!,
     null!,
     null!,
-    null!,
+    exporter as unknown as ProductionOrderExportService,
     null!,
   );
 
   beforeEach(() => jest.resetAllMocks());
+
+  it('uses temporary edits for PDF export without changing the original template', async () => {
+    const template = Object.freeze({ id: 22, print_position: 'Vị trí gốc', print_content: 'Nội dung gốc' });
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 1, item_code: 'SP01' });
+    prisma.datePrintTemplates.findFirst.mockResolvedValue(template);
+    exporter.exportDatePrintPdf.mockResolvedValue({ buffer: Buffer.from('pdf') });
+
+    await service.exportDatePrint(1, 22, 'pdf', '', {
+      print_position: '', print_content: 'Nội dung mới\nDòng thứ hai',
+    });
+    expect(exporter.exportDatePrintPdf).toHaveBeenLastCalledWith(
+      expect.anything(), { ...template, print_position: '', print_content: 'Nội dung mới\nDòng thứ hai' }, '',
+    );
+    expect(template.print_content).toBe('Nội dung gốc');
+    expect(template.print_position).toBe('Vị trí gốc');
+
+    await service.exportDatePrint(1, 22, 'pdf');
+    expect(exporter.exportDatePrintPdf).toHaveBeenLastCalledWith(expect.anything(), template, '');
+  });
+
+  it.each([
+    { print_content: 'a'.repeat(20001) },
+    { print_position: 'a'.repeat(2001) },
+    { print_content: 42 as unknown as string },
+  ])('rejects invalid temporary edits before reading data', async (overrides) => {
+    await expect(service.exportDatePrint(1, 22, 'pdf', '', overrides)).rejects.toThrow('phải là chuỗi');
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+  });
 
   it('rejects unsupported export formats before reading data', async () => {
     await expect(service.exportDatePrint(1, 22, 'html')).rejects.toThrow('Định dạng xuất');
@@ -62,7 +92,7 @@ describe('production order date print template selection', () => {
 
 describe('date print export authorization', () => {
   const guard = new PermissionsGuard(new Reflector());
-  it.each(['exportDatePrint', 'findDatePrintExportTemplates'] as const)(
+  it.each(['exportDatePrint', 'exportDatePrintWithOverrides', 'findDatePrintExportTemplates'] as const)(
     '%s requires the dedicated permission',
     (route) => {
       const context = (permissions: string[]) => ({

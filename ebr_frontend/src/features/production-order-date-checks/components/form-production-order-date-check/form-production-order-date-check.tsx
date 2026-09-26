@@ -151,7 +151,7 @@ export default function FormProductionOrderDateCheck({
                   </Button>
                 </DialogTrigger>
                 <DialogContent
-                  className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl"
+                  className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[min(800px,calc(100vw-2rem))]"
                   showCloseButton={!isGenerating}
                   onInteractOutside={(event) => event.preventDefault()}
                 >
