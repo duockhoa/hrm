@@ -3,7 +3,7 @@ export default function FieldDisplay({
   value,
 }: {
   lable: string;
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div className="flex w-full justify-start gap-3 md:gap-4">
@@ -17,3 +17,4 @@ export default function FieldDisplay({
     </div>
   );
 }
+import type { ReactNode } from "react";

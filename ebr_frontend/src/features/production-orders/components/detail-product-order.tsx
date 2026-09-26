@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import OpenFormButton from "@/components/button-open-form/button-open-form";
 import DispensedMaterialLabelForm from "@/components/form-dispensed-material-label/form-dispensed-material-label";
 import {
@@ -1852,7 +1853,17 @@ export default function ProductOrderDetail({
           lable="Mã lệnh sản xuất"
           value={productOrder.production_order_code}
         />
-        <FieldDisplay lable="Mã sản phẩm" value={productOrder.item_code} />
+        <FieldDisplay
+          lable="Mã sản phẩm"
+          value={productOrderItemCode ? (
+            <Link
+              href={`/${String(productOrderItemCode).startsWith("BTP") ? "semi-finished-products" : String(productOrderItemCode).startsWith("TP") ? "finished-products" : "raw-materials"}/${encodeURIComponent(String(productOrderItemCode))}`}
+              className="text-blue-600 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              {productOrderItemCode}
+            </Link>
+          ) : ""}
+        />
         <FieldDisplay
           lable="Trạng thái"
           value={formatProductionOrderStatus(productOrder.status)}
