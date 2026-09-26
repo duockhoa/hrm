@@ -143,9 +143,8 @@ export default function DatePrintImageEditor({
 
   const fitScale = image
     ? Math.min(
-        1,
-        Math.max(1, viewportSize.width - 16) / image.naturalWidth,
-        Math.max(1, viewportSize.height - 16) / image.naturalHeight,
+        Math.max(1, viewportSize.width) / image.naturalWidth,
+        Math.max(1, viewportSize.height) / image.naturalHeight,
       )
     : 1;
   const displayWidth = (image?.naturalWidth ?? 0) * fitScale * zoom;
@@ -284,12 +283,12 @@ export default function DatePrintImageEditor({
           draftRef.current = null;
           setMarks((current) => current.slice(0, -1));
         }}
-        className="max-h-[95dvh] overflow-y-auto sm:max-w-5xl"
+        className="grid h-[calc(100dvh-1rem)] max-h-[900px] max-w-[calc(100vw-1rem)] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 sm:h-[90dvh] sm:max-w-[min(calc(100vw-1rem),calc(72rem+232px))] sm:p-5"
         onInteractOutside={(event) => event.preventDefault()}
       >
-        <DialogHeader>
+        <DialogHeader className="min-w-0 pr-8">
           <DialogTitle>Sửa ảnh minh họa</DialogTitle>
-          <DialogDescription>Lưu sẽ thay thế ảnh cũ.</DialogDescription>
+          <DialogDescription className="sr-only">Lưu sẽ thay thế ảnh cũ.</DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap items-center gap-1 rounded-md border bg-white px-2 py-1.5">
           <Button
@@ -347,11 +346,11 @@ export default function DatePrintImageEditor({
             <Hand className="size-4" />
           </Button>
         </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_112px] items-stretch gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_112px] items-stretch gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
           <fieldset
             disabled={saving || !image}
             aria-label="Công cụ sửa ảnh"
-            className="order-2 min-w-0 rounded-xl bg-[#272727] text-white disabled:opacity-50"
+            className="order-2 min-h-0 min-w-0 overflow-y-auto rounded-xl bg-[#272727] text-white disabled:opacity-50"
           >
             <div className="grid grid-cols-2 gap-2 border-b border-white/15 p-3 sm:grid-cols-4">
               {(
@@ -495,7 +494,7 @@ export default function DatePrintImageEditor({
           </fieldset>
           <div
             ref={attachViewport}
-            className="order-1 h-[60vh] min-w-0 overflow-auto overscroll-contain rounded-xl border bg-slate-100"
+            className="order-1 min-h-0 min-w-0 overflow-auto overscroll-contain rounded-md bg-black/5"
             aria-label="Khung chỉnh sửa ảnh có thể cuộn"
           >
             {loadError ? (
@@ -508,8 +507,8 @@ export default function DatePrintImageEditor({
               <div
                 className="flex items-center justify-center"
                 style={{
-                  width: Math.max(viewportSize.width, displayWidth + 16),
-                  height: Math.max(viewportSize.height, displayHeight + 16),
+                  width: Math.max(viewportSize.width, displayWidth),
+                  height: Math.max(viewportSize.height, displayHeight),
                 }}
               >
                 <canvas
