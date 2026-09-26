@@ -690,8 +690,9 @@ export default function InlineDatePrintTemplates({
               {editingTemplate ? "Cập nhật" : "Tạo"} biểu mẫu in date
             </DialogTitle>
             <DialogDescription>
-              Nội dung in có thể sử dụng các biến như {"{{manufacturing_date}}"}
-              ,{" {{expiry_date}}"} hoặc {" {{batch_number}}"}.
+              Nội dung in có thể sử dụng các biến {"{{mfg_dd}}"},{" {{mfg_mm}}"}
+              ,{" {{mfg_yy}}"}, {"{{mfg_yyyy}}"}, {"{{exp_dd}}"},{" {{exp_mm}}"}
+              ,{" {{exp_yy}}"}, {"{{exp_yyyy}}"} hoặc {"{{batch_number}}"}.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -719,7 +720,7 @@ export default function InlineDatePrintTemplates({
               <Input
                 id="date-print-template-description"
                 value={form.description}
-                placeholder="Ví dụ: Nhãn chai 500 ml"
+                placeholder="Ví dụ: Phiếu in date gói"
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
@@ -736,7 +737,7 @@ export default function InlineDatePrintTemplates({
                 id="date-print-template-position"
                 value={form.printPosition}
                 maxLength={255}
-                placeholder="Ví dụ: Mặt đáy chai hoặc mép hàn túi"
+                placeholder="Mép trên chính giữa túi"
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
@@ -753,7 +754,7 @@ export default function InlineDatePrintTemplates({
                 rows={8}
                 required
                 placeholder={
-                  "NSX: {{manufacturing_date}}\nHSD: {{expiry_date}}\nSố lô: {{batch_number}}"
+                  "NSX: {{mfg_dd}}{{mfg_mm}}{{mfg_yy}}\nHSD: {{exp_dd}}{{exp_mm}}{{exp_yy}}\nLSX: {{batch_number}}"
                 }
                 className="font-mono"
                 onChange={(event) =>
