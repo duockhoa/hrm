@@ -12,10 +12,14 @@ export default function FormExportDatePrint({
   productionOrderId,
   itemCode,
   onClose,
+  onPdfGenerated,
+  onExportingChange,
 }: {
   productionOrderId: string | number;
-  itemCode: string;
+  itemCode?: string;
   onClose?: () => void;
+  onPdfGenerated?: (file: File) => void;
+  onExportingChange?: (exporting: boolean) => void;
 }) {
   const [selectedId, setSelectedId] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -34,22 +38,33 @@ export default function FormExportDatePrint({
   const handleExport = async () => {
     if (!selected || exporting) return;
     setExporting(true);
+    onExportingChange?.(true);
     try {
+      const exportFormat = onPdfGenerated ? "pdf" : format;
       const response = await productionOrdersService.exportDatePrint(
         productionOrderId,
         selected.id,
-        format,
+        exportFormat,
         note.trim(),
       );
-      const url = URL.createObjectURL(response.data as Blob);
+      const filename = `Theo-doi-in-date-${productionOrderId}-v${selected.version}.${exportFormat === 'pdf' ? 'pdf' : 'docx'}`;
+      const file = new File([response.data as Blob], filename, {
+        type: exportFormat === "pdf"
+          ? "application/pdf"
+          : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      onPdfGenerated?.(file);
+      const url = URL.createObjectURL(file);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Theo-doi-in-date-${productionOrderId}-v${selected.version}.${format === 'pdf' ? 'pdf' : 'docx'}`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      toast.success("Đã xuất phiếu theo dõi in date.");
+      toast.success(onPdfGenerated
+        ? "Đã tạo PDF và đính kèm vào form tải nội dung date yêu cầu."
+        : "Đã xuất phiếu theo dõi in date.");
       onClose?.();
     } catch (error: unknown) {
       let message = "Không thể xuất phiếu theo dõi in date.";
@@ -70,6 +85,7 @@ export default function FormExportDatePrint({
       toast.error(message);
     } finally {
       setExporting(false);
+      onExportingChange?.(false);
     }
   };
 
@@ -78,12 +94,13 @@ export default function FormExportDatePrint({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         void handleExport();
       }}
     >
-      <h2 className="text-lg font-semibold">Xuất theo dõi in date</h2>
+      {!onPdfGenerated && <h2 className="text-lg font-semibold">Xuất theo dõi in date</h2>}
       <p className="text-sm text-muted-foreground">
-        Mã hàng: {itemCode}. Ngày sản xuất, hạn dùng và số lô được lấy từ lệnh
+        {itemCode ? `Mã hàng: ${itemCode}. ` : ""}Ngày sản xuất, hạn dùng và số lô được lấy từ lệnh
         sản xuất.
       </p>
       {isLoading ? (
@@ -126,13 +143,13 @@ export default function FormExportDatePrint({
           </pre>
         </div>
       )}
-      <div className="space-y-2">
+      {!onPdfGenerated && <div className="space-y-2">
         <Label htmlFor="date-print-export-format">Định dạng xuất</Label>
         <select id="date-print-export-format" className="w-full rounded-md border bg-background p-2" value={format} disabled={exporting} onChange={(event) => setFormat(event.target.value as 'word' | 'pdf')}>
           <option value="word">Word (.docx)</option>
           <option value="pdf">PDF (.pdf)</option>
         </select>
-      </div>
+      </div>}
       <div className="space-y-2">
         <Label htmlFor="date-print-export-note">Ghi chú (nếu có)</Label>
         <Textarea id="date-print-export-note" value={note} onChange={(event) => setNote(event.target.value)} disabled={exporting} rows={3} maxLength={2000} placeholder="Nhập ghi chú cho phiếu xuất…" />
@@ -141,7 +158,7 @@ export default function FormExportDatePrint({
         type="submit"
         disabled={!selected || exporting || Boolean(error) || isLoading}
       >
-        {exporting ? "Đang xuất…" : format === 'pdf' ? "Xuất PDF" : "Xuất Word"}
+        {exporting ? "Đang xuất…" : onPdfGenerated ? "Tạo PDF và đính kèm" : format === 'pdf' ? "Xuất PDF" : "Xuất Word"}
       </Button>
     </form>
   );

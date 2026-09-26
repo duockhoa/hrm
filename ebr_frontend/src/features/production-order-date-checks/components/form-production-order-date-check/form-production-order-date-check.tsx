@@ -7,6 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import FormExportDatePrint from "@/features/production-orders/components/form-export-date-print";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -30,6 +39,9 @@ export default function FormProductionOrderDateCheck({
   const [packageType, setPackageType] = React.useState("goi");
   const [requestFile, setRequestFile] = React.useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [templateOpen, setTemplateOpen] = React.useState(false);
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dateChecksKey = productionOrderId
     ? API_ROUTES.productionOrders.dateChecks(productionOrderId)
     : null;
@@ -37,10 +49,12 @@ export default function FormProductionOrderDateCheck({
   const resetForm = () => {
     setPackageType("goi");
     setRequestFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSubmitting || isGenerating || templateOpen) return;
 
     if (!productionOrderId) {
       toast.error("Không tìm thấy lệnh sản xuất.");
@@ -114,14 +128,60 @@ export default function FormProductionOrderDateCheck({
             <Label htmlFor="date-check-request-file">
               File yêu cầu in date
             </Label>
-            <Input
-              id="date-check-request-file"
-              type="file"
-              disabled={isSubmitting}
-              onChange={(event) =>
-                setRequestFile(event.target.files?.[0] ?? null)
-              }
-            />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                ref={fileInputRef}
+                className="min-w-0 flex-1"
+                id="date-check-request-file"
+                type="file"
+                disabled={isSubmitting}
+                onChange={(event) =>
+                  setRequestFile(event.target.files?.[0] ?? null)
+                }
+              />
+              <Dialog
+                open={templateOpen}
+                onOpenChange={(open) => {
+                  if (!isGenerating) setTemplateOpen(open);
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline" disabled={isSubmitting}>
+                    Tạo từ mẫu
+                  </Button>
+                </DialogTrigger>
+                <DialogContent
+                  className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl"
+                  showCloseButton={!isGenerating}
+                  onInteractOutside={(event) => event.preventDefault()}
+                >
+                  <DialogHeader>
+                    <DialogTitle>Tạo phiếu in date từ mẫu</DialogTitle>
+                    <DialogDescription>
+                      PDF sẽ được đính kèm vào form yêu cầu và tải xuống máy.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <FormExportDatePrint
+                    productionOrderId={productionOrderId}
+                    onExportingChange={setIsGenerating}
+                    onPdfGenerated={(file) => {
+                      setRequestFile(file);
+                      if (fileInputRef.current) {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        fileInputRef.current.files = dataTransfer.files;
+                      }
+                    }}
+                    onClose={() => setTemplateOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
+            </div>
+            {requestFile && (
+              <p className="break-words text-sm text-muted-foreground" role="status">
+                File đính kèm: {requestFile.name}
+              </p>
+            )}
           </div>
         </div>
 
