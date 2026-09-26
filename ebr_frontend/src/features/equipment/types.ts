@@ -50,33 +50,6 @@ export type CreateEquipmentParameterPayload = {
 export type UpdateEquipmentParameterPayload =
   Partial<CreateEquipmentParameterPayload>;
 
-export type EquipmentIncidentPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-
-export type EquipmentIncidentStatus =
-  "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
-
-export type EquipmentIncidentReport = {
-  id: number;
-  equipment_id: number;
-  title: string;
-  description: string;
-  priority: EquipmentIncidentPriority;
-  status: EquipmentIncidentStatus;
-  created_by_id: number;
-  created_at?: string;
-  updated_at?: string;
-  equipment?: Equipment;
-  createdBy?: EquipmentCreatedBy;
-};
-
-export type CreateEquipmentIncidentReportPayload = {
-  equipment_id: number;
-  title: string;
-  description: string;
-  priority?: EquipmentIncidentPriority;
-  status?: EquipmentIncidentStatus;
-};
-
 export type EquipmentMonitoringValuePayload = {
   parameter_id: number;
   value: string;

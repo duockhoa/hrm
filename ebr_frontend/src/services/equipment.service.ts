@@ -1,12 +1,10 @@
 import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 import type {
-  CreateEquipmentIncidentReportPayload,
   CreateEquipmentMonitoringRecordPayload,
   CreateEquipmentParameterPayload,
   CreateEquipmentPayload,
   Equipment,
-  EquipmentIncidentReport,
   EquipmentMonitoringRecord,
   EquipmentParameter,
   UpdateEquipmentMonitoringRecordPayload,
@@ -96,27 +94,6 @@ const deleteEquipmentParameter = async (
   return response.data;
 };
 
-const fetchEquipmentIncidentReports = async (params?: {
-  equipment_id?: string | number;
-  status?: string;
-  priority?: string;
-}): Promise<EquipmentIncidentReport[]> => {
-  const response = await axiosClient.get(API_ROUTES.equipment.incidentReports, {
-    params,
-  });
-  return response.data;
-};
-
-const createEquipmentIncidentReport = async (
-  payload: CreateEquipmentIncidentReportPayload,
-): Promise<EquipmentIncidentReport> => {
-  const response = await axiosClient.post(
-    API_ROUTES.equipment.incidentReports,
-    payload,
-  );
-  return response.data;
-};
-
 const fetchEquipmentMonitoringRecords = async (params?: {
   production_order_id?: string | number;
   equipment_id?: string | number;
@@ -198,8 +175,6 @@ const equipmentService = {
   createEquipmentParameter,
   updateEquipmentParameter,
   deleteEquipmentParameter,
-  fetchEquipmentIncidentReports,
-  createEquipmentIncidentReport,
   fetchEquipmentMonitoringRecords,
   fetchEquipmentMonitoringRecordById,
   createEquipmentMonitoringRecord,

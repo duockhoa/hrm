@@ -368,9 +368,6 @@ const EQUIPMENT = {
   parameters: (id: string | number) => `/equipment/${id}/parameters`,
   parameterDetail: (parameterId: string | number) =>
     `/equipment/parameters/${parameterId}`,
-  incidentReports: "/equipment/incident-reports",
-  incidentReportDetail: (reportId: string | number) =>
-    `/equipment/incident-reports/${reportId}`,
   monitoringRecords: "/equipment/monitoring-records",
   monitoringRecordDetail: (recordId: string | number) =>
     `/equipment/monitoring-records/${recordId}`,

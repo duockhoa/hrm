@@ -71,12 +71,6 @@ const data = [
     url: "/cleaning-checklists",
   },
   {
-    id: "equipment-operation-records",
-    name: "Báo cáo sự cố thiết bị",
-    icon: <TriangleAlert className="size-5 shrink-0" />,
-    url: "/equipment-operation-records",
-  },
-  {
     id: "6",
     name: "Tổng hợp lô sản xuất",
     icon: <ListChecks className="size-5 shrink-0" />,
