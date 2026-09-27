@@ -71,6 +71,12 @@ const data = [
     url: "/cleaning-checklists",
   },
   {
+    id: "maintenance-requests",
+    name: "Báo cáo sự cố",
+    icon: <Wrench className="size-5 shrink-0" />,
+    url: "/maintenance-requests",
+  },
+  {
     id: "6",
     name: "Tổng hợp lô sản xuất",
     icon: <ListChecks className="size-5 shrink-0" />,
