@@ -818,6 +818,14 @@ export default function ProductOrderDetail({
 
         <div className="grid w-full grid-cols-4 justify-items-center gap-x-1 gap-y-1 md:min-h-50 md:grid-cols-[repeat(auto-fill,minmax(90px,1fr))] md:gap-2">
           {isActionEnabled(
+            "export_production_order",
+            "production-orders.export",
+          ) && (
+            <ExportProductionOrderButton
+              productionOrderId={productionOrderId}
+            />
+          )}
+          {isActionEnabled(
             "export_warehouse_release",
             "production-orders.export-warehouse-release",
           ) && (
@@ -848,74 +856,19 @@ export default function ProductOrderDetail({
             />
           )}
           {isActionEnabled(
-            "export_production_order",
-            "production-orders.export",
-          ) && (
-            <>
-              <ExportProductionOrderButton
+            "upload_production_guide",
+            "production-orders.production-guide.upload",
+          ) &&
+            productionOrderId !== null &&
+            productionOrderId !== undefined && (
+              <ProductionGuideUploadButton
                 productionOrderId={productionOrderId}
               />
-              <ExportBatchReportPDFButton
-                productionOrderId={productionOrderId}
-              />
-            </>
-          )}
+            )}
           <ProductionOrderDocumentControlActions
             productionOrderId={productionOrderId}
             featureConfig={featureConfig}
           />
-          {isActionEnabled("view_mixing_record") &&
-            productionOrderId !== null &&
-            productionOrderId !== undefined && (
-              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
-                <button
-                  type="button"
-                  title="Phiếu pha chế"
-                  onClick={() => onOpenMixingRecord?.(productionOrderId)}
-                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
-                >
-                  <FileText />
-                </button>
-                <div className="w-[68px] md:w-[90px]">
-                  <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-                    Phiếu pha chế
-                  </p>
-                </div>
-              </div>
-            )}
-          {isActionEnabled("view_material_summary") &&
-            productionOrderId !== null &&
-            productionOrderId !== undefined && (
-              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
-                <button
-                  type="button"
-                  title="Tổng kết vật liệu"
-                  onClick={() => onOpenMaterialSummary?.(productionOrderId)}
-                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
-                >
-                  <ClipboardList />
-                </button>
-                <div className="w-[68px] md:w-[90px]">
-                  <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-                    Tổng kết vật liệu
-                  </p>
-                </div>
-              </div>
-            )}
-          {isActionEnabled(
-            "create_semi_finished_product_label",
-            "production-orders.semi-finished-product-labels.create",
-          ) && (
-            <OpenFormButton
-              icon={<Tags />}
-              name="Tạo nhãn BTP"
-              form={
-                <SemiFinishedProductLabelForm
-                  productionOrderId={productionOrderId}
-                />
-              }
-            />
-          )}
           {isActionEnabled(
             "create_dispensed_material_label",
             "production-orders.dispensed-material-labels.create",
@@ -942,30 +895,164 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled(
-            "create_sampling_request",
-            "production-orders.sampling-requests.send",
-          ) && (
+          {isActionEnabled("create_disinfectant_preparation") && (
             <OpenFormButton
-              icon={<LuFileInput />}
-              name="Tạo PYCLM"
+              icon={<ShieldCheck />}
+              name="Pha chế chất sát khuẩn"
               form={
-                <FormCreateSamplingRequest
+                <FormProductionOrderDisinfectantPreparation
                   productionOrderId={productionOrderId}
                 />
               }
             />
           )}
-          {isActionEnabled(
-            "upload_production_guide",
-            "production-orders.production-guide.upload",
-          ) &&
+          {isActionEnabled("create_hygiene_check") && (
+            <OpenFormButton
+              icon={<Sparkles />}
+              name="Kiểm tra vệ sinh"
+              form={
+                <FormProductionOrderHygieneCheck
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
+          {isActionEnabled("create_steam_sterilization_check") &&
             productionOrderId !== null &&
             productionOrderId !== undefined && (
-              <ProductionGuideUploadButton
-                productionOrderId={productionOrderId}
-              />
+              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
+                <button
+                  type="button"
+                  title="Theo dõi quá trình tiệt trùng"
+                  onClick={() =>
+                    onOpenSteamSterilizationChecks?.(productionOrderId)
+                  }
+                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
+                >
+                  <CookingPot />
+                </button>
+                <div className="w-[68px] md:w-[90px]">
+                  <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+                    Theo dõi quá trình tiệt trùng
+                  </p>
+                </div>
+              </div>
             )}
+          {isActionEnabled("create_environment_check") && (
+            <OpenFormButton
+              icon={<ThermometerSun />}
+              name="Kiểm tra nhiệt độ độ ẩm"
+              form={
+                <FormProductionOrderEnvironmentCheck
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
+          {isActionEnabled("view_mixing_record") &&
+            productionOrderId !== null &&
+            productionOrderId !== undefined && (
+              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
+                <button
+                  type="button"
+                  title="Phiếu pha chế"
+                  onClick={() => onOpenMixingRecord?.(productionOrderId)}
+                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
+                >
+                  <FileText />
+                </button>
+                <div className="w-[68px] md:w-[90px]">
+                  <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+                    Phiếu pha chế
+                  </p>
+                </div>
+              </div>
+            )}
+          {isActionEnabled("create_filtration_check") &&
+            productionOrderId !== null &&
+            productionOrderId !== undefined && (
+              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
+                <button
+                  type="button"
+                  title="Theo dõi quá trình lọc"
+                  onClick={() => onOpenFiltrationChecks?.(productionOrderId)}
+                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
+                >
+                  <Filter />
+                </button>
+                <div className="w-[68px] md:w-[90px]">
+                  <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+                    Theo dõi quá trình lọc
+                  </p>
+                </div>
+              </div>
+            )}
+          {isActionEnabled("create_post_preparation_solution_check") && (
+            <OpenFormButton
+              icon={<Beaker />}
+              name="Kiểm tra dịch sau pha chế"
+              form={
+                <FormProductionOrderPostPreparationSolutionCheck
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
+          {isActionEnabled("create_post_homogenization_granule_check") && (
+            <OpenFormButton
+              icon={<Beaker />}
+              name="Kiểm tra cốm sau đồng nhất"
+              form={
+                <FormProductionOrderPostHomogenizationGranuleCheck
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
+          {isActionEnabled("create_density_check") && (
+            <OpenFormButton
+              icon={<Beaker />}
+              name="Kiểm tra tỉ trọng"
+              form={
+                <FormProductionOrderDensityCheck
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
+          {isActionEnabled("create_cylinder_calibration") && (
+            <OpenFormButton
+              icon={<Ruler />}
+              name="Hiệu chỉnh ống đong"
+              form={
+                <FormProductionOrderCylinderCalibration
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
+          {isActionEnabled("create_ten_shell_weight_check") && (
+            <OpenFormButton
+              icon={<Scale />}
+              name="Khối lượng 10 vỏ"
+              form={
+                <FormProductionOrderTenShellWeightCheck
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
+          {isActionEnabled("create_shell_weight_check") && (
+            <OpenFormButton
+              icon={<GiChipsBag />}
+              name="Kiểm tra khối lượng vỏ"
+              form={
+                <FormProductionOrderShellWeightCheck
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
           {isActionEnabled("create_equipment_monitoring_record") &&
             productionOrderId !== null &&
             productionOrderId !== undefined && (
@@ -990,52 +1077,29 @@ export default function ProductOrderDetail({
                 </div>
               </div>
             )}
-          {isActionEnabled("create_steam_sterilization_check") &&
-            productionOrderId !== null &&
-            productionOrderId !== undefined && (
-              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
-                <button
-                  type="button"
-                  title="Theo dõi quá trình tiệt trùng"
-                  onClick={() =>
-                    onOpenSteamSterilizationChecks?.(productionOrderId)
-                  }
-                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
-                >
-                  <CookingPot />
-                </button>
-                <div className="w-[68px] md:w-[90px]">
-                  <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-                    Theo dõi quá trình tiệt trùng
-                  </p>
-                </div>
+          {isActionEnabled("create_date_check") && (
+            <div className="inline-flex flex-col items-center p-0.5 md:p-1">
+              <button
+                type="button"
+                title="Theo dõi In Date"
+                onClick={() => onOpenDateChecks?.(productionOrderId)}
+                className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
+              >
+                <FileUp />
+              </button>
+              <div className="w-[68px] md:w-[90px]">
+                <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+                  Theo dõi In Date
+                </p>
               </div>
-            )}
-          {isActionEnabled("create_filtration_check") &&
-            productionOrderId !== null &&
-            productionOrderId !== undefined && (
-              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
-                <button
-                  type="button"
-                  title="Theo dõi quá trình lọc"
-                  onClick={() => onOpenFiltrationChecks?.(productionOrderId)}
-                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
-                >
-                  <Filter />
-                </button>
-                <div className="w-[68px] md:w-[90px]">
-                  <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-                    Theo dõi quá trình lọc
-                  </p>
-                </div>
-              </div>
-            )}
-          {isActionEnabled("create_environment_check") && (
+            </div>
+          )}
+          {isActionEnabled("create_primary_packaging_confirmation") && (
             <OpenFormButton
-              icon={<ThermometerSun />}
-              name="Kiểm tra nhiệt độ độ ẩm"
+              icon={<PackageCheck />}
+              name="Xác nhận trước đóng gói bao bì cấp 1"
               form={
-                <FormProductionOrderEnvironmentCheck
+                <FormPrimaryPackagingConfirmation
                   productionOrderId={productionOrderId}
                 />
               }
@@ -1077,56 +1141,12 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("create_hygiene_check") && (
-            <OpenFormButton
-              icon={<Sparkles />}
-              name="Kiểm tra vệ sinh"
-              form={
-                <FormProductionOrderHygieneCheck
-                  productionOrderId={productionOrderId}
-                />
-              }
-            />
-          )}
-          {isActionEnabled("create_density_check") && (
-            <OpenFormButton
-              icon={<Beaker />}
-              name="Kiểm tra tỉ trọng"
-              form={
-                <FormProductionOrderDensityCheck
-                  productionOrderId={productionOrderId}
-                />
-              }
-            />
-          )}
-          {isActionEnabled("create_post_homogenization_granule_check") && (
-            <OpenFormButton
-              icon={<Beaker />}
-              name="Kiểm tra cốm sau đồng nhất"
-              form={
-                <FormProductionOrderPostHomogenizationGranuleCheck
-                  productionOrderId={productionOrderId}
-                />
-              }
-            />
-          )}
           {isActionEnabled("create_friability_check") && (
             <OpenFormButton
               icon={<Percent />}
               name="Kiểm tra độ mài mòn"
               form={
                 <FormProductionOrderFriabilityCheck
-                  productionOrderId={productionOrderId}
-                />
-              }
-            />
-          )}
-          {isActionEnabled("create_cylinder_calibration") && (
-            <OpenFormButton
-              icon={<Ruler />}
-              name="Hiệu chỉnh ống đong"
-              form={
-                <FormProductionOrderCylinderCalibration
                   productionOrderId={productionOrderId}
                 />
               }
@@ -1142,17 +1162,6 @@ export default function ProductOrderDetail({
                   itemCode={
                     productOrder.item_code ?? productOrder.item?.item_code
                   }
-                />
-              }
-            />
-          )}
-          {isActionEnabled("create_vial_inspection_check") && (
-            <OpenFormButton
-              icon={<Eye />}
-              name="Soi lọ"
-              form={
-                <FormProductionOrderVialInspectionCheck
-                  productionOrderId={productionOrderId}
                 />
               }
             />
@@ -1251,17 +1260,6 @@ export default function ProductOrderDetail({
               name="Kiểm tra rò rỉ nang cứng"
               form={
                 <FormProductionOrderHardCapsuleLeakageCheck
-                  productionOrderId={productionOrderId}
-                />
-              }
-            />
-          )}
-          {isActionEnabled("create_shell_weight_check") && (
-            <OpenFormButton
-              icon={<GiChipsBag />}
-              name="Kiểm tra khối lượng vỏ"
-              form={
-                <FormProductionOrderShellWeightCheck
                   productionOrderId={productionOrderId}
                 />
               }
@@ -1489,17 +1487,6 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("create_ten_shell_weight_check") && (
-            <OpenFormButton
-              icon={<Scale />}
-              name="Khối lượng 10 vỏ"
-              form={
-                <FormProductionOrderTenShellWeightCheck
-                  productionOrderId={productionOrderId}
-                />
-              }
-            />
-          )}
           {isActionEnabled("create_spray_dose_check") && (
             <OpenFormButton
               icon={<SprayCan />}
@@ -1594,23 +1581,6 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("create_date_check") && (
-            <div className="inline-flex flex-col items-center p-0.5 md:p-1">
-              <button
-                type="button"
-                title="Theo dõi In Date"
-                onClick={() => onOpenDateChecks?.(productionOrderId)}
-                className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
-              >
-                <FileUp />
-              </button>
-              <div className="w-[68px] md:w-[90px]">
-                <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-                  Theo dõi In Date
-                </p>
-              </div>
-            </div>
-          )}
           {isActionEnabled("create_packaging_slip_attachment") && (
             <OpenFormButton
               icon={<FileUp />}
@@ -1635,17 +1605,6 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("create_finished_product_summary") && (
-            <OpenFormButton
-              icon={<PackageCheck />}
-              name="Tổng kết thành phẩm"
-              form={
-                <FormProductionOrderFinishedProductSummary
-                  productionOrderId={productionOrderId}
-                />
-              }
-            />
-          )}
           {isActionEnabled("create_post_secondary_packaging_summary") &&
           onOpenPostSecondaryPackagingSummaries ? (
             <div className="inline-flex flex-col items-center p-0.5 md:p-1">
@@ -1666,12 +1625,12 @@ export default function ProductOrderDetail({
               </div>
             </div>
           ) : null}
-          {isActionEnabled("create_primary_packaging_confirmation") && (
+          {isActionEnabled("create_finished_product_summary") && (
             <OpenFormButton
               icon={<PackageCheck />}
-              name="Xác nhận trước đóng gói bao bì cấp 1"
+              name="Tổng kết thành phẩm"
               form={
-                <FormPrimaryPackagingConfirmation
+                <FormProductionOrderFinishedProductSummary
                   productionOrderId={productionOrderId}
                 />
               }
@@ -1801,12 +1760,59 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("create_factory_release_review") && (
+          {isActionEnabled("view_material_summary") &&
+            productionOrderId !== null &&
+            productionOrderId !== undefined && (
+              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
+                <button
+                  type="button"
+                  title="Tổng kết vật liệu"
+                  onClick={() => onOpenMaterialSummary?.(productionOrderId)}
+                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
+                >
+                  <ClipboardList />
+                </button>
+                <div className="w-[68px] md:w-[90px]">
+                  <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+                    Tổng kết vật liệu
+                  </p>
+                </div>
+              </div>
+            )}
+          {isActionEnabled("create_vial_inspection_check") && (
             <OpenFormButton
-              icon={<FileCheck />}
-              name="Xét duyệt xuất xưởng"
+              icon={<Eye />}
+              name="Soi lọ"
               form={
-                <FormProductionOrderFactoryReleaseReview
+                <FormProductionOrderVialInspectionCheck
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
+          {isActionEnabled(
+            "create_semi_finished_product_label",
+            "production-orders.semi-finished-product-labels.create",
+          ) && (
+            <OpenFormButton
+              icon={<Tags />}
+              name="Tạo nhãn BTP"
+              form={
+                <SemiFinishedProductLabelForm
+                  productionOrderId={productionOrderId}
+                />
+              }
+            />
+          )}
+          {isActionEnabled(
+            "create_sampling_request",
+            "production-orders.sampling-requests.send",
+          ) && (
+            <OpenFormButton
+              icon={<LuFileInput />}
+              name="Tạo PYCLM"
+              form={
+                <FormCreateSamplingRequest
                   productionOrderId={productionOrderId}
                 />
               }
@@ -1823,26 +1829,23 @@ export default function ProductOrderDetail({
               }
             />
           )}
-          {isActionEnabled("create_disinfectant_preparation") && (
+          {isActionEnabled("create_factory_release_review") && (
             <OpenFormButton
-              icon={<ShieldCheck />}
-              name="Pha chế chất sát khuẩn"
+              icon={<FileCheck />}
+              name="Xét duyệt xuất xưởng"
               form={
-                <FormProductionOrderDisinfectantPreparation
+                <FormProductionOrderFactoryReleaseReview
                   productionOrderId={productionOrderId}
                 />
               }
             />
           )}
-          {isActionEnabled("create_post_preparation_solution_check") && (
-            <OpenFormButton
-              icon={<Beaker />}
-              name="Kiểm tra dịch sau pha chế"
-              form={
-                <FormProductionOrderPostPreparationSolutionCheck
-                  productionOrderId={productionOrderId}
-                />
-              }
+          {isActionEnabled(
+            "export_production_order",
+            "production-orders.export",
+          ) && (
+            <ExportBatchReportPDFButton
+              productionOrderId={productionOrderId}
             />
           )}
         </div>
