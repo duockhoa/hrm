@@ -4,7 +4,7 @@ import { Fragment, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { isAxiosError } from "axios";
 import { AiOutlineRight } from "react-icons/ai";
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import { Edit2, Plus, QrCode, Trash2 } from "lucide-react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QrScanDialog } from "@/components/qr-scan-dialog/qr-scan-dialog";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  maintenanceEquipmentKey,
   maintenanceRequestsKey,
   maintenanceRequestsService as service,
   type MaintenanceRequest,
@@ -72,12 +74,18 @@ export default function MaintenanceRequestsPage() {
     isLoading,
     mutate,
   } = useSWR(maintenanceRequestsKey, service.list);
+  const {
+    data: equipment = [],
+    error: equipmentError,
+    isLoading: isEquipmentLoading,
+  } = useSWR(maintenanceEquipmentKey, service.listEquipment);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MaintenanceRequest | null>(null);
   const [deleting, setDeleting] = useState<MaintenanceRequest | null>(null);
   const [form, setForm] = useState<MaintenanceRequestInput>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [isEquipmentScannerOpen, setIsEquipmentScannerOpen] = useState(false);
   const groups = new Map<string, MaintenanceRequest[]>();
   for (const record of records ?? []) {
     const date = new Date(record.createdAt).toLocaleDateString("vi-VN");
@@ -97,6 +105,27 @@ export default function MaintenanceRequestsPage() {
         : { ...emptyForm },
     );
     setOpen(true);
+  }
+
+  function handleEquipmentQrScan(decodedText: string) {
+    const equipmentCode = decodedText.split("$", 1)[0]?.trim();
+
+    if (!equipmentCode) {
+      toast.error("Không đọc được mã thiết bị từ QR.");
+      return;
+    }
+
+    const matchedEquipment = equipment.find(
+      (item) => item.code.trim().toLowerCase() === equipmentCode.toLowerCase(),
+    );
+
+    if (!matchedEquipment) {
+      toast.error(`Không tìm thấy thiết bị có mã ${equipmentCode}.`);
+      return;
+    }
+
+    setForm({ ...form, equipmentCode: matchedEquipment.code });
+    toast.success(`Đã chọn thiết bị ${matchedEquipment.code}.`);
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -250,7 +279,10 @@ export default function MaintenanceRequestsPage() {
       <Dialog
         open={open}
         onOpenChange={(value) => {
-          if (!saving) setOpen(value);
+          if (!saving) {
+            setOpen(value);
+            if (!value) setIsEquipmentScannerOpen(false);
+          }
         }}
       >
         <DialogContent className="max-h-[90dvh] overflow-y-auto">
@@ -266,15 +298,56 @@ export default function MaintenanceRequestsPage() {
             <fieldset disabled={saving} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="incident-equipment">Mã thiết bị</Label>
-                <Input
-                  id="incident-equipment"
-                  required
-                  value={form.equipmentCode}
-                  onChange={(event) =>
-                    setForm({ ...form, equipmentCode: event.target.value })
-                  }
-                  placeholder="TBSX915"
-                />
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={form.equipmentCode}
+                    disabled={
+                      saving || isEquipmentLoading || Boolean(equipmentError)
+                    }
+                    onValueChange={(equipmentCode) =>
+                      setForm({ ...form, equipmentCode })
+                    }
+                  >
+                    <SelectTrigger
+                      id="incident-equipment"
+                      className="min-w-0 flex-1"
+                    >
+                      <SelectValue
+                        placeholder={
+                          isEquipmentLoading
+                            ? "Đang tải danh sách thiết bị..."
+                            : "Chọn thiết bị"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {equipment.map((item) => (
+                        <SelectItem key={item.id} value={item.code}>
+                          {item.code} - {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    disabled={
+                      saving || isEquipmentLoading || Boolean(equipmentError)
+                    }
+                    onClick={() => setIsEquipmentScannerOpen(true)}
+                    aria-label="Quét QR thiết bị"
+                    title="Quét QR thiết bị"
+                  >
+                    <QrCode className="size-4" />
+                  </Button>
+                </div>
+                {equipmentError ? (
+                  <p className="text-sm text-red-600">
+                    Không thể tải danh sách thiết bị.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="incident-title">Tiêu đề sự cố</Label>
@@ -337,6 +410,13 @@ export default function MaintenanceRequestsPage() {
           </form>
         </DialogContent>
       </Dialog>
+      <QrScanDialog
+        open={isEquipmentScannerOpen}
+        title="Quét QR thiết bị"
+        description="Quét mã QR để chọn thiết bị trong danh sách. Nội dung sau ký tự $ sẽ được bỏ qua."
+        onOpenChange={setIsEquipmentScannerOpen}
+        onScan={handleEquipmentQrScan}
+      />
       <Dialog
         open={Boolean(deleting)}
         onOpenChange={(value) => {

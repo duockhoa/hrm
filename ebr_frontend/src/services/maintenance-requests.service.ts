@@ -19,11 +19,18 @@ export type MaintenanceRequest = {
   status: string;
   workOrders?: { id: string }[];
 };
+export type MaintenanceEquipment = {
+  id: string;
+  code: string;
+  name: string;
+  accountingCode?: string | null;
+};
 
 const baseURL =
   process.env.NEXT_PUBLIC_QLTB_API_URL || "https://qltb.dkpharma.io.vn/api/v1";
 const options = { baseURL };
 export const maintenanceRequestsKey = `${baseURL}/requests`;
+export const maintenanceEquipmentKey = `${baseURL}/equipment`;
 
 export const maintenanceRequestsService = {
   async list(): Promise<MaintenanceRequest[]> {
@@ -32,6 +39,13 @@ export const maintenanceRequestsService = {
       options,
     );
     return data;
+  },
+  async listEquipment(): Promise<MaintenanceEquipment[]> {
+    const { data } = await axiosClient.get<
+      MaintenanceEquipment[] | { data: MaintenanceEquipment[] }
+    >("/equipment", options);
+
+    return Array.isArray(data) ? data : data.data;
   },
   async create(input: MaintenanceRequestInput) {
     const { equipmentCode, title, description, priority } = input;
@@ -44,12 +58,14 @@ export const maintenanceRequestsService = {
   async update(record: MaintenanceRequest, input: MaintenanceRequestInput) {
     let equipmentId = record.equipmentId;
     if (input.equipmentCode !== record.equipment?.code) {
-      type Equipment = { id: string; code: string; accountingCode?: string };
-      const { data } = await axiosClient.get<Equipment[]>("/equipment", {
+      const { data: response } = await axiosClient.get<
+        MaintenanceEquipment[] | { data: MaintenanceEquipment[] }
+      >("/equipment", {
         ...options,
         params: { search: input.equipmentCode },
       });
-      const equipment = data.find(
+      const equipmentList = Array.isArray(response) ? response : response.data;
+      const equipment = equipmentList.find(
         (item) =>
           item.code === input.equipmentCode ||
           item.accountingCode === input.equipmentCode,
