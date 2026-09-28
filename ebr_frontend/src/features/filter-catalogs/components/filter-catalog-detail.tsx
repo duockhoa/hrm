@@ -78,7 +78,7 @@ export default function FilterCatalogDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-5xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full min-w-0 max-w-5xl overflow-hidden rounded border bg-white p-4 shadow-md">
         <DetailPanelHeader
           title="Chi tiết cột lọc"
           onClose={onClose}
@@ -93,7 +93,7 @@ export default function FilterCatalogDetail({
 
   if (!data) {
     return (
-      <div className="w-full max-w-5xl space-y-3 rounded border bg-white p-4 shadow-md">
+      <div className="w-full min-w-0 max-w-5xl space-y-3 overflow-hidden rounded border bg-white p-4 shadow-md">
         {Array.from({ length: 8 }).map((_, index) => (
           <Skeleton key={index} className="h-8 w-full" />
         ))}
@@ -123,7 +123,7 @@ export default function FilterCatalogDetail({
   const usages = data.productionOrderFiltrationChecks ?? [];
 
   return (
-    <div className="w-full max-w-5xl rounded border bg-white p-4 shadow-md">
+    <div className="w-full min-w-0 max-w-5xl overflow-hidden rounded border bg-white p-4 shadow-md">
       <DetailPanelHeader
         title={`Cột lọc ${data.filter_code}`}
         subtitle={data.filter_type}
@@ -136,7 +136,7 @@ export default function FilterCatalogDetail({
         ))}
       </div>
 
-      <div className="mt-6 border-t pt-4">
+      <div className="mt-6 min-w-0 border-t pt-4">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold">Lịch sử sử dụng</h2>
           <span className="rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700">
@@ -148,8 +148,8 @@ export default function FilterCatalogDetail({
             Màng lọc chưa từng được sử dụng.
           </div>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded border">
-            <Table>
+          <div className="mt-3 w-full min-w-0 max-w-full overflow-hidden rounded border">
+            <Table className="min-w-[816px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Thời điểm</TableHead>

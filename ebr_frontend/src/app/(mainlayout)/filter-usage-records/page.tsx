@@ -266,7 +266,7 @@ export default function FilterUsageRecordsPage() {
   );
 
   const detailPanel = selectedFilterCatalogId ? (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-white">
       <div className="sticky top-0 z-20 w-full bg-white p-2">
         <div className="flex w-full justify-between border-b border-gray-200 pb-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -292,7 +292,7 @@ export default function FilterUsageRecordsPage() {
           </Button>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 justify-center overflow-auto p-2 md:p-4">
+      <div className="flex min-h-0 min-w-0 flex-1 justify-center overflow-x-hidden overflow-y-auto p-2 md:p-4">
         <FilterCatalogDetail
           id={selectedFilterCatalogId}
           onClose={() => setSelectedFilterCatalogId(null)}
@@ -305,7 +305,7 @@ export default function FilterUsageRecordsPage() {
   );
 
   if (shouldShowMobileDetail) {
-    return <div className="h-full overflow-auto">{detailPanel}</div>;
+    return <div className="h-full min-w-0 overflow-hidden">{detailPanel}</div>;
   }
 
   return (
@@ -324,7 +324,7 @@ export default function FilterUsageRecordsPage() {
             <ResizablePanel
               defaultSize={60}
               minSize={30}
-              className="min-h-0 min-w-0 overflow-auto bg-blue-50"
+              className="min-h-0 min-w-0 overflow-hidden bg-blue-50"
             >
               {detailPanel}
             </ResizablePanel>
