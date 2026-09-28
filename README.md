@@ -2,14 +2,16 @@
 
 ## Chạy bằng Docker
 
-1. Sao chép các biến môi trường và điền giá trị thật:
+1. Sao chép các biến môi trường và điền giá trị thật khi cần triển khai:
 
    ```bash
    cp .env.example .env
    cp backend/.env.example backend/.env
    ```
 
-   `backend/.env` chứa JWT, Cloudinary, SAP và các thông tin tích hợp khác.
+   Nếu chưa tạo `backend/.env`, Docker Compose sẽ dùng `backend/.env.example`
+   để chạy local. `backend/.env` chứa JWT, Cloudinary, SAP và các thông tin
+   tích hợp thật và sẽ ghi đè các giá trị mẫu.
    Docker Compose tự thay `DATABASE_URL` của backend để kết nối MySQL nội bộ.
 
 2. Khởi động toàn bộ web, API và MySQL:
@@ -18,11 +20,20 @@
    docker compose up --build
    ```
 
+   Nếu chỉ cần backend và MySQL, chạy:
+
+   ```bash
+   docker compose up --build backend
+   ```
+
+   Compose sẽ tự khởi động MySQL, chạy Prisma migration rồi mới khởi động backend.
+
 Sau khi khởi động:
 
 - Web: `http://localhost:3000`
 - API: `http://localhost:3012`
 - Swagger: `http://localhost:50000/api-docs`
+- MySQL: `localhost:3306` (hoặc cổng được cấu hình bằng `MYSQL_PORT`)
 
 Migration Prisma được chạy một lần trong service `migrate` trước khi backend
 khởi động. Dữ liệu MySQL và file upload được giữ trong Docker volumes.
