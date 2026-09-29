@@ -46,16 +46,18 @@ const FilterUsageHistoryRow = memo(function FilterUsageHistoryRow({
 }) {
   return (
     <TableRow>
-      <TableCell className="min-w-40">
+      <TableCell className="w-36">
         {formatDateTime(usage.created_at)}
       </TableCell>
-      <TableCell className="min-w-32 font-medium">{productName(usage)}</TableCell>
-      <TableCell className="min-w-28">{usage.productionOrder?.lot_no ?? ""}</TableCell>
-      <TableCell className="min-w-32">{userLabel(usage.sterilizedBy)}</TableCell>
-      <TableCell className="min-w-36">
+      <TableCell className="w-64 whitespace-normal break-words font-medium">
+        {productName(usage)}
+      </TableCell>
+      <TableCell className="w-28">{usage.productionOrder?.lot_no ?? ""}</TableCell>
+      <TableCell className="w-32">{userLabel(usage.sterilizedBy)}</TableCell>
+      <TableCell className="w-36">
         {usage.pre_sterilization_integrity_result ?? ""}
       </TableCell>
-      <TableCell className="min-w-36">
+      <TableCell className="w-36">
         {usage.post_filter_integrity_result ?? ""}
       </TableCell>
     </TableRow>
@@ -148,9 +150,9 @@ export default function FilterCatalogDetail({
             Màng lọc chưa từng được sử dụng.
           </div>
         ) : (
-          <div className="mt-3 w-full min-w-0 max-w-full overflow-hidden rounded border">
-            <Table className="min-w-[816px]">
-              <TableHeader>
+          <div className="mt-3 w-full min-w-0 max-w-full overflow-x-auto rounded border">
+            <Table className="min-w-[896px] table-fixed">
+              <TableHeader className="[&_th:nth-child(1)]:w-36 [&_th:nth-child(2)]:w-64 [&_th:nth-child(2)]:whitespace-normal [&_th:nth-child(3)]:w-28 [&_th:nth-child(4)]:w-32 [&_th:nth-child(5)]:w-36 [&_th:nth-child(6)]:w-36">
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Thời điểm</TableHead>
                   <TableHead>Tên sản phẩm</TableHead>

@@ -292,12 +292,14 @@ export default function FilterUsageRecordsPage() {
           </Button>
         </div>
       </div>
-      <div className="flex h-0 min-h-0 min-w-0 flex-1 justify-center overflow-x-hidden overflow-y-scroll overscroll-y-contain p-2 [scrollbar-gutter:stable] md:p-4">
-        <FilterCatalogDetail
-          id={selectedFilterCatalogId}
-          onClose={() => setSelectedFilterCatalogId(null)}
-          showCloseButton={false}
-        />
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain p-2 [scrollbar-gutter:stable] md:p-4">
+        <div className="mx-auto w-full max-w-5xl">
+          <FilterCatalogDetail
+            id={selectedFilterCatalogId}
+            onClose={() => setSelectedFilterCatalogId(null)}
+            showCloseButton={false}
+          />
+        </div>
       </div>
     </div>
   ) : (
@@ -310,7 +312,7 @@ export default function FilterUsageRecordsPage() {
 
   return (
     <div className="h-full min-h-0 overflow-hidden rounded-lg bg-white shadow-md">
-      <ResizablePanelGroup>
+      <ResizablePanelGroup className="min-h-0">
         <ResizablePanel
           defaultSize={selectedFilterCatalogExists ? 40 : 100}
           minSize={35}
