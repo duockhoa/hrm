@@ -266,8 +266,8 @@ export default function FilterUsageRecordsPage() {
   );
 
   const detailPanel = selectedFilterCatalogId ? (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-white">
-      <div className="sticky top-0 z-20 w-full bg-white p-2">
+    <div className="flex h-full max-h-full min-h-0 min-w-0 flex-col overflow-hidden bg-white">
+      <div className="z-20 w-full shrink-0 bg-white p-2">
         <div className="flex w-full justify-between border-b border-gray-200 pb-2">
           <div className="flex min-w-0 items-center gap-2">
             <Link
@@ -292,7 +292,7 @@ export default function FilterUsageRecordsPage() {
           </Button>
         </div>
       </div>
-      <div className="flex min-h-0 min-w-0 flex-1 justify-center overflow-x-hidden overflow-y-auto p-2 md:p-4">
+      <div className="flex h-0 min-h-0 min-w-0 flex-1 justify-center overflow-x-hidden overflow-y-scroll overscroll-y-contain p-2 [scrollbar-gutter:stable] md:p-4">
         <FilterCatalogDetail
           id={selectedFilterCatalogId}
           onClose={() => setSelectedFilterCatalogId(null)}
@@ -309,7 +309,7 @@ export default function FilterUsageRecordsPage() {
   }
 
   return (
-    <div className="h-full overflow-hidden rounded-lg bg-white shadow-md">
+    <div className="h-full min-h-0 overflow-hidden rounded-lg bg-white shadow-md">
       <ResizablePanelGroup>
         <ResizablePanel
           defaultSize={selectedFilterCatalogExists ? 40 : 100}
