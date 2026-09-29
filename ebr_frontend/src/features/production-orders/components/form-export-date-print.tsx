@@ -58,14 +58,16 @@ export default function FormExportDatePrint({
           : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
       onPdfGenerated?.(file);
-      const url = URL.createObjectURL(file);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (!onPdfGenerated) {
+        const url = URL.createObjectURL(file);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
       toast.success(onPdfGenerated
         ? "Đã tạo PDF và đính kèm vào form tải nội dung date yêu cầu."
         : "Đã xuất phiếu theo dõi in date.");

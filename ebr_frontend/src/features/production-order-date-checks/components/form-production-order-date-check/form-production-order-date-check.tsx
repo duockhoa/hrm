@@ -158,7 +158,7 @@ export default function FormProductionOrderDateCheck({
                   <DialogHeader>
                     <DialogTitle>Tạo phiếu in date từ mẫu</DialogTitle>
                     <DialogDescription>
-                      PDF sẽ được đính kèm vào form yêu cầu và tải xuống máy.
+                      PDF sẽ được đính kèm vào form yêu cầu.
                     </DialogDescription>
                   </DialogHeader>
                   <FormExportDatePrint
