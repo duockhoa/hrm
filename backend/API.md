@@ -57,6 +57,15 @@ GET /data-export/items?include_deleted=true
 
 Response gồm `data` và `pagination`. Mỗi dòng `data` giữ cấu trúc quan hệ gốc: thông tin số đăng ký nằm trong object `registration` (hoặc `null` nếu item chưa liên kết số đăng ký).
 
+### Sai lệch sản xuất
+
+```http
+GET /data-export/production-order-deviations?page=1&limit=500
+GET /data-export/production-order-deviations?updated_from=2026-09-01T00:00:00.000Z
+```
+
+Endpoint xuất từng bản ghi sai lệch chưa xóa mềm, sắp xếp theo ngày nhập tăng dần. Mỗi dòng có `created_at`, `deviation_content`, `product_name`, `product_code`, `lot_no`, `product_code_lot`, `handling_plan`, `handling_result`, `cause` và `reporter_name`; dữ liệu có phân trang qua `pagination`.
+
 ### Tổng kết thành phẩm
 
 ```http

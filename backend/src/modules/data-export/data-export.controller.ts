@@ -17,6 +17,7 @@ import {
 import { DataExportApiKeyGuard } from './data-export-api-key.guard';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
+import { ExportProductionOrderDeviationsQueryDto } from './dto/export-production-order-deviations.query.dto';
 import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post-secondary-packaging-summaries.query.dto';
 import { ExportSemiFinishedProductSummariesQueryDto } from './dto/export-semi-finished-product-summaries.query.dto';
 import { ExportSemiFinishedWeightChecksQueryDto } from './dto/export-semi-finished-weight-checks.query.dto';
@@ -46,6 +47,18 @@ export class DataExportController {
   })
   exportItems(@Query() query: ExportItemsQueryDto) {
     return this.dataExportService.exportItems(query);
+  }
+
+  @Get('production-order-deviations')
+  @ApiOperation({
+    summary: 'Xuất danh sách sai lệch sản xuất cho Google Sheets',
+  })
+  @ApiOkResponse({ description: 'Danh sách sai lệch theo trang' })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportProductionOrderDeviations(
+    @Query() query: ExportProductionOrderDeviationsQueryDto,
+  ) {
+    return this.dataExportService.exportProductionOrderDeviations(query);
   }
 
   @Get('finished-product-summaries')

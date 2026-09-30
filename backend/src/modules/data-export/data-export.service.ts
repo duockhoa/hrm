@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
 import { ExportItemsQueryDto } from './dto/export-items.query.dto';
+import { ExportProductionOrderDeviationsQueryDto } from './dto/export-production-order-deviations.query.dto';
 import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post-secondary-packaging-summaries.query.dto';
 import { ExportSemiFinishedProductSummariesQueryDto } from './dto/export-semi-finished-product-summaries.query.dto';
 import { ExportSemiFinishedWeightChecksQueryDto } from './dto/export-semi-finished-weight-checks.query.dto';
@@ -384,6 +385,90 @@ const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
 @Injectable()
 export class DataExportService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async exportProductionOrderDeviations(
+    query: ExportProductionOrderDeviationsQueryDto,
+  ) {
+    const where: Prisma.ProductionOrderDeviationsWhereInput = {
+      deleted_at: null,
+    };
+
+    if (query.updated_from) {
+      where.updated_at = { gte: new Date(query.updated_from) };
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const [total, deviations] = await this.prisma.$transaction([
+      this.prisma.productionOrderDeviations.count({ where }),
+      this.prisma.productionOrderDeviations.findMany({
+        where,
+        select: {
+          id: true,
+          deviation_content: true,
+          handling_plan: true,
+          handling_result: true,
+          cause: true,
+          created_at: true,
+          updated_at: true,
+          productionOrder: {
+            select: {
+              item_code: true,
+              lot_no: true,
+              description: true,
+              item: {
+                select: {
+                  item_code: true,
+                  item_name: true,
+                },
+              },
+            },
+          },
+          reporter: {
+            select: {
+              name: true,
+              username: true,
+            },
+          },
+        },
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+      }),
+    ]);
+
+    const data = deviations.map((deviation) => {
+      const productionOrder = deviation.productionOrder;
+      const item = productionOrder?.item;
+      const productCode = item?.item_code || productionOrder?.item_code || '';
+      const lotNo = productionOrder?.lot_no || '';
+
+      return {
+        id: deviation.id,
+        created_at: deviation.created_at,
+        deviation_content: deviation.deviation_content,
+        product_name: item?.item_name || productionOrder?.description || '',
+        product_code: productCode,
+        lot_no: lotNo,
+        product_code_lot: [productCode, lotNo].filter(Boolean).join('-'),
+        handling_plan: deviation.handling_plan || '',
+        handling_result: deviation.handling_result || '',
+        cause: deviation.cause || '',
+        reporter_name:
+          deviation.reporter?.name || deviation.reporter?.username || '',
+      };
+    });
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
 
   async exportItems(query: ExportItemsQueryDto) {
     const where: Prisma.ItemsWhereInput = {};
