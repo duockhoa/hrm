@@ -20,7 +20,9 @@ const padDateTimePart = (value: number) => String(value).padStart(2, "0");
 
 const toDateTimeInputValue = (value: unknown) => {
   const rawValue = String(value).trim();
-  const nativeMatch = rawValue.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+  // Only timezone-free values can be used directly by datetime-local.
+  // UTC/offset values must be converted to the browser's local time below.
+  const nativeMatch = rawValue.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?$/);
   if (nativeMatch) return nativeMatch[1];
 
   const displayMatch = rawValue.match(
@@ -64,7 +66,8 @@ const toDateTimeResultValue = (value: string): string | null | undefined => {
     return undefined;
   }
 
-  return `${year}-${padDateTimePart(month)}-${padDateTimePart(day)}T${padDateTimePart(hour)}:${padDateTimePart(minute)}`;
+  // Send an explicit UTC instant so the server timezone cannot change it.
+  return date.toISOString();
 };
 
 const toInputValue = (parameter: ProductionOrderMixingRecordParameter) => {
