@@ -133,25 +133,28 @@ function xuatTongKetBanThanhPham() {
       formatDateTime(po.samplingRequests?.[0]?.sent_at), // X: Gửi PYC lấy mẫu
       po.production_order_code || "", // Y: Mã lệnh
       noiDungSaiLech, // Z: Nội dung sai lệch
-      po.change_content || "", // AA: Nội dung thay đổi
-      po.total_sampling_quantity ?? "", // AB: Tổng số lượng mẫu lấy
-      formatDateTime(po.first_hygiene_check_at), // AC: Thời điểm kiểm tra vệ sinh
-      "", // AD: Để trống
+      po.deviation_handling_plans || "", // AA: Phương án xử lý sai lệch
+      po.deviation_handling_results || "", // AB: Kết quả xử lý sai lệch
+      po.deviation_causes || "", // AC: Nguyên nhân sai lệch
+      po.change_content || "", // AD: Nội dung thay đổi
+      po.total_sampling_quantity ?? "", // AE: Tổng số lượng mẫu lấy
+      formatDateTime(po.first_hygiene_check_at), // AF: Thời điểm kiểm tra vệ sinh
+      "", // AG: Để trống
     ];
   });
 
-  // Giữ header dòng 1; chỉ xoá và ghi dữ liệu từ dòng 2, cột A:AD.
+  // Giữ header dòng 1; chỉ xoá và ghi dữ liệu từ dòng 2, cột A:AG.
   const oldRowCount = sheet.getLastRow() - 1;
 
   if (oldRowCount > 0) {
-    sheet.getRange(2, 1, oldRowCount, 30).clearContent();
+    sheet.getRange(2, 1, oldRowCount, 33).clearContent();
   }
 
   if (output.length > 0) {
     // Cột E giữ định dạng text để không mất số 0 đầu số lô.
     sheet.getRange(2, 5, output.length, 1).setNumberFormat("@");
 
-    // Ghi dữ liệu A:AD.
-    sheet.getRange(2, 1, output.length, 30).setValues(output);
+    // Ghi dữ liệu A:AG.
+    sheet.getRange(2, 1, output.length, 33).setValues(output);
   }
 }

@@ -179,6 +179,9 @@ const SEMI_FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
         orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
         select: {
           deviation_content: true,
+          handling_plan: true,
+          handling_result: true,
+          cause: true,
         },
       },
       samplingRecords: {
@@ -557,6 +560,18 @@ export class DataExportService {
               .map(({ deviation_content }) => deviation_content.trim())
               .filter(Boolean)
               .join(', '),
+            deviation_handling_plans: deviations
+              .map(({ handling_plan }) => handling_plan?.trim())
+              .filter(Boolean)
+              .join('-'),
+            deviation_handling_results: deviations
+              .map(({ handling_result }) => handling_result?.trim())
+              .filter(Boolean)
+              .join('-'),
+            deviation_causes: deviations
+              .map(({ cause }) => cause?.trim())
+              .filter(Boolean)
+              .join('-'),
             total_sampling_quantity: samplingRecords.reduce(
               (total, { quantity }) => total + Number(quantity),
               0,
