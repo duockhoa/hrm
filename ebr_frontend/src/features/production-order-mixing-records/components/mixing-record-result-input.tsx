@@ -18,14 +18,23 @@ const toBoolean = (value: unknown): boolean | null => {
 
 const padDateTimePart = (value: number) => String(value).padStart(2, "0");
 
-const toDateTimeDisplayValue = (value: unknown) => {
-  const date = new Date(String(value));
-  if (Number.isNaN(date.getTime())) return String(value);
+const toDateTimeInputValue = (value: unknown) => {
+  const rawValue = String(value).trim();
+  const nativeMatch = rawValue.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+  if (nativeMatch) return nativeMatch[1];
 
-  return [
-    `${padDateTimePart(date.getDate())}/${padDateTimePart(date.getMonth() + 1)}/${date.getFullYear()}`,
-    `${padDateTimePart(date.getHours())}:${padDateTimePart(date.getMinutes())}`,
-  ].join(" ");
+  const displayMatch = rawValue.match(
+    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})\s+(\d{1,2}):(\d{2})$/,
+  );
+  if (displayMatch) {
+    const [, day, month, year, hour, minute] = displayMatch;
+    return `${year}-${padDateTimePart(Number(month))}-${padDateTimePart(Number(day))}T${padDateTimePart(Number(hour))}:${minute}`;
+  }
+
+  const date = new Date(rawValue);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return `${date.getFullYear()}-${padDateTimePart(date.getMonth() + 1)}-${padDateTimePart(date.getDate())}T${padDateTimePart(date.getHours())}:${padDateTimePart(date.getMinutes())}`;
 };
 
 const toDateTimeResultValue = (value: string): string | null | undefined => {
@@ -62,7 +71,7 @@ const toInputValue = (parameter: ProductionOrderMixingRecordParameter) => {
   const value = parameter.result_value;
   if (value === null || value === undefined) return "";
   if (parameter.data_type === "datetime") {
-    return toDateTimeDisplayValue(value);
+    return toDateTimeInputValue(value);
   }
   return String(value);
 };
@@ -209,24 +218,13 @@ export default function MixingRecordResultInput({
   return (
     <div className="flex min-h-10 items-stretch">
       {parameter.data_type === "text" ||
-      parameter.data_type === "select" ||
-      parameter.data_type === "datetime" ? (
+      parameter.data_type === "select" ? (
         <textarea
           ref={textareaRef}
           rows={1}
           value={draft}
           disabled={disabled || isSaving}
-          placeholder={
-            parameter.data_type === "datetime"
-              ? "DD/MM/YYYY HH:mm"
-              : "Nhập kết quả"
-          }
-          aria-label={
-            parameter.data_type === "datetime"
-              ? "Ngày giờ thực tế, định dạng DD/MM/YYYY HH:mm"
-              : undefined
-          }
-          inputMode={parameter.data_type === "datetime" ? "numeric" : undefined}
+          placeholder="Nhập kết quả"
           onChange={(event) => setDraft(event.target.value)}
           onBlur={() => {
             void saveDraft();
@@ -244,9 +242,11 @@ export default function MixingRecordResultInput({
           type={
             parameter.data_type === "date"
               ? "date"
-              : "number"
+              : parameter.data_type === "datetime"
+                ? "datetime-local"
+                : "number"
           }
-          step={parameter.data_type === "number" ? "1" : "any"}
+          step={parameter.data_type === "datetime" ? "60" : parameter.data_type === "number" ? "1" : "any"}
           value={draft}
           disabled={disabled || isSaving}
           placeholder="Nhập kết quả"
