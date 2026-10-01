@@ -9,7 +9,6 @@ import {
   priorities,
   priorityColors,
   requestStatusLabel,
-  workOrderStatusLabel,
 } from "./utils";
 
 const cardClassName =
@@ -96,45 +95,6 @@ export default function MaintenanceRequestDetail({
         ) : null}
       </section>
 
-      <section className={cardClassName} aria-labelledby="incident-work-orders-heading">
-        <h2 id="incident-work-orders-heading" className="text-left text-lg font-semibold text-gray-900">
-          Lệnh công việc
-        </h2>
-        {record.workOrders?.length ? (
-          record.workOrders.map((order) => (
-            <div key={order.id} className="flex flex-col gap-3 border-t pt-3 md:gap-4">
-              <FieldDisplay lable="Mã lệnh" value={order.orderCode} />
-              <FieldDisplay lable="Tiêu đề" value={order.title} />
-              <FieldDisplay lable="Trạng thái" value={workOrderStatusLabel(order.status)} />
-              <FieldDisplay lable="Người xử lý" value={order.technicianName || "—"} />
-              <FieldDisplay lable="Ngày tạo" value={formatDateTime(order.createdAt)} />
-              {order.description ? (
-                <FieldDisplay lable="Mô tả" value={order.description} />
-              ) : null}
-              {order.plannedStartDate ? (
-                <FieldDisplay lable="Bắt đầu dự kiến" value={formatDateTime(order.plannedStartDate)} />
-              ) : null}
-              {order.plannedEndDate ? (
-                <FieldDisplay lable="Kết thúc dự kiến" value={formatDateTime(order.plannedEndDate)} />
-              ) : null}
-              {order.actualStartDate ? (
-                <FieldDisplay lable="Bắt đầu thực tế" value={formatDateTime(order.actualStartDate)} />
-              ) : null}
-              {order.actualEndDate ? (
-                <FieldDisplay lable="Kết thúc thực tế" value={formatDateTime(order.actualEndDate)} />
-              ) : null}
-              {order.failureCause ? (
-                <FieldDisplay lable="Nguyên nhân" value={order.failureCause} />
-              ) : null}
-              {order.solution ? (
-                <FieldDisplay lable="Biện pháp xử lý" value={order.solution} />
-              ) : null}
-            </div>
-          ))
-        ) : (
-          <p className="py-3 text-sm text-gray-500">Chưa có lệnh công việc.</p>
-        )}
-      </section>
     </div>
   );
 }
