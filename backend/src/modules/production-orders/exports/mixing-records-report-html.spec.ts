@@ -178,6 +178,7 @@ describePdf('Mixing record PDF pagination', () => {
             ids: string[];
             pages: number;
             approvals: number;
+            infoRecordIds: string[];
             merged: boolean;
             overflow: boolean;
           }
@@ -193,6 +194,9 @@ describePdf('Mixing record PDF pagination', () => {
             ).map((row) => row.dataset.parameterId!),
             pages: pages.length,
             approvals: document.querySelectorAll('.mixing-approvals').length,
+            infoRecordIds: pages
+              .filter((page) => page.querySelector('.mixing-info'))
+              .map((page) => (page as HTMLElement).dataset.recordId!),
             merged: Array.from(
               document.querySelectorAll<HTMLTableCellElement>(
                 '[data-step-cell]',
@@ -216,6 +220,7 @@ describePdf('Mixing record PDF pagination', () => {
       ]);
       expect(layout?.pages).toBeGreaterThan(2);
       expect(layout?.approvals).toBe(2);
+      expect(layout?.infoRecordIds).toEqual(['1', '2']);
       expect(layout?.merged).toBe(true);
       expect(layout?.overflow).toBe(false);
     } finally {

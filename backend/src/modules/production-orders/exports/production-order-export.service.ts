@@ -821,8 +821,13 @@ export class ProductionOrderExportService {
     lines?: ProductionOrderLineWithRelations[],
   ) {
     const printTime = new Intl.DateTimeFormat('vi-VN', {
-      dateStyle: 'short',
-      timeStyle: 'short',
+      timeZone: 'Asia/Ho_Chi_Minh',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
     }).format(new Date());
     const printerName = user?.name || user?.full_name || user?.username || '';
     const appInfo = `${process.env.APP_NAME || 'EBR System'} - ${process.env.APP_VERSION || 'v1.0.0'}`;

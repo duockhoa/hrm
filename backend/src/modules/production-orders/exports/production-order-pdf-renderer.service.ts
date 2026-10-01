@@ -124,6 +124,8 @@ export class ProductionOrderPdfRendererService {
                   body.lastElementChild.remove();
                 if (!body.rows.length) return { overflow: true };
                 const nextPage = currentPage.cloneNode(true) as HTMLElement;
+                // Show record details only on the first page of each form.
+                nextPage.querySelector('.mixing-info')?.remove();
                 body = nextPage.querySelector<HTMLTableSectionElement>(
                   '.mixing-content > tbody',
                 )!;
