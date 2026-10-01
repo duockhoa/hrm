@@ -11,7 +11,7 @@ export type MaintenanceRequest = {
   id: string;
   requestCode: string;
   equipmentId: string;
-  equipment?: { code: string; name: string };
+  equipment?: { code: string; name: string } | null;
   title: string;
   description: string;
   priority: Priority;
@@ -30,18 +30,62 @@ export type MaintenanceEquipment = {
   code: string;
   name: string;
   accountingCode?: string | null;
+  category?: string | null;
+  department?: string | null;
+  location?: string | null;
+  status?: string;
+  serialNumber?: string | null;
+};
+
+export type MaintenanceWorkOrder = {
+  id: string;
+  orderCode: string;
+  title: string;
+  description?: string | null;
+  status: string;
+  priority: Priority;
+  technicianName?: string | null;
+  createdAt: string;
+  plannedStartDate?: string | null;
+  plannedEndDate?: string | null;
+  actualStartDate?: string | null;
+  actualEndDate?: string | null;
+  failureCause?: string | null;
+  solution?: string | null;
+};
+
+export type MaintenanceRequestDetail = Omit<
+  MaintenanceRequest,
+  "equipment" | "workOrders"
+> & {
+  equipment?: MaintenanceEquipment | null;
+  images?: string[] | null;
+  rejectedReason?: string | null;
+  returnedReason?: string | null;
+  cancelledReason?: string | null;
+  cancelledAt?: string | null;
+  workOrders?: MaintenanceWorkOrder[];
 };
 
 const baseURL =
   process.env.NEXT_PUBLIC_QLTB_API_URL || "https://qltb.dkpharma.io.vn/api/v1";
 const options = { baseURL };
 export const maintenanceRequestsKey = `${baseURL}/requests`;
+export const maintenanceRequestKey = (id: string) =>
+  `${maintenanceRequestsKey}/${encodeURIComponent(id)}`;
 export const maintenanceEquipmentKey = `${baseURL}/equipment`;
 
 export const maintenanceRequestsService = {
   async list(): Promise<MaintenanceRequest[]> {
     const { data } = await axiosClient.get<MaintenanceRequest[]>(
       "/requests",
+      options,
+    );
+    return data;
+  },
+  async detail(id: string): Promise<MaintenanceRequestDetail> {
+    const { data } = await axiosClient.get<MaintenanceRequestDetail>(
+      `/requests/${encodeURIComponent(id)}`,
       options,
     );
     return data;

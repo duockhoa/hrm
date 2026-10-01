@@ -1,26 +1,14 @@
 "use client";
 
-import { Fragment, useRef, useState, type FormEvent } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
-import { isAxiosError } from "axios";
+import { usePathname, useRouter } from "next/navigation";
 import { AiOutlineRight } from "react-icons/ai";
-import { Edit2, Plus, QrCode, Trash2 } from "lucide-react";
+import { Edit2, Plus, Trash2 } from "lucide-react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QrScanDialog } from "@/components/qr-scan-dialog/qr-scan-dialog";
 import {
   Dialog,
   DialogContent,
@@ -30,74 +18,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  maintenanceEquipmentKey,
   maintenanceRequestsKey,
   maintenanceRequestsService as service,
   type MaintenanceRequest,
-  type MaintenanceRequestInput,
-  type Priority,
 } from "@/services/maintenance-requests.service";
-
-const priorities: Record<Priority, string> = {
-  LOW: "Thấp",
-  MEDIUM: "Trung bình",
-  HIGH: "Cao",
-  URGENT: "Khẩn cấp",
-};
-const priorityColors: Record<Priority, string> = {
-  LOW: "text-gray-600",
-  MEDIUM: "text-blue-600",
-  HIGH: "text-amber-600",
-  URGENT: "text-red-600",
-};
-const emptyForm: MaintenanceRequestInput = {
-  equipmentCode: "",
-  title: "",
-  description: "",
-  priority: "MEDIUM",
-};
-
-function errorMessage(error: unknown) {
-  if (isAxiosError(error)) {
-    const message = error.response?.data?.message;
-    if (Array.isArray(message)) return message.join("; ");
-    if (typeof message === "string") return message;
-  }
-  return error instanceof Error
-    ? error.message
-    : "Thao tác không thành công. Vui lòng thử lại.";
-}
+import MaintenanceRequestFormDialog from "./maintenance-request-form-dialog";
+import { errorMessage, isRequestLocked, priorities, priorityColors } from "./utils";
 
 export default function MaintenanceRequestsPage() {
+  const pathname = usePathname();
+  const router = useRouter();
   const {
     data: records,
     error,
     isLoading,
     mutate,
   } = useSWR(maintenanceRequestsKey, service.list);
-  const {
-    data: equipment = [],
-    error: equipmentError,
-    isLoading: isEquipmentLoading,
-  } = useSWR(maintenanceEquipmentKey, service.listEquipment);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MaintenanceRequest | null>(null);
   const [deleting, setDeleting] = useState<MaintenanceRequest | null>(null);
-  const [form, setForm] = useState<MaintenanceRequestInput>(emptyForm);
-  const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [isEquipmentScannerOpen, setIsEquipmentScannerOpen] = useState(false);
-  const equipmentDialogContentRef = useRef<HTMLDivElement | null>(null);
-  const selectedEquipment = equipment.find(
-    (item) => item.code === form.equipmentCode,
-  );
   const groups = new Map<string, MaintenanceRequest[]>();
   for (const record of records ?? []) {
     const date = new Date(record.createdAt).toLocaleDateString("vi-VN");
@@ -106,67 +46,7 @@ export default function MaintenanceRequestsPage() {
 
   function openForm(record: MaintenanceRequest | null) {
     setEditing(record);
-    setForm(
-      record
-        ? {
-            equipmentCode: record.equipment?.code ?? "",
-            title: record.title,
-            description: record.description,
-            priority: record.priority,
-          }
-        : { ...emptyForm },
-    );
     setOpen(true);
-  }
-
-  function handleEquipmentQrScan(decodedText: string) {
-    const equipmentCode = decodedText.split("$", 1)[0]?.trim();
-
-    if (!equipmentCode) {
-      toast.error("Không đọc được mã thiết bị từ QR.");
-      return;
-    }
-
-    const matchedEquipment = equipment.find(
-      (item) => item.code.trim().toLowerCase() === equipmentCode.toLowerCase(),
-    );
-
-    if (!matchedEquipment) {
-      toast.error(`Không tìm thấy thiết bị có mã ${equipmentCode}.`);
-      return;
-    }
-
-    setForm({ ...form, equipmentCode: matchedEquipment.code });
-    toast.success(`Đã chọn thiết bị ${matchedEquipment.code}.`);
-  }
-
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (saving) return;
-    const input = {
-      ...form,
-      equipmentCode: form.equipmentCode.trim(),
-      title: form.title.trim(),
-      description: form.description.trim(),
-    };
-    if (!input.equipmentCode || !input.title || !input.description) {
-      toast.error("Vui lòng nhập đầy đủ mã thiết bị, tiêu đề và mô tả.");
-      return;
-    }
-    setSaving(true);
-    try {
-      if (editing) await service.update(editing, input);
-      else await service.create(input);
-      toast.success(
-        editing ? "Đã cập nhật báo cáo sự cố." : "Đã thêm báo cáo sự cố.",
-      );
-      setOpen(false);
-      await mutate();
-    } catch (error) {
-      toast.error(errorMessage(error));
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function remove() {
@@ -175,6 +55,9 @@ export default function MaintenanceRequestsPage() {
     try {
       await service.remove(deleting.id);
       toast.success("Đã xóa báo cáo sự cố.");
+      if (pathname === `/maintenance-requests/${encodeURIComponent(deleting.id)}`) {
+        router.push("/maintenance-requests");
+      }
       setDeleting(null);
       await mutate();
     } catch (error) {
@@ -225,15 +108,17 @@ export default function MaintenanceRequestsPage() {
               {items.map((record) => {
                 const reporterName =
                   record.reporterName?.trim() || record.reporter?.name?.trim();
-                const locked =
-                  record.status === "CLOSED" ||
-                  Boolean(record.workOrders?.length);
+                const locked = isRequestLocked(record);
                 return (
                   <div
                     key={record.id}
-                    className="flex min-h-[100px] items-center gap-4 border-b border-gray-200 px-3 py-4 hover:bg-gray-50"
+                    className={`flex min-h-[100px] items-center gap-4 border-b border-gray-200 px-3 py-4 ${pathname === `/maintenance-requests/${encodeURIComponent(record.id)}` ? "bg-blue-50 hover:bg-blue-100" : "hover:bg-gray-50"}`}
                   >
-                    <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/maintenance-requests/${encodeURIComponent(record.id)}`}
+                      className="min-w-0 flex-1 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+                      aria-label={`Xem báo cáo ${record.requestCode}: ${record.title}`}
+                    >
                       <p
                         className="truncate text-sm font-bold text-gray-900"
                         title={record.title}
@@ -246,7 +131,7 @@ export default function MaintenanceRequestsPage() {
                       <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-600">
                         {record.description}
                       </p>
-                    </div>
+                    </Link>
                     <div className="shrink-0 text-right">
                       {reporterName ? (
                         <p className="mb-1 text-sm text-gray-600">
@@ -295,159 +180,9 @@ export default function MaintenanceRequestsPage() {
           </p>
         )}
       </div>
-      <Dialog
-        open={open}
-        onOpenChange={(value) => {
-          if (!saving) {
-            setOpen(value);
-            if (!value) setIsEquipmentScannerOpen(false);
-          }
-        }}
-      >
-        <DialogContent
-          ref={equipmentDialogContentRef}
-          className="max-h-[90dvh] overflow-y-auto"
-        >
-          <DialogHeader>
-            <DialogTitle>
-              {editing ? "Sửa báo cáo sự cố" : "Thêm báo cáo sự cố"}
-            </DialogTitle>
-            <DialogDescription>
-              Nhập thông tin thiết bị và sự cố.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={save} className="space-y-4">
-            <fieldset disabled={saving} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="incident-equipment">Mã thiết bị</Label>
-                <div className="flex items-center gap-2">
-                  <Combobox
-                    autoHighlight
-                    items={equipment}
-                    value={selectedEquipment ?? null}
-                    disabled={
-                      saving || isEquipmentLoading || Boolean(equipmentError)
-                    }
-                    onValueChange={(item) =>
-                      setForm({ ...form, equipmentCode: item?.code ?? "" })
-                    }
-                    itemToStringLabel={(item) => `${item.code} - ${item.name}`}
-                    isItemEqualToValue={(item, value) => item.code === value.code}
-                  >
-                    <ComboboxInput
-                      id="incident-equipment"
-                      className="min-w-0 flex-1"
-                      placeholder={
-                        isEquipmentLoading
-                          ? "Đang tải danh sách thiết bị..."
-                          : "Tìm và chọn thiết bị theo mã hoặc tên"
-                      }
-                      aria-label="Tìm thiết bị"
-                      disabled={
-                        saving || isEquipmentLoading || Boolean(equipmentError)
-                      }
-                      showClear
-                    />
-                    <ComboboxContent portalContainer={equipmentDialogContentRef}>
-                      <ComboboxEmpty>Không tìm thấy thiết bị.</ComboboxEmpty>
-                      <ComboboxList>
-                        {(item) => (
-                          <ComboboxItem key={item.id} value={item}>
-                            {item.code} - {item.name}
-                          </ComboboxItem>
-                        )}
-                      </ComboboxList>
-                    </ComboboxContent>
-                  </Combobox>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                    disabled={
-                      saving || isEquipmentLoading || Boolean(equipmentError)
-                    }
-                    onClick={() => setIsEquipmentScannerOpen(true)}
-                    aria-label="Quét QR thiết bị"
-                    title="Quét QR thiết bị"
-                  >
-                    <QrCode className="size-4" />
-                  </Button>
-                </div>
-                {equipmentError ? (
-                  <p className="text-sm text-red-600">
-                    Không thể tải danh sách thiết bị.
-                  </p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="incident-title">Tiêu đề sự cố</Label>
-                <Input
-                  id="incident-title"
-                  required
-                  value={form.title}
-                  onChange={(event) =>
-                    setForm({ ...form, title: event.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="incident-description">Mô tả</Label>
-                <Textarea
-                  id="incident-description"
-                  required
-                  rows={4}
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm({ ...form, description: event.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="incident-priority">Mức độ ưu tiên</Label>
-                <Select
-                  value={form.priority}
-                  disabled={saving}
-                  onValueChange={(priority: Priority) =>
-                    setForm({ ...form, priority })
-                  }
-                >
-                  <SelectTrigger id="incident-priority" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(priorities).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </fieldset>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving}
-                onClick={() => setOpen(false)}
-              >
-                Hủy
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? "Đang lưu..." : "Lưu"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-      <QrScanDialog
-        open={isEquipmentScannerOpen}
-        title="Quét QR thiết bị"
-        description="Quét mã QR để chọn thiết bị trong danh sách. Nội dung sau ký tự $ sẽ được bỏ qua."
-        onOpenChange={setIsEquipmentScannerOpen}
-        onScan={handleEquipmentQrScan}
-      />
+      {open ? (
+        <MaintenanceRequestFormDialog record={editing} onClose={() => setOpen(false)} />
+      ) : null}
       <Dialog
         open={Boolean(deleting)}
         onOpenChange={(value) => {
