@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, type FormEvent } from "react";
+import { Fragment, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { isAxiosError } from "axios";
 import { AiOutlineRight } from "react-icons/ai";
@@ -15,7 +15,6 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-  ComboboxTrigger,
 } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,6 +94,7 @@ export default function MaintenanceRequestsPage() {
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [isEquipmentScannerOpen, setIsEquipmentScannerOpen] = useState(false);
+  const equipmentDialogContentRef = useRef<HTMLDivElement | null>(null);
   const selectedEquipment = equipment.find(
     (item) => item.code === form.equipmentCode,
   );
@@ -297,7 +297,10 @@ export default function MaintenanceRequestsPage() {
           }
         }}
       >
-        <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogContent
+          ref={equipmentDialogContentRef}
+          className="max-h-[90dvh] overflow-y-auto"
+        >
           <DialogHeader>
             <DialogTitle>
               {editing ? "Sửa báo cáo sự cố" : "Thêm báo cáo sự cố"}
@@ -324,29 +327,21 @@ export default function MaintenanceRequestsPage() {
                     itemToStringLabel={(item) => `${item.code} - ${item.name}`}
                     isItemEqualToValue={(item, value) => item.code === value.code}
                   >
-                    <ComboboxTrigger
+                    <ComboboxInput
                       id="incident-equipment"
-                      render={<Button type="button" variant="outline" />}
-                      className="min-w-0 flex-1 justify-between font-normal"
-                    >
-                      <span className="truncate">
-                        {form.equipmentCode
-                          ? selectedEquipment
-                            ? `${selectedEquipment.code} - ${selectedEquipment.name}`
-                            : form.equipmentCode
-                          : isEquipmentLoading
-                            ? "Đang tải danh sách thiết bị..."
-                            : "Chọn thiết bị"}
-                      </span>
-                    </ComboboxTrigger>
-                    <ComboboxContent>
-                      <ComboboxInput
-                        autoFocus
-                        placeholder="Tìm theo mã hoặc tên thiết bị..."
-                        aria-label="Tìm thiết bị"
-                        showTrigger={false}
-                        className="w-auto"
-                      />
+                      className="min-w-0 flex-1"
+                      placeholder={
+                        isEquipmentLoading
+                          ? "Đang tải danh sách thiết bị..."
+                          : "Tìm và chọn thiết bị theo mã hoặc tên"
+                      }
+                      aria-label="Tìm thiết bị"
+                      disabled={
+                        saving || isEquipmentLoading || Boolean(equipmentError)
+                      }
+                      showClear
+                    />
+                    <ComboboxContent portalContainer={equipmentDialogContentRef}>
                       <ComboboxEmpty>Không tìm thấy thiết bị.</ComboboxEmpty>
                       <ComboboxList>
                         {(item) => (
