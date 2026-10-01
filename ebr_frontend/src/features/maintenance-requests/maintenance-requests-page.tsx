@@ -8,6 +8,15 @@ import { Edit2, Plus, QrCode, Trash2 } from "lucide-react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -86,6 +95,9 @@ export default function MaintenanceRequestsPage() {
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [isEquipmentScannerOpen, setIsEquipmentScannerOpen] = useState(false);
+  const selectedEquipment = equipment.find(
+    (item) => item.code === form.equipmentCode,
+  );
   const groups = new Map<string, MaintenanceRequest[]>();
   for (const record of records ?? []) {
     const date = new Date(record.createdAt).toLocaleDateString("vi-VN");
@@ -299,35 +311,52 @@ export default function MaintenanceRequestsPage() {
               <div className="space-y-2">
                 <Label htmlFor="incident-equipment">Mã thiết bị</Label>
                 <div className="flex items-center gap-2">
-                  <Select
-                    value={form.equipmentCode}
+                  <Combobox
+                    autoHighlight
+                    items={equipment}
+                    value={selectedEquipment ?? null}
                     disabled={
                       saving || isEquipmentLoading || Boolean(equipmentError)
                     }
-                    onValueChange={(equipmentCode) =>
-                      setForm({ ...form, equipmentCode })
+                    onValueChange={(item) =>
+                      setForm({ ...form, equipmentCode: item?.code ?? "" })
                     }
+                    itemToStringLabel={(item) => `${item.code} - ${item.name}`}
+                    isItemEqualToValue={(item, value) => item.code === value.code}
                   >
-                    <SelectTrigger
+                    <ComboboxTrigger
                       id="incident-equipment"
-                      className="min-w-0 flex-1"
+                      render={<Button type="button" variant="outline" />}
+                      className="min-w-0 flex-1 justify-between font-normal"
                     >
-                      <SelectValue
-                        placeholder={
-                          isEquipmentLoading
+                      <span className="truncate">
+                        {form.equipmentCode
+                          ? selectedEquipment
+                            ? `${selectedEquipment.code} - ${selectedEquipment.name}`
+                            : form.equipmentCode
+                          : isEquipmentLoading
                             ? "Đang tải danh sách thiết bị..."
-                            : "Chọn thiết bị"
-                        }
+                            : "Chọn thiết bị"}
+                      </span>
+                    </ComboboxTrigger>
+                    <ComboboxContent>
+                      <ComboboxInput
+                        autoFocus
+                        placeholder="Tìm theo mã hoặc tên thiết bị..."
+                        aria-label="Tìm thiết bị"
+                        showTrigger={false}
+                        className="w-auto"
                       />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {equipment.map((item) => (
-                        <SelectItem key={item.id} value={item.code}>
-                          {item.code} - {item.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <ComboboxEmpty>Không tìm thấy thiết bị.</ComboboxEmpty>
+                      <ComboboxList>
+                        {(item) => (
+                          <ComboboxItem key={item.id} value={item}>
+                            {item.code} - {item.name}
+                          </ComboboxItem>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
                   <Button
                     type="button"
                     variant="outline"
