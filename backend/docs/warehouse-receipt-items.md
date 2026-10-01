@@ -2,15 +2,15 @@
 
 Bảng `warehouse_receipt_items`: mỗi bản ghi là một mặt hàng theo lô trong một lần nhập kho. Cho phép cùng mã hàng và số lô xuất hiện trong nhiều lần nhập. Bảng lưu thông tin hàng/lô, chưa tính tồn kho vì chưa có số lượng nhập.
 
-Tất cả endpoint yêu cầu `Authorization: Bearer <access_token>`. API danh sách không yêu cầu quyền riêng; các endpoint còn lại yêu cầu quyền tương ứng. Migration tạo các quyền nhưng không tự gán cho vai trò; quản trị viên gán qua chức năng quản lý quyền/vai trò hiện tại.
+Tất cả endpoint yêu cầu `Authorization: Bearer <access_token>`, không yêu cầu quyền riêng. Người dùng đã đăng nhập có thể xem danh sách, xem chi tiết, thêm, sửa và xoá hàng nhập kho. Migration `20261001010000_remove_warehouse_receipt_item_permissions` xoá các quyền `warehouse-receipt-items.*` và các liên kết vai trò tương ứng đã được tạo trước đây.
 
 | Method | Endpoint | Quyền |
 | --- | --- | --- |
 | GET | `/warehouse-receipt-items` | Chỉ cần đăng nhập |
-| GET | `/warehouse-receipt-items/:id` | `warehouse-receipt-items.read` |
-| POST | `/warehouse-receipt-items` | `warehouse-receipt-items.create` |
-| PATCH | `/warehouse-receipt-items/:id` | `warehouse-receipt-items.update` |
-| DELETE | `/warehouse-receipt-items/:id` | `warehouse-receipt-items.delete` |
+| GET | `/warehouse-receipt-items/:id` | Chỉ cần đăng nhập |
+| POST | `/warehouse-receipt-items` | Chỉ cần đăng nhập |
+| PATCH | `/warehouse-receipt-items/:id` | Chỉ cần đăng nhập |
+| DELETE | `/warehouse-receipt-items/:id` | Chỉ cần đăng nhập |
 
 ## Thêm mới
 

@@ -5,7 +5,6 @@ import { Reflector } from '@nestjs/core';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { WarehouseReceiptItemsController } from './warehouse-receipt-items.controller';
-import { WAREHOUSE_RECEIPT_ITEM_PERMISSIONS as PERMISSIONS } from './warehouse-receipt-items.permissions';
 
 describe('Warehouse receipt item access', () => {
   const guard = new PermissionsGuard(new Reflector());
@@ -19,28 +18,24 @@ describe('Warehouse receipt item access', () => {
     } as unknown as ExecutionContext;
   }
 
-  it('allows listing for a logged-in user with no permissions', () => {
-    expect(guard.canActivate(context(controller.findAll))).toBe(true);
-  });
-
   it.each([
-    [controller.findById, PERMISSIONS.READ],
-    [controller.create, PERMISSIONS.CREATE],
-    [controller.update, PERMISSIONS.UPDATE],
-    [controller.delete, PERMISSIONS.DELETE],
+    ['listing', controller.findAll],
+    ['reading', controller.findById],
+    ['creating', controller.create],
+    ['updating', controller.update],
+    ['deleting', controller.delete],
   ])(
-    'continues to enforce permission %s for other operations',
-    (handler, permission) => {
+    'allows %s for a logged-in user with no permissions',
+    (_operation, handler) => {
       const route = handler as () => unknown;
-      expect(guard.canActivate(context(route))).toBe(false);
-      expect(guard.canActivate(context(route, [permission]))).toBe(true);
+      expect(guard.canActivate(context(route))).toBe(true);
     },
   );
 
   it('keeps JWT authentication required, including for listing', () => {
     expect(
       Reflect.getMetadata(GUARDS_METADATA, WarehouseReceiptItemsController),
-    ).toContain(jwtAuthGuard);
+    ).toEqual([jwtAuthGuard]);
     expect(() =>
       new jwtAuthGuard().handleRequest(null, undefined, undefined),
     ).toThrow(UnauthorizedException);

@@ -11,16 +11,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
-import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateWarehouseReceiptItemDto } from './dto/create-warehouse-receipt-item.dto';
 import { UpdateWarehouseReceiptItemDto } from './dto/update-warehouse-receipt-item.dto';
-import { WAREHOUSE_RECEIPT_ITEM_PERMISSIONS as PERMISSIONS } from './warehouse-receipt-items.permissions';
 import { WarehouseReceiptItemsService } from './warehouse-receipt-items.service';
 
 @ApiTags('warehouse-receipt-items')
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard)
 @Controller('warehouse-receipt-items')
 export class WarehouseReceiptItemsController {
   constructor(private readonly service: WarehouseReceiptItemsService) {}
@@ -31,13 +28,11 @@ export class WarehouseReceiptItemsController {
   }
 
   @Get(':id')
-  @Permissions(PERMISSIONS.READ)
   findById(@Param('id', ParseIntPipe) id: number) {
     return this.service.findById(id);
   }
 
   @Post()
-  @Permissions(PERMISSIONS.CREATE)
   create(
     @Body() dto: CreateWarehouseReceiptItemDto,
     @Request() req: { user: { id: number } },
@@ -46,7 +41,6 @@ export class WarehouseReceiptItemsController {
   }
 
   @Patch(':id')
-  @Permissions(PERMISSIONS.UPDATE)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateWarehouseReceiptItemDto,
@@ -55,7 +49,6 @@ export class WarehouseReceiptItemsController {
   }
 
   @Delete(':id')
-  @Permissions(PERMISSIONS.DELETE)
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.service.delete(id);
   }
