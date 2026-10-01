@@ -26,7 +26,6 @@ export class WarehouseReceiptItemsController {
   constructor(private readonly service: WarehouseReceiptItemsService) {}
 
   @Get()
-  @Permissions(PERMISSIONS.LIST)
   findAll() {
     return this.service.findAll();
   }

@@ -15,7 +15,7 @@ import useSWR from "swr";
 const menuItems = [
   {
     id: "1",
-    name: "Lô bán thành phẩm",
+    name: "Kiểm hàng nhập kho",
     icon: <Boxes className="size-5 shrink-0" />,
     url: "/home",
   },
