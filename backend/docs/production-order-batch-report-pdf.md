@@ -96,6 +96,15 @@ không chồng lên chân trang. Mỗi trang lặp tiêu đề, tiêu đề bả
 thông tin in; số trang tính trên toàn báo cáo. Nếu một bản ghi riêng lẻ quá dài
 để vừa trang, API trả 422.
 
+Phần **Thông tin sai lệch** dành riêng một trang A4 cho mỗi sai lệch, không có
+cột STT. Mỗi trang trình bày tên/mã sản phẩm, số lô, mã lệnh sản xuất, nội dung,
+nguyên nhân và phân loại nguyên nhân, phương án và kết quả xử lý, số lượng ảnh
+hưởng/đã xử lý/đã hủy kèm đơn vị, người báo cáo/phê duyệt, ngày tạo/cập nhật
+(giờ Việt Nam) và toàn bộ hình ảnh chưa bị xóa. Chữ nội dung cỡ 12pt, giữ xuống
+dòng và escape HTML. Ảnh được nhúng trực tiếp từ tệp tải lên và giữ tỷ lệ;
+không tải được ảnh thì hiển thị thông báo tại vị trí ảnh. Nếu nội dung quá dài
+để vừa một trang, API trả 422 thay vì che nội dung hoặc thu nhỏ chữ.
+
 HTML/CSS tại `templates/batch-report/production-order.html`; dữ liệu phần mới
 được dựng tại `src/modules/production-orders/exports/environment-checks-report-html.ts`.
 Logo và watermark được nhúng trực tiếp vào HTML.

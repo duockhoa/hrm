@@ -1,3 +1,4 @@
+import { buildDeviationsHtml, type DeviationForReport } from './deviations-report-html';
 import {
   buildSemiFinishedNetWeightChecksHtml,
   type SemiFinishedNetWeightCheckForReport,
@@ -103,7 +104,6 @@ import type {
   Items,
   ProductionOrders,
   RegistrationNumbers,
-  ProductionOrderDeviations,
   ProductionOrderVialInspectionChecks,
   ProductionOrderHardCapsuleLeakageChecks,
   ProductionOrderDisintegrationChecks,
@@ -175,10 +175,7 @@ type ProductionOrderForExport = ProductionOrders & {
         registration?: RegistrationNumbers | null;
       })
     | null;
-  deviations?: (ProductionOrderDeviations & {
-    reporter?: Users | null;
-    approver?: Users | null;
-  })[];
+  deviations?: DeviationForReport[];
   vialInspectionChecks?: (ProductionOrderVialInspectionChecks & {
     createdBy?: Pick<Users, 'name' | 'username'> | null;
   })[];
@@ -959,148 +956,6 @@ export class ProductionOrderExportService {
   </main>`;
     }
 
-    const buildDeviationsHtml = () => {
-      const deviations = (productionOrder as any).deviations ?? [];
-
-      if (!deviations || deviations.length === 0) {
-        return `
-  <main class="report-page page-break">
-    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
-    <div class="page-header">
-      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
-      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
-    </div>
-    <div style="margin-top: 2mm; margin-bottom: 2mm;">
-      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">
-        Thông tin sai lệch
-      </h2>
-      <div style="margin-top: 15mm; text-align: center;">
-        <p style="font-size: 11pt; font-style: italic; color: #475569;">
-          (Không có sai lệch nào phát sinh trong quá trình sản xuất lô này)
-        </p>
-      </div>
-    </div>
-    <div class="page-footer">
-      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
-      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
-    </div>
-  </main>`;
-      }
-
-      const rows = deviations
-        .map((dev: any, index: number) => {
-          const time = formatDisplayDateTime(dev.created_at);
-          const reporterName = esc(
-            dev.reporter?.name ?? dev.reporter?.username ?? '',
-          );
-          const approverName = esc(
-            dev.approver?.name ?? dev.approver?.username ?? '',
-          );
-
-          let quantityHtml = '';
-          if (
-            dev.affected_quantity !== null &&
-            dev.affected_quantity !== undefined &&
-            dev.affected_quantity !== ''
-          ) {
-            quantityHtml += `<div><span style="color: #64748b;">Ảnh hưởng:</span> <b>${formatNum(dev.affected_quantity)}</b> ${esc(dev.affected_quantity_unit ?? '')}</div>`;
-          }
-          if (
-            dev.handled_quantity !== null &&
-            dev.handled_quantity !== undefined &&
-            dev.handled_quantity !== ''
-          ) {
-            quantityHtml += `<div><span style="color: #64748b;">Đã xử lý:</span> <b>${formatNum(dev.handled_quantity)}</b> ${esc(dev.handled_quantity_unit ?? '')}</div>`;
-          }
-          if (
-            dev.destroyed_quantity !== null &&
-            dev.destroyed_quantity !== undefined &&
-            dev.destroyed_quantity !== ''
-          ) {
-            quantityHtml += `<div><span style="color: #dc2626;">Đã hủy:</span> <b>${formatNum(dev.destroyed_quantity)}</b> ${esc(dev.destroyed_quantity_unit ?? '')}</div>`;
-          }
-
-          const causeClassification = dev.cause_classification
-            ? `<div style="font-size: 8pt; color: #64748b; font-style: italic; margin-bottom: 1mm;">[${esc(dev.cause_classification)}]</div>`
-            : '';
-          const causeContent = dev.cause
-            ? esc(dev.cause)
-            : dev.cause_classification
-              ? ''
-              : '—';
-
-          const handlingPlan = dev.handling_plan
-            ? `<div><span style="font-weight: bold;">PA:</span> ${esc(dev.handling_plan)}</div>`
-            : '';
-          const handlingResult = dev.handling_result
-            ? `<div style="margin-top: 1mm;"><span style="font-weight: bold;">KQ:</span> ${esc(dev.handling_result)}</div>`
-            : '';
-          const handlingCombined =
-            handlingPlan || handlingResult
-              ? `${handlingPlan}${handlingResult}`
-              : '—';
-
-          const personnelHtml =
-            `<div><span style="color: #64748b;">Báo cáo:</span> ${reporterName || '—'}</div>` +
-            (approverName
-              ? `<div style="margin-top: 1mm;"><span style="color: #166534;">Duyệt:</span> ${approverName}</div>`
-              : `<div style="margin-top: 1mm; color: #94a3b8; font-style: italic;">Chưa duyệt</div>`);
-
-          return `<tr>
-          <td style="text-align: center; vertical-align: middle;">${index + 1}</td>
-          <td style="text-align: center; vertical-align: middle; font-size: 8.5pt;">${time}</td>
-          <td style="vertical-align: top; white-space: normal; word-wrap: break-word;">
-            <div style="font-weight: bold; margin-bottom: 1mm;">${esc(dev.deviation_content ?? '')}</div>
-            ${quantityHtml ? `<div style="font-size: 8pt; margin-top: 1.5mm; border-top: 0.5pt dashed #cbd5e1; padding-top: 1mm;">${quantityHtml}</div>` : ''}
-          </td>
-          <td style="vertical-align: top; white-space: normal; word-wrap: break-word;">
-            ${causeClassification}
-            <div>${causeContent}</div>
-          </td>
-          <td style="vertical-align: top; white-space: normal; word-wrap: break-word;">
-            ${handlingCombined}
-          </td>
-          <td style="vertical-align: top; font-size: 8.5pt;">
-            ${personnelHtml}
-          </td>
-        </tr>`;
-        })
-        .join('');
-
-      return `
-  <main class="report-page page-break">
-    <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
-    <div class="page-header">
-      <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
-      <span style="flex: 1; text-align: center;">${safeHeaderTitle}</span>
-      <span style="flex: 1; text-align: right;">Support 21 CFR 11</span>
-    </div>
-    <div style="margin-top: 2mm; margin-bottom: 2mm;">
-      <h2 style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 3mm; text-transform: uppercase; color: #000;">
-        Thông tin sai lệch
-      </h2>
-      <table class="deviations-table">
-        <thead>
-          <tr>
-            <th style="width: 5%;">STT</th>
-            <th style="width: 12%;">Thời gian</th>
-            <th style="width: 28%;">Nội dung sai lệch</th>
-            <th style="width: 18%;">Nguyên nhân</th>
-            <th style="width: 23%;">Phương án & Kết quả xử lý</th>
-            <th style="width: 14%;">Nhân sự</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <div class="page-footer">
-      <span style="flex: 1; text-align: left;">${safePrintTime}</span>
-      <span style="flex: 1; text-align: center;">${safePrinterName}</span>
-    </div>
-  </main>`;
-    };
-
     const buildTasteChecksHtml = () => {
       const checks = productionOrder.sensoryChecks ?? [];
       const rows = checks
@@ -1766,11 +1621,11 @@ export class ProductionOrderExportService {
               },
             )
           : '',
-        deviations_html: renderFeatureSection(
-          productionOrder,
-          'deviations_html',
-          buildDeviationsHtml,
-        ),
+        deviations_html: isReportSectionEnabled(productionOrder, 'deviations_html')
+          ? await buildDeviationsHtml(productionOrder.deviations ?? [], productionOrder, {
+              appInfo, headerTitle, printTime, printerName, watermarkDataUri,
+            })
+          : '',
         taste_checks_html: renderFeatureSection(
           productionOrder,
           'taste_checks_html',

@@ -643,6 +643,10 @@ export class ProductionOrdersService {
             include: {
               reporter: true,
               approver: true,
+              images: {
+                where: { deleted_at: null },
+                orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+              },
             },
             orderBy: {
               created_at: 'asc',

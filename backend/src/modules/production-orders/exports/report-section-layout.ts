@@ -73,6 +73,8 @@ export async function reportImage(
 ): Promise<string> {
   if (!storedPath) return '—';
   const routes: Record<string, string> = {
+    '/production-order-deviations/images/': 'production-order-deviations',
+    '/uploads/production-order-deviations/': 'production-order-deviations',
     '/production-orders/mixing-record-parameters/images/':
       'production-order-mixing-record-parameters/images',
     '/production-orders/attachments/files/': 'production-order-attachments',
