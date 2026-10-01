@@ -37,6 +37,7 @@ import { UserLoginSessionsModule } from './modules/user-login-sessions/user-logi
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { DataExportModule } from './modules/data-export/data-export.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
+import { WarehouseReceiptItemsModule } from './modules/warehouse-receipt-items/warehouse-receipt-items.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
     NotificationsModule,
     DataExportModule,
     AuditLogsModule,
+    WarehouseReceiptItemsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
