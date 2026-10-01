@@ -296,7 +296,7 @@ export default function ReceiptPage({
       <Dialog open={creating} onOpenChange={setCreating}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto md:max-w-[640px]">
           <DialogHeader>
-            <DialogTitle>Thêm hàng nhập kho</DialogTitle>
+            <DialogTitle className="text-center">Thêm hàng nhập kho</DialogTitle>
           </DialogHeader>
           <ReceiptForm
             onCancel={() => setCreating(false)}
