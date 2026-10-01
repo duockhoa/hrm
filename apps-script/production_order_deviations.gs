@@ -46,16 +46,20 @@ function xuatSaiLechSanXuat() {
     );
   }
 
-  const formatDate = (value) => {
+  const formatDateTime = (value) => {
     if (!value) return "";
     const date = new Date(value);
     return isNaN(date.getTime())
       ? value
-      : Utilities.formatDate(date, DATA_EXPORT_ENV.timeZone, "dd/MM/yyyy");
+      : Utilities.formatDate(
+          date,
+          DATA_EXPORT_ENV.timeZone,
+          "dd/MM/yyyy HH:mm",
+        );
   };
 
   const output = data.map((deviation) => [
-    formatDate(deviation.created_at), // A: Ngày nhập sai lệch
+    formatDateTime(deviation.created_at), // A: Thời điểm nhập sai lệch
     deviation.deviation_content || "", // B: Nội dung sai lệch
     deviation.product_name || "", // C: Tên sản phẩm
     deviation.product_code || "", // D: Mã sản phẩm
@@ -68,8 +72,8 @@ function xuatSaiLechSanXuat() {
     deviation.reporter_name || "", // J: Người nhập sai lệch
   ]);
 
-  // Giữ hai dòng tiêu đề/mô tả; dữ liệu bắt đầu từ dòng 3.
-  const startRow = 3;
+  // Giữ dòng tiêu đề; dữ liệu bắt đầu từ dòng 2.
+  const startRow = 2;
   const oldRowCount = sheet.getLastRow() - startRow + 1;
   if (oldRowCount > 0) {
     sheet.getRange(startRow, 1, oldRowCount, 10).clearContent();
