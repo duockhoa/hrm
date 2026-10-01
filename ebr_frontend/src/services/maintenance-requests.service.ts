@@ -17,6 +17,12 @@ export type MaintenanceRequest = {
   priority: Priority;
   createdAt: string;
   status: string;
+  reporterName?: string | null;
+  department?: string | null;
+  reporter?: {
+    name: string | null;
+    department?: string | null;
+  } | null;
   workOrders?: { id: string }[];
 };
 export type MaintenanceEquipment = {

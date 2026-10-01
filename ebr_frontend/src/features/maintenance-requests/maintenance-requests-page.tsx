@@ -223,6 +223,8 @@ export default function MaintenanceRequestsPage() {
                 {date}
               </div>
               {items.map((record) => {
+                const reporterName =
+                  record.reporterName?.trim() || record.reporter?.name?.trim();
                 const locked =
                   record.status === "CLOSED" ||
                   Boolean(record.workOrders?.length);
@@ -246,6 +248,11 @@ export default function MaintenanceRequestsPage() {
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
+                      {reporterName ? (
+                        <p className="mb-1 text-sm text-gray-600">
+                          {reporterName}
+                        </p>
+                      ) : null}
                       <p
                         className={`text-xs font-semibold ${priorityColors[record.priority] ?? "text-gray-600"}`}
                       >
