@@ -705,6 +705,7 @@ export class ProductionOrdersService {
           },
           sensoryChecks: {
             include: {
+              images: { orderBy: [{ created_at: 'asc' }, { id: 'asc' }] },
               createdBy: { select: { name: true, username: true } },
             },
             orderBy: [{ created_at: 'asc' }, { id: 'asc' }],

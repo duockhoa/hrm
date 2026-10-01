@@ -68,16 +68,24 @@ export class ProductionOrderPdfRendererService {
           }
           for (const firstPage of Array.from(
             document.querySelectorAll<HTMLElement>(
-              '.additional-report-page, .environment-check-page, .hygiene-check-page, .volume-check-page, .semi-finished-net-weight-check-page, .semi-finished-gross-weight-check-page, .leak-tightness-check-page, .warehouse-release-page',
+              '.additional-report-page, .environment-check-page, .hygiene-check-page, .volume-check-page, .semi-finished-net-weight-check-page, .semi-finished-gross-weight-check-page, .leak-tightness-check-page, .warehouse-release-page, .taste-check-page',
             ),
           )) {
             let currentPage = firstPage;
             let body = currentPage.querySelector('tbody');
             if (!body) continue;
             const rows = Array.from(body.rows);
-            body.replaceChildren();
+            // Keep a taste-check record together with its following image row.
+            const groups: HTMLTableRowElement[][] = [];
             for (const row of rows) {
-              body.appendChild(row);
+              const previous = groups[groups.length - 1];
+              if (row.dataset.tasteCheckId && previous?.[0].dataset.tasteCheckId === row.dataset.tasteCheckId) previous.push(row);
+              else groups.push([row]);
+            }
+            body.replaceChildren();
+            for (const group of groups) {
+              const row = group[group.length - 1];
+              body.append(...group);
               const exceedsFooter = () => {
                 const footer =
                   currentPage.querySelector<HTMLElement>('.page-footer')!;
@@ -86,14 +94,14 @@ export class ProductionOrderPdfRendererService {
                   footer.getBoundingClientRect().top - footerRowClearancePx
                 );
               };
-              if (exceedsFooter() && body.rows.length > 1) {
-                row.remove();
+              if (exceedsFooter() && body.rows.length > group.length) {
+                for (const member of group) member.remove();
                 const nextPage = currentPage.cloneNode(true) as HTMLElement;
                 body = nextPage.querySelector('tbody')!;
                 body.replaceChildren();
                 currentPage.after(nextPage);
                 currentPage = nextPage;
-                body.appendChild(row);
+                body.append(...group);
               }
               if (exceedsFooter()) return { overflow: true };
             }

@@ -1,3 +1,4 @@
+import { reportImage } from './report-section-layout';
 import { buildDeviationsHtml, type DeviationForReport } from './deviations-report-html';
 import {
   buildSemiFinishedNetWeightChecksHtml,
@@ -208,6 +209,7 @@ type ProductionOrderForExport = ProductionOrders & {
     createdBy?: Pick<Users, 'name' | 'username'> | null;
   })[];
   sensoryChecks?: (ProductionOrderSensoryChecks & {
+    images?: { image_path: string }[];
     createdBy?: Pick<Users, 'name' | 'username'> | null;
   })[];
   documentControl?: any;
@@ -956,11 +958,19 @@ export class ProductionOrderExportService {
   </main>`;
     }
 
-    const buildTasteChecksHtml = () => {
+    const buildTasteChecksHtml = async () => {
       const checks = productionOrder.sensoryChecks ?? [];
-      const rows = checks
-        .map(
-          (check, index) => `<tr>
+      const rows = (await Promise.all(
+        checks.map(async (check, index) => {
+          const images = check.images?.length
+            ? await Promise.all(check.images.map((image, imageIndex) =>
+                reportImage(`Hình ảnh thử mùi vị ${index + 1}.${imageIndex + 1}`, image.image_path),
+              ))
+            : [];
+          const imageRow = images.length
+            ? `<tr class="taste-check-image-row" data-taste-check-id="${check.id}"><td colspan="7"><div class="taste-check-images">${images.map(image => `<div>${image}</div>`).join('')}</div></td></tr>`
+            : '';
+          return `<tr data-taste-check-id="${check.id}">
             <td style="text-align: center;">${index + 1}</td>
             <td style="text-align: center;">${formatDisplayDateTime(check.created_at)}</td>
             <td>${esc(check.color ?? '')}</td>
@@ -968,12 +978,12 @@ export class ProductionOrderExportService {
             <td>${esc(check.taste ?? '')}</td>
             <td>${esc(check.note ?? '')}</td>
             <td>${esc(check.createdBy?.name ?? check.createdBy?.username ?? '')}</td>
-          </tr>`,
-        )
-        .join('');
+          </tr>${imageRow}`;
+        }),
+      )).join('');
 
       return `
-  <main class="report-page page-break">
+  <main class="report-page page-break taste-check-page">
     <img class="watermark" src="${watermarkDataUri}" alt="Watermark" />
     <div class="page-header">
       <span style="flex: 1; text-align: left;">${safeAppInfo}</span>
@@ -1626,11 +1636,9 @@ export class ProductionOrderExportService {
               appInfo, headerTitle, printTime, printerName, watermarkDataUri,
             })
           : '',
-        taste_checks_html: renderFeatureSection(
-          productionOrder,
-          'taste_checks_html',
-          buildTasteChecksHtml,
-        ),
+        taste_checks_html: isReportSectionEnabled(productionOrder, 'taste_checks_html')
+          ? await buildTasteChecksHtml()
+          : '',
         vial_inspection_html: renderFeatureSection(
           productionOrder,
           'vial_inspection_html',
