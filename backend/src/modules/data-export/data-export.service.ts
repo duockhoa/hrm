@@ -277,6 +277,7 @@ const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
       samplingRequests: {
         orderBy: [{ sent_at: 'desc' }, { id: 'desc' }],
         take: 1,
+        where: { status: 'sent' },
         select: {
           id: true,
           production_order_id: true,
@@ -520,7 +521,7 @@ export class DataExportService {
     }
 
     const skip = (query.page - 1) * query.limit;
-    const [total, data] = await this.prisma.$transaction([
+    const [total, summaries] = await this.prisma.$transaction([
       this.prisma.productionOrderFinishedProductSummaries.count({ where }),
       this.prisma.productionOrderFinishedProductSummaries.findMany({
         where,
@@ -530,6 +531,24 @@ export class DataExportService {
         take: query.limit,
       }),
     ]);
+
+    const data = summaries.map((summary) => {
+      const productionOrder = summary.productionOrder;
+      const hasSentSamplingRequest = productionOrder.samplingRequests.some(
+        (request) => request.status === 'sent',
+      );
+
+      return {
+        ...summary,
+        productionOrder: {
+          ...productionOrder,
+          // Use the saved number after sending PYCLM, even if the item changes.
+          registration_number: hasSentSamplingRequest
+            ? (productionOrder.registrationNumber?.registration_number ?? '')
+            : (productionOrder.item?.registration?.registration_number ?? ''),
+        },
+      };
+    });
 
     return {
       data,
@@ -779,9 +798,7 @@ export class DataExportService {
       unit_7_weight: this.toExportNumber(check[`unit_7_${weightSuffix}`]),
       unit_8_weight: this.toExportNumber(check[`unit_8_${weightSuffix}`]),
       unit_9_weight: this.toExportNumber(check[`unit_9_${weightSuffix}`]),
-      unit_10_weight: this.toExportNumber(
-        check[`unit_10_${weightSuffix}`],
-      ),
+      unit_10_weight: this.toExportNumber(check[`unit_10_${weightSuffix}`]),
     };
   }
 

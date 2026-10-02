@@ -91,10 +91,7 @@ function xuatThanhPham() {
   const output = data.map((item) => {
     const po = item.productionOrder || {};
     const hangHoa = po.item || {};
-    const registration = hangHoa.registration || {};
-    const registrationNumber = po.samplingRequests?.[0]?.status === "sent"
-      ? (po.registrationNumber?.registration_number ?? "")
-      : (registration.registration_number ?? "");
+    const registrationNumber = po.registration_number ?? "";
     const productLine = hangHoa.productionSpecification?.productLine || {};
     const documentControl = po.documentControl || {};
 

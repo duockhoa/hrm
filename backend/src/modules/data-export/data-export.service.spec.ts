@@ -223,9 +223,7 @@ describe('DataExportService', () => {
                 }),
               }),
             }),
-            samplingRequests: [
-              expect.objectContaining({ status: 'sent' }),
-            ],
+            samplingRequests: [expect.objectContaining({ status: 'sent' })],
             samplingRecords: [
               expect.objectContaining({
                 sampling_type: 'Kiểm nghiệm thành phẩm',
@@ -247,7 +245,9 @@ describe('DataExportService', () => {
               batch_record_issued_at: expect.any(Date),
             }),
             deviations: [
-              expect.objectContaining({ deviation_content: 'Sai lệch minh họa' }),
+              expect.objectContaining({
+                deviation_content: 'Sai lệch minh họa',
+              }),
             ],
           }),
         }),
@@ -278,6 +278,14 @@ describe('DataExportService', () => {
                 take: 1,
                 orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
               }),
+              registrationNumber: {
+                select: { registration_number: true },
+              },
+              samplingRequests: expect.objectContaining({
+                where: { status: 'sent' },
+                take: 1,
+                orderBy: [{ sent_at: 'desc' }, { id: 'desc' }],
+              }),
               factoryReleaseReviews: expect.objectContaining({
                 take: 1,
                 orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
@@ -288,6 +296,84 @@ describe('DataExportService', () => {
       }),
     );
   });
+
+  it.each([
+    {
+      scenario:
+        'uses the saved number after PYCLM was sent and the item changed',
+      samplingRequests: [{ status: 'sent' }],
+      registrationNumber: { registration_number: 'VD-SAVED' },
+      item: { registration: { registration_number: 'VD-CURRENT' } },
+      expected: 'VD-SAVED',
+    },
+    {
+      scenario: 'uses the current item number before PYCLM is sent',
+      samplingRequests: [],
+      registrationNumber: { registration_number: 'VD-SAVED' },
+      item: { registration: { registration_number: 'VD-CURRENT' } },
+      expected: 'VD-CURRENT',
+    },
+    {
+      scenario: 'does not treat an unsent request as a sent PYCLM',
+      samplingRequests: [{ status: 'draft' }],
+      registrationNumber: { registration_number: 'VD-SAVED' },
+      item: { registration: { registration_number: 'VD-CURRENT' } },
+      expected: 'VD-CURRENT',
+    },
+    {
+      scenario: 'keeps a missing saved number blank after PYCLM was sent',
+      samplingRequests: [{ status: 'sent' }],
+      registrationNumber: null,
+      item: { registration: { registration_number: 'VD-CURRENT' } },
+      expected: '',
+    },
+    {
+      scenario: 'keeps an empty saved number blank after PYCLM was sent',
+      samplingRequests: [{ status: 'sent' }],
+      registrationNumber: { registration_number: '' },
+      item: { registration: { registration_number: 'VD-CURRENT' } },
+      expected: '',
+    },
+    {
+      scenario:
+        'returns blank when the item has no registration before sending',
+      samplingRequests: [],
+      registrationNumber: null,
+      item: { registration: null },
+      expected: '',
+    },
+    {
+      scenario: 'returns blank when the item is missing before sending',
+      samplingRequests: [],
+      registrationNumber: null,
+      item: null,
+      expected: '',
+    },
+  ])(
+    '$scenario',
+    async ({ samplingRequests, registrationNumber, item, expected }) => {
+      prisma.$transaction.mockResolvedValue([
+        1,
+        [
+          {
+            id: 10,
+            productionOrder: { samplingRequests, registrationNumber, item },
+          },
+        ],
+      ]);
+
+      const result = await service.exportFinishedProductSummaries({
+        page: 1,
+        limit: 500,
+      });
+
+      expect(result.data[0].productionOrder.registration_number).toBe(expected);
+      expect(result.data[0].productionOrder.registrationNumber).toEqual(
+        registrationNumber,
+      );
+      expect(result.data[0].productionOrder.item).toEqual(item);
+    },
+  );
 
   it('exports post-secondary packaging summaries with production orders', async () => {
     prisma.productionOrderPostSecondaryPackagingSummaries.count.mockReturnValue(
@@ -505,9 +591,7 @@ describe('DataExportService', () => {
             ],
             documentControl: expect.objectContaining({
               batch_record_issued_at: new Date('2026-01-03T08:00:00.000Z'),
-              batch_record_received_at: new Date(
-                '2026-01-04T08:00:00.000Z',
-              ),
+              batch_record_received_at: new Date('2026-01-04T08:00:00.000Z'),
               test_certificate_received_at: new Date(
                 '2026-01-05T08:00:00.000Z',
               ),
