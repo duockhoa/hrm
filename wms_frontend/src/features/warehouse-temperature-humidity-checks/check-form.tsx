@@ -199,8 +199,8 @@ export default function CheckForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <fieldset disabled={isSubmitting} className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2 sm:col-span-2">
+      <fieldset disabled={isSubmitting} className="grid grid-cols-1 gap-4">
+        <div className="space-y-2">
           <Label htmlFor="check-location">Vị trí *</Label>
           <div className="relative w-full">
             <Input
@@ -218,7 +218,7 @@ export default function CheckForm({
             />
           </div>
         </div>
-        <div className="space-y-2 sm:col-span-2">
+        <div className="space-y-2">
           <Label htmlFor="check-requirement">Yêu cầu *</Label>
           <Textarea
             id="check-requirement"
@@ -254,7 +254,7 @@ export default function CheckForm({
             required
           />
         </div>
-        <div className="space-y-2 sm:col-span-2">
+        <div className="space-y-2">
           <Label htmlFor="check-result">Kết quả *</Label>
           <Select
             value={result}
