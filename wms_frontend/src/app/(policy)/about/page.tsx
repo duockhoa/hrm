@@ -38,6 +38,16 @@ export default function AboutPage() {
               Tập đoàn Intech Group.
             </p>
             <p>
+              Điện thoại liên hệ:{" "}
+              <a
+                className="text-blue-600 hover:underline"
+                href="tel:0965155761"
+              >
+                0965155761
+              </a>
+              .
+            </p>
+            <p>
               Bản quyền ứng dụng thuộc Công ty Cổ phần Dược Khoa. Mọi hành vi
               sao chép, khai thác hoặc sử dụng lại khi chưa được cho phép đều
               được xem là vi phạm quyền sở hữu trí tuệ.
