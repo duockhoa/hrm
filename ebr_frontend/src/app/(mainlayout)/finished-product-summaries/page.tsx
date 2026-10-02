@@ -495,7 +495,7 @@ export default function FinishedProductSummariesPage() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 justify-center overflow-auto p-2 md:p-4">
+      <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto p-2 md:p-4">
         <FinishedProductSummaryDetail
           id={selectedSummaryId}
           onClose={() => setSelectedSummaryId(null)}
