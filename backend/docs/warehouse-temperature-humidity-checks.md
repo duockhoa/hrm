@@ -41,15 +41,66 @@ Lỗi dữ liệu: 400; chưa đăng nhập: 401; không tìm thấy: 404; xung 
 
 Áp dụng migration khi triển khai: `npx prisma migrate deploy`, sau đó `npx prisma generate` và build backend.
 
-## Khôi phục lỗi migration P3018 / MySQL 1824
+## Khôi phục lỗi migration P3009 / P3018 / MySQL 1824
 
 Migration `20261002000000_add_warehouse_temperature_humidity_checks` trước đây tham chiếu
 `Users` thay vì tên bảng thực tế `users` (`@@map("users")` trong schema). MySQL trên Linux
 có thể phân biệt chữ hoa/thường nên bước thêm khóa ngoại thất bại. Migration đã được sửa
 để dùng `users` cho các database chưa áp dụng.
 
-Với server đã lỗi ở câu lệnh thứ 2, bước tạo bảng đã chạy thành công theo log; cần kiểm tra
-trạng thái thực tế trước khi khôi phục. Chạy các truy vấn sau trong MySQL, database `dkpharma`:
+Sau lần thất bại, Prisma lưu trạng thái lỗi trong `_prisma_migrations`. Vì vậy, `git pull`
+lấy SQL đã sửa rồi chạy lại `npx prisma migrate deploy` vẫn có thể báo **P3009**: Prisma
+chặn migration mới cho đến khi migration lỗi được khôi phục và resolve. `prisma generate`,
+build thành công hoặc PM2 báo `online` không xóa trạng thái này và không cập nhật database.
+Log P3009 chỉ cho biết migration còn lỗi; lỗi gốc nằm trong cột `logs` của bản ghi migration.
+
+### Khôi phục bằng lệnh có kiểm tra trạng thái
+
+Trong thư mục backend, chạy:
+
+```bash
+npm run db:recover:warehouse-checks
+```
+
+Lệnh sử dụng `DATABASE_URL` từ môi trường hoặc `.env` của backend và kiểm tra migration
+`20261002000000_add_warehouse_temperature_humidity_checks`. Nếu migration đang lỗi, lệnh
+kiểm tra bảng đã tồn tại, các cột/index, quan hệ đến `users.id` và các giá trị `checked_by_id`
+không có người dùng tương ứng trước khi sửa. Lệnh chỉ bổ sung khóa ngoại còn thiếu, kiểm tra
+lại rồi chạy `prisma migrate resolve --applied` cho migration này; giữ nguyên dữ liệu.
+
+Nếu khóa ngoại đúng đã có từ lần sửa trước, lệnh bỏ qua bước thêm khóa ngoại và tiếp tục
+resolve. Nếu không còn bản ghi migration đang lỗi, lệnh kết thúc mà không sửa database.
+Có thể chạy lại lệnh sau khi một lần khôi phục bị gián đoạn.
+
+Nếu migration đang lỗi nhưng bảng chưa tồn tại, cấu trúc bảng/khóa ngoại khác dự kiến hoặc
+có `checked_by_id` không khớp `users.id`, lệnh dừng và báo nguyên nhân. Cần đối chiếu lỗi gốc
+và trạng thái database trước khi xử lý trường hợp đó. Lệnh không tự tạo lại bảng, xóa dữ liệu,
+triển khai migration tiếp theo, build hoặc restart backend.
+
+Trước khi dùng `git pull` trên server, cần commit và push các thay đổi của bản sửa này lên
+`origin/main`, gồm script khôi phục và lệnh mới trong `backend/package.json`. Sau đó chạy
+chuỗi sau trên server:
+
+```bash
+cd /home/admin/hrm &&
+git pull origin main &&
+cd backend &&
+npm run db:recover:warehouse-checks &&
+npx prisma migrate deploy &&
+npx prisma migrate status &&
+npx prisma generate &&
+npm run build &&
+pm2 restart hrm-backend &&
+pm2 status
+```
+
+`migrate deploy` sẽ tiếp tục áp dụng migration thêm cột `is_passed` và các migration đang chờ.
+Dùng `&&` để dừng chuỗi triển khai nếu có bước lỗi; chỉ restart backend sau khi khôi phục,
+triển khai migration và build đều thành công.
+
+### Kiểm tra và khôi phục thủ công
+
+Nếu cần đối chiếu trực tiếp, chạy các truy vấn sau trong MySQL, database `dkpharma`:
 
 ```sql
 SHOW CREATE TABLE `users`;
@@ -57,15 +108,20 @@ SHOW CREATE TABLE `warehouse_temperature_humidity_checks`;
 SELECT `migration_name`, `finished_at`, `rolled_back_at`, `logs`
 FROM `_prisma_migrations`
 WHERE `migration_name` = '20261002000000_add_warehouse_temperature_humidity_checks';
+SELECT COUNT(*) AS `orphan_count`
+FROM `warehouse_temperature_humidity_checks` AS c
+LEFT JOIN `users` AS u ON u.`id` = c.`checked_by_id`
+WHERE u.`id` IS NULL;
 ```
 
 Nếu bảng kiểm tra đã tồn tại với các cột/index của migration, migration đang lỗi chưa được
-resolve và khóa ngoại `warehouse_temperature_humidity_checks_checked_by_id_fkey` chưa có,
-chạy script khôi phục bên dưới. Script chỉ thêm khóa ngoại còn thiếu, giữ nguyên dữ liệu.
+resolve (`finished_at` và `rolled_back_at` đều `NULL`), không có người dùng tham chiếu bị thiếu
+(`orphan_count = 0`) và khóa ngoại `warehouse_temperature_humidity_checks_checked_by_id_fkey`
+chưa có, chạy script SQL khôi phục bên dưới. Script chỉ thêm khóa ngoại còn thiếu, giữ nguyên dữ liệu.
 Nếu khóa ngoại đúng đã có, bỏ qua lệnh `db execute`; nếu trạng thái khác, cần đối chiếu lại
 schema trước khi đánh dấu migration thành công.
 
-Sau khi đưa bản sửa này lên server, chạy trong thư mục backend:
+Sau khi kiểm tra các điều kiện trên, chạy trong thư mục backend:
 
 ```bash
 cd /home/admin/hrm/backend
@@ -78,10 +134,11 @@ npm run build &&
 pm2 restart hrm-backend
 ```
 
-Chỉ dùng `resolve --applied` sau khi toàn bộ bước của migration đầu đã hoàn tất.
-`migrate deploy` sẽ tiếp tục áp dụng migration thêm cột `is_passed` và các migration đang chờ.
-Dùng `&&` để dừng chuỗi triển khai nếu có bước lỗi. PM2 báo `online` chỉ xác nhận process
-đang chạy, không xác nhận schema database đã cập nhật đầy đủ.
+Chỉ dùng `resolve --applied` sau khi toàn bộ bước của migration đầu đã hoàn tất, gồm khóa
+ngoại đến `users.id` với `ON DELETE RESTRICT ON UPDATE CASCADE`. Cột `is_passed` thuộc
+migration tiếp theo nên chưa cần có để resolve migration đầu.
 
 Không chạy lại toàn bộ migration đầu trực tiếp trên bảng đã tạo vì sẽ lỗi trùng bảng.
+Không chỉ đánh dấu `--rolled-back` rồi chạy lại migration khi bảng vẫn tồn tại: lệnh này
+chỉ đổi lịch sử migration, không hoàn tác bước tạo bảng đã chạy.
 Không cần xóa bảng hay reset database để sửa lỗi này.
