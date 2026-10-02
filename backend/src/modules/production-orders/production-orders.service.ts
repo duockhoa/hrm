@@ -266,7 +266,14 @@ export class ProductionOrdersService {
         where: {
           id,
         },
-        include: productionOrderFindInclude,
+        include: {
+          ...productionOrderFindInclude,
+          registrationNumber: {
+            include: {
+              registration: true,
+            },
+          },
+        },
       });
 
     if (!productionOrder) {

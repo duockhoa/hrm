@@ -2779,6 +2779,8 @@ GET /production-orders/:id
 
 Response có thêm field `pyclm` dựa trên sampling request mới nhất, `samplingRecords` chứa dữ liệu lấy mẫu, `documentControl` chứa thông tin cấp/nhận hồ sơ và `featureConfig` dựa trên cấu hình action/view của `item_code`.
 
+Response cũng trả `registrationNumber`: bản ghi số đăng ký được lưu khi gửi PYCLM, gồm `id`, `production_order_id`, `registration_id`, `registration_number`, `created_at`, `updated_at` và quan hệ `registration`. Nếu chưa có bản ghi, `registrationNumber` là `null`. Frontend đọc số đăng ký đã lưu tại `registrationNumber.registration_number`; `item.registration` vẫn là số đăng ký đang liên kết với sản phẩm.
+
 Ví dụ phần dữ liệu lấy mẫu trong response:
 
 ```json

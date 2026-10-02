@@ -297,7 +297,7 @@ describe('ProductionOrdersService', () => {
     });
   });
 
-  it('returns a production order by id with PYCLM sending info', async () => {
+  it('returns a production order by id with PYCLM sending info and saved registration number', async () => {
     const sentAt = new Date('2026-05-28T08:00:00.000Z');
     const sender = {
       id: 7,
@@ -321,6 +321,16 @@ describe('ProductionOrdersService', () => {
       id: 2031,
       item_code: 'TP00001',
       internal_notes: 'Ghi chu noi bo TP',
+      registrationNumber: {
+        id: 1,
+        production_order_id: 2031,
+        registration_id: 583,
+        registration_number: 'VD-12345-26',
+        registration: {
+          id: 583,
+          registration_number: 'VD-12345-26',
+        },
+      },
       samplingRequests: [latestSamplingRequest],
     };
     const featureConfig = {
@@ -369,7 +379,14 @@ describe('ProductionOrdersService', () => {
       where: {
         id: 2031,
       },
-      include: expectedProductionOrderFindInclude,
+      include: {
+        ...expectedProductionOrderFindInclude,
+        registrationNumber: {
+          include: {
+            registration: true,
+          },
+        },
+      },
     });
     expect(featuresService.findConfigByItemCode).toHaveBeenCalledWith(
       'TP00001',
