@@ -78,12 +78,6 @@ const CLEANING_REQUIREMENTS = {
   detail: (id: string | number) => `/cleaning-requirements/${id}`,
 };
 
-const SECONDARY_PACKAGING_STAGE_REQUIREMENTS = {
-  base: "/secondary-packaging-stage-requirements",
-  detail: (id: string | number) =>
-    `/secondary-packaging-stage-requirements/${id}`,
-};
-
 const DOSAGE_FORMS = {
   base: "/dosage-forms",
   detail: (id: string | number) => `/dosage-forms/${id}`,
@@ -103,7 +97,5 @@ export const API_ROUTES = {
   equipment: EQUIPMENT,
   cleaningObjects: CLEANING_OBJECTS,
   cleaningRequirements: CLEANING_REQUIREMENTS,
-  secondaryPackagingStageRequirements:
-    SECONDARY_PACKAGING_STAGE_REQUIREMENTS,
   dosageForms: DOSAGE_FORMS,
 };
