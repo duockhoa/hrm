@@ -1,13 +1,10 @@
 import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 import type {
-  CreateEquipmentMonitoringRecordPayload,
   CreateEquipmentParameterPayload,
   CreateEquipmentPayload,
   Equipment,
-  EquipmentMonitoringRecord,
   EquipmentParameter,
-  UpdateEquipmentMonitoringRecordPayload,
   UpdateEquipmentParameterPayload,
   UpdateEquipmentPayload,
 } from "@/features/equipment/types";
@@ -96,73 +93,6 @@ const deleteEquipmentParameter = async (
   return response.data;
 };
 
-const fetchEquipmentMonitoringRecords = async (params?: {
-  production_order_id?: string | number;
-  equipment_id?: string | number;
-}): Promise<EquipmentMonitoringRecord[]> => {
-  const response = await axiosClient.get(API_ROUTES.equipment.monitoringRecords, {
-    params,
-  });
-  return response.data;
-};
-
-const fetchEquipmentMonitoringRecordById = async (
-  recordId: string | number,
-): Promise<EquipmentMonitoringRecord> => {
-  const response = await axiosClient.get(
-    API_ROUTES.equipment.monitoringRecordDetail(recordId),
-  );
-  return response.data;
-};
-
-const createEquipmentMonitoringRecord = async (
-  payload: CreateEquipmentMonitoringRecordPayload,
-): Promise<EquipmentMonitoringRecord> => {
-  const response = await axiosClient.post(
-    API_ROUTES.equipment.monitoringRecords,
-    payload,
-  );
-  return response.data;
-};
-
-const updateEquipmentMonitoringRecord = async (
-  recordId: string | number,
-  payload: UpdateEquipmentMonitoringRecordPayload,
-): Promise<EquipmentMonitoringRecord> => {
-  const response = await axiosClient.patch(
-    API_ROUTES.equipment.monitoringRecordDetail(recordId),
-    payload,
-  );
-  return response.data;
-};
-
-const deleteEquipmentMonitoringRecord = async (
-  recordId: string | number,
-): Promise<EquipmentMonitoringRecord> => {
-  const response = await axiosClient.delete(
-    API_ROUTES.equipment.monitoringRecordDetail(recordId),
-  );
-  return response.data;
-};
-
-const addEquipmentMonitoringRecordImages = async (
-  recordId: string | number,
-  images: File[],
-): Promise<EquipmentMonitoringRecord> => {
-  const formData = new FormData();
-  images.forEach((image) => formData.append("images", image));
-
-  const response = await axiosClient.post(
-    API_ROUTES.equipment.monitoringRecordImages(recordId),
-    formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
-  );
-  return response.data;
-};
-
-const fetchEquipmentMonitoringRecordImage = (imagePath: string) =>
-  axiosClient.get<Blob>(imagePath, { responseType: "blob" });
-
 const equipmentService = {
   fetchEquipment,
   fetchEquipmentById,
@@ -174,13 +104,6 @@ const equipmentService = {
   createEquipmentParameter,
   updateEquipmentParameter,
   deleteEquipmentParameter,
-  fetchEquipmentMonitoringRecords,
-  fetchEquipmentMonitoringRecordById,
-  createEquipmentMonitoringRecord,
-  updateEquipmentMonitoringRecord,
-  deleteEquipmentMonitoringRecord,
-  addEquipmentMonitoringRecordImages,
-  fetchEquipmentMonitoringRecordImage,
 };
 
 export default equipmentService;

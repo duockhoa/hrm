@@ -1,7 +1,7 @@
 import type {
   SecondaryPackagingStageRequirement,
   SecondaryPackagingStageRequirementPayload,
-} from "@/features/secondary-packaging-stage-requirements";
+} from "@/features/secondary-packaging-stage-requirements/types";
 import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 

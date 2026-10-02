@@ -21,9 +21,8 @@ export default function PoliciesPage() {
             </h2>
             <p className="mt-2">
               Hệ thống Kho Dược Khoa thu thập và xử lý dữ liệu nhằm phục vụ việc
-              quản lý lệnh sản xuất, bán thành phẩm, thành phẩm, nguyên liệu,
-              phiếu kiểm tra trong quá trình sản xuất và các nghiệp vụ nội bộ
-              liên quan.
+              quản lý danh mục hàng hóa, kiểm hàng nhập kho và các nghiệp vụ
+              nội bộ liên quan.
             </p>
           </section>
 
