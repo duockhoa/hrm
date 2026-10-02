@@ -139,7 +139,7 @@ export default function SemiFinishedGrossWeightCheckDetail({
       />
 
       <Dialog modal={false} open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="md:max-w-[600px]">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto md:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="sr-only">
               Cập nhật kiểm tra khối lượng cả vỏ
