@@ -8,7 +8,7 @@ import { API_ROUTES } from "@/lib/api-routes";
 import { usersService } from "@/services/index.service";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useUsersStore from "@/store/users.store";
-import { Boxes, Package } from "lucide-react";
+import { Boxes, Package, Thermometer } from "lucide-react";
 import { useEffect } from "react";
 import useSWR from "swr";
 
@@ -24,6 +24,12 @@ const menuItems = [
     name: "Danh sách nguyên liệu",
     icon: <Package className="size-5 shrink-0" />,
     url: "/items",
+  },
+  {
+    id: "warehouse-temperature-humidity-checks",
+    name: "Kiểm tra nhiệt độ, độ ẩm kho",
+    icon: <Thermometer className="size-5 shrink-0" />,
+    url: "/warehouse-temperature-humidity-checks",
   },
 ];
 

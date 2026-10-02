@@ -29,6 +29,7 @@ model AuditLogs {
 }
 
 model Users {
+  checkedWarehouseTemperatureHumidityChecks WarehouseTemperatureHumidityChecks[] @relation("WarehouseTemperatureHumidityChecker")
   enteredWarehouseReceiptItems                          WarehouseReceiptItems[]                                         @relation("WarehouseReceiptItemEnteredBy")
   id                                                    Int                                                             @id @default(autoincrement())
   username                                              String                                                          @unique
@@ -473,6 +474,23 @@ model WarehouseReceiptItems {
   @@index([lot_number])
   @@index([expiry_date])
   @@map("warehouse_receipt_items")
+}
+
+model WarehouseTemperatureHumidityChecks {
+  id            Int      @id @default(autoincrement())
+  location      String   @db.VarChar(255)
+  requirement   String   @db.Text
+  temperature   Decimal  @db.Decimal(5, 2)
+  humidity      Decimal  @db.Decimal(5, 2)
+  is_passed     Boolean?
+  checked_by_id Int
+  created_at    DateTime @default(now()) @db.DateTime(3)
+  updated_at    DateTime @default(now()) @updatedAt @db.DateTime(3)
+  checkedBy     Users    @relation("WarehouseTemperatureHumidityChecker", fields: [checked_by_id], references: [id], onDelete: Restrict)
+
+  @@index([checked_by_id])
+  @@index([location, created_at])
+  @@map("warehouse_temperature_humidity_checks")
 }
 
 model Features {
