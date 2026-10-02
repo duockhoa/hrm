@@ -38,7 +38,7 @@ export default function ItemDetailPage() {
         <ResizablePanel defaultSize={isMobile ? "100%" : isTablet ? "75%" : "70%"} minSize={0} className="min-h-0 min-w-0 overflow-auto p-4">
           <div className="flex w-full items-center justify-between gap-2 border-b border-gray-200 pb-2">
             <div className="flex min-w-0 items-center gap-2">
-              <Link className="shrink-0" href="/items">Danh mục Items</Link>
+              <Link className="shrink-0" href="/items">Danh sách nguyên liệu</Link>
               <AiOutlineRight className="shrink-0" />
               <p className="truncate">{data?.item_code ?? id}</p>
             </div>

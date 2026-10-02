@@ -21,7 +21,7 @@ const menuItems = [
   },
   {
     id: "items",
-    name: "Danh mục Items",
+    name: "Danh sách nguyên liệu",
     icon: <Package className="size-5 shrink-0" />,
     url: "/items",
   },

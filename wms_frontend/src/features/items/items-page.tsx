@@ -18,8 +18,8 @@ const collator = new Intl.Collator("vi-VN", { numeric: true, sensitivity: "base"
 
 export default function ItemsPage() {
   const { data, error, isLoading, mutate } = useSWR<Item[]>(
-    API_ROUTES.items.base,
-    itemsService.fetchItems,
+    API_ROUTES.items.rawMaterials,
+    itemsService.fetchRawMaterials,
   );
   const router = useRouter();
   const pathname = usePathname();
@@ -46,7 +46,7 @@ export default function ItemsPage() {
       <div className="sticky top-0 z-10 w-full bg-white p-2">
         <div className="flex w-full items-center gap-2 border-b border-gray-200 pb-2">
           <AiOutlineRight />
-          <Link href="/items">Danh mục Items</Link>
+          <Link href="/items">Danh sách nguyên liệu</Link>
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
@@ -54,7 +54,7 @@ export default function ItemsPage() {
           Array.from({ length: 10 }, (_, index) => <ItemRow key={index} item={null} />)
         ) : error ? (
           <div role="alert" className="p-4 text-center text-sm text-red-600">
-            <p>Không thể tải danh mục Items.</p>
+            <p>Không thể tải danh sách nguyên liệu.</p>
             <Button variant="outline" className="mt-2" onClick={() => void mutate()}>Thử lại</Button>
           </div>
         ) : filteredItems.length ? (
