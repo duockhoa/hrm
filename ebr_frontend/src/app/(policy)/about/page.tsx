@@ -34,8 +34,8 @@ export default function AboutPage() {
         <div className="mt-8">
           <div className="space-y-4 leading-7 text-gray-700">
             <p>
-              Ứng dụng được phát triển bởi Tổ Chuyển đổi số Công ty Cổ phần
-              Dược Khoa. Hỗ trợ kỹ thuật: Phạm Văn Bình - 0965155761.
+              Ứng dụng được phát triển bởi Phạm Văn Bình, Chuyên gia GMP,
+              Tập đoàn Intech Group.
             </p>
             <p>
               Bản quyền ứng dụng thuộc Công ty Cổ phần Dược Khoa. Mọi hành vi

@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
+import {
+  QrInputButton,
+  QrScanDialog,
+} from "@/components/qr-scan-dialog/qr-scan-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +22,52 @@ import warehouseTemperatureHumidityChecksService, {
   type WarehouseTemperatureHumidityCheck,
   type WarehouseTemperatureHumidityCheckPayload,
 } from "@/services/warehouse-temperature-humidity-checks.service";
+
+const locationQrKeys = [
+  "location",
+  "vi_tri",
+  "vị trí",
+  "location_name",
+  "location_code",
+  "room",
+  "phong",
+  "phòng",
+  "room_name",
+  "room_code",
+];
+
+const getQrLocation = (source: Record<string, unknown>) => {
+  const entries = Object.entries(source);
+  for (const key of locationQrKeys) {
+    const match = entries.find(([name]) => name.toLowerCase() === key);
+    if (typeof match?.[1] === "string" || typeof match?.[1] === "number") {
+      const value = String(match[1]).trim();
+      if (value) return value;
+    }
+  }
+  return null;
+};
+
+const parseQrLocation = (decodedText: string) => {
+  const text = decodedText.trim();
+  try {
+    const json: unknown = JSON.parse(text);
+    if (json && typeof json === "object" && !Array.isArray(json)) {
+      const value = getQrLocation(json as Record<string, unknown>);
+      if (value) return value;
+    }
+  } catch {
+    // QR may be plain text, a URL, or query params, as in the EBR form.
+  }
+
+  let params: URLSearchParams;
+  try {
+    params = new URL(text).searchParams;
+  } catch {
+    params = new URLSearchParams(text);
+  }
+  return getQrLocation(Object.fromEntries(params.entries())) ?? text;
+};
 
 export function checkError(error: unknown, fallback: string) {
   if (isAxiosError(error)) {
@@ -42,6 +92,8 @@ export default function CheckForm({
   onSaved: (check: WarehouseTemperatureHumidityCheck) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLocationQrScannerOpen, setIsLocationQrScannerOpen] = useState(false);
+  const [location, setLocation] = useState(data?.location ?? "");
   const [error, setError] = useState("");
   const [result, setResult] = useState(
     data?.is_passed === true
@@ -50,6 +102,20 @@ export default function CheckForm({
         ? "false"
         : "",
   );
+
+  const handleQrScan = useCallback((decodedText: string) => {
+    const scannedValue = parseQrLocation(decodedText);
+    if (!scannedValue) {
+      toast.error("Không đọc được vị trí từ mã QR.");
+      return;
+    }
+    if (scannedValue.length > 255) {
+      toast.error("Vị trí từ mã QR không được vượt quá 255 ký tự.");
+      return;
+    }
+    setLocation(scannedValue);
+    toast.success("Đã quét QR và điền vị trí.");
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -136,13 +202,21 @@ export default function CheckForm({
       <fieldset disabled={isSubmitting} className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="check-location">Vị trí *</Label>
-          <Input
-            id="check-location"
-            name="location"
-            defaultValue={data?.location ?? ""}
-            maxLength={255}
-            required
-          />
+          <div className="relative w-full">
+            <Input
+              id="check-location"
+              name="location"
+              className="pr-11"
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+              maxLength={255}
+              required
+            />
+            <QrInputButton
+              disabled={isSubmitting}
+              onClick={() => setIsLocationQrScannerOpen(true)}
+            />
+          </div>
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="check-requirement">Yêu cầu *</Label>
@@ -219,6 +293,12 @@ export default function CheckForm({
           {isSubmitting ? "Đang lưu..." : "Lưu"}
         </Button>
       </div>
+      <QrScanDialog
+        open={isLocationQrScannerOpen}
+        title="Quét QR vị trí kho"
+        onOpenChange={setIsLocationQrScannerOpen}
+        onScan={handleQrScan}
+      />
     </form>
   );
 }
