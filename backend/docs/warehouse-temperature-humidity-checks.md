@@ -40,3 +40,48 @@ Response kèm `is_passed` và `checkedBy: { id, username, name }`. Prisma trả 
 Lỗi dữ liệu: 400; chưa đăng nhập: 401; không tìm thấy: 404; xung đột quan hệ: 409.
 
 Áp dụng migration khi triển khai: `npx prisma migrate deploy`, sau đó `npx prisma generate` và build backend.
+
+## Khôi phục lỗi migration P3018 / MySQL 1824
+
+Migration `20261002000000_add_warehouse_temperature_humidity_checks` trước đây tham chiếu
+`Users` thay vì tên bảng thực tế `users` (`@@map("users")` trong schema). MySQL trên Linux
+có thể phân biệt chữ hoa/thường nên bước thêm khóa ngoại thất bại. Migration đã được sửa
+để dùng `users` cho các database chưa áp dụng.
+
+Với server đã lỗi ở câu lệnh thứ 2, bước tạo bảng đã chạy thành công theo log; cần kiểm tra
+trạng thái thực tế trước khi khôi phục. Chạy các truy vấn sau trong MySQL, database `dkpharma`:
+
+```sql
+SHOW CREATE TABLE `users`;
+SHOW CREATE TABLE `warehouse_temperature_humidity_checks`;
+SELECT `migration_name`, `finished_at`, `rolled_back_at`, `logs`
+FROM `_prisma_migrations`
+WHERE `migration_name` = '20261002000000_add_warehouse_temperature_humidity_checks';
+```
+
+Nếu bảng kiểm tra đã tồn tại với các cột/index của migration, migration đang lỗi chưa được
+resolve và khóa ngoại `warehouse_temperature_humidity_checks_checked_by_id_fkey` chưa có,
+chạy script khôi phục bên dưới. Script chỉ thêm khóa ngoại còn thiếu, giữ nguyên dữ liệu.
+Nếu khóa ngoại đúng đã có, bỏ qua lệnh `db execute`; nếu trạng thái khác, cần đối chiếu lại
+schema trước khi đánh dấu migration thành công.
+
+Sau khi đưa bản sửa này lên server, chạy trong thư mục backend:
+
+```bash
+cd /home/admin/hrm/backend
+npx prisma db execute --schema prisma/schema.prisma --file prisma/recovery/20261002000000_warehouse_temperature_humidity_checks_fk.sql &&
+npx prisma migrate resolve --applied 20261002000000_add_warehouse_temperature_humidity_checks &&
+npx prisma migrate deploy &&
+npx prisma migrate status &&
+npx prisma generate &&
+npm run build &&
+pm2 restart hrm-backend
+```
+
+Chỉ dùng `resolve --applied` sau khi toàn bộ bước của migration đầu đã hoàn tất.
+`migrate deploy` sẽ tiếp tục áp dụng migration thêm cột `is_passed` và các migration đang chờ.
+Dùng `&&` để dừng chuỗi triển khai nếu có bước lỗi. PM2 báo `online` chỉ xác nhận process
+đang chạy, không xác nhận schema database đã cập nhật đầy đủ.
+
+Không chạy lại toàn bộ migration đầu trực tiếp trên bảng đã tạo vì sẽ lỗi trùng bảng.
+Không cần xóa bảng hay reset database để sửa lỗi này.

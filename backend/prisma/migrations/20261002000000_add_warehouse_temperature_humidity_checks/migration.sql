@@ -14,4 +14,4 @@ CREATE TABLE `warehouse_temperature_humidity_checks` (
 
 ALTER TABLE `warehouse_temperature_humidity_checks`
 ADD CONSTRAINT `warehouse_temperature_humidity_checks_checked_by_id_fkey`
-FOREIGN KEY (`checked_by_id`) REFERENCES `Users`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+FOREIGN KEY (`checked_by_id`) REFERENCES `users`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
