@@ -744,8 +744,9 @@ export default function ProductOrderDetail({
   }
 
   const itemName = productOrder.item?.item_name ?? "";
-  const registrationNumber =
-    productOrder.item?.registration?.registration_number ?? "";
+  const registrationNumber = productOrder.pyclm?.isSent
+    ? (productOrder.registrationNumber?.registration_number ?? "")
+    : (productOrder.item?.registration?.registration_number ?? "");
   const productionOrderId =
     productOrder.id ??
     productOrder.production_order_id ??
