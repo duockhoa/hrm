@@ -43,11 +43,7 @@ function xuatThanhPham() {
     const date = new Date(value);
     return isNaN(date.getTime())
       ? value
-      : Utilities.formatDate(
-          date,
-          DATA_EXPORT_ENV.timeZone,
-          "dd/MM/yyyy",
-        );
+      : Utilities.formatDate(date, DATA_EXPORT_ENV.timeZone, "dd/MM/yyyy");
   };
 
   const formatDateTime = (value) => {
@@ -96,6 +92,9 @@ function xuatThanhPham() {
     const po = item.productionOrder || {};
     const hangHoa = po.item || {};
     const registration = hangHoa.registration || {};
+    const registrationNumber = po.samplingRequests?.[0]?.status === "sent"
+      ? (po.registrationNumber?.registration_number ?? "")
+      : (registration.registration_number ?? "");
     const productLine = hangHoa.productionSpecification?.productLine || {};
     const documentControl = po.documentControl || {};
 
@@ -117,7 +116,7 @@ function xuatThanhPham() {
       hangHoa.unit || po.unit || "", // G: Đơn vị tính
       formatDate(po.date_manufacture), // H: NSX
       formatDate(po.expire_date), // I: HSD
-      registration.registration_number || "", // J: Số đăng ký
+      registrationNumber, // J: Số đăng ký
       formatDate(po.start_date), // K: Ngày bắt đầu sản xuất
       po.remarks || "", // L: Ghi chú
       productLine.name || productLine.code || "", // M: Dòng sản phẩm

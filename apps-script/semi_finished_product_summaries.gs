@@ -1,5 +1,4 @@
-const SEMI_FINISHED_PRODUCT_SUMMARIES_SHEET_NAME =
-  "DANH MỤC BÁN THÀNH PHẨM";
+const SEMI_FINISHED_PRODUCT_SUMMARIES_SHEET_NAME = "DANH MỤC BÁN THÀNH PHẨM";
 
 function xuatTongKetBanThanhPham() {
   const apiUrl =

@@ -255,6 +255,11 @@ const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
       remarks: true,
       internal_notes: true,
       change_content: true,
+      registrationNumber: {
+        select: {
+          registration_number: true,
+        },
+      },
       productionGuide: {
         select: {
           id: true,
