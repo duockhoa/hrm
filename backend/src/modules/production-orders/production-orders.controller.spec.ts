@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RequestMethod, StreamableFile } from '@nestjs/common';
-import { METHOD_METADATA } from '@nestjs/common/constants';
+import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { ProductionOrdersController } from './production-orders.controller';
 import { ProductionOrdersService } from './production-orders.service';
@@ -203,6 +203,7 @@ describe('ProductionOrdersController', () => {
     delete: jest.Mock;
   };
   let productionOrderVialInspectionChecksService: {
+    findAll: jest.Mock;
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -529,6 +530,7 @@ describe('ProductionOrdersController', () => {
       delete: jest.fn(),
     };
     productionOrderVialInspectionChecksService = {
+      findAll: jest.fn(),
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
@@ -1012,6 +1014,7 @@ describe('ProductionOrdersController', () => {
       ],
       ['exportProductionOrder', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
       ['exportDatePrint', PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT],
+      ['exportDatePrintWithOverrides', PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT],
       ['findDatePrintExportTemplates', PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT],
       ['exportBatchReport', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
       [
@@ -2654,6 +2657,21 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderFactoryReleaseReviewsService.delete,
     ).toHaveBeenCalledWith(1);
+  });
+
+  it('exposes the cross-order vial inspection list as a protected static GET route', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    productionOrderVialInspectionChecksService.findAll.mockResolvedValue(checks);
+    await expect(controller.findAllVialInspectionChecks()).resolves.toBe(checks);
+    expect(productionOrderVialInspectionChecksService.findAll).toHaveBeenCalledWith();
+    const handler = ProductionOrdersController.prototype.findAllVialInspectionChecks;
+    expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(
+      'vial-inspection-checks',
+    );
+    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(RequestMethod.GET);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, handler)).toEqual([
+      PRODUCTION_ORDER_PERMISSIONS.READ,
+    ]);
   });
 
   it('gets vial inspection checks for a production order', async () => {

@@ -37,6 +37,7 @@ import { getReportDay } from "../report-date";
 import FinishedProductOutputChart from "./finished-product-output-chart";
 import DeviationReport from "./deviation-report";
 import ProductionReport from "./production-report";
+import VialInspectionReport from "./vial-inspection-report";
 import type { ReportDeviation } from "../deviation-report";
 import type { ReportProductionOrder } from "../production-report";
 import {
@@ -365,8 +366,8 @@ export default function ReportsDashboard() {
   ).size;
   const deviationMetric = (value: number) =>
     isDeviationLoading ? "…" : deviationError ? "—" : formatNumber(value);
-  const isReportLoading = reportType === "deviations" ? isDeviationLoading : isLoading;
-  const reportError = reportType === "deviations" ? deviationError : error;
+  const isReportLoading = reportType === "vial-inspections" ? false : reportType === "deviations" ? isDeviationLoading : isLoading;
+  const reportError = reportType === "vial-inspections" ? null : reportType === "deviations" ? deviationError : error;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto rounded-lg bg-white shadow-md">
@@ -380,6 +381,7 @@ export default function ReportsDashboard() {
                 <SelectItem value="overview">Tổng quan</SelectItem>
                 <SelectItem value="deviations">Báo cáo sai lệch</SelectItem>
                 <SelectItem value="production">Báo cáo sản xuất</SelectItem>
+                <SelectItem value="vial-inspections">Báo cáo soi lọ</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -452,6 +454,10 @@ export default function ReportsDashboard() {
 
         {reportType === "production" && !isLoading && !error && !rangeError ? (
           <ProductionReport orders={data ?? EMPTY_PRODUCTION_ORDERS} range={isAllTime ? null : range} />
+        ) : null}
+
+        {reportType === "vial-inspections" && !rangeError ? (
+          <VialInspectionReport range={isAllTime ? null : range} />
         ) : null}
 
         {reportType === "overview" && !isLoading && !error && !rangeError ? (

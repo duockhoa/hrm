@@ -1521,6 +1521,12 @@ export class ProductionOrdersController {
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Get('vial-inspection-checks')
+  async findAllVialInspectionChecks() {
+    return this.productionOrderVialInspectionChecksService.findAll();
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('vial-inspection-checks/:checkId')
   async findVialInspectionCheckById(
     @Param('checkId', ParseIntPipe) checkId: number,

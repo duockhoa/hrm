@@ -166,6 +166,7 @@ const PRODUCTION_ORDERS = {
     `/production-orders/disintegration-checks/${checkId}`,
   vialInspectionChecks: (id: string | number) =>
     `/production-orders/${id}/vial-inspection-checks`,
+  allVialInspectionChecks: "/production-orders/vial-inspection-checks",
   vialInspectionCheckDetail: (checkId: string | number) =>
     `/production-orders/vial-inspection-checks/${checkId}`,
   sensoryChecks: (id: string | number) =>

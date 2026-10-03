@@ -995,6 +995,11 @@ const deleteDisintegrationCheck = async (checkId: string | number) => {
   return response.data;
 };
 
+const fetchAllVialInspectionChecks = async () => {
+  const response = await axiosClient.get(API_ROUTES.productionOrders.allVialInspectionChecks);
+  return response.data;
+};
+
 const fetchVialInspectionChecks = async (id: string | number) => {
   const response = await axiosClient.get(
     API_ROUTES.productionOrders.vialInspectionChecks(id),
@@ -2574,6 +2579,7 @@ const productOrdersService = {
   updateDisintegrationCheck,
   deleteDisintegrationCheck,
   fetchVialInspectionChecks,
+  fetchAllVialInspectionChecks,
   fetchVialInspectionCheckById,
   createVialInspectionCheck,
   updateVialInspectionCheck,

@@ -32,6 +32,26 @@ const vialInspectionCheckInclude = {
 export class ProductionOrderVialInspectionChecksService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  async findAll() {
+    return this.prismaService.productionOrderVialInspectionChecks.findMany({
+      include: {
+        ...vialInspectionCheckInclude,
+        productionOrder: {
+          select: {
+            id: true,
+            production_order_code: true,
+            item_code: true,
+            lot_no: true,
+            status: true,
+            date_manufacture: true,
+            item: { select: { item_code: true, item_name: true } },
+          },
+        },
+      },
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    });
+  }
+
   async findById(checkId: number) {
     const check =
       await this.prismaService.productionOrderVialInspectionChecks.findUnique({
@@ -216,7 +236,11 @@ export class ProductionOrderVialInspectionChecksService {
     }
 
     const normalizedValue =
-      typeof value === 'string' ? value.trim() : String(value);
+      typeof value === 'string'
+        ? value.trim()
+        : typeof value === 'number'
+          ? String(value)
+          : '';
 
     if (!/^\d+$/.test(normalizedValue)) {
       throw new BadRequestException(

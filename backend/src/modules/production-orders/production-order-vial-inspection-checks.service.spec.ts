@@ -60,6 +60,37 @@ describe('ProductionOrderVialInspectionChecksService', () => {
     );
   });
 
+  it('lists checks across orders with product and creator data for reporting', async () => {
+    const checks = [{ id: 1, production_order_id: 2031 }];
+    prismaService.productionOrderVialInspectionChecks.findMany.mockResolvedValue(
+      checks,
+    );
+
+    await expect(service.findAll()).resolves.toBe(checks);
+    expect(
+      prismaService.productionOrderVialInspectionChecks.findMany,
+    ).toHaveBeenCalledWith({
+      include: {
+        createdBy: {
+          select: expect.objectContaining({ id: true, name: true }),
+        },
+        productionOrder: {
+          select: {
+            id: true,
+            production_order_code: true,
+            item_code: true,
+            lot_no: true,
+            status: true,
+            date_manufacture: true,
+            item: { select: { item_code: true, item_name: true } },
+          },
+        },
+      },
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    });
+    expect(prismaService.productionOrders.findUnique).not.toHaveBeenCalled();
+  });
+
   it('gets vial inspection checks for a production order', async () => {
     const checks = [{ id: 1, production_order_id: 2031 }];
     prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
@@ -249,11 +280,29 @@ describe('ProductionOrderVialInspectionChecksService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it.each([[[1]], [{ toString: () => '1' }], [true]])(
+    'rejects non-scalar numeric counts: %p',
+    async (value) => {
+      prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+      await expect(
+        service.create(
+          2031,
+          { ...validDto, fiber_vial_count: value as unknown as number },
+          { id: 7 },
+        ),
+      ).rejects.toThrow('fiber_vial_count must be a non-negative integer');
+    },
+  );
+
   it('rejects a non-string note', async () => {
     prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
 
     await expect(
-      service.create(2031, { ...validDto, note: 1 as any }, { id: 7 }),
+      service.create(
+        2031,
+        { ...validDto, note: 1 as unknown as string },
+        { id: 7 },
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
