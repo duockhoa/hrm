@@ -199,7 +199,7 @@ export default function CheckForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <fieldset disabled={isSubmitting} className="grid grid-cols-1 gap-4">
+      <fieldset disabled={isSubmitting} className="flex flex-col gap-4">
         <div className="space-y-2">
           <Label htmlFor="check-location">Vị trí *</Label>
           <div className="relative w-full">
