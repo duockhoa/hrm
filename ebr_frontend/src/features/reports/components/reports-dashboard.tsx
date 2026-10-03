@@ -72,50 +72,26 @@ const getPresetRange = (preset: string): DateRange => {
   const date = new Date(`${today}T00:00:00Z`);
   const format = (value: Date) => value.toISOString().slice(0, 10);
   if (preset === "today") return { from: today, to: today };
-  const rollingDays: Record<string, number> = {
-    "last-7-days": 7,
-    "last-14-days": 14,
-    "last-30-days": 30,
-    "last-60-days": 60,
-    "last-90-days": 90,
-    "last-180-days": 180,
-    "last-365-days": 365,
-  };
-  if (rollingDays[preset]) {
-    date.setUTCDate(date.getUTCDate() - rollingDays[preset] + 1);
+  if (preset === "last-7-days" || preset === "last-30-days") {
+    date.setUTCDate(date.getUTCDate() - (preset === "last-30-days" ? 29 : 6));
     return { from: format(date), to: today };
   }
   if (preset === "last-6-months") {
-    const day = date.getUTCDate();
-    date.setUTCDate(1);
-    date.setUTCMonth(date.getUTCMonth() - 6);
-    const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
-    date.setUTCDate(Math.min(day, lastDay));
-    return { from: format(date), to: today };
-  }
-  const rollingMonths: Record<string, number> = {
-    "last-3-months": 3,
-    "last-6-months": 6,
-    "last-12-months": 12,
-  };
-  if (rollingMonths[preset]) {
-    const from = new Date(Date.UTC(
-      date.getUTCFullYear(), date.getUTCMonth() - rollingMonths[preset] + 1, 1,
-    ));
-    return { from: format(from), to: today };
-  }
-  if (preset === "last-month" || preset === "month-before-last") {
-    const offset = preset === "last-month" ? 1 : 2;
-    const from = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - offset, 1));
-    const to = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - offset + 1, 0));
-    return { from: format(from), to: format(to) };
-  }
-  if (preset === "year" || preset === "last-year" || preset === "last-2-years") {
-    const year = date.getUTCFullYear() - (preset === "year" ? 0 : 1);
     return {
-      from: `${year}-01-01`,
-      to: preset === "last-year" ? `${year}-12-31` : today,
+      from: format(new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 5, 1))),
+      to: today,
     };
+  }
+  if (preset === "last-month") {
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    return {
+      from: format(new Date(Date.UTC(year, month - 1, 1))),
+      to: format(new Date(Date.UTC(year, month, 0))),
+    };
+  }
+  if (preset === "year") {
+    return { from: `${date.getUTCFullYear()}-01-01`, to: today };
   }
   return { from: `${today.slice(0, 7)}-01`, to: today };
 };
@@ -474,22 +450,11 @@ export default function ReportsDashboard() {
                 <SelectItem value="custom" disabled>Tùy chọn</SelectItem>
                 <SelectItem value="today">Hôm nay</SelectItem>
                 <SelectItem value="last-7-days">7 ngày gần nhất</SelectItem>
-                <SelectItem value="last-14-days">14 ngày gần nhất</SelectItem>
                 <SelectItem value="last-30-days">30 ngày gần nhất</SelectItem>
-                <SelectItem value="last-60-days">60 ngày gần nhất</SelectItem>
-                <SelectItem value="last-90-days">90 ngày gần nhất</SelectItem>
-                <SelectItem value="last-180-days">180 ngày gần nhất</SelectItem>
-                <SelectItem value="last-365-days">365 ngày gần nhất</SelectItem>
-                <SelectItem value="last-6-months">6 tháng gần nhất</SelectItem>
                 <SelectItem value="month">Tháng này</SelectItem>
                 <SelectItem value="last-month">Tháng trước</SelectItem>
-                <SelectItem value="month-before-last">Tháng trước nữa</SelectItem>
-                <SelectItem value="last-3-months">3 tháng gần nhất</SelectItem>
                 <SelectItem value="last-6-months">6 tháng gần nhất</SelectItem>
-                <SelectItem value="last-12-months">12 tháng gần nhất</SelectItem>
                 <SelectItem value="year">Năm nay</SelectItem>
-                <SelectItem value="last-year">Năm trước</SelectItem>
-                <SelectItem value="last-2-years">2 năm gần nhất</SelectItem>
               </SelectContent>
             </Select>
           </div>
