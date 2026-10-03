@@ -5,6 +5,7 @@ import type {
   CreateEquipmentParameterPayload,
   CreateEquipmentPayload,
   Equipment,
+  EquipmentIncidentReport,
   EquipmentMonitoringRecord,
   EquipmentParameter,
   UpdateEquipmentMonitoringRecordPayload,
@@ -14,6 +15,11 @@ import type {
 
 const fetchEquipment = async (): Promise<Equipment[]> => {
   const response = await axiosClient.get(API_ROUTES.equipment.base);
+  return response.data;
+};
+
+const fetchEquipmentIncidentReports = async (): Promise<EquipmentIncidentReport[]> => {
+  const response = await axiosClient.get(API_ROUTES.equipment.incidentReports);
   return response.data;
 };
 
@@ -166,6 +172,7 @@ const fetchEquipmentMonitoringRecordImage = (imagePath: string) =>
 
 const equipmentService = {
   fetchEquipment,
+  fetchEquipmentIncidentReports,
   fetchEquipmentById,
   createEquipment,
   updateEquipment,

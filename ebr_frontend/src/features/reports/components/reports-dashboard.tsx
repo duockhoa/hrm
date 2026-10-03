@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
+import { AlertTriangle, ClipboardList, FileWarning, Package, Wrench, type LucideIcon } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -25,7 +26,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { API_ROUTES } from "@/lib/api-routes";
+import type { EquipmentIncidentReport } from "@/features/equipment/types";
+import { buildProductionSummary } from "../production-summary";
 import {
+  equipmentService,
   productionOrderDeviationsService,
   productOrdersService,
 } from "@/services/index.service";
@@ -33,14 +37,9 @@ import {
 type ProductionOrder = Record<string, any>;
 type ProductionOrderDeviation = Record<string, any>;
 
-type MonthlyProduction = {
-  key: string;
-  month: string;
-  orders: number;
-};
-
 const EMPTY_PRODUCTION_ORDERS: ProductionOrder[] = [];
 const EMPTY_PRODUCTION_ORDER_DEVIATIONS: ProductionOrderDeviation[] = [];
+const EMPTY_EQUIPMENT_INCIDENT_REPORTS: EquipmentIncidentReport[] = [];
 const DEVIATION_BAR_COLORS = ["#93c5fd", "#38bdf8", "#0ea5e9", "#0369a1"];
 
 type DateRange = { from: string; to: string };
@@ -68,6 +67,7 @@ const getReportDay = (value: unknown): string | null => {
 };
 
 const getPresetRange = (preset: string): DateRange => {
+  if (preset === "all") return { from: "", to: "" };
   const today = getReportDay(new Date().toISOString())!;
   const date = new Date(`${today}T00:00:00Z`);
   const format = (value: Date) => value.toISOString().slice(0, 10);
@@ -192,30 +192,6 @@ const getMonthInfo = (value: unknown) => {
   };
 };
 
-const buildMonthlyProduction = (orders: ProductionOrder[]) => {
-  const monthMap = new Map<string, MonthlyProduction>();
-
-  orders.forEach((order) => {
-    const monthInfo = getMonthInfo(getOrderDate(order));
-
-    if (!monthInfo) {
-      return;
-    }
-
-    const existing = monthMap.get(monthInfo.key) ?? {
-      key: monthInfo.key,
-      month: monthInfo.label,
-      orders: 0,
-    };
-
-    existing.orders += 1;
-    monthMap.set(monthInfo.key, existing);
-  });
-
-  return Array.from(monthMap.values())
-    .sort((left, right) => left.key.localeCompare(right.key));
-};
-
 const buildMonthlyDeviationSummary = (
   deviations: ProductionOrderDeviation[],
 ) => {
@@ -266,20 +242,69 @@ const getDeviationBarColor = (value: number, maxValue: number) => {
   return DEVIATION_BAR_COLORS[0];
 };
 
+const METRIC_CARD_THEMES = {
+  blue: {
+    card: "border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/60",
+    accent: "bg-blue-500",
+    text: "text-blue-950",
+    icon: "bg-blue-100 text-blue-600",
+  },
+  emerald: {
+    card: "border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/60",
+    accent: "bg-emerald-500",
+    text: "text-emerald-950",
+    icon: "bg-emerald-100 text-emerald-600",
+  },
+  amber: {
+    card: "border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100/60",
+    accent: "bg-amber-500",
+    text: "text-amber-950",
+    icon: "bg-amber-100 text-amber-600",
+  },
+  rose: {
+    card: "border-rose-200 bg-gradient-to-br from-rose-50 to-rose-100/60",
+    accent: "bg-rose-500",
+    text: "text-rose-950",
+    icon: "bg-rose-100 text-rose-600",
+  },
+  violet: {
+    card: "border-violet-200 bg-gradient-to-br from-violet-50 to-violet-100/60",
+    accent: "bg-violet-500",
+    text: "text-violet-950",
+    icon: "bg-violet-100 text-violet-600",
+  },
+};
+
 function MetricCard({
   label,
   value,
   hint,
+  tone,
+  icon: Icon,
 }: {
   label: string;
   value: string;
   hint: string;
+  tone?: keyof typeof METRIC_CARD_THEMES;
+  icon?: LucideIcon;
 }) {
+  const theme = tone ? METRIC_CARD_THEMES[tone] : undefined;
+
   return (
-    <div className="rounded-md border bg-white p-4 shadow-sm">
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-gray-950">{value}</p>
-      <p className="mt-1 text-xs text-gray-500">{hint}</p>
+    <div className={`relative overflow-hidden rounded-lg border p-4 shadow-sm ${theme?.card ?? "bg-white"}`}>
+      {theme ? <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${theme.accent}`} /> : null}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={`text-sm font-medium ${theme?.text ?? "text-gray-500"}`}>{label}</p>
+          <p className={`mt-2 ${theme ? `text-3xl font-bold tabular-nums ${theme.text}` : "text-2xl font-semibold text-gray-950"}`}>{value}</p>
+        </div>
+        {Icon ? (
+          <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${theme?.icon ?? "bg-gray-100 text-gray-600"}`}>
+            <Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
+          </div>
+        ) : null}
+      </div>
+      <p className={theme ? "mt-2 text-xs leading-relaxed text-slate-600" : "mt-1 text-xs text-gray-500"}>{hint}</p>
     </div>
   );
 }
@@ -319,8 +344,8 @@ function ReportSection({
 function ReportSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, index) => (
           <Skeleton key={index} className="h-28 rounded-md" />
         ))}
       </div>
@@ -336,7 +361,10 @@ function ReportSkeleton() {
 export default function ReportsDashboard() {
   const [range, setRange] = useState<DateRange>(() => getPresetRange("year"));
   const [preset, setPreset] = useState("year");
-  const rangeError = !getReportDay(range.from) || !getReportDay(range.to)
+  const isAllTime = preset === "all";
+  const rangeError = isAllTime
+    ? ""
+    : !getReportDay(range.from) || !getReportDay(range.to)
     ? "Vui lòng chọn đầy đủ từ ngày và đến ngày."
     : range.from > range.to
       ? "Từ ngày phải nhỏ hơn hoặc bằng đến ngày."
@@ -353,22 +381,40 @@ export default function ReportsDashboard() {
     API_ROUTES.productionOrderDeviations.base,
     () => productionOrderDeviationsService.fetchProductionOrderDeviations(),
   );
+  const {
+    data: incidentData,
+    isLoading: isIncidentLoading,
+    error: incidentError,
+  } = useSWR<EquipmentIncidentReport[]>(
+    API_ROUTES.equipment.incidentReports,
+    equipmentService.fetchEquipmentIncidentReports,
+  );
   const productionOrders = useMemo(
     () => (data ?? EMPTY_PRODUCTION_ORDERS).filter((order) =>
-      isInRange(getOrderDate(order), range),
+      isAllTime || isInRange(getOrderDate(order), range),
     ),
-    [data, range],
+    [data, range, isAllTime],
   );
   const productionOrderDeviations = useMemo(
     () => (deviationData ?? EMPTY_PRODUCTION_ORDER_DEVIATIONS).filter((deviation) =>
-      isInRange(getFirstValue(deviation, ["created_at", "updated_at"]), range),
+      isAllTime || isInRange(getFirstValue(deviation, ["created_at", "updated_at"]), range),
     ),
-    [deviationData, range],
+    [deviationData, range, isAllTime],
+  );
+  const equipmentIncidentReports = useMemo(
+    () => (incidentData ?? EMPTY_EQUIPMENT_INCIDENT_REPORTS).filter((incident) =>
+      isAllTime || isInRange(incident.created_at, range),
+    ),
+    [incidentData, range, isAllTime],
   );
 
-  const monthlyProduction = useMemo(
-    () => buildMonthlyProduction(productionOrders),
-    [productionOrders],
+  const productionSummary = useMemo(
+    () => buildProductionSummary(
+      productionOrders.map((order) => getReportDay(getOrderDate(order)))
+        .filter((day): day is string => day !== null),
+      isAllTime ? null : range,
+    ),
+    [productionOrders, range, isAllTime],
   );
   const monthlyDeviationSummary = useMemo(
     () => buildMonthlyDeviationSummary(productionOrderDeviations),
@@ -417,6 +463,7 @@ export default function ReportsDashboard() {
             <Input
               id="report-from"
               type="date"
+              disabled={isAllTime}
               value={range.from}
               max={range.to || undefined}
               aria-invalid={Boolean(rangeError)}
@@ -432,6 +479,7 @@ export default function ReportsDashboard() {
             <Input
               id="report-to"
               type="date"
+              disabled={isAllTime}
               value={range.to}
               min={range.from || undefined}
               aria-invalid={Boolean(rangeError)}
@@ -448,6 +496,7 @@ export default function ReportsDashboard() {
               <SelectTrigger id="report-preset" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent position="popper" side="bottom" align="start" avoidCollisions={false}>
                 <SelectItem value="custom" disabled>Tùy chọn</SelectItem>
+                <SelectItem value="all">Tất cả</SelectItem>
                 <SelectItem value="today">Hôm nay</SelectItem>
                 <SelectItem value="last-7-days">7 ngày gần nhất</SelectItem>
                 <SelectItem value="last-30-days">30 ngày gần nhất</SelectItem>
@@ -463,7 +512,7 @@ export default function ReportsDashboard() {
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-auto bg-gray-50 p-4">
-        {!rangeError ? <p className="text-sm text-gray-600">Tổng quan · {formatReportDate(range.from)} – {formatReportDate(range.to)}</p> : null}
+        {!rangeError ? <p className="text-sm text-gray-600">Tổng quan · {isAllTime ? "Tất cả thời gian" : `${formatReportDate(range.from)} – ${formatReportDate(range.to)}`}</p> : null}
         {isLoading && !rangeError ? <ReportSkeleton /> : null}
 
         {!isLoading && error ? (
@@ -477,28 +526,42 @@ export default function ReportsDashboard() {
             <ReportSection>
               <ChartPanel
                 title="Tổng quan"
-                subtitle="Lệnh lọc theo ngày sản xuất (hoặc ngày tạo nếu chưa có); sai lệch lọc theo ngày tạo phiếu."
               >
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                   <MetricCard
                     label="Tổng lệnh sản xuất"
                     value={formatNumber(productionOrders.length)}
+                    tone="blue"
+                    icon={ClipboardList}
                     hint="Trong khoảng thời gian đã chọn"
                   />
                   <MetricCard
                     label="Số sản phẩm"
                     value={formatNumber(productCount)}
+                    tone="emerald"
+                    icon={Package}
                     hint="Sản phẩm có lệnh trong kỳ"
                   />
                   <MetricCard
                     label="Số sai lệch"
                     value={deviationMetric(productionOrderDeviations.length)}
+                    tone="amber"
+                    icon={AlertTriangle}
                     hint="Phiếu sai lệch phát sinh trong kỳ"
                   />
                   <MetricCard
                     label="Lệnh có sai lệch"
                     value={deviationMetric(affectedOrderCount)}
+                    tone="rose"
+                    icon={FileWarning}
                     hint="Số lệnh liên quan đến phiếu sai lệch trong kỳ"
+                  />
+                  <MetricCard
+                    label="Số sự cố thiết bị"
+                    value={isIncidentLoading ? "…" : incidentError ? "—" : formatNumber(equipmentIncidentReports.length)}
+                    tone="violet"
+                    icon={Wrench}
+                    hint={incidentError ? "Không thể tải dữ liệu sự cố thiết bị" : "Phiếu sự cố thiết bị được tạo trong kỳ"}
                   />
                 </div>
               </ChartPanel>
@@ -507,16 +570,19 @@ export default function ReportsDashboard() {
             <div className="grid gap-4 xl:grid-cols-2">
             <ReportSection>
               <ChartPanel
-                title="Số lô theo tháng"
-                subtitle="Số lượng lệnh sản xuất phát sinh theo từng tháng."
+                title="Số lô sản xuất"
+                subtitle={`Số lô sản xuất theo ${productionSummary.resolutionLabel} trong khoảng thời gian đã chọn.`}
               >
                 <div className="h-96">
-                  {monthlyProduction.length > 0 ? (
+                  {productionSummary.points.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={monthlyProduction}>
+                      <LineChart data={productionSummary.points}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis
-                          dataKey="month"
+                          dataKey="key"
+                          tickFormatter={(key) => productionSummary.points.find((point) => point.key === key)?.label ?? key}
+                          interval="preserveStartEnd"
+                          minTickGap={24}
                           tickLine={false}
                           axisLine={false}
                         />
@@ -526,7 +592,7 @@ export default function ReportsDashboard() {
                             formatNumber(value as number),
                             "Số lô",
                           ]}
-                          labelFormatter={(label) => `Tháng ${label}`}
+                          labelFormatter={(key) => productionSummary.points.find((point) => point.key === String(key))?.tooltipLabel ?? String(key)}
                         />
                         <Line
                           type="monotone"
@@ -540,7 +606,7 @@ export default function ReportsDashboard() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex h-full items-center justify-center text-sm text-gray-500">
-                      Chưa có dữ liệu theo tháng.
+                      Chưa có dữ liệu lô sản xuất trong khoảng thời gian đã chọn.
                     </div>
                   )}
                 </div>

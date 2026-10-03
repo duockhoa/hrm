@@ -364,6 +364,7 @@ const PRODUCTION_WORKSHOPS = {
 
 const EQUIPMENT = {
   base: "/equipment",
+  incidentReports: "/equipment/incident-reports",
   detail: (id: string | number) => `/equipment/${id}`,
   parameters: (id: string | number) => `/equipment/${id}/parameters`,
   parameterDetail: (parameterId: string | number) =>

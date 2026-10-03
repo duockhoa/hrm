@@ -20,6 +20,20 @@ export type Equipment = {
 export type EquipmentParameterDataType =
   "text" | "number" | "boolean" | "date" | "datetime" | "select";
 
+export type EquipmentIncidentReport = {
+  id: number;
+  equipment_id: number;
+  title: string;
+  description: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  created_by_id: number;
+  created_at: string;
+  updated_at: string;
+  equipment?: Equipment;
+  createdBy?: EquipmentCreatedBy;
+};
+
 export type EquipmentParameter = {
   id: number;
   equipment_id: number;
