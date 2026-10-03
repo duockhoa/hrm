@@ -116,7 +116,7 @@ function FilterSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <div className="min-w-0 space-y-2">
+    <div className="relative min-w-0 space-y-2">
       <Label htmlFor={id}>{label}</Label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger id={id} className="w-full">
@@ -207,7 +207,7 @@ function DeviationTable({ rows }: { rows: DeviationRow[] }) {
       title="Danh sách sai lệch chi tiết"
       subtitle="Mở từng phiếu để xem nội dung, nguyên nhân, phương án, kết quả xử lý và thông tin người liên quan."
     >
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="relative overflow-x-auto rounded-lg border">
         <table className="w-full min-w-[1000px] text-left text-sm">
           <caption className="sr-only">Danh sách {rows.length} phiếu sai lệch phù hợp bộ lọc</caption>
           <thead className="bg-slate-50 text-xs text-slate-600">
@@ -373,7 +373,7 @@ export default function DeviationReport({
     report.timeline.find((point) => point.key === String(key))?.tooltipLabel ?? String(key);
 
   return (
-    <div className="space-y-4">
+    <div className="relative min-w-0 space-y-4">
       <section aria-label="Bộ lọc báo cáo sai lệch" className="rounded-xl border bg-white p-4">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <FilterSelect
@@ -727,7 +727,7 @@ export default function DeviationReport({
               title="Số lượng ảnh hưởng, xử lý và hủy"
               subtitle="Chọn từng đơn vị để xem tổng số lượng đã ghi nhận; các đại lượng có thể chồng lấp và không dùng để tính số lượng còn lại."
             >
-              <div className="mb-3 flex items-center gap-3">
+              <div className="relative mb-3 flex items-center gap-3">
                 <Label htmlFor="deviation-unit">Đơn vị</Label>
                 <Select value={unit} onValueChange={setSelectedUnit} disabled={!report.quantities.length}>
                   <SelectTrigger id="deviation-unit" className="w-48">
@@ -797,7 +797,7 @@ export default function DeviationReport({
             >
               {report.heatmap.length ? (
                 <>
-                  <div className="overflow-x-auto rounded-lg border">
+                  <div className="relative overflow-x-auto rounded-lg border">
                     <table className="w-full min-w-[420px] text-center text-xs">
                       <caption className="sr-only">Số phiếu theo kỳ phát sinh và thứ trong tuần</caption>
                       <thead className="sticky top-0 z-[1] bg-slate-50">

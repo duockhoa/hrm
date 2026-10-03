@@ -150,7 +150,7 @@ export default function MainLayout({
         <Header />
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar isOpen={isOpen} data={data} isMobile={isMobile} />
-          <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-blue-50 p-2">{children}</div>
+          <div className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-blue-50 p-2">{children}</div>
         </div>
       </div>
     </ApplicationAccessGuard>
