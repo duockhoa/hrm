@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { API_ROUTES } from "@/lib/api-routes";
+import { isCancelledProductionOrder } from "@/lib/production-order-status";
 import {
   maintenanceRequestsKey,
   maintenanceRequestsService,
@@ -306,7 +307,8 @@ export default function ReportsDashboard() {
   );
   const productionOrders = useMemo(
     () => (data ?? EMPTY_PRODUCTION_ORDERS).filter((order) =>
-      isAllTime || isInRange(getOrderDate(order), range),
+      !isCancelledProductionOrder(order.status) &&
+      (isAllTime || isInRange(getOrderDate(order), range)),
     ),
     [data, range, isAllTime],
   );
@@ -445,7 +447,7 @@ export default function ReportsDashboard() {
                     value={formatNumber(productionOrders.length)}
                     tone="blue"
                     icon={ClipboardList}
-                    hint="Trong khoảng thời gian đã chọn"
+                    hint="Trong khoảng thời gian đã chọn, không gồm lô đã huỷ"
                   />
                   <MetricCard
                     label="Số sản phẩm"

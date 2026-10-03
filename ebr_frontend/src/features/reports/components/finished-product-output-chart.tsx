@@ -48,12 +48,10 @@ export default function FinishedProductOutputChart({
         So sánh sản lượng kế hoạch từ lệnh thành phẩm và sản lượng thực tế từ tổng kết thành phẩm, theo {report.resolutionLabel} sản xuất của lô.
         Lô chưa có ngày sản xuất dùng ngày tạo lô. Loại trừ lô đã hủy.
       </p>
-      <div className="my-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="my-4 grid gap-3 sm:grid-cols-2">
         {[
           { label: "Sản lượng kế hoạch", value: report.totalPlannedQuantity },
           { label: "Sản lượng thực tế (hộp)", value: report.totalQuantity },
-          { label: "Lô đã có tổng kết", value: report.summarizedLotCount },
-          { label: "Lô chưa có tổng kết", value: report.pendingLotCount },
         ].map((metric) => (
           <div key={metric.label} className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
             <p className="text-sm text-gray-600">{metric.label}</p>
