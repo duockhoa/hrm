@@ -377,7 +377,7 @@ export default function ReportsDashboard() {
             <Label htmlFor="report-type">Loại báo cáo</Label>
             <Select value={reportType} onValueChange={setReportType}>
               <SelectTrigger id="report-type" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" side="bottom" align="start" avoidCollisions={false}>
                 <SelectItem value="overview">Tổng quan</SelectItem>
                 <SelectItem value="deviations">Báo cáo sai lệch</SelectItem>
                 <SelectItem value="production">Báo cáo sản xuất</SelectItem>
