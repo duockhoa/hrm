@@ -8,12 +8,12 @@ const toDay = (date: Date) => date.toISOString().slice(0, 10);
 const displayDay = (day: string) => day.split("-").reverse().join("/");
 
 // Calendar arithmetic uses UTC after dates have been normalized to the reporting timezone.
-export const buildProductionSummary = (days: string[], range: DateRange | null) => {
+export const buildTimeSummary = (days: string[], range: DateRange | null) => {
   const sortedDays = [...days].sort();
   const from = range?.from ?? sortedDays[0];
   const to = range?.to ?? sortedDays[sortedDays.length - 1];
   const empty = { resolutionLabel: RESOLUTION_LABELS.day, points: [] as {
-    key: string; label: string; tooltipLabel: string; orders: number;
+    key: string; label: string; tooltipLabel: string; count: number;
   }[] };
   if (!from || !to) return empty;
   const start = toDate(from);
@@ -59,7 +59,7 @@ export const buildProductionSummary = (days: string[], range: DateRange | null) 
       label = key;
       tooltipLabel = `Năm ${key}`;
     }
-    points.push({ key, label, tooltipLabel, orders: counts.get(key) ?? 0 });
+    points.push({ key, label, tooltipLabel, count: counts.get(key) ?? 0 });
     if (resolution === "year") cursor.setUTCFullYear(cursor.getUTCFullYear() + 1);
     else if (resolution === "month") cursor.setUTCMonth(cursor.getUTCMonth() + 1);
     else cursor.setUTCDate(cursor.getUTCDate() + (resolution === "week" ? 7 : 1));

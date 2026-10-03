@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { API_ROUTES } from "@/lib/api-routes";
 import type { EquipmentIncidentReport } from "@/features/equipment/types";
-import { buildProductionSummary } from "../production-summary";
+import { buildTimeSummary } from "../time-summary";
 import {
   equipmentService,
   productionOrderDeviationsService,
@@ -119,21 +119,6 @@ const formatNumber = (value: number | string | null | undefined) => {
   });
 };
 
-const parseQuantity = (value: unknown) => {
-  if (value === null || value === undefined || value === "") {
-    return 0;
-  }
-
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
-  }
-
-  const normalizedValue = String(value).trim().replace(",", ".");
-  const numberValue = Number(normalizedValue);
-
-  return Number.isFinite(numberValue) ? numberValue : 0;
-};
-
 const getFirstValue = (source: ProductionOrder, keys: string[]) => {
   for (const key of keys) {
     const value = source?.[key];
@@ -154,14 +139,6 @@ const getOrderDate = (order: ProductionOrder) =>
     "updated_at",
   ]);
 
-const getOrderQuantity = (order: ProductionOrder) =>
-  parseQuantity(
-    getFirstValue(order, [
-      "planned_quantity",
-      "planned_quatity",
-    ]),
-  );
-
 const getProductLabel = (order: ProductionOrder) => {
   const item = order.item ?? {};
 
@@ -173,51 +150,6 @@ const getProductLabel = (order: ProductionOrder) => {
     order.item_code ??
     "Không rõ sản phẩm"
   );
-};
-
-const getMonthInfo = (value: unknown) => {
-  if (!value) {
-    return null;
-  }
-
-  const day = getReportDay(value);
-  if (!day) return null;
-  const year = Number(day.slice(0, 4));
-  const monthNumber = Number(day.slice(5, 7));
-  const month = String(monthNumber).padStart(2, "0");
-
-  return {
-    key: `${year}-${month}`,
-    label: `T${monthNumber}/${year}`,
-  };
-};
-
-const buildMonthlyDeviationSummary = (
-  deviations: ProductionOrderDeviation[],
-) => {
-  const monthMap = new Map<string, { key: string; month: string; deviations: number }>();
-
-  deviations.forEach((deviation) => {
-    const monthInfo = getMonthInfo(
-      getFirstValue(deviation, ["created_at", "updated_at"]),
-    );
-
-    if (!monthInfo) {
-      return;
-    }
-
-    const existing = monthMap.get(monthInfo.key) ?? {
-      key: monthInfo.key,
-      month: monthInfo.label,
-      deviations: 0,
-    };
-
-    existing.deviations += 1;
-    monthMap.set(monthInfo.key, existing);
-  });
-
-  return Array.from(monthMap.values())
-    .sort((left, right) => left.key.localeCompare(right.key));
 };
 
 const getDeviationBarColor = (value: number, maxValue: number) => {
@@ -409,33 +341,30 @@ export default function ReportsDashboard() {
   );
 
   const productionSummary = useMemo(
-    () => buildProductionSummary(
+    () => buildTimeSummary(
       productionOrders.map((order) => getReportDay(getOrderDate(order)))
         .filter((day): day is string => day !== null),
       isAllTime ? null : range,
     ),
     [productionOrders, range, isAllTime],
   );
-  const monthlyDeviationSummary = useMemo(
-    () => buildMonthlyDeviationSummary(productionOrderDeviations),
-    [productionOrderDeviations],
+  const deviationSummary = useMemo(
+    () => buildTimeSummary(
+      productionOrderDeviations.map((deviation) =>
+        getReportDay(getFirstValue(deviation, ["created_at", "updated_at"])),
+      ).filter((day): day is string => day !== null),
+      isAllTime ? null : range,
+    ),
+    [productionOrderDeviations, range, isAllTime],
   );
-  const maxMonthlyDeviation = useMemo(
+  const maxDeviation = useMemo(
     () =>
-      monthlyDeviationSummary.reduce(
-        (maxValue, item) => Math.max(maxValue, item.deviations),
+      deviationSummary.points.reduce(
+        (maxValue, item) => Math.max(maxValue, item.count),
         0,
       ),
-    [monthlyDeviationSummary],
+    [deviationSummary],
   );
-  const plannedByUnit = useMemo(() => {
-    const units = new Map<string, number>();
-    productionOrders.forEach((order) => {
-      const unit = String(order.unit || order.item?.unit || "Chưa có đơn vị");
-      units.set(unit, (units.get(unit) ?? 0) + getOrderQuantity(order));
-    });
-    return Array.from(units, ([unit, quantity]) => ({ unit, quantity }));
-  }, [productionOrders]);
   const productCount = useMemo(
     () => new Set(productionOrders.map((order) => String(order.item_code ?? order.item?.item_code ?? getProductLabel(order)))).size,
     [productionOrders],
@@ -596,7 +525,7 @@ export default function ReportsDashboard() {
                         />
                         <Line
                           type="monotone"
-                          dataKey="orders"
+                          dataKey="count"
                           stroke="var(--chart-2)"
                           strokeWidth={3}
                           dot={{ r: 4 }}
@@ -622,20 +551,27 @@ export default function ReportsDashboard() {
                 </div>
               ) : (
                 <ChartPanel
-                  title="Số lượng sai lệch theo tháng"
-                  subtitle="Đếm số bản ghi sai lệch theo tháng tạo phiếu."
+                  title="Số lượng sai lệch"
+                  subtitle={`Đếm số phiếu sai lệch theo ${deviationSummary.resolutionLabel} tạo phiếu trong khoảng thời gian đã chọn.`}
                   className="border-sky-100 bg-sky-50/40"
                 >
                   <div className="h-96">
-                    {monthlyDeviationSummary.length > 0 ? (
+                    {deviationSummary.points.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={monthlyDeviationSummary}>
+                        <BarChart data={deviationSummary.points}>
                           <CartesianGrid
                             stroke="#bae6fd"
                             strokeDasharray="3 3"
                             vertical={false}
                           />
-                          <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                          <XAxis
+                            dataKey="key"
+                            tickFormatter={(key) => deviationSummary.points.find((point) => point.key === key)?.label ?? key}
+                            interval="preserveStartEnd"
+                            minTickGap={24}
+                            tickLine={false}
+                            axisLine={false}
+                          />
                           <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
                           <Tooltip
                             cursor={{ fill: "rgba(186, 230, 253, 0.32)" }}
@@ -649,19 +585,19 @@ export default function ReportsDashboard() {
                               formatNumber(value as number),
                               "Số sai lệch",
                             ]}
-                            labelFormatter={(label) => `Tháng ${label}`}
+                            labelFormatter={(key) => deviationSummary.points.find((point) => point.key === String(key))?.tooltipLabel ?? String(key)}
                           />
                           <Bar
-                            dataKey="deviations"
+                            dataKey="count"
                             radius={[4, 4, 0, 0]}
                             name="Số sai lệch"
                           >
-                            {monthlyDeviationSummary.map((item) => (
+                            {deviationSummary.points.map((item) => (
                               <Cell
                                 key={item.key}
                                 fill={getDeviationBarColor(
-                                  item.deviations,
-                                  maxMonthlyDeviation,
+                                  item.count,
+                                  maxDeviation,
                                 )}
                               />
                             ))}
@@ -670,7 +606,7 @@ export default function ReportsDashboard() {
                       </ResponsiveContainer>
                     ) : (
                       <div className="flex h-full items-center justify-center text-sm text-gray-500">
-                        Chưa có dữ liệu sai lệch theo tháng.
+                        Chưa có dữ liệu sai lệch trong khoảng thời gian đã chọn.
                       </div>
                     )}
                   </div>
@@ -678,15 +614,6 @@ export default function ReportsDashboard() {
               )}
             </ReportSection>
             </div>
-            <ChartPanel title="Số lượng kế hoạch theo đơn vị" subtitle="Tổng cỡ lô kế hoạch của các lệnh trong kỳ, tách riêng từng đơn vị tính.">
-              {plannedByUnit.length ? (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  {plannedByUnit.map(({ unit, quantity }) => (
-                    <MetricCard key={unit} label={unit} value={formatNumber(quantity)} hint="Số lượng kế hoạch" />
-                  ))}
-                </div>
-              ) : <p className="py-6 text-center text-sm text-gray-500">Không có lệnh sản xuất trong khoảng thời gian đã chọn.</p>}
-            </ChartPanel>
           </>
         ) : null}
       </div>
