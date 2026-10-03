@@ -36,13 +36,15 @@ import { buildTimeSummary } from "../time-summary";
 import { getReportDay } from "../report-date";
 import FinishedProductOutputChart from "./finished-product-output-chart";
 import DeviationReport from "./deviation-report";
+import ProductionReport from "./production-report";
 import type { ReportDeviation } from "../deviation-report";
+import type { ReportProductionOrder } from "../production-report";
 import {
   productionOrderDeviationsService,
   productOrdersService,
 } from "@/services/index.service";
 
-type ProductionOrder = Record<string, any>;
+type ProductionOrder = ReportProductionOrder & Record<string, any>;
 type ProductionOrderDeviation = ReportDeviation;
 
 const EMPTY_PRODUCTION_ORDERS: ProductionOrder[] = [];
@@ -377,6 +379,7 @@ export default function ReportsDashboard() {
               <SelectContent>
                 <SelectItem value="overview">Tổng quan</SelectItem>
                 <SelectItem value="deviations">Báo cáo sai lệch</SelectItem>
+                <SelectItem value="production">Báo cáo sản xuất</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -445,6 +448,10 @@ export default function ReportsDashboard() {
 
         {reportType === "deviations" && !isReportLoading && !reportError && !rangeError ? (
           <DeviationReport deviations={productionOrderDeviations} range={isAllTime ? null : range} />
+        ) : null}
+
+        {reportType === "production" && !isLoading && !error && !rangeError ? (
+          <ProductionReport orders={data ?? EMPTY_PRODUCTION_ORDERS} range={isAllTime ? null : range} />
         ) : null}
 
         {reportType === "overview" && !isLoading && !error && !rangeError ? (
