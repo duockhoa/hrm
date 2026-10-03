@@ -35,13 +35,15 @@ import {
 import { buildTimeSummary } from "../time-summary";
 import { getReportDay } from "../report-date";
 import FinishedProductOutputChart from "./finished-product-output-chart";
+import DeviationReport from "./deviation-report";
+import type { ReportDeviation } from "../deviation-report";
 import {
   productionOrderDeviationsService,
   productOrdersService,
 } from "@/services/index.service";
 
 type ProductionOrder = Record<string, any>;
-type ProductionOrderDeviation = Record<string, any>;
+type ProductionOrderDeviation = ReportDeviation;
 
 const EMPTY_PRODUCTION_ORDERS: ProductionOrder[] = [];
 const EMPTY_PRODUCTION_ORDER_DEVIATIONS: ProductionOrderDeviation[] = [];
@@ -275,6 +277,7 @@ function ReportSkeleton() {
 }
 
 export default function ReportsDashboard() {
+  const [reportType, setReportType] = useState("overview");
   const [range, setRange] = useState<DateRange>(() => getPresetRange("year"));
   const [preset, setPreset] = useState("year");
   const isAllTime = preset === "all";
@@ -314,7 +317,7 @@ export default function ReportsDashboard() {
   );
   const productionOrderDeviations = useMemo(
     () => (deviationData ?? EMPTY_PRODUCTION_ORDER_DEVIATIONS).filter((deviation) =>
-      isAllTime || isInRange(getFirstValue(deviation, ["created_at", "updated_at"]), range),
+      isAllTime || isInRange(getReportDay(deviation.created_at) ?? getReportDay(deviation.updated_at), range),
     ),
     [deviationData, range, isAllTime],
   );
@@ -336,7 +339,7 @@ export default function ReportsDashboard() {
   const deviationSummary = useMemo(
     () => buildTimeSummary(
       productionOrderDeviations.map((deviation) =>
-        getReportDay(getFirstValue(deviation, ["created_at", "updated_at"])),
+        getReportDay(deviation.created_at) ?? getReportDay(deviation.updated_at),
       ).filter((day): day is string => day !== null),
       isAllTime ? null : range,
     ),
@@ -360,6 +363,8 @@ export default function ReportsDashboard() {
   ).size;
   const deviationMetric = (value: number) =>
     isDeviationLoading ? "…" : deviationError ? "—" : formatNumber(value);
+  const isReportLoading = reportType === "deviations" ? isDeviationLoading : isLoading;
+  const reportError = reportType === "deviations" ? deviationError : error;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto rounded-lg bg-white shadow-md">
@@ -367,9 +372,12 @@ export default function ReportsDashboard() {
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="report-type">Loại báo cáo</Label>
-            <Select value="overview">
+            <Select value={reportType} onValueChange={setReportType}>
               <SelectTrigger id="report-type" className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="overview">Tổng quan</SelectItem></SelectContent>
+              <SelectContent>
+                <SelectItem value="overview">Tổng quan</SelectItem>
+                <SelectItem value="deviations">Báo cáo sai lệch</SelectItem>
+              </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
@@ -426,16 +434,20 @@ export default function ReportsDashboard() {
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-auto bg-gray-50 p-4">
-        {!rangeError ? <p className="text-sm text-gray-600">Tổng quan · {isAllTime ? "Tất cả thời gian" : `${formatReportDate(range.from)} – ${formatReportDate(range.to)}`}</p> : null}
-        {isLoading && !rangeError ? <ReportSkeleton /> : null}
+        {!rangeError && reportType === "overview" ? <p className="text-sm text-gray-600">Tổng quan · {isAllTime ? "Tất cả thời gian" : `${formatReportDate(range.from)} – ${formatReportDate(range.to)}`}</p> : null}
+        {isReportLoading && !rangeError ? <ReportSkeleton /> : null}
 
-        {!isLoading && error ? (
-          <div className="rounded-md border border-red-100 bg-red-50 p-6 text-center text-sm text-red-600">
-            Không thể tải dữ liệu báo cáo.
+        {!isReportLoading && reportError && !rangeError ? (
+          <div role="alert" className="rounded-md border border-red-100 bg-red-50 p-6 text-center text-sm text-red-600">
+            {reportType === "deviations" ? "Không thể tải dữ liệu báo cáo sai lệch. Vui lòng thử lại sau." : "Không thể tải dữ liệu báo cáo."}
           </div>
         ) : null}
 
-        {!isLoading && !error && !rangeError ? (
+        {reportType === "deviations" && !isReportLoading && !reportError && !rangeError ? (
+          <DeviationReport deviations={productionOrderDeviations} range={isAllTime ? null : range} />
+        ) : null}
+
+        {reportType === "overview" && !isLoading && !error && !rangeError ? (
           <>
             <ReportSection>
               <ChartPanel
