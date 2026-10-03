@@ -797,7 +797,7 @@ export default function DeviationReport({
             >
               {report.heatmap.length ? (
                 <>
-                  <div className="max-h-80 overflow-auto rounded-lg border">
+                  <div className="overflow-x-auto rounded-lg border">
                     <table className="w-full min-w-[420px] text-center text-xs">
                       <caption className="sr-only">Số phiếu theo kỳ phát sinh và thứ trong tuần</caption>
                       <thead className="sticky top-0 z-[1] bg-slate-50">

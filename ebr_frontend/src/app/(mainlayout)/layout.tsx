@@ -146,11 +146,11 @@ export default function MainLayout({
 
   return (
     <ApplicationAccessGuard>
-      <div className="flex h-screen flex-col">
+      <div className="flex h-dvh flex-col overflow-hidden">
         <Header />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar isOpen={isOpen} data={data} isMobile={isMobile} />
-          <div className="flex-1 overflow-auto bg-blue-50 p-2">{children}</div>
+          <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-blue-50 p-2">{children}</div>
         </div>
       </div>
     </ApplicationAccessGuard>

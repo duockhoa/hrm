@@ -448,7 +448,7 @@ export default function ProductionReportCharts({
               </Treemap>
             </ResponsiveContainer>
           </Plot>
-          <div className="mt-3 flex max-h-20 flex-wrap gap-x-4 gap-y-2 overflow-auto">
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
             {report.warehouses.map((warehouse, index) => (
               <span key={warehouse.name} className="flex items-center gap-1.5 text-xs text-slate-600">
                 <span className="size-2.5 rounded-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
@@ -463,7 +463,7 @@ export default function ProductionReportCharts({
         >
           {report.heatmap.length ? (
             <>
-              <div className="max-h-80 overflow-auto rounded-lg border">
+              <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full min-w-[420px] text-center text-xs">
                   <caption className="sr-only">Số lệnh theo kỳ và thứ trong tuần</caption>
                   <thead className="sticky top-0 z-[1] bg-slate-50">

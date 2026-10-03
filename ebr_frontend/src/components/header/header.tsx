@@ -27,7 +27,7 @@ export default function Header() {
   }, [user]);
 
   return (
-    <header className="flex items-center justify-between p-2 bg-white px-4 border-b border-gray-200 h-[60px]">
+    <header className="flex shrink-0 items-center justify-between p-2 bg-white px-4 border-b border-gray-200 h-[60px]">
       <div className="flex items-center gap-2">
         <button
           onClick={toggleSidebar}

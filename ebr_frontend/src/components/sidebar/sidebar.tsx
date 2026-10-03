@@ -50,7 +50,7 @@ export default function Sidebar({
 }) {
   return (
     <div
-      className={` border-r border-gray-200 h-screen ${isMobile && !isOpen ? "w-0" : isOpen ? "w-64" : "w-20"} transition-all duration-300 ease-in-out`}
+      className={` border-r border-gray-200 h-full min-h-0 shrink-0 overflow-y-auto ${isMobile && !isOpen ? "w-0" : isOpen ? "w-64" : "w-20"} transition-all duration-300 ease-in-out`}
     >
       <div className="flex flex-col h-full justify-between">
         <div className="flex flex-col items-center justify-between p-2 w-full">
