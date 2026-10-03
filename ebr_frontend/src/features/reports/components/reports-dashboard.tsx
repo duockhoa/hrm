@@ -32,6 +32,8 @@ import {
   type MaintenanceRequest,
 } from "@/services/maintenance-requests.service";
 import { buildTimeSummary } from "../time-summary";
+import { getReportDay } from "../report-date";
+import FinishedProductOutputChart from "./finished-product-output-chart";
 import {
   productionOrderDeviationsService,
   productOrdersService,
@@ -46,28 +48,6 @@ const EMPTY_EQUIPMENT_INCIDENT_REPORTS: MaintenanceRequest[] = [];
 const DEVIATION_BAR_COLORS = ["#93c5fd", "#38bdf8", "#0ea5e9", "#0369a1"];
 
 type DateRange = { from: string; to: string };
-
-// Preserve calendar dates; convert timestamps to the reporting timezone.
-const getReportDay = (value: unknown): string | null => {
-  if (!value) return null;
-  const text = String(value);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-    const parsed = new Date(`${text}T00:00:00Z`);
-    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === text
-      ? text
-      : null;
-  }
-  const date = new Date(text);
-  if (Number.isNaN(date.getTime())) return null;
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const part = (type: string) => parts.find((item) => item.type === type)?.value;
-  return `${part("year")}-${part("month")}-${part("day")}`;
-};
 
 const getPresetRange = (preset: string): DateRange => {
   if (preset === "all") return { from: "", to: "" };
@@ -617,6 +597,8 @@ export default function ReportsDashboard() {
               )}
             </ReportSection>
             </div>
+
+            <FinishedProductOutputChart range={isAllTime ? null : range} />
           </>
         ) : null}
       </div>

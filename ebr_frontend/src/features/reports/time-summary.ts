@@ -8,7 +8,7 @@ const toDay = (date: Date) => date.toISOString().slice(0, 10);
 const displayDay = (day: string) => day.split("-").reverse().join("/");
 
 // Calendar arithmetic uses UTC after dates have been normalized to the reporting timezone.
-export const buildTimeSummary = (days: string[], range: DateRange | null) => {
+export const buildTimeSummary = (days: string[], range: DateRange | null, quantities?: number[]) => {
   const sortedDays = [...days].sort();
   const from = range?.from ?? sortedDays[0];
   const to = range?.to ?? sortedDays[sortedDays.length - 1];
@@ -32,10 +32,10 @@ export const buildTimeSummary = (days: string[], range: DateRange | null) => {
     return day;
   };
   const counts = new Map<string, number>();
-  days.forEach((day) => {
+  days.forEach((day, index) => {
     if (day >= from && day <= to) {
       const key = getKey(day);
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+      counts.set(key, (counts.get(key) ?? 0) + (quantities?.[index] ?? 1));
     }
   });
 
