@@ -26,10 +26,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { API_ROUTES } from "@/lib/api-routes";
-import type { EquipmentIncidentReport } from "@/features/equipment/types";
+import {
+  maintenanceRequestsKey,
+  maintenanceRequestsService,
+  type MaintenanceRequest,
+} from "@/services/maintenance-requests.service";
 import { buildTimeSummary } from "../time-summary";
 import {
-  equipmentService,
   productionOrderDeviationsService,
   productOrdersService,
 } from "@/services/index.service";
@@ -39,7 +42,7 @@ type ProductionOrderDeviation = Record<string, any>;
 
 const EMPTY_PRODUCTION_ORDERS: ProductionOrder[] = [];
 const EMPTY_PRODUCTION_ORDER_DEVIATIONS: ProductionOrderDeviation[] = [];
-const EMPTY_EQUIPMENT_INCIDENT_REPORTS: EquipmentIncidentReport[] = [];
+const EMPTY_EQUIPMENT_INCIDENT_REPORTS: MaintenanceRequest[] = [];
 const DEVIATION_BAR_COLORS = ["#93c5fd", "#38bdf8", "#0ea5e9", "#0369a1"];
 
 type DateRange = { from: string; to: string };
@@ -317,9 +320,9 @@ export default function ReportsDashboard() {
     data: incidentData,
     isLoading: isIncidentLoading,
     error: incidentError,
-  } = useSWR<EquipmentIncidentReport[]>(
-    API_ROUTES.equipment.incidentReports,
-    equipmentService.fetchEquipmentIncidentReports,
+  } = useSWR<MaintenanceRequest[]>(
+    maintenanceRequestsKey,
+    maintenanceRequestsService.list,
   );
   const productionOrders = useMemo(
     () => (data ?? EMPTY_PRODUCTION_ORDERS).filter((order) =>
@@ -335,7 +338,7 @@ export default function ReportsDashboard() {
   );
   const equipmentIncidentReports = useMemo(
     () => (incidentData ?? EMPTY_EQUIPMENT_INCIDENT_REPORTS).filter((incident) =>
-      isAllTime || isInRange(incident.created_at, range),
+      isAllTime || isInRange(incident.createdAt, range),
     ),
     [incidentData, range, isAllTime],
   );
