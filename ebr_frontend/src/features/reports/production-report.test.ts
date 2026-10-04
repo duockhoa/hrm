@@ -223,3 +223,152 @@ test("invalid and missing summaries remain unknown, while explicit zero is valid
   assert.equal(empty.outputAchievement, null);
   assert.deepEqual(empty.timeline, []);
 });
+
+
+test("uses product-line identity and labels, preserving legacy and unassigned products", () => {
+  const rows = buildProductionRows(
+    [
+      lot(1, { item: { productionSpecification: { product_line_id: 99, product_line: "Cũ", productLine: { id: 7, code: "DC", name: "Dung dịch" } } } }),
+      lot(2, { item: { productionSpecification: { product_line_id: "8" } } }),
+      lot(3, { item: { productionSpecification: { productLine: { code: "NC" } } } }),
+      lot(4, { item: { productionSpecification: { productLine: { name: "Viên nén" } } } }),
+      lot(5, { item: { productionSpecification: { product_line: "  Thuốc bột  " } } }),
+      lot(6),
+      lot(7, { item: { productionSpecification: { deleted_at: "2026-10-02", productLine: { id: 7, code: "DC", name: "Dung dịch" } } } }),
+    ],
+    [],
+    range,
+  );
+  assert.deepEqual(
+    rows.map((row) => [row.productLineKey, row.productLine]),
+    [
+      ["id:7", "DC - Dung dịch"],
+      ["id:8", "Dòng sản phẩm #8"],
+      ["code:NC", "NC"],
+      ["name:Viên nén", "Viên nén"],
+      ["name:Thuốc bột", "Thuốc bột"],
+      ["unknown", "Chưa ghi nhận dòng sản phẩm"],
+      ["unknown", "Chưa ghi nhận dòng sản phẩm"],
+    ],
+  );
+  const report = buildProductionReport(rows, range, "hộp");
+  assert.equal(report.productLineCount, 5);
+  assert.equal(report.missingProductLineCount, 2);
+  assert.equal(report.productLines.find((line) => line.key === "unknown")?.count, 2);
+});
+
+test("groups renamed product lines by ID and combines line filters with product search", () => {
+  const rows = buildProductionRows(
+    [
+      lot(1, { warehouse: "KHO1", item: { item_name: "Sản phẩm A", productionSpecification: { productLine: { id: 7, code: "DD", name: "Dung dịch" } } } }),
+      lot(2, { item_code: "TP02", warehouse: "KHO2", status: "L", item: { productionSpecification: { productLine: { id: "7", code: "DD", name: "Dung dịch đổi tên" } } } }),
+      lot(3, { item_code: "BTP01", item: { productionSpecification: { productLine: { id: 8, code: "VN", name: "Viên nén" } } } }),
+    ],
+    [],
+    range,
+  );
+  const report = buildProductionReport(rows, range, "hộp");
+  assert.equal(report.productLineCount, 2);
+  const line = report.productLines.find((group) => group.key === "id:7");
+  assert.equal(line?.count, 2);
+  assert.equal(line?.productCount, 2);
+  assert.deepEqual(
+    filterProductionRows(rows, {
+      ...EMPTY_PRODUCTION_FILTERS,
+      productLine: "id:7",
+      product: "code:TP01",
+      category: "finished",
+      status: "released",
+      warehouse: "KHO1",
+      search: "dung dich",
+    }).map((row) => row.id),
+    ["1"],
+  );
+  assert.deepEqual(
+    filterProductionRows(rows, { ...EMPTY_PRODUCTION_FILTERS, productLine: "id:7", search: "dd" }).map((row) => row.id),
+    ["1", "2"],
+  );
+  assert.deepEqual(
+    filterProductionRows(rows, { ...EMPTY_PRODUCTION_FILTERS, productLine: "id:8", search: "vien nen" }).map((row) => row.id),
+    ["3"],
+  );
+});
+
+test("product-line output excludes cancelled orders, separates units, and weights achievement by plan", () => {
+  const item = { productionSpecification: { productLine: { id: 7, name: "Dòng A" } } };
+  const rows = buildProductionRows(
+    [
+      lot(1, { item, item_code: "TP01", status: "L", planned_quatity: 100 }),
+      lot(2, { item, item_code: "TP02", planned_quatity: 300 }),
+      lot(3, { item, item_code: "TP03", unit: "kg", planned_quatity: 10 }),
+      lot(4, { item, item_code: "BTP01", status: "L", unit: "kg", planned_quatity: 20 }),
+      lot(5, { item, item_code: "TP04", status: "P", planned_quatity: 0 }),
+      lot(6, { item, item_code: "TP05", status: "P" }),
+      lot(7, { item, item_code: "TP06", status: "Unexpected", planned_quatity: null }),
+      lot(8, { item, item_code: "TP07", status: "Cancelled", planned_quatity: 999 }),
+    ],
+    [
+      { production_order_id: 1, total_quantity: 50 },
+      { production_order_id: 2, total_quantity: 300 },
+      { production_order_id: 3, total_quantity: 90 },
+      { production_order_id: 4, total_quantity: 999 },
+      { production_order_id: 5, total_quantity: 0 },
+      { production_order_id: 7, total_quantity: 20 },
+      { production_order_id: 8, total_quantity: 999 },
+    ],
+    range,
+  );
+  const [line] = buildProductionReport(rows, range, "kg").productLines;
+  assert.equal(line.count, 8);
+  assert.equal(line.productCount, 8);
+  assert.equal(line.activeCount, 7);
+  assert.equal(line.open, 4);
+  assert.equal(line.closed, 2);
+  assert.equal(line.cancelled, 1);
+  assert.equal(line.plannedOrders, 2);
+  assert.equal(line.releasedOrders, 2);
+  assert.equal(line.otherOrders, 1);
+  assert.equal(line.planned, 30);
+  assert.equal(line.plannedCount, 2);
+  assert.equal(line.actual, 460);
+  assert.equal(line.summarizedCount, 5);
+  assert.equal(line.comparablePlanned, 400);
+  assert.equal(line.comparableActual, 350);
+  assert.equal(line.comparableCount, 2);
+  assert.equal(line.outputAchievement, 87.5);
+  const [boxLine] = buildProductionReport(rows, range, "hộp").productLines;
+  assert.equal(boxLine.planned, 500);
+  assert.equal(boxLine.plannedCount, 4);
+  assert.equal(boxLine.actual, line.actual);
+  assert.equal(boxLine.outputAchievement, line.outputAchievement);
+});
+
+test("product lines distinguish recorded zero output from missing results and empty reports", () => {
+  const rows = buildProductionRows(
+    [
+      lot(1, { item: { productionSpecification: { productLine: { id: 1, name: "Đã tổng kết" } } } }),
+      lot(2, { item: { productionSpecification: { productLine: { id: 2, name: "Chưa tổng kết" } } }, planned_quatity: 0 }),
+      lot(3, { item: { productionSpecification: { productLine: { id: 2, name: "Chưa tổng kết" } } } }),
+    ],
+    [
+      { production_order_id: 1, total_quantity: 0 },
+      { production_order_id: 3, total_quantity: "invalid" },
+    ],
+    range,
+  );
+  const report = buildProductionReport(rows, range, "hộp");
+  const recorded = report.productLines.find((line) => line.key === "id:1")!;
+  assert.equal(recorded.actual, 0);
+  assert.equal(recorded.summarizedCount, 1);
+  assert.equal(recorded.comparableCount, 1);
+  assert.equal(recorded.outputAchievement, 0);
+  const missing = report.productLines.find((line) => line.key === "id:2")!;
+  assert.equal(missing.actual, 0);
+  assert.equal(missing.summarizedCount, 0);
+  assert.equal(missing.comparableCount, 0);
+  assert.equal(missing.outputAchievement, null);
+  const empty = buildProductionReport([], null, "hộp");
+  assert.equal(empty.productLineCount, 0);
+  assert.equal(empty.missingProductLineCount, 0);
+  assert.deepEqual(empty.productLines, []);
+});

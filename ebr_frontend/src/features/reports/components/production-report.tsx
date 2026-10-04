@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ReportProductFilter from "./report-product-filter";
+import ProductionReportProductLines from "./production-report-product-lines";
 import { API_ROUTES } from "@/lib/api-routes";
 import { productOrdersService } from "@/services/index.service";
 import { getReportDay } from "../report-date";
@@ -111,6 +112,7 @@ function OrderDetails({ row, hasSummaryData }: { row: ProductionRow; hasSummaryD
         {[
           ["Mã lệnh", row.source.production_order_code || row.id],
           ["Nhóm sản phẩm", categoryLabel(row.category)],
+          ["Dòng sản phẩm", row.productLine],
           ["Ngày tạo lệnh", dayLabel(getReportDay(row.source.creation_date) ?? getReportDay(row.source.created_at))],
           ["Ngày bắt đầu", dayLabel(getReportDay(row.source.start_date))],
           ["Ngày sản xuất", dayLabel(getReportDay(row.source.date_manufacture))],
@@ -301,6 +303,7 @@ function ProductionTable({ rows, hasSummaryData }: { rows: ProductionRow[]; hasS
                     <td className="max-w-64 px-3 py-3">
                       <p className="font-medium">{row.product}</p>
                       <p className="mt-1 text-xs text-slate-500">{categoryLabel(row.category)}</p>
+                      <p className="mt-1 text-xs text-slate-500">Dòng: {row.productLine}</p>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3">
                       {dayLabel(row.day)}
@@ -414,6 +417,14 @@ export default function ProductionReport({
         .map((value) => ({ value, label: value })),
     [rows],
   );
+  const productLineOptions = useMemo(
+    () =>
+      Array.from(new Map(rows.map((row) => [row.productLineKey, row.productLine])), ([value, label]) => ({
+        value,
+        label,
+      })).sort((a, b) => a.label.localeCompare(b.label, "vi")),
+    [rows],
+  );
   const units = useMemo(
     () =>
       Array.from(
@@ -443,6 +454,13 @@ export default function ProductionReport({
             value={filters.product}
             onChange={(value) => setFilter("product", value)}
             options={productOptions}
+          />
+          <FilterSelect
+            id="production-product-line"
+            label="Dòng sản phẩm"
+            value={filters.productLine}
+            onChange={(value) => setFilter("productLine", value)}
+            options={productLineOptions}
           />
           <FilterSelect
             id="production-category"
@@ -606,6 +624,14 @@ export default function ProductionReport({
 
       {filtered.length ? (
         <>
+          <ProductionReportProductLines
+            report={report}
+            unit={unit}
+            hasSummaryData={hasSummaryData}
+            summaryLoading={summaries.isLoading}
+            selectedLine={filters.productLine}
+            onSelectLine={(value) => setFilter("productLine", value)}
+          />
           <ProductionReportCharts report={report} hasSummaryData={hasSummaryData} />
           <ProductionPanel
             title="Tổng hợp theo sản phẩm"

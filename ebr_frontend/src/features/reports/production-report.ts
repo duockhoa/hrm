@@ -7,7 +7,22 @@ export type ReportProductionOrder = {
   id: string | number;
   production_order_code?: string | null;
   item_code?: string | null;
-  item?: { item_name?: string | null; name?: string | null; item_code?: string | null; unit?: string | null } | null;
+  item?: {
+    item_name?: string | null;
+    name?: string | null;
+    item_code?: string | null;
+    unit?: string | null;
+    productionSpecification?: {
+      product_line_id?: string | number | null;
+      product_line?: string | null;
+      productLine?: {
+        id?: string | number | null;
+        code?: string | null;
+        name?: string | null;
+      } | null;
+      deleted_at?: string | null;
+    } | null;
+  } | null;
   description?: string | null;
   status?: string | null;
   type?: string | null;
@@ -43,6 +58,7 @@ export type ProductionState = (typeof PRODUCTION_STATES)[number]["key"];
 export type ProductionRange = { from: string; to: string } | null;
 export type ProductionFilters = {
   product: string;
+  productLine: string;
   category: string;
   status: string;
   warehouse: string;
@@ -51,6 +67,7 @@ export type ProductionFilters = {
 };
 export const EMPTY_PRODUCTION_FILTERS: ProductionFilters = {
   product: "all",
+  productLine: "all",
   category: "all",
   status: "all",
   warehouse: "all",
@@ -93,6 +110,22 @@ export function summaryQuantity(summary: ProductionSummary): number | null {
   const boxes = productionQuantity(summary.boxes_per_package);
   const loose = productionQuantity(summary.loose_box_count);
   return packages === null || boxes === null || loose === null ? null : packages * boxes + loose;
+}
+
+function productionProductLine(source: ReportProductionOrder) {
+  const specification = source.item?.productionSpecification;
+  if (!specification || specification.deleted_at) {
+    return { productLineKey: "unknown", productLine: "Chưa ghi nhận dòng sản phẩm" };
+  }
+  const line = specification.productLine;
+  const id = text(line?.id ?? specification.product_line_id);
+  const code = text(line?.code);
+  const name = text(line?.name) || text(specification.product_line);
+  return {
+    productLineKey: id ? `id:${id}` : code ? `code:${code}` : name ? `name:${name}` : "unknown",
+    productLine:
+      code && name ? `${code} - ${name}` : name || code || (id ? `Dòng sản phẩm #${id}` : "Chưa ghi nhận dòng sản phẩm"),
+  };
 }
 
 export function buildProductionRows(
@@ -139,6 +172,7 @@ export function buildProductionRows(
         itemCode,
         productKey,
         product: itemCode && productName !== itemCode ? `${productName} (${itemCode})` : productName,
+        ...productionProductLine(source),
         category,
         status,
         statusLabel:
@@ -169,6 +203,7 @@ export function filterProductionRows(rows: ProductionRow[], filters: ProductionF
     (row) =>
       (filters.includeCancelled || filters.status === "cancelled" || row.status !== "cancelled") &&
       (filters.product === "all" || row.productKey === filters.product) &&
+      (filters.productLine === "all" || row.productLineKey === filters.productLine) &&
       (filters.category === "all" || row.category === filters.category) &&
       (filters.status === "all" || row.status === filters.status) &&
       (filters.warehouse === "all" || row.warehouse === filters.warehouse) &&
@@ -179,6 +214,7 @@ export function filterProductionRows(rows: ProductionRow[], filters: ProductionF
             row.source.production_order_code,
             row.itemCode,
             row.product,
+            row.productLine,
             row.lot,
             row.warehouse,
             row.source.remarks,
@@ -276,6 +312,41 @@ export function buildProductionReport(rows: ProductionRow[], range: ProductionRa
     }
     productGroups.set(row.productKey, product);
   });
+  const lineGroups = new Map<string, ProductionRow[]>();
+  rows.forEach((row) => {
+    const group = lineGroups.get(row.productLineKey);
+    if (group) group.push(row);
+    else lineGroups.set(row.productLineKey, [row]);
+  });
+  const productLines = Array.from(lineGroups, ([key, group]) => {
+    const active = group.filter((row) => row.status !== "cancelled");
+    const planned = active.filter((row) => row.unit === selectedUnit && row.planned !== null);
+    const summarized = active.filter((row) => row.category === "finished" && row.actual !== null);
+    const comparable = active.filter((row) => row.achievement !== null);
+    const comparablePlanned = comparable.reduce((sum, row) => sum + (row.planned ?? 0), 0);
+    const comparableActual = comparable.reduce((sum, row) => sum + (row.actual ?? 0), 0);
+    return {
+      key,
+      name: group[0].productLine,
+      count: group.length,
+      productCount: new Set(group.map((row) => row.productKey)).size,
+      activeCount: active.length,
+      open: active.filter((row) => row.status === "planned" || row.status === "released").length,
+      closed: active.filter((row) => row.status === "closed").length,
+      cancelled: group.length - active.length,
+      plannedOrders: active.filter((row) => row.status === "planned").length,
+      releasedOrders: active.filter((row) => row.status === "released").length,
+      otherOrders: active.filter((row) => row.status === "other").length,
+      planned: planned.reduce((sum, row) => sum + (row.planned ?? 0), 0),
+      plannedCount: planned.length,
+      actual: summarized.reduce((sum, row) => sum + (row.actual ?? 0), 0),
+      summarizedCount: summarized.length,
+      comparablePlanned,
+      comparableActual,
+      comparableCount: comparable.length,
+      outputAchievement: comparablePlanned > 0 ? (comparableActual / comparablePlanned) * 100 : null,
+    };
+  }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "vi"));
   const warehouses = new Map<string, number>();
   rows.forEach((row) => warehouses.set(row.warehouse, (warehouses.get(row.warehouse) ?? 0) + 1));
   const achievement = [
@@ -305,6 +376,9 @@ export function buildProductionReport(rows: ProductionRow[], range: ProductionRa
     total: rows.length,
     activeCount: active.length,
     productCount: productGroups.size,
+    productLines,
+    productLineCount: productLines.filter((line) => line.key !== "unknown").length,
+    missingProductLineCount: rows.filter((row) => row.productLineKey === "unknown").length,
     closedCount: active.filter((row) => row.status === "closed").length,
     openCount: active.filter((row) => row.status === "planned" || row.status === "released").length,
     cancelledCount: rows.length - active.length,
