@@ -10,7 +10,6 @@ import {
   FileWarning,
   Package,
   RotateCcw,
-  Search,
 } from "lucide-react";
 import {
   Area,
@@ -30,7 +29,6 @@ import {
   YAxis,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ReportProductFilter from "./report-product-filter";
@@ -376,7 +374,7 @@ export default function DeviationReport({
   return (
     <div className="relative min-w-0 space-y-4">
       <section aria-label="Bộ lọc báo cáo sai lệch" className="rounded-xl border bg-white p-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <ReportProductFilter
             id="deviation-product"
             value={filters.product}
@@ -397,19 +395,6 @@ export default function DeviationReport({
             onChange={(value) => setFilter("stage", value)}
             options={DEVIATION_STAGES.map((stage) => ({ value: stage.key, label: stage.label }))}
           />
-          <div className="space-y-2">
-            <Label htmlFor="deviation-search">Tìm phiếu sai lệch</Label>
-            <div className="relative">
-              <Search aria-hidden="true" className="absolute left-3 top-3 size-4 text-slate-400" />
-              <Input
-                id="deviation-search"
-                className="pl-9"
-                value={filters.search}
-                onChange={(event) => setFilter("search", event.target.value)}
-                placeholder="Mã phiếu, lô, nội dung, người báo cáo…"
-              />
-            </div>
-          </div>
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
           <p aria-live="polite" className="text-sm text-slate-500">
