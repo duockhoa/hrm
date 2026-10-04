@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ReportProductFilter from "./report-product-filter";
 import { API_ROUTES } from "@/lib/api-routes";
 import { productOrdersService } from "@/services/index.service";
 import { getReportDay } from "../report-date";
@@ -437,9 +438,8 @@ export default function ProductionReport({
     <div className="space-y-4">
       <section aria-label="Bộ lọc báo cáo sản xuất" className="rounded-xl border bg-white p-4">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <FilterSelect
+          <ReportProductFilter
             id="production-product"
-            label="Sản phẩm"
             value={filters.product}
             onChange={(value) => setFilter("product", value)}
             options={productOptions}

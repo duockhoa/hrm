@@ -25,6 +25,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import useSWR from "swr";
 
 const data = [
@@ -119,6 +120,8 @@ export default function MainLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isReportsPage = pathname === "/reports" || pathname.startsWith("/reports/");
   const { isOpen, toggleSidebar } = useSidebarStore();
   const isMobile = useMobile();
   useEffect(() => {
@@ -150,7 +153,11 @@ export default function MainLayout({
         <Header />
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar isOpen={isOpen} data={data} isMobile={isMobile} />
-          <div className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-blue-50 p-2">{children}</div>
+          <div
+            className={`relative min-h-0 min-w-0 flex-1 bg-blue-50 p-2 ${isReportsPage ? "overflow-hidden" : "overflow-auto"}`}
+          >
+            {children}
+          </div>
         </div>
       </div>
     </ApplicationAccessGuard>

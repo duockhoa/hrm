@@ -370,8 +370,8 @@ export default function ReportsDashboard() {
   const reportError = reportType === "vial-inspections" ? null : reportType === "deviations" ? deviationError : error;
 
   return (
-    <div className="min-h-full rounded-lg bg-white shadow-md">
-      <div className="sticky top-0 z-10 border-b bg-white px-4 py-3">
+    <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg bg-white shadow-md">
+      <div className="z-10 shrink-0 border-b bg-white px-4 py-3">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="report-type">Loại báo cáo</Label>
@@ -438,7 +438,11 @@ export default function ReportsDashboard() {
         {rangeError ? <p id="report-range-error" role="alert" className="mt-2 text-sm text-red-600">{rangeError}</p> : null}
       </div>
 
-      <div className="space-y-4 rounded-b-lg bg-gray-50 p-4">
+      <div
+        role="region"
+        aria-label="Nội dung báo cáo"
+        className="relative min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain rounded-b-lg bg-gray-50 p-4"
+      >
         {!rangeError && reportType === "overview" ? <p className="text-sm text-gray-600">Tổng quan · {isAllTime ? "Tất cả thời gian" : `${formatReportDate(range.from)} – ${formatReportDate(range.to)}`}</p> : null}
         {isReportLoading && !rangeError ? <ReportSkeleton /> : null}
 

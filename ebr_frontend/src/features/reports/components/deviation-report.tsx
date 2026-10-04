@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ReportProductFilter from "./report-product-filter";
 import { getReportDay } from "../report-date";
 import {
   buildDeviationReport,
@@ -376,9 +377,8 @@ export default function DeviationReport({
     <div className="relative min-w-0 space-y-4">
       <section aria-label="Bộ lọc báo cáo sai lệch" className="rounded-xl border bg-white p-4">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <FilterSelect
+          <ReportProductFilter
             id="deviation-product"
-            label="Sản phẩm"
             value={filters.product}
             onChange={(value) => setFilter("product", value)}
             options={productOptions}
