@@ -22,7 +22,6 @@ import {
   Line,
   Pie,
   PieChart,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -470,16 +469,12 @@ export default function DeviationReport({
         ))}
       </div>
 
-      <div className="rounded-lg border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm leading-relaxed text-amber-950">
-        Tình trạng hồ sơ được suy ra từ phương án và kết quả đã nhập; “đã ghi nhận kết quả” không xác nhận phiếu đã được
-        phê duyệt hoặc đóng.
-        {report.undatedCount > 0 ? (
-          <p className="mt-1">
-            {number(report.undatedCount)} phiếu thiếu ngày hợp lệ: có trong tổng và bảng chi tiết, không có trên biểu đồ
-            thời gian.
-          </p>
-        ) : null}
-      </div>
+      {report.undatedCount > 0 ? (
+        <div className="rounded-lg border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm leading-relaxed text-amber-950">
+          {number(report.undatedCount)} phiếu thiếu ngày hợp lệ: có trong tổng và bảng chi tiết, không có trên biểu đồ
+          thời gian.
+        </div>
+      ) : null}
 
       {!filtered.length ? (
         <div role="status" className="rounded-xl border border-dashed bg-white p-8 text-center">
@@ -541,6 +536,51 @@ export default function DeviationReport({
               </Plot>
             </Panel>
             <Panel
+              title="Cơ cấu nhóm nguyên nhân"
+              subtitle="Tỷ trọng số phiếu theo từng nhóm nguyên nhân."
+            >
+              <Plot hasData={report.causes.length > 0} height={280}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={report.causes} dataKey="count" nameKey="name" outerRadius="85%">
+                      {report.causes.map((cause, index) => (
+                        <Cell key={cause.name} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, name) => [
+                        `${number(Number(value))} phiếu · ${percent((Number(value) / report.total) * 100)}`,
+                        name,
+                      ]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Plot>
+              <ul className="space-y-2">
+                {report.causes.map((cause, index) => (
+                  <li key={cause.name} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="flex min-w-0 items-center gap-2 text-slate-600">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      {cause.name}
+                    </span>
+                    <span className="whitespace-nowrap font-semibold tabular-nums">
+                      {number(cause.count)} phiếu · {percent(cause.percentage)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-slate-500">
+                Chưa phân loại: {number(report.unclassifiedCount)} phiếu. Nhóm này được giữ trong phân tích để phản ánh
+                đầy đủ dữ liệu.
+              </p>
+            </Panel>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Panel
               title="Cơ cấu tình trạng hồ sơ"
               subtitle="Tỷ trọng phiếu theo mức độ cập nhật phương án và kết quả xử lý."
             >
@@ -583,68 +623,6 @@ export default function DeviationReport({
                   </li>
                 ))}
               </ul>
-            </Panel>
-          </div>
-
-          <div className="grid gap-4 xl:grid-cols-2">
-            <Panel
-              title="Pareto nhóm nguyên nhân"
-              subtitle="Cột: số phiếu theo nhóm nguyên nhân, giảm dần. Đường: tỷ lệ lũy kế; mốc 80% giúp xác định nhóm cần ưu tiên."
-            >
-              <div className="overflow-x-auto">
-                <div style={{ minWidth: Math.max(450, report.causes.length * 100) }}>
-                  <Plot hasData={report.causes.length > 0} height={360}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={report.causes} margin={{ top: 8, right: 8, bottom: 35, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis
-                          dataKey="name"
-                          tickFormatter={shortLabel}
-                          angle={-20}
-                          textAnchor="end"
-                          height={70}
-                          interval={0}
-                          tick={{ fontSize: 11 }}
-                        />
-                        <YAxis yAxisId="count" allowDecimals={false} />
-                        <YAxis
-                          yAxisId="percent"
-                          orientation="right"
-                          domain={[0, 100]}
-                          tickFormatter={(value) => `${value}%`}
-                        />
-                        <Tooltip
-                          formatter={(value, name) => [
-                            name === "Tỷ lệ lũy kế" ? percent(Number(value)) : `${number(Number(value))} phiếu`,
-                            name,
-                          ]}
-                        />
-                        <Legend />
-                        <ReferenceLine yAxisId="percent" y={80} stroke="#f59e0b" strokeDasharray="5 5" />
-                        <Bar
-                          yAxisId="count"
-                          dataKey="count"
-                          name="Số phiếu"
-                          fill="#6366f1"
-                          radius={[4, 4, 0, 0]}
-                          maxBarSize={55}
-                        />
-                        <Line
-                          yAxisId="percent"
-                          dataKey="cumulative"
-                          name="Tỷ lệ lũy kế"
-                          stroke="#f43f5e"
-                          strokeWidth={2}
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </Plot>
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-slate-500">
-                Chưa phân loại: {number(report.unclassifiedCount)} phiếu. Nhóm này được giữ trong phân tích để phản ánh
-                đầy đủ dữ liệu.
-              </p>
             </Panel>
             <Panel
               title="10 sản phẩm có nhiều sai lệch nhất"
