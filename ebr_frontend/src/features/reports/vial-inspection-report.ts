@@ -1,6 +1,6 @@
 import type { ProductionOrderVialInspectionCheck } from "../production-order-vial-inspection-checks/types";
 import { isCancelledProductionOrder } from "../../lib/production-order-status";
-import { getReportDay } from "./report-date";
+import { getProductionOrderReportDay } from "./report-date";
 import { buildTimeSummary } from "./time-summary";
 
 export type ReportVialInspection = ProductionOrderVialInspectionCheck & {
@@ -11,6 +11,7 @@ export type ReportVialInspection = ProductionOrderVialInspectionCheck & {
     lot_no?: string | null;
     status?: string | null;
     date_manufacture?: string | null;
+    start_date?: string | null;
     planned_quatity?: number | string | null;
     planned_quantity?: number | string | null;
     item?: { item_code?: string | null; item_name?: string | null } | null;
@@ -64,7 +65,7 @@ export function buildVialInspectionRows(checks: ReportVialInspection[], range: V
     const key = source.id == null ? `row:${index}` : `id:${source.id}`;
     if (seen.has(key)) return [];
     seen.add(key);
-    const day = getReportDay(source.created_at) ?? getReportDay(source.updated_at);
+    const day = getProductionOrderReportDay(source.productionOrder);
     if (range && (!day || day < range.from || day > range.to)) return [];
     const order = source.productionOrder;
     const orderId = source.production_order_id ?? order?.id;

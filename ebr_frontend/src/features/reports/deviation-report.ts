@@ -1,4 +1,4 @@
-import { getReportDay } from "./report-date";
+import { getReportDay, getProductionOrderReportDay } from "./report-date";
 import { buildTimeSummary } from "./time-summary";
 import { isCancelledProductionOrder } from "../../lib/production-order-status";
 import type { ReportProductionOrder } from "./production-report";
@@ -9,6 +9,7 @@ type Id = string | number;
 type User = { name?: string | null; username?: string | null; email?: string | null };
 type Order = {
   id?: Id;
+  start_date?: string | null;
   lot_no?: string | null;
   item_code?: string | null;
   description?: string | null;
@@ -59,6 +60,9 @@ export const deviationQuantity = (value: unknown): number | null => {
   return Number.isFinite(number) && number >= 0 ? number : null;
 };
 
+export const getDeviationReportDay = (source: ReportDeviation) =>
+  getProductionOrderReportDay(source.productionOrder ?? source.production_order);
+
 export function normalizeDeviation(source: ReportDeviation, today: string) {
   const order = source.productionOrder ?? source.production_order;
   const orderId = source.production_order_id ?? order?.id;
@@ -66,14 +70,15 @@ export function normalizeDeviation(source: ReportDeviation, today: string) {
   const productName =
     reportText(order?.item?.item_name) || reportText(order?.description) || itemCode || "Chưa rõ sản phẩm";
   const productKey = itemCode ? `code:${itemCode}` : `name:${productName}`;
-  const day = getReportDay(source.created_at) ?? getReportDay(source.updated_at);
+  const day = getDeviationReportDay(source);
+  const recordDay = getReportDay(source.created_at) ?? getReportDay(source.updated_at);
   const stage: DeviationStage = reportText(source.handling_result)
     ? "result"
     : reportText(source.handling_plan)
       ? "planned"
       : "new";
-  const age = day
-    ? Math.max(0, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${day}T00:00:00Z`)) / 86400000))
+  const age = recordDay
+    ? Math.max(0, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${recordDay}T00:00:00Z`)) / 86400000))
     : null;
   return {
     source,
@@ -187,7 +192,7 @@ export function buildDeviationOrderRateReport(
   const deviationDays = rows.flatMap((row) => row.day ? [row.day] : []);
   const activeOrders = orders.filter((order) => !isCancelledProductionOrder(order.status));
   const datedOrders = activeOrders.flatMap((order) => {
-    const day = getReportDay(order.date_manufacture || order.creation_date || order.created_at || order.updated_at);
+    const day = getProductionOrderReportDay(order);
     const itemCode = reportText(order.item_code) || reportText(order.item?.item_code);
     const productName = reportText(order.item?.item_name) || reportText(order.description) || "Chưa rõ sản phẩm";
     const productKey = itemCode ? `code:${itemCode}` : `name:${productName}`;
@@ -199,7 +204,7 @@ export function buildDeviationOrderRateReport(
   const commonRange = range ?? (days.length ? { from: days[0], to: days[days.length - 1] } : null);
   const deviations = buildTimeSummary(deviationDays, commonRange);
   const production = buildTimeSummary(orderDays, commonRange);
-  // A production order represents one lot. Count it once in its production period,
+  // A production order represents one lot. Count it once in its start period,
   // so the affected lots are always a subset of the denominator's lots.
   const lots = Array.from(new Map(datedOrders.map((order) => [order.id, order])).values());
   const affectedOrderIds = new Set(

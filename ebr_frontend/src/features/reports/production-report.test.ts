@@ -17,7 +17,7 @@ const lot = (id: number, extra: Partial<ReportProductionOrder> = {}): ReportProd
   status: "R",
   unit: "hộp",
   planned_quatity: 100,
-  date_manufacture: "2026-10-01",
+  start_date: "2026-10-01",
   ...extra,
 });
 
@@ -47,26 +47,25 @@ test("joins numeric/string IDs, deduplicates orders and summary IDs, sums packag
   assert.equal(buildProductionReport(rows, range, "hộp").actualQuantity, 30);
 });
 
-test("uses Vietnam production dates and valid creation fallback; undated orders are all-time only", () => {
+test("uses only Vietnam start dates; manufacture and creation dates cannot fill missing start dates", () => {
   const orders = [
-    lot(1, { date_manufacture: "2026-09-30T18:00:00Z" }),
-    lot(2, { date_manufacture: "invalid", creation_date: "2026-10-02" }),
-    lot(3, { date_manufacture: null, creation_date: null }),
-    lot(4, { date_manufacture: "2026-09-30" }),
+    lot(1, { start_date: "2026-09-30T18:00:00Z", date_manufacture: "2026-09-01" }),
+    lot(2, { start_date: "invalid", creation_date: "2026-10-02", date_manufacture: "2026-10-02" }),
+    lot(3, { start_date: null, created_at: "2026-10-03" }),
+    lot(4, { start_date: "2026-09-30", date_manufacture: "2026-10-01" }),
   ];
   const rows = buildProductionRows(orders, [], range);
   assert.deepEqual(
-    rows.map((row) => [row.id, row.day, row.dateFallback]),
+    rows.map((row) => [row.id, row.day]),
     [
-      ["1", "2026-10-01", false],
-      ["2", "2026-10-02", true],
+      ["1", "2026-10-01"],
     ],
   );
   const report = buildProductionReport(buildProductionRows(orders, [], null), null, "hộp");
-  assert.equal(report.undatedCount, 1);
+  assert.equal(report.undatedCount, 2);
   assert.equal(
     report.timeline.reduce((sum, point) => sum + point.count, 0),
-    3,
+    2,
   );
   assert.equal(report.total, 4);
 });
@@ -138,9 +137,9 @@ test("compares only known box plans and actuals, preserving zero plans and missi
 test("adaptive all-time series stay aligned across empty months, and heatmap uses actual weekdays", () => {
   const rows = buildProductionRows(
     [
-      lot(1, { date_manufacture: "2026-01-01", status: "P" }),
-      lot(2, { date_manufacture: "2026-06-01", item_code: "BTP01" }),
-      lot(3, { date_manufacture: "2026-10-01", status: "L" }),
+      lot(1, { start_date: "2026-01-01", status: "P" }),
+      lot(2, { start_date: "2026-06-01", item_code: "BTP01" }),
+      lot(3, { start_date: "2026-10-01", status: "L" }),
     ],
     [{ production_order_id: 3, total_quantity: 80 }],
     null,

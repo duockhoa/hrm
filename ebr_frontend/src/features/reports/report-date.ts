@@ -20,3 +20,8 @@ export const getReportDay = (value: unknown): string | null => {
   return `${part("year")}-${part("month")}-${part("day")}`;
 };
 
+// Orders and their related records share the order's start date in reports.
+// Missing start dates stay undated rather than falling back to another date.
+export const getProductionOrderReportDay = (order?: { start_date?: string | null } | null): string | null =>
+  getReportDay(order?.start_date);
+

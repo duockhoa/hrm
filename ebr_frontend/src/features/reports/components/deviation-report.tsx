@@ -223,7 +223,7 @@ export default function DeviationReport({
         <div className="mt-3 flex items-center justify-between gap-3">
           <p aria-live="polite" className="text-sm text-slate-500">
             Hiển thị <strong className="text-slate-800">{number(filtered.length)}</strong> / {number(rows.length)} phiếu
-            trong kỳ
+            trong kỳ theo ngày bắt đầu của lệnh
           </p>
           <Button
             variant="ghost"
@@ -381,7 +381,7 @@ export default function DeviationReport({
 
       {report.undatedCount > 0 ? (
         <div className="rounded-lg border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm leading-relaxed text-amber-950">
-          {number(report.undatedCount)} phiếu thiếu ngày hợp lệ: có trong tổng và bảng chi tiết, không có trên biểu đồ
+          {number(report.undatedCount)} phiếu thuộc lệnh thiếu ngày bắt đầu hợp lệ: có trong tổng, không có trên biểu đồ
           thời gian.
         </div>
       ) : null}
@@ -399,7 +399,7 @@ export default function DeviationReport({
           <div className="grid gap-4 xl:grid-cols-3">
             <Panel
               title="Xu hướng phát sinh và lũy kế"
-              subtitle={`Số phiếu phát sinh theo ${report.resolutionLabel}; đường lũy kế bắt đầu từ đầu kỳ lọc.`}
+              subtitle={`Số phiếu theo ${report.resolutionLabel} bắt đầu của lệnh; đường lũy kế bắt đầu từ đầu kỳ lọc.`}
               className="xl:col-span-2"
             >
               <Plot hasData={report.timeline.length > 0}>
@@ -586,7 +586,7 @@ export default function DeviationReport({
             </Panel>
             <Panel
               title="Tỉ lệ sai lệch và lô có sai lệch theo thời gian"
-              subtitle={`Tỉ lệ phiếu sai lệch/lệnh sản xuất, lô có sai lệch/tổng số lô và sản phẩm có sai lệch/tổng số sản phẩm theo ${orderRateReport?.resolutionLabel ?? report.resolutionLabel}.`}
+              subtitle={`Tỉ lệ phiếu sai lệch/lệnh sản xuất, lô có sai lệch/tổng số lô và sản phẩm có sai lệch/tổng số sản phẩm theo ${orderRateReport?.resolutionLabel ?? report.resolutionLabel} bắt đầu của lệnh.`}
               className="xl:col-span-2"
             >
               {orderRateReport === null ? (
@@ -651,8 +651,8 @@ export default function DeviationReport({
               )}
             </Panel>
             <Panel
-              title="Tình trạng hồ sơ theo kỳ phát sinh"
-              subtitle={`Cột chồng theo ${report.resolutionLabel} tạo phiếu, dùng tình trạng hiện tại của hồ sơ.`}
+              title="Tình trạng hồ sơ theo kỳ bắt đầu của lệnh"
+              subtitle={`Cột chồng theo ${report.resolutionLabel} bắt đầu của lệnh, dùng tình trạng hiện tại của hồ sơ.`}
             >
               <Plot hasData={report.timeline.length > 0}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -676,7 +676,7 @@ export default function DeviationReport({
                 </ResponsiveContainer>
               </Plot>
               <p className="mt-2 text-xs text-slate-500">
-                Biểu đồ thể hiện các phiếu tạo trong từng kỳ đang có thông tin gì tại thời điểm xem.
+                Biểu đồ thể hiện các phiếu của lệnh bắt đầu trong từng kỳ đang có thông tin gì tại thời điểm xem.
               </p>
             </Panel>
             <Panel
@@ -723,6 +723,7 @@ export default function DeviationReport({
             </Panel>
             <Panel
               title="Mật độ sai lệch theo ngày"
+              subtitle="Xếp phiếu theo ngày bắt đầu của lệnh sản xuất."
               className="xl:col-span-2"
             >
               <DeviationCalendarHeatmap heatmap={report.heatmap} />

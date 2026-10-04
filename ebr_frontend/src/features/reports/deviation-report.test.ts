@@ -4,6 +4,7 @@ import {
   buildDeviationReport,
   buildDeviationOrderRateReport,
   buildDeviationHeatmap,
+  getDeviationReportDay,
   EMPTY_DEVIATION_FILTERS,
   filterDeviationRows,
   normalizeDeviation,
@@ -13,11 +14,11 @@ import {
 const today = "2026-10-03";
 const rows = (sources: ReportDeviation[]) => sources.map((source) => normalizeDeviation(source, today));
 
-test("normalizes Vietnam dates, fallback dates, and stages based on actual content", () => {
+test("uses order start dates for grouping and record dates for age and stages", () => {
   const normalized = rows([
-    { created_at: "2026-09-30T18:00:00Z", handling_plan: "   ", handling_result: "   " },
-    { created_at: "invalid", updated_at: "2026-10-02", handling_plan: "Kiểm tra lại" },
-    { created_at: "2026-10-03", handling_result: "Đã xử lý", approver: null },
+    { productionOrder: { start_date: "2026-09-30T18:00:00Z" }, created_at: "2026-09-30T18:00:00Z", handling_plan: "   ", handling_result: "   " },
+    { productionOrder: { start_date: "2026-10-02" }, created_at: "invalid", updated_at: "2026-10-02", handling_plan: "Kiểm tra lại" },
+    { productionOrder: { start_date: "2026-10-03" }, created_at: "2026-10-03", handling_result: "Đã xử lý", approver: null },
     {},
   ]);
   assert.deepEqual(
@@ -31,18 +32,44 @@ test("normalizes Vietnam dates, fallback dates, and stages based on actual conte
   );
 });
 
+test("deviation timelines, rates and heatmaps use order start date even when records are created later", () => {
+  const sources: ReportDeviation[] = [
+    { production_order_id: 1, productionOrder: { id: 1, start_date: "2026-09-30T18:00:00Z" }, created_at: "2026-11-02" },
+    { production_order_id: "1", production_order: { id: 1, start_date: "2026-10-01" }, created_at: "2026-12-01" },
+    { production_order_id: 2, productionOrder: { start_date: null }, created_at: "2026-10-01", updated_at: "2026-10-02" },
+  ];
+  const range = { from: "2026-10-01", to: "2026-10-02" };
+  const selected = sources.filter((source) => {
+    const day = getDeviationReportDay(source);
+    return day !== null && day >= range.from && day <= range.to;
+  });
+  const normalized = selected.map((source) => normalizeDeviation(source, "2026-12-03"));
+  assert.deepEqual(normalized.map((row) => row.day), ["2026-10-01", "2026-10-01"]);
+  assert.deepEqual(normalized.map((row) => row.age), [31, 2]);
+  const report = buildDeviationReport(normalized, range);
+  assert.equal(report.timeline[0].count, 2);
+  assert.equal(report.heatmap.weeks.flatMap((week) => week.days).find((cell) => cell?.day === "2026-10-01")?.count, 2);
+  const rates = buildDeviationOrderRateReport(normalized, [
+    { id: 1, start_date: "2026-10-01", date_manufacture: "2026-11-01" },
+    { id: 2, start_date: null, date_manufacture: "2026-10-01", creation_date: "2026-10-01" },
+  ], range);
+  assert.deepEqual([rates.points[0].deviationCount, rates.points[0].orderCount, rates.points[0].rate], [2, 1, 200]);
+  assert.equal(rates.undatedOrderCount, 1);
+  assert.equal(buildDeviationReport(rows(sources), null).undatedCount, 1);
+});
+
 test("order rates count every deviation, exclude cancelled orders and preserve rates above 100%", () => {
   const report = buildDeviationOrderRateReport(
     rows([
-      { production_order_id: 1, created_at: "2026-09-30T18:00:00Z" },
-      { production_order_id: 1, created_at: "2026-10-01" },
-      { created_at: "2026-10-02" },
+      { production_order_id: 1, productionOrder: { start_date: "2026-09-30T18:00:00Z" }, created_at: "2026-09-30T18:00:00Z" },
+      { production_order_id: 1, productionOrder: { start_date: "2026-10-01" }, created_at: "2026-10-01" },
+      { productionOrder: { start_date: "2026-10-02" }, created_at: "2026-10-02" },
       {},
     ]),
     [
-      { id: 1, date_manufacture: "2026-10-01" },
-      { id: 2, date_manufacture: "2026-10-01", status: "boposcancelled" },
-      { id: 3, creation_date: "2026-10-03" },
+      { id: 1, start_date: "2026-10-01" },
+      { id: 2, start_date: "2026-10-01", status: "boposcancelled" },
+      { id: 3, start_date: "2026-10-03" },
       { id: 4 },
     ],
     { from: "2026-10-01", to: "2026-10-03" },
@@ -55,8 +82,8 @@ test("order rates count every deviation, exclude cancelled orders and preserve r
 
 test("all-time order rates align months across both data sources and keep empty months", () => {
   const report = buildDeviationOrderRateReport(
-    rows([{ created_at: "2026-06-03" }]),
-    [{ id: 1, date_manufacture: "2026-01-01" }, { id: 2, created_at: "2026-10-01" }],
+    rows([{ productionOrder: { start_date: "2026-06-03" }, created_at: "2026-06-03" }]),
+    [{ id: 1, start_date: "2026-01-01" }, { id: 2, start_date: "2026-10-01" }],
     null,
   );
   assert.equal(report.resolutionLabel, "tháng");
@@ -71,16 +98,16 @@ test("all-time order rates align months across both data sources and keep empty 
 test("order rates apply the selected date range to both series and share weekly boundaries", () => {
   const report = buildDeviationOrderRateReport(
     rows([
-      { created_at: "2026-09-30" },
-      { created_at: "2026-10-07" },
-      { created_at: "2026-10-08" },
-      { created_at: "2026-12-01" },
+      { productionOrder: { start_date: "2026-09-30" }, created_at: "2026-09-30" },
+      { productionOrder: { start_date: "2026-10-07" }, created_at: "2026-10-07" },
+      { productionOrder: { start_date: "2026-10-08" }, created_at: "2026-10-08" },
+      { productionOrder: { start_date: "2026-12-01" }, created_at: "2026-12-01" },
     ]),
     [
-      { id: 1, date_manufacture: "2026-09-30" },
-      { id: 2, date_manufacture: "2026-10-07" },
-      { id: 3, updated_at: "2026-10-07T18:00:00Z" },
-      { id: 4, creation_date: "2026-12-01" },
+      { id: 1, start_date: "2026-09-30" },
+      { id: 2, start_date: "2026-10-07" },
+      { id: 3, start_date: "2026-10-07T18:00:00Z" },
+      { id: 4, start_date: "2026-12-01" },
     ],
     { from: "2026-10-01", to: "2026-11-30" },
   );
@@ -96,26 +123,26 @@ test("order rates handle empty data and zero deviations without inventing a deno
   assert.deepEqual(buildDeviationOrderRateReport([], [], null).points, []);
   const range = { from: "2026-10-01", to: "2026-10-01" };
   assert.equal(buildDeviationOrderRateReport([], [], range).points[0].rate, null);
-  assert.equal(buildDeviationOrderRateReport([], [{ id: 1, date_manufacture: range.from }], range).points[0].rate, 0);
+  assert.equal(buildDeviationOrderRateReport([], [{ id: 1, start_date: range.from }], range).points[0].rate, 0);
   assert.equal(buildDeviationOrderRateReport([], [], range).points[0].lotRate, null);
-  assert.equal(buildDeviationOrderRateReport([], [{ id: 1, date_manufacture: range.from }], range).points[0].lotRate, 0);
+  assert.equal(buildDeviationOrderRateReport([], [{ id: 1, start_date: range.from }], range).points[0].lotRate, 0);
 });
 
-test("lot rates count affected production lots once, using their production period", () => {
+test("lot rates count affected production lots once, using their start period", () => {
   const report = buildDeviationOrderRateReport(
     rows([
-      { production_order_id: 1, created_at: "2026-10-01" },
-      { production_order_id: "1", created_at: "2026-10-02" },
-      { production_order: { id: 1 }, created_at: "2026-10-02" },
-      { production_order_id: 3, created_at: "2026-10-01" },
-      { production_order_id: 99, created_at: "2026-10-01" },
-      { created_at: "2026-10-01" },
+      { production_order_id: 1, productionOrder: { start_date: "2026-10-01" }, created_at: "2026-10-01" },
+      { production_order_id: "1", productionOrder: { start_date: "2026-10-02" }, created_at: "2026-10-02" },
+      { production_order: { id: 1, start_date: "2026-10-01" }, created_at: "2026-10-02" },
+      { production_order_id: 3, productionOrder: { start_date: "2026-10-01" }, created_at: "2026-10-01" },
+      { production_order_id: 99, productionOrder: { start_date: "2026-10-01" }, created_at: "2026-10-01" },
+      { productionOrder: { start_date: "2026-10-01" }, created_at: "2026-10-01" },
     ]),
     [
-      { id: 1, date_manufacture: "2026-10-01" },
-      { id: 2, date_manufacture: "2026-10-01" },
-      { id: 3, date_manufacture: "2026-10-01", status: "cancelled" },
-      { id: 4, date_manufacture: "2026-10-03" },
+      { id: 1, start_date: "2026-10-01" },
+      { id: 2, start_date: "2026-10-01" },
+      { id: 3, start_date: "2026-10-01", status: "cancelled" },
+      { id: 4, start_date: "2026-10-03" },
     ],
     { from: "2026-10-01", to: "2026-10-03" },
   );
@@ -127,14 +154,14 @@ test("lot rates count affected production lots once, using their production peri
 test("lot rates deduplicate order IDs and ignore deviations outside the selected range", () => {
   const report = buildDeviationOrderRateReport(
     rows([
-      { production_order_id: "1", created_at: "2026-10-08" },
-      { production_order_id: 1, created_at: "2026-10-09" },
-      { production_order_id: 2, created_at: "2026-09-30" },
+      { production_order_id: "1", productionOrder: { start_date: "2026-10-08" }, created_at: "2026-10-08" },
+      { production_order_id: 1, productionOrder: { start_date: "2026-10-09" }, created_at: "2026-10-09" },
+      { production_order_id: 2, productionOrder: { start_date: "2026-09-30" }, created_at: "2026-09-30" },
     ]),
     [
-      { id: 1, date_manufacture: "2026-10-02" },
-      { id: "1", date_manufacture: "2026-10-02" },
-      { id: 2, date_manufacture: "2026-10-03" },
+      { id: 1, start_date: "2026-10-02" },
+      { id: "1", start_date: "2026-10-02" },
+      { id: 2, start_date: "2026-10-03" },
     ],
     { from: "2026-10-01", to: "2026-11-30" },
   );
@@ -145,24 +172,24 @@ test("lot rates deduplicate order IDs and ignore deviations outside the selected
   assert.equal(report.points[1].lotRate, null);
 });
 
-test("product rates deduplicate products across lots and use the affected lot's production period", () => {
+test("product rates deduplicate products across lots and use the affected lot's start period", () => {
   const report = buildDeviationOrderRateReport(
     rows([
-      { production_order_id: 1, created_at: "2026-10-02" },
-      { production_order_id: "1", created_at: "2026-10-02" },
-      { production_order_id: 2, created_at: "2026-10-02" },
-      { production_order_id: 4, created_at: "2026-10-01" },
-      { production_order_id: 5, created_at: "2026-10-01" },
-      { production_order_id: 99, created_at: "2026-10-01" },
+      { production_order_id: 1, productionOrder: { start_date: "2026-10-02" }, created_at: "2026-10-02" },
+      { production_order_id: "1", productionOrder: { start_date: "2026-10-02" }, created_at: "2026-10-02" },
+      { production_order_id: 2, productionOrder: { start_date: "2026-10-02" }, created_at: "2026-10-02" },
+      { production_order_id: 4, productionOrder: { start_date: "2026-10-01" }, created_at: "2026-10-01" },
+      { production_order_id: 5, productionOrder: { start_date: "2026-10-01" }, created_at: "2026-10-01" },
+      { production_order_id: 99, productionOrder: { start_date: "2026-10-01" }, created_at: "2026-10-01" },
     ]),
     [
-      { id: 1, item_code: "SP1", date_manufacture: "2026-10-01" },
-      { id: "1", item_code: "SP1", date_manufacture: "2026-10-01" },
-      { id: 2, item: { item_code: "SP1", item_name: "Tên khác" }, date_manufacture: "2026-10-01" },
-      { id: 3, item_code: "SP2", date_manufacture: "2026-10-01" },
-      { id: 4, item_code: "SP3", date_manufacture: "2026-10-01", status: "cancelled" },
+      { id: 1, item_code: "SP1", start_date: "2026-10-01" },
+      { id: "1", item_code: "SP1", start_date: "2026-10-01" },
+      { id: 2, item: { item_code: "SP1", item_name: "Tên khác" }, start_date: "2026-10-01" },
+      { id: 3, item_code: "SP2", start_date: "2026-10-01" },
+      { id: 4, item_code: "SP3", start_date: "2026-10-01", status: "cancelled" },
       { id: 5, item_code: "SP4" },
-      { id: 6, item_code: "SP1", date_manufacture: "2026-10-03" },
+      { id: 6, item_code: "SP1", start_date: "2026-10-03" },
     ],
     { from: "2026-10-01", to: "2026-10-03" },
   );
@@ -173,18 +200,18 @@ test("product rates deduplicate products across lots and use the affected lot's 
 
 test("product rates share weekly boundaries and respect deviation filters and date ranges", () => {
   const filtered = filterDeviationRows(rows([
-    { production_order_id: 1, created_at: "2026-10-09", cause_classification: "Selected" },
-    { production_order_id: 2, created_at: "2026-10-09", cause_classification: "Other" },
-    { production_order_id: 3, created_at: "2026-09-30", cause_classification: "Selected" },
+    { production_order_id: 1, productionOrder: { start_date: "2026-10-09" }, created_at: "2026-10-09", cause_classification: "Selected" },
+    { production_order_id: 2, productionOrder: { start_date: "2026-10-09" }, created_at: "2026-10-09", cause_classification: "Other" },
+    { production_order_id: 3, productionOrder: { start_date: "2026-09-30" }, created_at: "2026-09-30", cause_classification: "Selected" },
   ]), { ...EMPTY_DEVIATION_FILTERS, cause: "Selected" });
   const report = buildDeviationOrderRateReport(
     filtered,
     [
-      { id: 1, item_code: "SP1", date_manufacture: "2026-10-02" },
-      { id: 2, item_code: "SP2", date_manufacture: "2026-10-07" },
-      { id: 3, item_code: "SP3", date_manufacture: "2026-10-03" },
-      { id: 4, item_code: "SP1", date_manufacture: "2026-10-08" },
-      { id: 5, item_code: "SP4", date_manufacture: "2026-09-30" },
+      { id: 1, item_code: "SP1", start_date: "2026-10-02" },
+      { id: 2, item_code: "SP2", start_date: "2026-10-07" },
+      { id: 3, item_code: "SP3", start_date: "2026-10-03" },
+      { id: 4, item_code: "SP1", start_date: "2026-10-08" },
+      { id: 5, item_code: "SP4", start_date: "2026-09-30" },
     ],
     { from: "2026-10-01", to: "2026-11-30" },
   );
@@ -198,14 +225,14 @@ test("product rates share weekly boundaries and respect deviation filters and da
 });
 
 test("product rates count distinct names without codes within each month or year", () => {
-  const deviations = rows([{ production_order_id: 2, created_at: "2026-06-04" }]);
+  const deviations = rows([{ production_order_id: 2, productionOrder: { start_date: "2026-06-04" }, created_at: "2026-06-04" }]);
   const orders = [
-    { id: 1, description: "Product A", date_manufacture: "2026-06-01" },
-    { id: 2, item: { item_name: "Product A" }, date_manufacture: "2026-06-02" },
-    { id: 3, description: "Product B", date_manufacture: "2026-06-03" },
-    { id: 4, description: "Product A", date_manufacture: "2026-07-01" },
-    { id: 5, description: "Product A", date_manufacture: "2026-01-01" },
-    { id: 6, description: "Product A", date_manufacture: "2026-12-31" },
+    { id: 1, description: "Product A", start_date: "2026-06-01" },
+    { id: 2, item: { item_name: "Product A" }, start_date: "2026-06-02" },
+    { id: 3, description: "Product B", start_date: "2026-06-03" },
+    { id: 4, description: "Product A", start_date: "2026-07-01" },
+    { id: 5, description: "Product A", start_date: "2026-01-01" },
+    { id: 6, description: "Product A", start_date: "2026-12-31" },
   ];
   const monthly = buildDeviationOrderRateReport(deviations, orders, null);
   assert.equal(monthly.resolutionLabel, "tháng");
@@ -225,12 +252,12 @@ test("deduplicates order IDs and product codes, keeps undated records out of tim
     rows([
       {
         production_order_id: 1,
-        productionOrder: { item_code: "SP1", item: { item_name: "Tên cũ" } },
+        productionOrder: { start_date: "2026-10-01", item_code: "SP1", item: { item_name: "Tên cũ" } },
         created_at: "2026-10-01",
       },
       {
         production_order_id: "1",
-        productionOrder: { item_code: "SP1", item: { item_name: "Tên mới" } },
+        productionOrder: { start_date: "2026-10-01", item_code: "SP1", item: { item_name: "Tên mới" } },
         created_at: "2026-10-02",
         handling_result: "Đã xử lý",
       },
@@ -248,8 +275,7 @@ test("deduplicates order IDs and product codes, keeps undated records out of tim
   assert.deepEqual(
     report.timeline.map((point) => [point.count, point.cumulative, point.new, point.planned, point.result]),
     [
-      [1, 1, 1, 0, 0],
-      [1, 2, 0, 0, 1],
+      [2, 2, 1, 0, 1],
     ],
   );
 });
@@ -274,9 +300,9 @@ test("counts missing handling plans independently of handling results", () => {
 test("all-time stage buckets align with the common timeline, including empty months", () => {
   const report = buildDeviationReport(
     rows([
-      { created_at: "2026-01-02" },
-      { created_at: "2026-06-02", handling_plan: "Phương án" },
-      { created_at: "2026-10-01", handling_result: "Kết quả" },
+      { productionOrder: { start_date: "2026-01-02" }, created_at: "2026-01-02" },
+      { productionOrder: { start_date: "2026-06-02" }, created_at: "2026-06-02", handling_plan: "Phương án" },
+      { productionOrder: { start_date: "2026-10-01" }, created_at: "2026-10-01", handling_result: "Kết quả" },
     ]),
     null,
   );
@@ -300,10 +326,10 @@ test("all-time stage buckets align with the common timeline, including empty mon
 test("calendar heatmap counts individual Vietnam dates and fills missing days, independent of monthly trends", () => {
   const report = buildDeviationReport(
     rows([
-      { created_at: "2026-05-04" },
-      { created_at: "2026-05-04T17:30:00Z" }, // May 5 in Vietnam.
-      { created_at: "2026-05-05" },
-      { created_at: "2026-09-30" },
+      { productionOrder: { start_date: "2026-05-04" }, created_at: "2026-05-04" },
+      { productionOrder: { start_date: "2026-05-04T17:30:00Z" }, created_at: "2026-05-04T17:30:00Z" }, // May 5 in Vietnam.
+      { productionOrder: { start_date: "2026-05-05" }, created_at: "2026-05-05" },
+      { productionOrder: { start_date: "2026-09-30" }, created_at: "2026-09-30" },
       {},
     ]),
     { from: "2026-05-01", to: "2026-10-31" },
@@ -412,10 +438,10 @@ test("combines product, cause, stage and accent-insensitive search filters", () 
 test("Pareto counts all groups and age buckets include only records without results", () => {
   const report = buildDeviationReport(
     rows([
-      { created_at: "2026-10-03", cause_classification: "Máy móc" },
-      { created_at: "2026-09-26", cause_classification: "Máy móc" },
-      { created_at: "2026-09-25", handling_plan: "Kiểm tra" },
-      { created_at: "2026-07-01", handling_result: "Xong" },
+      { productionOrder: { start_date: "2026-10-03" }, created_at: "2026-10-03", cause_classification: "Máy móc" },
+      { productionOrder: { start_date: "2026-09-26" }, created_at: "2026-09-26", cause_classification: "Máy móc" },
+      { productionOrder: { start_date: "2026-09-25" }, created_at: "2026-09-25", handling_plan: "Kiểm tra" },
+      { productionOrder: { start_date: "2026-07-01" }, created_at: "2026-07-01", handling_result: "Xong" },
       {},
     ]),
     null,

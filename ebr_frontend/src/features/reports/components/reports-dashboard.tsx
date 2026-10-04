@@ -33,12 +33,12 @@ import {
   type MaintenanceRequest,
 } from "@/services/maintenance-requests.service";
 import { buildTimeSummary } from "../time-summary";
-import { getReportDay } from "../report-date";
+import { getReportDay, getProductionOrderReportDay } from "../report-date";
 import FinishedProductOutputChart from "./finished-product-output-chart";
 import DeviationReport from "./deviation-report";
 import ProductionReport from "./production-report";
 import VialInspectionReport from "./vial-inspection-report";
-import type { ReportDeviation } from "../deviation-report";
+import { getDeviationReportDay, type ReportDeviation } from "../deviation-report";
 import type { ReportProductionOrder } from "../production-report";
 import {
   productionOrderDeviationsService,
@@ -107,26 +107,6 @@ const formatNumber = (value: number | string | null | undefined) => {
     maximumFractionDigits: 3,
   });
 };
-
-const getFirstValue = (source: ProductionOrder, keys: string[]) => {
-  for (const key of keys) {
-    const value = source?.[key];
-
-    if (value !== undefined && value !== null && value !== "") {
-      return value;
-    }
-  }
-
-  return null;
-};
-
-const getOrderDate = (order: ProductionOrder) =>
-  getFirstValue(order, [
-    "date_manufacture",
-    "creation_date",
-    "created_at",
-    "updated_at",
-  ]);
 
 const getProductLabel = (order: ProductionOrder) => {
   const item = order.item ?? {};
@@ -314,13 +294,13 @@ export default function ReportsDashboard() {
   const productionOrders = useMemo(
     () => (data ?? EMPTY_PRODUCTION_ORDERS).filter((order) =>
       !isCancelledProductionOrder(order.status) &&
-      (isAllTime || isInRange(getOrderDate(order), range)),
+      (isAllTime || isInRange(getProductionOrderReportDay(order), range)),
     ),
     [data, range, isAllTime],
   );
   const productionOrderDeviations = useMemo(
     () => (deviationData ?? EMPTY_PRODUCTION_ORDER_DEVIATIONS).filter((deviation) =>
-      isAllTime || isInRange(getReportDay(deviation.created_at) ?? getReportDay(deviation.updated_at), range),
+      isAllTime || isInRange(getDeviationReportDay(deviation), range),
     ),
     [deviationData, range, isAllTime],
   );
@@ -333,7 +313,7 @@ export default function ReportsDashboard() {
 
   const productionSummary = useMemo(
     () => buildTimeSummary(
-      productionOrders.map((order) => getReportDay(getOrderDate(order)))
+      productionOrders.map(getProductionOrderReportDay)
         .filter((day): day is string => day !== null),
       isAllTime ? null : range,
     ),
@@ -341,9 +321,7 @@ export default function ReportsDashboard() {
   );
   const deviationSummary = useMemo(
     () => buildTimeSummary(
-      productionOrderDeviations.map((deviation) =>
-        getReportDay(deviation.created_at) ?? getReportDay(deviation.updated_at),
-      ).filter((day): day is string => day !== null),
+      productionOrderDeviations.map(getDeviationReportDay).filter((day): day is string => day !== null),
       isAllTime ? null : range,
     ),
     [productionOrderDeviations, range, isAllTime],
@@ -489,7 +467,7 @@ export default function ReportsDashboard() {
                     value={formatNumber(productionOrders.length)}
                     tone="blue"
                     icon={ClipboardList}
-                    hint="Trong khoảng thời gian đã chọn, không gồm lô đã huỷ"
+                    hint="Theo ngày bắt đầu của lệnh, không gồm lô đã huỷ"
                   />
                   <MetricCard
                     label="Số sản phẩm"
@@ -503,14 +481,14 @@ export default function ReportsDashboard() {
                     value={deviationMetric(productionOrderDeviations.length)}
                     tone="amber"
                     icon={AlertTriangle}
-                    hint="Phiếu sai lệch phát sinh trong kỳ"
+                    hint="Phiếu sai lệch của lệnh có ngày bắt đầu trong kỳ"
                   />
                   <MetricCard
                     label="Lệnh có sai lệch"
                     value={deviationMetric(affectedOrderCount)}
                     tone="rose"
                     icon={FileWarning}
-                    hint="Số lệnh liên quan đến phiếu sai lệch trong kỳ"
+                    hint="Lệnh có ngày bắt đầu trong kỳ và có phiếu sai lệch"
                   />
                   <MetricCard
                     label="Số sự cố thiết bị"
@@ -527,7 +505,7 @@ export default function ReportsDashboard() {
             <ReportSection>
               <ChartPanel
                 title="Số lô sản xuất"
-                subtitle={`Số lô sản xuất theo ${productionSummary.resolutionLabel} trong khoảng thời gian đã chọn.`}
+                subtitle={`Số lô theo ${productionSummary.resolutionLabel}, căn cứ ngày bắt đầu của lệnh.`}
               >
                 <div className="h-96">
                   {productionSummary.points.length > 0 ? (
@@ -579,7 +557,7 @@ export default function ReportsDashboard() {
               ) : (
                 <ChartPanel
                   title="Số lượng sai lệch"
-                  subtitle={`Đếm số phiếu sai lệch theo ${deviationSummary.resolutionLabel} tạo phiếu trong khoảng thời gian đã chọn.`}
+                  subtitle={`Đếm số phiếu sai lệch theo ${deviationSummary.resolutionLabel}, căn cứ ngày bắt đầu của lệnh.`}
                   className="border-sky-100 bg-sky-50/40"
                 >
                   <div className="h-96">

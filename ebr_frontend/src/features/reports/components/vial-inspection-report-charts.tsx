@@ -77,7 +77,7 @@ export default function VialInspectionReportCharts({ report, byOrder = false }: 
           title="Xu hướng lỗi ghi nhận"
           subtitle={byOrder
             ? "Tổng lượt lỗi và số lượng từng nhóm lỗi theo mã lệnh của sản phẩm đã chọn."
-            : `Tổng lượt lỗi và số lượng từng nhóm lỗi theo ${report.resolutionLabel} ghi nhận phiếu.`}
+            : `Tổng lượt lỗi và số lượng từng nhóm lỗi theo ${report.resolutionLabel} bắt đầu của lệnh.`}
           className="xl:col-span-2"
         >
           <Plot hasData={chartData.length > 0}>
@@ -163,7 +163,7 @@ export default function VialInspectionReportCharts({ report, byOrder = false }: 
         title="Xu hướng tỷ lệ lỗi soi lọ (%)"
         subtitle={byOrder
           ? "Tổng lượt lỗi và từng nhóm lỗi / cỡ lô của lệnh × 100%. Mốc thiếu cỡ lô hoặc cỡ lô bằng 0 không hiển thị tỷ lệ."
-          : `Tổng lượt lỗi và từng nhóm lỗi / tổng cỡ lô các lệnh có phiếu soi trong từng ${report.resolutionLabel} × 100%. Mỗi lệnh chỉ cộng cỡ lô một lần trong mỗi mốc; mốc thiếu cỡ lô hoặc cỡ lô bằng 0 không hiển thị tỷ lệ.`}
+          : `Tổng lượt lỗi và từng nhóm lỗi / tổng cỡ lô các lệnh có phiếu soi theo ${report.resolutionLabel} bắt đầu × 100%. Mỗi lệnh chỉ cộng cỡ lô một lần; mốc thiếu cỡ lô hoặc cỡ lô bằng 0 không hiển thị tỷ lệ.`}
       >
         <Plot hasData={ratePoints.some((point) => point.errors !== null)}>
           <ResponsiveContainer width="100%" height="100%">

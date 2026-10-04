@@ -44,6 +44,7 @@ export class ProductionOrderVialInspectionChecksService {
             lot_no: true,
             status: true,
             date_manufacture: true,
+            start_date: true,
             planned_quatity: true,
             item: { select: { item_code: true, item_name: true } },
           },

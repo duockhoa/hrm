@@ -1,10 +1,11 @@
 import { isCancelledProductionOrder } from "../../lib/production-order-status";
-import { getReportDay } from "./report-date";
+import { getProductionOrderReportDay } from "./report-date";
 import { buildTimeSummary } from "./time-summary";
 
 export type FinishedProductLot = {
   id: string | number;
   status?: string | null;
+  start_date?: string | null;
   date_manufacture?: string | null;
   creation_date?: string | null;
   created_at?: string | null;
@@ -56,7 +57,7 @@ export const buildFinishedProductOutput = (
     const id = String(lot.id);
     if (seenIds.has(id) || isCancelledProductionOrder(lot.status)) continue;
     seenIds.add(id);
-    const day = getReportDay(lot.date_manufacture) ?? getReportDay(lot.creation_date) ?? getReportDay(lot.created_at);
+    const day = getProductionOrderReportDay(lot);
     if (range && (!day || day < range.from || day > range.to)) continue;
     lotCount += 1;
     if (quantities.has(id)) summarizedLotCount += 1;

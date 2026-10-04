@@ -45,8 +45,8 @@ export default function FinishedProductOutputChart({
     <section className="rounded-md border border-emerald-100 bg-white p-4 shadow-sm">
       <h2 className="text-base font-semibold text-gray-950">Sản lượng thành phẩm</h2>
       <p className="mt-1 text-sm text-gray-500">
-        So sánh sản lượng kế hoạch từ lệnh thành phẩm và sản lượng thực tế từ tổng kết thành phẩm, theo {report.resolutionLabel} sản xuất của lô.
-        Lô chưa có ngày sản xuất dùng ngày tạo lô. Loại trừ lô đã hủy.
+        So sánh sản lượng kế hoạch từ lệnh thành phẩm và sản lượng thực tế từ tổng kết thành phẩm, theo {report.resolutionLabel} bắt đầu của lệnh.
+        Lệnh thiếu ngày bắt đầu chỉ tính trong tổng khi chọn tất cả thời gian. Loại trừ lô đã hủy.
       </p>
       <div className="my-4 grid gap-3 sm:grid-cols-2">
         {[
@@ -61,7 +61,7 @@ export default function FinishedProductOutputChart({
       </div>
       {report.undatedLotCount > 0 ? (
         <p className="mb-3 text-sm text-amber-700">
-          Có {formatQuantity(report.undatedLotCount)} lô không có ngày hợp lệ, được tính trong tổng sản lượng nhưng không hiển thị trên biểu đồ thời gian.
+          Có {formatQuantity(report.undatedLotCount)} lô thiếu ngày bắt đầu hợp lệ, được tính trong tổng sản lượng nhưng không hiển thị trên biểu đồ thời gian.
         </p>
       ) : null}
       <div className="h-80">

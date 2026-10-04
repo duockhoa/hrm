@@ -139,7 +139,7 @@ export default function ProductionReportCharts({
       <div className="grid gap-4 xl:grid-cols-3">
         <ProductionPanel
           title="Xu hướng số lệnh sản xuất"
-          subtitle={`Số lệnh theo ${report.resolutionLabel} sản xuất và số lệnh lũy kế trong kỳ.`}
+          subtitle={`Số lệnh theo ${report.resolutionLabel} bắt đầu và số lệnh lũy kế trong kỳ.`}
           className="xl:col-span-2"
         >
           <Plot hasData={report.timeline.length > 0}>
@@ -275,7 +275,7 @@ export default function ProductionReportCharts({
         </ProductionPanel>
         <ProductionPanel
           title="Sản lượng thành phẩm: kế hoạch và thực tế"
-          subtitle={`So sánh theo ${report.resolutionLabel} sản xuất. Chỉ lấy lệnh thành phẩm có kế hoạch theo hộp; thực tế cộng các phiếu tổng kết cùng lệnh.`}
+          subtitle={`So sánh theo ${report.resolutionLabel} bắt đầu của lệnh. Chỉ lấy lệnh thành phẩm có kế hoạch theo hộp; thực tế cộng các phiếu tổng kết cùng lệnh.`}
         >
           <Plot hasData={report.boxPlanCount > 0 && report.timeline.length > 0}>
             <ResponsiveContainer width="100%" height="100%">
@@ -347,7 +347,7 @@ export default function ProductionReportCharts({
             </ResponsiveContainer>
           </Plot>
           <p className="mt-2 text-xs text-slate-500">
-            Tổng kết được gắn với kỳ sản xuất của lô; lũy kế không thể hiện ngày nhập phiếu hoặc ngày hoàn tất lệnh.
+            Tổng kết được gắn với kỳ bắt đầu của lệnh; lũy kế không thể hiện ngày nhập phiếu hoặc ngày hoàn tất lệnh.
           </p>
         </ProductionPanel>
         <ProductionPanel
@@ -459,7 +459,7 @@ export default function ProductionReportCharts({
         </ProductionPanel>
         <ProductionPanel
           title="Mật độ sản xuất theo thứ trong tuần"
-          subtitle={`Bản đồ nhiệt đếm lệnh theo ${report.resolutionLabel} và thứ của ngày sản xuất. Ô đậm hơn biểu thị nhiều lệnh hơn.`}
+          subtitle={`Bản đồ nhiệt đếm lệnh theo ${report.resolutionLabel} và thứ của ngày bắt đầu. Ô đậm hơn biểu thị nhiều lệnh hơn.`}
         >
           {report.heatmap.length ? (
             <>
@@ -526,8 +526,8 @@ export default function ProductionReportCharts({
           )}
         </ProductionPanel>
         <ProductionPanel
-          title="Trạng thái lệnh theo kỳ sản xuất"
-          subtitle="Cột chồng giúp theo dõi trạng thái hiện tại của lệnh trong từng kỳ sản xuất."
+          title="Trạng thái lệnh theo kỳ bắt đầu"
+          subtitle="Cột chồng giúp theo dõi trạng thái hiện tại của lệnh trong từng kỳ bắt đầu."
           className="xl:col-span-2"
         >
           <Plot hasData={report.timeline.length > 0} height={290}>

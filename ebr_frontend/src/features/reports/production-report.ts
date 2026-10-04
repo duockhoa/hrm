@@ -1,5 +1,5 @@
 import { isCancelledProductionOrder } from "../../lib/production-order-status";
-import { getReportDay } from "./report-date";
+import { getProductionOrderReportDay } from "./report-date";
 import { buildTimeSummary } from "./time-summary";
 import type { FinishedProductOutputSummary } from "./finished-product-output";
 
@@ -151,8 +151,7 @@ export function buildProductionRows(
     const id = String(source.id);
     if (seenOrders.has(id)) return [];
     seenOrders.add(id);
-    const day =
-      getReportDay(source.date_manufacture) ?? getReportDay(source.creation_date) ?? getReportDay(source.created_at);
+    const day = getProductionOrderReportDay(source);
     if (range && (!day || day < range.from || day > range.to)) return [];
     const itemCode = text(source.item_code) || text(source.item?.item_code);
     const productName = text(source.item?.item_name) || text(source.description) || itemCode || "Chưa rõ sản phẩm";
@@ -180,7 +179,6 @@ export function buildProductionRows(
             ? text(source.status) || "Chưa ghi nhận"
             : PRODUCTION_STATES.find((state) => state.key === status)!.label,
         day,
-        dateFallback: getReportDay(source.date_manufacture) === null,
         lot: text(source.lot_no) || "Chưa ghi nhận",
         warehouse: text(source.warehouse) || "Chưa ghi nhận kho",
         planned,
@@ -396,7 +394,6 @@ export function buildProductionReport(rows: ProductionRow[], range: ProductionRa
     semiCount: active.filter((row) => row.category === "semi").length,
     summarizedCount: finished.filter((row) => row.actual !== null).length,
     undatedCount: rows.filter((row) => row.day === null).length,
-    dateFallbackCount: rows.filter((row) => row.dateFallback && row.day !== null).length,
     missingPlanCount: active.filter((row) => row.planned === null).length,
     missingUnitCount: active.filter((row) => !row.unit).length,
     invalidSummaryCount: active.reduce((sum, row) => sum + row.invalidSummaryCount, 0),

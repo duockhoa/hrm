@@ -20,8 +20,11 @@ const check = (id: number, extra: Partial<ReportVialInspection> = {}): ReportVia
   other_defect_count: 0,
   created_at: "2026-10-01",
   created_by_id: 1,
-  productionOrder: { id: 1, item_code: "TP01", lot_no: "LO01", status: "R", item: { item_name: "Dung dịch A" } },
   ...extra,
+  productionOrder: extra.productionOrder === null ? null : {
+    id: 1, start_date: "2026-10-01", item_code: "TP01", lot_no: "LO01", status: "R",
+    item: { item_name: "Dung dịch A" }, ...extra.productionOrder,
+  },
 });
 
 test("deduplicates IDs and counts bag identifiers per order instead of summing them", () => {
@@ -43,13 +46,13 @@ test("deduplicates IDs and counts bag identifiers per order instead of summing t
   assert.equal(report.orders.find((order) => order.orderId === "1")?.bagCount, 2);
 });
 
-test("uses Vietnam record dates rather than manufacture dates, with valid update fallback", () => {
+test("uses order start dates instead of manufacture, record creation, or update dates", () => {
   const rows = buildVialInspectionRows(
     [
-      check(1, { created_at: "2026-09-30T18:00:00Z", productionOrder: { date_manufacture: "2025-01-01" } }),
-      check(2, { created_at: "invalid", updated_at: "2026-10-02" }),
-      check(3, { created_at: null }),
-      check(4, { created_at: "2026-09-30" }),
+      check(1, { created_at: "2026-11-01", productionOrder: { start_date: "2026-09-30T18:00:00Z", date_manufacture: "2025-01-01" } }),
+      check(2, { created_at: "invalid", productionOrder: { start_date: "2026-10-02" } }),
+      check(3, { updated_at: "2026-10-02", productionOrder: { start_date: null } }),
+      check(4, { created_at: "2026-10-01", productionOrder: { start_date: "2026-09-30" } }),
     ],
     range,
   );
@@ -60,7 +63,7 @@ test("uses Vietnam record dates rather than manufacture dates, with valid update
       [2, "2026-10-02"],
     ],
   );
-  const all = buildVialInspectionRows([check(1, { created_at: null }), check(2)], null);
+  const all = buildVialInspectionRows([check(1, { productionOrder: { start_date: "invalid" } }), check(2)], null);
   const report = buildVialInspectionReport(all, null);
   assert.equal(report.total, 2);
   assert.equal(report.undatedCount, 1);
@@ -136,9 +139,9 @@ test("excludes cancelled orders by default and keeps records available on explic
 test("all-time defect series align across empty months", () => {
   const rows = buildVialInspectionRows(
     [
-      check(1, { created_at: "2026-01-01", fiber_vial_count: 2 }),
-      check(2, { created_at: "2026-06-01", damaged_count: 4 }),
-      check(3, { created_at: "2026-10-01", particulate_count: 3 }),
+      check(1, { productionOrder: { start_date: "2026-01-01" }, fiber_vial_count: 2 }),
+      check(2, { productionOrder: { start_date: "2026-06-01" }, damaged_count: 4 }),
+      check(3, { productionOrder: { start_date: "2026-10-01" }, particulate_count: 3 }),
     ],
     null,
   );
@@ -165,19 +168,19 @@ test("sums batch sizes once per order in each time bucket and per-order trend", 
     check(4, { created_at: "2026-10-02", fiber_vial_count: 5, productionOrder: { planned_quatity: 1000 } }),
   ], range), range);
   assert.equal(report.timeline[0].batchSize, 3000);
-  assert.equal(report.timeline[0].errors / report.timeline[0].batchSize! * 100, 2);
-  assert.equal(report.timeline[1].batchSize, 1000);
+  assert.equal(report.timeline[0].errors, 65);
+  assert.equal(report.timeline[1].batchSize, null);
   assert.equal(report.timeline[2].batchSize, null);
   const order = report.orders.find((point) => point.orderId === "1")!;
   assert.equal(order.batchSize, 1000);
   assert.equal(order.errors, 35);
 });
 
-test("deduplicates batch sizes across different days in a monthly bucket", () => {
+test("records created on different days share the order start month and one batch size", () => {
   const report = buildVialInspectionReport(buildVialInspectionRows([
-    check(1, { created_at: "2026-01-01", productionOrder: { planned_quatity: 1000 } }),
-    check(2, { created_at: "2026-01-20", productionOrder: { planned_quatity: 1000 } }),
-    check(3, { created_at: "2026-06-01", productionOrder: { planned_quatity: 1000 } }),
+    check(1, { created_at: "2026-02-01", productionOrder: { start_date: "2026-01-01", planned_quatity: 1000 } }),
+    check(2, { created_at: "2026-03-20", productionOrder: { start_date: "2026-01-01", planned_quatity: 1000 } }),
+    check(3, { production_order_id: 2, created_at: "2026-07-01", productionOrder: { start_date: "2026-06-01", planned_quatity: 1000 } }),
   ], null), null);
   assert.equal(report.timeline[0].batchSize, 1000);
   assert.equal(report.timeline[1].batchSize, null);
@@ -219,7 +222,7 @@ test("handles missing order/bag IDs, strict counts, and empty data without inven
       check(1, { production_order_id: null, productionOrder: null, bag_number: 0 }),
       check(2, { production_order_id: null, productionOrder: null, bag_number: 99 }),
     ],
-    range,
+    null,
   );
   const report = buildVialInspectionReport(rows, range);
   assert.equal(report.bagCount, 0);

@@ -144,7 +144,7 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p aria-live="polite" className="text-sm text-slate-500">
             <strong className="text-slate-800">{number(filtered.length)}</strong> / {number(rows.length)} phiếu trong
-            kỳ
+            kỳ theo ngày bắt đầu của lệnh
           </p>
           <Button
             variant="ghost"

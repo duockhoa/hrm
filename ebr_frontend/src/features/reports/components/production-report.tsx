@@ -189,7 +189,7 @@ export default function ProductionReport({
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <p aria-live="polite" className="text-sm text-slate-500">
               <strong className="text-slate-800">{number(filtered.length)}</strong> / {number(rows.length)} lệnh trong
-              kỳ
+              kỳ theo ngày bắt đầu của lệnh
             </p>
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
               <input
