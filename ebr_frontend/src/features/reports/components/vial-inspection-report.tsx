@@ -11,11 +11,8 @@ import {
   ClipboardList,
   FileSearch,
   RotateCcw,
-  Search,
-  TriangleAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ReportProductFilter from "./report-product-filter";
@@ -91,14 +88,14 @@ function FilterSelect({
   );
 }
 
-function OrderSummaryTable({ orders, onFilter }: { orders: Report["orders"]; onFilter: (id: string) => void }) {
+function OrderSummaryTable({ orders }: { orders: Report["orders"] }) {
   const [page, setPage] = useState(1);
   const pageCount = Math.max(1, Math.ceil(orders.length / 10));
   const activePage = Math.min(page, pageCount);
   return (
     <Panel
       title="Tổng hợp soi lọ theo lệnh / lô"
-      subtitle="Cộng các phiếu trong phạm vi bộ lọc; đếm mỗi bao một lần trong từng lệnh. Chọn mã lệnh để lọc toàn bộ báo cáo về lệnh đó."
+      subtitle="Cộng các phiếu trong phạm vi bộ lọc; đếm mỗi bao một lần trong từng lệnh."
     >
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full min-w-[1120px] text-left text-sm">
@@ -122,20 +119,7 @@ function OrderSummaryTable({ orders, onFilter }: { orders: Report["orders"]; onF
           <tbody>
             {orders.slice((activePage - 1) * 10, activePage * 10).map((order) => (
               <tr key={order.key} className="border-t align-top">
-                <td className="p-3">
-                  {order.orderId ? (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-indigo-700"
-                      onClick={() => onFilter(order.orderId!)}
-                    >
-                      {order.name}
-                    </Button>
-                  ) : (
-                    order.name
-                  )}
-                </td>
+                <td className="p-3">{order.name}</td>
                 <td className="max-w-64 p-3 font-medium">{order.product}</td>
                 <td className="p-3 tabular-nums">{number(order.records)}</td>
                 <td className="p-3 tabular-nums">{number(order.bagCount)}</td>
@@ -407,19 +391,13 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
       );
     return {
       products: unique(rows.map((row) => [row.productKey, row.product])),
-      orders: unique(
-        rows.filter((row) => row.orderId !== null).map((row) => [row.orderId!, `${row.orderLabel} · Lô ${row.lot}`]),
-      ),
-      creators: unique(rows.map((row) => [row.creatorKey, row.creator])),
     };
   }, [rows]);
   const filtered = useMemo(() => filterVialInspectionRows(rows, filters), [rows, filters]);
   const report = useMemo(() => buildVialInspectionReport(filtered, range), [filtered, range]);
-  const setFilter = <K extends keyof VialReportFilters>(key: K, value: VialReportFilters[K]) =>
+  const setFilter = (key: "product" | "defect", value: string) =>
     setFilters((current) => ({ ...current, [key]: value }));
-  const activeFilters = Object.entries(filters).some(([key, value]) =>
-    key === "search" ? String(value).trim() !== "" : key === "includeCancelled" ? value : value !== "all",
-  );
+  const activeFilters = filters.product !== "all" || filters.defect !== "all";
   const tableKey = JSON.stringify([filters, range]);
 
   if (checks.isLoading)
@@ -427,7 +405,7 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
       <div className="space-y-4">
         <Skeleton className="h-48 rounded-xl" />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 8 }, (_, index) => (
+          {Array.from({ length: 4 }, (_, index) => (
             <Skeleton key={index} className="h-28 rounded-xl" />
           ))}
         </div>
@@ -450,7 +428,7 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
   return (
     <div className="space-y-4">
       <section aria-label="Bộ lọc báo cáo soi lọ" className="rounded-xl border bg-white p-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <ReportProductFilter
             id="vial-product"
             value={filters.product}
@@ -458,67 +436,18 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
             options={options.products}
           />
           <FilterSelect
-            id="vial-order"
-            label="Lệnh / Lô sản xuất"
-            value={filters.order}
-            onChange={(value) => setFilter("order", value)}
-            options={options.orders}
-          />
-          <FilterSelect
-            id="vial-creator"
-            label="Người ghi nhận"
-            value={filters.creator}
-            onChange={(value) => setFilter("creator", value)}
-            options={options.creators}
-          />
-          <FilterSelect
             id="vial-defect"
-            label="Phiếu có nhóm lỗi"
+            label="Nhóm lỗi"
             value={filters.defect}
             onChange={(value) => setFilter("defect", value)}
             options={VIAL_DEFECTS.map((defect) => ({ value: defect.key, label: defect.label }))}
           />
-          <FilterSelect
-            id="vial-result"
-            label="Thông tin ghi nhận"
-            value={filters.result}
-            onChange={(value) => setFilter("result", value)}
-            options={[
-              { value: "defects", label: "Có ghi nhận lỗi" },
-              { value: "none", label: "Không ghi nhận lỗi" },
-              { value: "incomplete", label: "Chưa đủ số lượng" },
-            ]}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="vial-search">Tìm phiếu soi lọ</Label>
-            <div className="relative">
-              <Search aria-hidden="true" className="absolute left-3 top-2.5 size-4 text-slate-400" />
-              <Input
-                id="vial-search"
-                className="pl-9"
-                value={filters.search}
-                onChange={(event) => setFilter("search", event.target.value)}
-                placeholder="Mã phiếu, số bao, lô, ghi chú…"
-              />
-            </div>
-          </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <p aria-live="polite" className="text-sm text-slate-500">
-              <strong className="text-slate-800">{number(filtered.length)}</strong> / {number(rows.length)} phiếu trong
-              kỳ
-            </p>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                checked={filters.includeCancelled}
-                onChange={(event) => setFilter("includeCancelled", event.target.checked)}
-                className="size-4 accent-indigo-600"
-              />
-              Bao gồm lệnh đã hủy
-            </label>
-          </div>
+          <p aria-live="polite" className="text-sm text-slate-500">
+            <strong className="text-slate-800">{number(filtered.length)}</strong> / {number(rows.length)} phiếu trong
+            kỳ
+          </p>
           <Button
             variant="ghost"
             size="sm"
@@ -535,13 +464,6 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           {
-            label: "Tổng phiếu soi lọ",
-            value: number(report.total),
-            hint: "Theo thời gian và bộ lọc đã chọn",
-            icon: ClipboardList,
-            theme: "border-blue-200 bg-blue-50 text-blue-950",
-          },
-          {
             label: "Lệnh có phiếu soi",
             value: number(report.orderCount),
             hint: `${number(report.productCount)} sản phẩm có phiếu soi`,
@@ -556,20 +478,6 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
             theme: "border-violet-200 bg-violet-50 text-violet-950",
           },
           {
-            label: "Tổng lượt lỗi đã nhập",
-            value: number(report.totalErrors),
-            hint: "Cộng số lượng bốn nhóm lỗi hợp lệ",
-            icon: TriangleAlert,
-            theme: "border-rose-200 bg-rose-50 text-rose-950",
-          },
-          {
-            label: "Phiếu có ghi nhận lỗi",
-            value: number(report.withDefects),
-            hint: "Phiếu đủ dữ liệu, tổng số lỗi > 0",
-            icon: TriangleAlert,
-            theme: "border-amber-200 bg-amber-50 text-amber-950",
-          },
-          {
             label: "Phiếu không ghi nhận lỗi",
             value: number(report.withoutDefects),
             hint: "Cả bốn số lượng hợp lệ và bằng 0",
@@ -582,13 +490,6 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
             hint: `${number(report.withDefects)} / ${number(report.completeCount)} phiếu đủ số lượng`,
             icon: Activity,
             theme: "border-sky-200 bg-sky-50 text-sky-950",
-          },
-          {
-            label: "Lỗi trung bình / phiếu",
-            value: report.averageErrors === null ? "—" : number(report.averageErrors),
-            hint: "Tính trên phiếu đủ bốn số lượng hợp lệ",
-            icon: Activity,
-            theme: "border-teal-200 bg-teal-50 text-teal-950",
           },
         ].map((metric) => (
           <div key={metric.label} className={`rounded-xl border p-4 ${metric.theme}`}>
@@ -622,7 +523,7 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
       {filtered.length ? (
         <>
           <VialInspectionReportCharts report={report} />
-          <OrderSummaryTable key={tableKey} orders={report.orders} onFilter={(id) => setFilter("order", id)} />
+          <OrderSummaryTable key={tableKey} orders={report.orders} />
           <Panel
             title="Phạm vi và mức độ đầy đủ của dữ liệu"
             subtitle="Lọc theo ngày tạo phiếu soi lọ; thiếu ngày tạo dùng ngày cập nhật, theo giờ Việt Nam. Tổng lỗi là tổng số lượng đã ghi nhận, có thể gồm nhiều loại lỗi trên cùng một lọ."

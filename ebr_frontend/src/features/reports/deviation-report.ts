@@ -1,5 +1,9 @@
 import { getReportDay } from "./report-date";
 import { buildTimeSummary } from "./time-summary";
+import { isCancelledProductionOrder } from "../../lib/production-order-status";
+import type { ReportProductionOrder } from "./production-report";
+
+export type DeviationProductionOrder = ReportProductionOrder & { updated_at?: string | null };
 
 type Id = string | number;
 type User = { name?: string | null; username?: string | null; email?: string | null };
@@ -173,6 +177,76 @@ export function buildDeviationHeatmap(days: string[], range: { from: string; to:
     weeks.push(week);
   }
   return { weeks, months, from, to, maxCount, total };
+}
+
+export function buildDeviationOrderRateReport(
+  rows: DeviationRow[],
+  orders: DeviationProductionOrder[],
+  range: { from: string; to: string } | null,
+) {
+  const deviationDays = rows.flatMap((row) => row.day ? [row.day] : []);
+  const activeOrders = orders.filter((order) => !isCancelledProductionOrder(order.status));
+  const datedOrders = activeOrders.flatMap((order) => {
+    const day = getReportDay(order.date_manufacture || order.creation_date || order.created_at || order.updated_at);
+    const itemCode = reportText(order.item_code) || reportText(order.item?.item_code);
+    const productName = reportText(order.item?.item_name) || reportText(order.description) || "Chưa rõ sản phẩm";
+    const productKey = itemCode ? `code:${itemCode}` : `name:${productName}`;
+    return day ? [{ id: String(order.id), day, productKey }] : [];
+  });
+  const orderDays = datedOrders.map((order) => order.day);
+  // Both series must use the same bounds and resolution, including all-time reports.
+  const days = [...deviationDays, ...orderDays].sort();
+  const commonRange = range ?? (days.length ? { from: days[0], to: days[days.length - 1] } : null);
+  const deviations = buildTimeSummary(deviationDays, commonRange);
+  const production = buildTimeSummary(orderDays, commonRange);
+  // A production order represents one lot. Count it once in its production period,
+  // so the affected lots are always a subset of the denominator's lots.
+  const lots = Array.from(new Map(datedOrders.map((order) => [order.id, order])).values());
+  const affectedOrderIds = new Set(
+    rows.filter((row) => row.orderId !== null && (!range || (row.day !== null && row.day >= range.from && row.day <= range.to)))
+      .map((row) => row.orderId),
+  );
+  const lotSummary = buildTimeSummary(lots.map((lot) => lot.day), commonRange);
+  const affectedLotSummary = buildTimeSummary(
+    lots.filter((lot) => affectedOrderIds.has(lot.id)).map((lot) => lot.day),
+    commonRange,
+  );
+  const productBuckets = lotSummary.points.map(() => ({
+    products: new Set<string>(),
+    affectedProducts: new Set<string>(),
+  }));
+  lots.forEach((lot) => {
+    if (!commonRange || lot.day < commonRange.from || lot.day > commonRange.to) return;
+    // Bucket keys mark period starts (day, week, month or year).
+    const index = lotSummary.points.findLastIndex((point) => point.key <= lot.day);
+    const bucket = productBuckets[index];
+    if (!bucket) return;
+    bucket.products.add(lot.productKey);
+    if (affectedOrderIds.has(lot.id)) bucket.affectedProducts.add(lot.productKey);
+  });
+  return {
+    resolutionLabel: deviations.resolutionLabel,
+    undatedOrderCount: activeOrders.length - orderDays.length,
+    points: deviations.points.map((point, index) => {
+      const orderCount = production.points[index]?.count ?? 0;
+      const lotCount = lotSummary.points[index]?.count ?? 0;
+      const affectedLotCount = affectedLotSummary.points[index]?.count ?? 0;
+      const productCount = productBuckets[index]?.products.size ?? 0;
+      const affectedProductCount = productBuckets[index]?.affectedProducts.size ?? 0;
+      return {
+        ...point,
+        deviationCount: point.count,
+        orderCount,
+        rate: orderCount > 0 ? (point.count / orderCount) * 100 : null,
+        lotCount,
+        affectedLotCount,
+        lotRate: lotCount > 0 ? (affectedLotCount / lotCount) * 100 : null,
+        productCount,
+        affectedProductCount,
+        productRate: productCount > 0 ? (affectedProductCount / productCount) * 100 : null,
+      };
+    }),
+  };
 }
 
 export function buildDeviationReport(rows: DeviationRow[], range: { from: string; to: string } | null) {

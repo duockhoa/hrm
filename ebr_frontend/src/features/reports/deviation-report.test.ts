@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildDeviationReport,
+  buildDeviationOrderRateReport,
   buildDeviationHeatmap,
   EMPTY_DEVIATION_FILTERS,
   filterDeviationRows,
@@ -28,6 +29,195 @@ test("normalizes Vietnam dates, fallback dates, and stages based on actual conte
       [null, null, "new"],
     ],
   );
+});
+
+test("order rates count every deviation, exclude cancelled orders and preserve rates above 100%", () => {
+  const report = buildDeviationOrderRateReport(
+    rows([
+      { production_order_id: 1, created_at: "2026-09-30T18:00:00Z" },
+      { production_order_id: 1, created_at: "2026-10-01" },
+      { created_at: "2026-10-02" },
+      {},
+    ]),
+    [
+      { id: 1, date_manufacture: "2026-10-01" },
+      { id: 2, date_manufacture: "2026-10-01", status: "boposcancelled" },
+      { id: 3, creation_date: "2026-10-03" },
+      { id: 4 },
+    ],
+    { from: "2026-10-01", to: "2026-10-03" },
+  );
+  assert.deepEqual(report.points.map((point) => [point.deviationCount, point.orderCount, point.rate]), [
+    [2, 1, 200], [1, 0, null], [0, 1, 0],
+  ]);
+  assert.equal(report.undatedOrderCount, 1);
+});
+
+test("all-time order rates align months across both data sources and keep empty months", () => {
+  const report = buildDeviationOrderRateReport(
+    rows([{ created_at: "2026-06-03" }]),
+    [{ id: 1, date_manufacture: "2026-01-01" }, { id: 2, created_at: "2026-10-01" }],
+    null,
+  );
+  assert.equal(report.resolutionLabel, "tháng");
+  assert.equal(report.points.length, 10);
+  assert.equal(report.points[0].orderCount, 1);
+  assert.equal(report.points[5].deviationCount, 1);
+  assert.equal(report.points[5].rate, null);
+  assert.equal(report.points[9].orderCount, 1);
+  assert.deepEqual([report.points[1].deviationCount, report.points[1].orderCount, report.points[1].rate], [0, 0, null]);
+});
+
+test("order rates apply the selected date range to both series and share weekly boundaries", () => {
+  const report = buildDeviationOrderRateReport(
+    rows([
+      { created_at: "2026-09-30" },
+      { created_at: "2026-10-07" },
+      { created_at: "2026-10-08" },
+      { created_at: "2026-12-01" },
+    ]),
+    [
+      { id: 1, date_manufacture: "2026-09-30" },
+      { id: 2, date_manufacture: "2026-10-07" },
+      { id: 3, updated_at: "2026-10-07T18:00:00Z" },
+      { id: 4, creation_date: "2026-12-01" },
+    ],
+    { from: "2026-10-01", to: "2026-11-30" },
+  );
+  assert.equal(report.resolutionLabel, "tuần");
+  assert.deepEqual(report.points.slice(0, 2).map((point) => [point.key, point.deviationCount, point.orderCount, point.rate]), [
+    ["2026-10-01", 1, 1, 100], ["2026-10-08", 1, 1, 100],
+  ]);
+  assert.equal(report.points.reduce((sum, point) => sum + point.deviationCount, 0), 2);
+  assert.equal(report.points.reduce((sum, point) => sum + point.orderCount, 0), 2);
+});
+
+test("order rates handle empty data and zero deviations without inventing a denominator", () => {
+  assert.deepEqual(buildDeviationOrderRateReport([], [], null).points, []);
+  const range = { from: "2026-10-01", to: "2026-10-01" };
+  assert.equal(buildDeviationOrderRateReport([], [], range).points[0].rate, null);
+  assert.equal(buildDeviationOrderRateReport([], [{ id: 1, date_manufacture: range.from }], range).points[0].rate, 0);
+  assert.equal(buildDeviationOrderRateReport([], [], range).points[0].lotRate, null);
+  assert.equal(buildDeviationOrderRateReport([], [{ id: 1, date_manufacture: range.from }], range).points[0].lotRate, 0);
+});
+
+test("lot rates count affected production lots once, using their production period", () => {
+  const report = buildDeviationOrderRateReport(
+    rows([
+      { production_order_id: 1, created_at: "2026-10-01" },
+      { production_order_id: "1", created_at: "2026-10-02" },
+      { production_order: { id: 1 }, created_at: "2026-10-02" },
+      { production_order_id: 3, created_at: "2026-10-01" },
+      { production_order_id: 99, created_at: "2026-10-01" },
+      { created_at: "2026-10-01" },
+    ]),
+    [
+      { id: 1, date_manufacture: "2026-10-01" },
+      { id: 2, date_manufacture: "2026-10-01" },
+      { id: 3, date_manufacture: "2026-10-01", status: "cancelled" },
+      { id: 4, date_manufacture: "2026-10-03" },
+    ],
+    { from: "2026-10-01", to: "2026-10-03" },
+  );
+  assert.deepEqual(report.points.map((point) => [point.lotCount, point.affectedLotCount, point.lotRate]), [
+    [2, 1, 50], [0, 0, null], [1, 0, 0],
+  ]);
+});
+
+test("lot rates deduplicate order IDs and ignore deviations outside the selected range", () => {
+  const report = buildDeviationOrderRateReport(
+    rows([
+      { production_order_id: "1", created_at: "2026-10-08" },
+      { production_order_id: 1, created_at: "2026-10-09" },
+      { production_order_id: 2, created_at: "2026-09-30" },
+    ]),
+    [
+      { id: 1, date_manufacture: "2026-10-02" },
+      { id: "1", date_manufacture: "2026-10-02" },
+      { id: 2, date_manufacture: "2026-10-03" },
+    ],
+    { from: "2026-10-01", to: "2026-11-30" },
+  );
+  assert.equal(report.resolutionLabel, "tuần");
+  assert.equal(report.points[0].lotCount, 2);
+  assert.equal(report.points[0].affectedLotCount, 1);
+  assert.equal(report.points[0].lotRate, 50);
+  assert.equal(report.points[1].lotRate, null);
+});
+
+test("product rates deduplicate products across lots and use the affected lot's production period", () => {
+  const report = buildDeviationOrderRateReport(
+    rows([
+      { production_order_id: 1, created_at: "2026-10-02" },
+      { production_order_id: "1", created_at: "2026-10-02" },
+      { production_order_id: 2, created_at: "2026-10-02" },
+      { production_order_id: 4, created_at: "2026-10-01" },
+      { production_order_id: 5, created_at: "2026-10-01" },
+      { production_order_id: 99, created_at: "2026-10-01" },
+    ]),
+    [
+      { id: 1, item_code: "SP1", date_manufacture: "2026-10-01" },
+      { id: "1", item_code: "SP1", date_manufacture: "2026-10-01" },
+      { id: 2, item: { item_code: "SP1", item_name: "Tên khác" }, date_manufacture: "2026-10-01" },
+      { id: 3, item_code: "SP2", date_manufacture: "2026-10-01" },
+      { id: 4, item_code: "SP3", date_manufacture: "2026-10-01", status: "cancelled" },
+      { id: 5, item_code: "SP4" },
+      { id: 6, item_code: "SP1", date_manufacture: "2026-10-03" },
+    ],
+    { from: "2026-10-01", to: "2026-10-03" },
+  );
+  assert.deepEqual(report.points.map((point) => [point.productCount, point.affectedProductCount, point.productRate]), [
+    [2, 1, 50], [0, 0, null], [1, 0, 0],
+  ]);
+});
+
+test("product rates share weekly boundaries and respect deviation filters and date ranges", () => {
+  const filtered = filterDeviationRows(rows([
+    { production_order_id: 1, created_at: "2026-10-09", cause_classification: "Selected" },
+    { production_order_id: 2, created_at: "2026-10-09", cause_classification: "Other" },
+    { production_order_id: 3, created_at: "2026-09-30", cause_classification: "Selected" },
+  ]), { ...EMPTY_DEVIATION_FILTERS, cause: "Selected" });
+  const report = buildDeviationOrderRateReport(
+    filtered,
+    [
+      { id: 1, item_code: "SP1", date_manufacture: "2026-10-02" },
+      { id: 2, item_code: "SP2", date_manufacture: "2026-10-07" },
+      { id: 3, item_code: "SP3", date_manufacture: "2026-10-03" },
+      { id: 4, item_code: "SP1", date_manufacture: "2026-10-08" },
+      { id: 5, item_code: "SP4", date_manufacture: "2026-09-30" },
+    ],
+    { from: "2026-10-01", to: "2026-11-30" },
+  );
+  assert.equal(report.resolutionLabel, "tuần");
+  assert.deepEqual(report.points.slice(0, 3).map((point) => [point.productCount, point.affectedProductCount]), [
+    [3, 1], [1, 0], [0, 0],
+  ]);
+  assert.ok(Math.abs(report.points[0].productRate! - 100 / 3) < 1e-10);
+  assert.equal(report.points[1].productRate, 0);
+  assert.equal(report.points[2].productRate, null);
+});
+
+test("product rates count distinct names without codes within each month or year", () => {
+  const deviations = rows([{ production_order_id: 2, created_at: "2026-06-04" }]);
+  const orders = [
+    { id: 1, description: "Product A", date_manufacture: "2026-06-01" },
+    { id: 2, item: { item_name: "Product A" }, date_manufacture: "2026-06-02" },
+    { id: 3, description: "Product B", date_manufacture: "2026-06-03" },
+    { id: 4, description: "Product A", date_manufacture: "2026-07-01" },
+    { id: 5, description: "Product A", date_manufacture: "2026-01-01" },
+    { id: 6, description: "Product A", date_manufacture: "2026-12-31" },
+  ];
+  const monthly = buildDeviationOrderRateReport(deviations, orders, null);
+  assert.equal(monthly.resolutionLabel, "tháng");
+  assert.deepEqual(monthly.points.slice(5, 7).map((point) => [point.productCount, point.affectedProductCount, point.productRate]), [
+    [2, 1, 50], [1, 0, 0],
+  ]);
+  const yearly = buildDeviationOrderRateReport(deviations, orders, { from: "2025-01-01", to: "2027-12-31" });
+  assert.equal(yearly.resolutionLabel, "năm");
+  assert.deepEqual(yearly.points.map((point) => [point.productCount, point.affectedProductCount, point.productRate]), [
+    [0, 0, null], [2, 1, 50], [0, 0, null],
+  ]);
+  assert.deepEqual(buildDeviationOrderRateReport([], [], null).points, []);
 });
 
 test("deduplicates order IDs and product codes, keeps undated records out of timeline", () => {

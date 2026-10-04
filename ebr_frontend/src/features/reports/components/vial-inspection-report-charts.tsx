@@ -283,33 +283,6 @@ export default function VialInspectionReportCharts({ report }: { report: Report 
           </Plot>
         </Panel>
         <Panel
-          title="Phân bố số lỗi trên mỗi phiếu"
-          subtitle="Mỗi phiếu được xếp vào một nhóm theo tổng bốn loại lỗi; chỉ tính phiếu đầy đủ các số lượng hợp lệ."
-        >
-          <Plot hasData={report.completeCount > 0}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={report.histogram}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  label={{ value: "Số lỗi / phiếu", position: "insideBottom", offset: -2 }}
-                  height={45}
-                />
-                <YAxis allowDecimals={false} />
-                <Tooltip formatter={tooltipNumber} />
-                <Bar dataKey="count" name="Số phiếu" radius={[5, 5, 0, 0]} maxBarSize={60}>
-                  {report.histogram.map((point, index) => (
-                    <Cell key={point.name} fill={["#10b981", "#38bdf8", "#f59e0b", "#fb923c", "#f43f5e"][index]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </Plot>
-          <p className="mt-2 text-xs text-slate-500">
-            {number(report.incompleteCount)} phiếu thiếu hoặc có số lượng không hợp lệ chưa được xếp nhóm.
-          </p>
-        </Panel>
-        <Panel
           title="Phân bố phiếu theo người ghi nhận"
           subtitle="Số phiếu đã nhập, tối đa 10 người có nhiều phiếu nhất; thể hiện khối lượng ghi nhận dữ liệu."
         >

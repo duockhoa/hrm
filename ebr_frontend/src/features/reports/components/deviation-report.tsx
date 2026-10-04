@@ -20,6 +20,7 @@ import {
   ComposedChart,
   Legend,
   Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -35,11 +36,13 @@ import DeviationCalendarHeatmap from "./deviation-calendar-heatmap";
 import { getReportDay } from "../report-date";
 import {
   buildDeviationReport,
+  buildDeviationOrderRateReport,
   DEVIATION_STAGES,
   EMPTY_DEVIATION_FILTERS,
   filterDeviationRows,
   normalizeDeviation,
   type DeviationFilters,
+  type DeviationProductionOrder,
   type ReportDeviation,
 } from "../deviation-report";
 
@@ -56,14 +59,14 @@ function Panel({
   className = "",
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <section className={`min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}>
-      <h2 className="text-base font-semibold text-slate-950">{title}</h2>
-      <p className="mb-4 mt-1 text-sm leading-relaxed text-slate-500">{subtitle}</p>
+      <h2 className={`text-base font-semibold text-slate-950${subtitle ? "" : " mb-4"}`}>{title}</h2>
+      {subtitle && <p className="mb-4 mt-1 text-sm leading-relaxed text-slate-500">{subtitle}</p>}
       {children}
     </section>
   );
@@ -118,11 +121,13 @@ function FilterSelect({
 
 export default function DeviationReport({
   deviations,
+  productionOrders,
   totalProductionOrders,
   totalProducts,
   range,
 }: {
   deviations: ReportDeviation[];
+  productionOrders: DeviationProductionOrder[] | null;
   totalProductionOrders: number | "…" | "—";
   totalProducts: number | "…" | "—";
   range: { from: string; to: string } | null;
@@ -148,9 +153,16 @@ export default function DeviationReport({
   );
   const filtered = useMemo(() => filterDeviationRows(rows, filters), [rows, filters]);
   const report = useMemo(() => buildDeviationReport(filtered, range), [filtered, range]);
+  const orderRateReport = useMemo(
+    () => productionOrders === null ? null : buildDeviationOrderRateReport(filtered, productionOrders, range),
+    [filtered, productionOrders, range],
+  );
   const deviationOrderRate = typeof totalProductionOrders === "number"
     ? totalProductionOrders > 0
-      ? `${((report.total / totalProductionOrders) * 100).toFixed(1)}%`
+      ? `${((report.total / totalProductionOrders) * 100).toLocaleString("vi-VN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} %`
       : "—"
     : totalProductionOrders;
   const affectedOrderRate = typeof totalProductionOrders === "number"
@@ -260,10 +272,10 @@ export default function DeviationReport({
             hint: (
               <>
                 <strong className="text-2xl font-extrabold tabular-nums leading-none">{deviationOrderRate}</strong>{" "}
-                <span className="whitespace-nowrap text-sm font-semibold">Tổng số lệnh</span>
+                <span className="text-sm font-semibold leading-snug">Tổng số lệnh sản xuất</span>
               </>
             ),
-            hintClassName: "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-amber-200 px-3 py-2.5 text-amber-950 ring-1 ring-inset ring-amber-300",
+            hintClassName: "flex flex-col items-start gap-2 rounded-lg bg-amber-200 px-3 py-2.5 text-amber-950 ring-1 ring-inset ring-amber-300",
             icon: AlertTriangle,
             theme: "border-amber-200 bg-amber-50 text-amber-950",
           },
@@ -573,6 +585,72 @@ export default function DeviationReport({
               </p>
             </Panel>
             <Panel
+              title="Tỉ lệ sai lệch và lô có sai lệch theo thời gian"
+              subtitle={`Tỉ lệ phiếu sai lệch/lệnh sản xuất, lô có sai lệch/tổng số lô và sản phẩm có sai lệch/tổng số sản phẩm theo ${orderRateReport?.resolutionLabel ?? report.resolutionLabel}.`}
+              className="xl:col-span-2"
+            >
+              {orderRateReport === null ? (
+                <div role="status" className="flex h-80 items-center justify-center text-sm text-slate-500">
+                  {totalProductionOrders === "…" ? "Đang tải dữ liệu lệnh sản xuất…" : "Không thể tải dữ liệu lệnh sản xuất."}
+                </div>
+              ) : (
+                <>
+                  <Plot hasData={orderRateReport.points.length > 0} height={344}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={orderRateReport.points} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis
+                          dataKey="key"
+                          tickFormatter={(key) => orderRateReport.points.find((point) => point.key === key)?.label ?? key}
+                          minTickGap={24}
+                          height={56}
+                          label={{ value: "Thời gian", position: "insideBottom", offset: 8 }}
+                        />
+                        <YAxis tickFormatter={percent} width={75} />
+                        <Tooltip
+                          labelFormatter={(key) => orderRateReport.points.find((point) => point.key === String(key))?.tooltipLabel ?? String(key)}
+                          formatter={(value, name, item) => [
+                            item.dataKey === "productRate"
+                              ? `${percent(Number(value))} (${number(item.payload.affectedProductCount)} / ${number(item.payload.productCount)} sản phẩm)`
+                              : percent(Number(value)),
+                            name,
+                          ]}
+                        />
+                        <Line
+                          type="linear"
+                          dataKey="rate"
+                          name="Tỉ lệ sai lệch/lệnh sản xuất"
+                          stroke="#f59e0b"
+                          strokeWidth={2.5}
+                          dot={{ r: 3 }}
+                          connectNulls={false}
+                        />
+                        <Line
+                          type="linear"
+                          dataKey="lotRate"
+                          name="Tỉ lệ lô có sai lệch/tổng số lô"
+                          stroke="#6366f1"
+                          strokeWidth={2.5}
+                          dot={{ r: 3 }}
+                          connectNulls={false}
+                        />
+                        <Line
+                          type="linear"
+                          dataKey="productRate"
+                          name="Tỉ lệ sản phẩm có sai lệch/tổng số sản phẩm"
+                          stroke="#10b981"
+                          strokeWidth={2.5}
+                          dot={{ r: 3 }}
+                          connectNulls={false}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Plot>
+                </>
+              )}
+            </Panel>
+            <Panel
               title="Tình trạng hồ sơ theo kỳ phát sinh"
               subtitle={`Cột chồng theo ${report.resolutionLabel} tạo phiếu, dùng tình trạng hiện tại của hồ sơ.`}
             >
@@ -645,7 +723,6 @@ export default function DeviationReport({
             </Panel>
             <Panel
               title="Mật độ sai lệch theo ngày"
-              subtitle="Mỗi ô là một ngày, mỗi cột là một tuần. Di chuột lên ô để xem ngày và số phiếu; màu xanh càng đậm, số phiếu càng nhiều."
               className="xl:col-span-2"
             >
               <DeviationCalendarHeatmap heatmap={report.heatmap} />
