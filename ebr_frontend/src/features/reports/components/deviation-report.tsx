@@ -1,11 +1,9 @@
 "use client";
 
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
-  ChevronDown,
-  ChevronRight,
   ClipboardList,
   Factory,
   FileWarning,
@@ -33,30 +31,23 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ReportProductFilter from "./report-product-filter";
+import DeviationCalendarHeatmap from "./deviation-calendar-heatmap";
 import { getReportDay } from "../report-date";
 import {
   buildDeviationReport,
   DEVIATION_STAGES,
-  deviationQuantity,
   EMPTY_DEVIATION_FILTERS,
   filterDeviationRows,
   normalizeDeviation,
-  reportText,
   type DeviationFilters,
-  type DeviationRow,
   type ReportDeviation,
 } from "../deviation-report";
 
 const COLORS = ["#6366f1", "#0ea5e9", "#f59e0b", "#10b981", "#f43f5e", "#8b5cf6"];
 const number = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
 const percent = (value: number) => `${value.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`;
-const dayLabel = (value: string | null) => (value ? value.split("-").reverse().join("/") : "Chưa ghi nhận");
 const tooltipNumber = (value: unknown, name: unknown) => [number(Number(value)), String(name)];
 const shortLabel = (value: string) => (value.length > 24 ? `${value.slice(0, 24)}…` : value);
-const quantityLabel = (value: unknown, unit: unknown) => {
-  const amount = deviationQuantity(value);
-  return amount === null ? "Chưa ghi nhận" : `${number(amount)} ${reportText(unit) || "(chưa rõ đơn vị)"}`;
-};
 
 function Panel({
   title,
@@ -92,16 +83,6 @@ function Plot({ hasData, children, height = 320 }: { hasData: boolean; children:
   );
 }
 
-function StageBadge({ stage }: { stage: DeviationRow["stage"] }) {
-  const meta = DEVIATION_STAGES.find((item) => item.key === stage)!;
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
-      <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: meta.color }} />
-      {meta.label}
-    </span>
-  );
-}
-
 function FilterSelect({
   id,
   label,
@@ -132,194 +113,6 @@ function FilterSelect({
         </SelectContent>
       </Select>
     </div>
-  );
-}
-
-function Details({ row }: { row: DeviationRow }) {
-  const source = row.source;
-  return (
-    <div className="grid gap-5 p-4 md:grid-cols-2 xl:grid-cols-3">
-      {[
-        ["Nội dung sai lệch", source.deviation_content],
-        ["Nguyên nhân", source.cause],
-        ["Phương án xử lý", source.handling_plan],
-        ["Kết quả xử lý", source.handling_result],
-      ].map(([label, value]) => (
-        <div key={label}>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="whitespace-pre-wrap break-words text-sm text-slate-800">
-            {reportText(value) || "Chưa ghi nhận"}
-          </p>
-        </div>
-      ))}
-      <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Số lượng</p>
-        <dl className="space-y-2 text-sm">
-          {[
-            ["Ảnh hưởng", quantityLabel(source.affected_quantity, source.affected_quantity_unit)],
-            ["Đã xử lý", quantityLabel(source.handled_quantity, source.handled_quantity_unit)],
-            ["Hủy", quantityLabel(source.destroyed_quantity, source.destroyed_quantity_unit)],
-          ].map(([label, value]) => (
-            <div key={label} className="flex justify-between gap-3">
-              <dt className="text-slate-500">{label}</dt>
-              <dd className="text-right font-medium">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-      <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Thông tin hồ sơ</p>
-        <dl className="space-y-2 text-sm">
-          {[
-            ["Mã lệnh", row.orderId ?? "Chưa ghi nhận"],
-            ["Người báo cáo", row.reporter],
-            ["Người phê duyệt được ghi nhận", row.approver],
-            ["Cập nhật gần nhất", dayLabel(getReportDay(source.updated_at))],
-          ].map(([label, value]) => (
-            <div key={label} className="flex justify-between gap-3">
-              <dt className="text-slate-500">{label}</dt>
-              <dd className="text-right font-medium">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </div>
-  );
-}
-
-function DeviationTable({ rows }: { rows: DeviationRow[] }) {
-  const [page, setPage] = useState(1);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const pageCount = Math.max(1, Math.ceil(rows.length / 10));
-  const activePage = Math.min(page, pageCount);
-  const sorted = useMemo(
-    () =>
-      [...rows].sort(
-        (a, b) =>
-          (b.day ?? "").localeCompare(a.day ?? "") ||
-          String(b.source.id ?? "").localeCompare(String(a.source.id ?? ""), "vi", { numeric: true }),
-      ),
-    [rows],
-  );
-  const visible = sorted.slice((activePage - 1) * 10, activePage * 10);
-  return (
-    <Panel
-      title="Danh sách sai lệch chi tiết"
-      subtitle="Mở từng phiếu để xem nội dung, nguyên nhân, phương án, kết quả xử lý và thông tin người liên quan."
-    >
-      <div className="relative overflow-x-auto rounded-lg border">
-        <table className="w-full min-w-[1000px] text-left text-sm">
-          <caption className="sr-only">Danh sách {rows.length} phiếu sai lệch phù hợp bộ lọc</caption>
-          <thead className="bg-slate-50 text-xs text-slate-600">
-            <tr>
-              {[
-                "Phiếu / Ngày",
-                "Sản phẩm / Số lô",
-                "Nội dung sai lệch",
-                "Nhóm nguyên nhân",
-                "Tình trạng hồ sơ",
-                "SL ảnh hưởng",
-              ].map((title) => (
-                <th key={title} scope="col" className="px-3 py-3 font-semibold">
-                  {title}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((row, index) => {
-              const key = `${row.source.id ?? "row"}-${(activePage - 1) * 10 + index}`;
-              const open = expanded === key;
-              return (
-                <Fragment key={key}>
-                  <tr className="border-t align-top hover:bg-slate-50/60">
-                    <td className="px-3 py-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto gap-1 px-0 text-indigo-700"
-                        onClick={() => setExpanded(open ? null : key)}
-                        aria-expanded={open}
-                        aria-controls={`deviation-detail-${key}`}
-                        aria-label={`${open ? "Ẩn" : "Xem"} chi tiết phiếu ${row.source.id ?? index + 1}`}
-                      >
-                        {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}#
-                        {row.source.id ?? "—"}
-                      </Button>
-                      <p className="mt-1 whitespace-nowrap text-xs text-slate-500">{dayLabel(row.day)}</p>
-                    </td>
-                    <td className="max-w-64 px-3 py-3">
-                      <p className="font-medium">{row.product}</p>
-                      <p className="mt-1 text-xs text-slate-500">Lô: {row.lot}</p>
-                    </td>
-                    <td className="max-w-72 px-3 py-3">
-                      <p className="line-clamp-3 whitespace-pre-wrap break-words">
-                        {reportText(row.source.deviation_content) || "Chưa ghi nhận"}
-                      </p>
-                    </td>
-                    <td className="px-3 py-3">{row.cause}</td>
-                    <td className="px-3 py-3">
-                      <StageBadge stage={row.stage} />
-                    </td>
-                    <td className="px-3 py-3 tabular-nums">
-                      {quantityLabel(row.source.affected_quantity, row.source.affected_quantity_unit)}
-                    </td>
-                  </tr>
-                  {open ? (
-                    <tr id={`deviation-detail-${key}`} className="border-t bg-indigo-50/30">
-                      <td colSpan={6}>
-                        <Details row={row} />
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
-              );
-            })}
-            {!rows.length ? (
-              <tr>
-                <td colSpan={6} className="p-8 text-center text-slate-500">
-                  Không có phiếu sai lệch phù hợp bộ lọc.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-        <p>
-          {rows.length
-            ? `${(activePage - 1) * 10 + 1}–${Math.min(activePage * 10, rows.length)} / ${number(rows.length)} phiếu`
-            : "0 phiếu"}
-        </p>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={activePage === 1}
-            onClick={() => {
-              setPage(activePage - 1);
-              setExpanded(null);
-            }}
-          >
-            Trước
-          </Button>
-          <span>
-            Trang {activePage}/{pageCount}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={activePage === pageCount}
-            onClick={() => {
-              setPage(activePage + 1);
-              setExpanded(null);
-            }}
-          >
-            Sau
-          </Button>
-        </div>
-      </div>
-    </Panel>
   );
 }
 
@@ -357,12 +150,12 @@ export default function DeviationReport({
   const report = useMemo(() => buildDeviationReport(filtered, range), [filtered, range]);
   const deviationOrderRate = typeof totalProductionOrders === "number"
     ? totalProductionOrders > 0
-      ? percent((report.total / totalProductionOrders) * 100)
+      ? `${((report.total / totalProductionOrders) * 100).toFixed(1)}%`
       : "—"
     : totalProductionOrders;
-  const affectedLotRate = typeof totalProductionOrders === "number"
+  const affectedOrderRate = typeof totalProductionOrders === "number"
     ? totalProductionOrders > 0
-      ? percent((report.affectedOrders / totalProductionOrders) * 100)
+      ? `${((report.affectedOrders / totalProductionOrders) * 100).toFixed(1)}%`
       : "—"
     : totalProductionOrders;
   const affectedProductRate = typeof totalProducts === "number"
@@ -386,7 +179,6 @@ export default function DeviationReport({
   const activeFilters = Object.entries(filters).some(([key, value]) =>
     key === "search" ? value.trim() !== "" : value !== "all",
   );
-  const heatMax = Math.max(1, ...report.heatmap.flatMap((point) => point.weekdays));
   const timeTick = (key: string) => report.timeline.find((point) => point.key === key)?.label ?? key;
   const timeTooltip = (key: unknown) =>
     report.timeline.find((point) => point.key === String(key))?.tooltipLabel ?? String(key);
@@ -435,60 +227,129 @@ export default function DeviationReport({
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div className="space-y-3 divide-y divide-blue-200">
+            {[
+              {
+                label: "Tổng số lệnh sản xuất",
+                value: typeof totalProductionOrders === "number" ? number(totalProductionOrders) : totalProductionOrders,
+                icon: Factory,
+                color: "text-blue-950",
+              },
+              {
+                label: "Tổng số sản phẩm",
+                value: typeof totalProducts === "number" ? number(totalProducts) : totalProducts,
+                icon: Package,
+                color: "text-emerald-950",
+              },
+            ].map((metric) => (
+              <div key={metric.label} className={`pt-3 first:pt-0 ${metric.color}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium">{metric.label}</p>
+                  <metric.icon aria-hidden="true" className="size-5 shrink-0 opacity-70" />
+                </div>
+                <p className="mt-1 text-2xl font-bold tabular-nums">{metric.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
         {[
-          {
-            label: "Tổng số lệnh sản xuất",
-            value: typeof totalProductionOrders === "number" ? number(totalProductionOrders) : totalProductionOrders,
-            hint: "Lệnh trong kỳ, không gồm lệnh đã hủy",
-            icon: Factory,
-            theme: "border-blue-200 bg-blue-50 text-blue-950",
-          },
-          {
-            label: "Tổng số sản phẩm",
-            value: typeof totalProducts === "number" ? number(totalProducts) : totalProducts,
-            hint: "Sản phẩm có lệnh trong kỳ, không gồm lệnh đã hủy",
-            icon: Package,
-            theme: "border-emerald-200 bg-emerald-50 text-emerald-950",
-          },
           {
             label: "Tổng phiếu sai lệch",
             value: number(report.total),
-            hint: `Tỷ lệ phiếu sai lệch / tổng lệnh sản xuất: ${deviationOrderRate}`,
+            hint: (
+              <>
+                <strong className="text-2xl font-extrabold tabular-nums leading-none">{deviationOrderRate}</strong>{" "}
+                <span className="whitespace-nowrap text-sm font-semibold">Tổng số lệnh</span>
+              </>
+            ),
+            hintClassName: "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-amber-200 px-3 py-2.5 text-amber-950 ring-1 ring-inset ring-amber-300",
             icon: AlertTriangle,
             theme: "border-amber-200 bg-amber-50 text-amber-950",
           },
           {
             label: "Lệnh có sai lệch",
             value: number(report.affectedOrders),
-            hint: `Tỷ lệ lô sai lệch / tổng số lô: ${affectedLotRate}`,
+            hint: (
+              <>
+                <strong className="text-2xl font-extrabold tabular-nums leading-none">{affectedOrderRate}</strong>{" "}
+                <span className="whitespace-nowrap text-sm font-semibold">tổng số lệnh</span>
+              </>
+            ),
+            hintClassName: "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-rose-200 px-3 py-2.5 text-rose-950 ring-1 ring-inset ring-rose-300",
             icon: FileWarning,
             theme: "border-rose-200 bg-rose-50 text-rose-950",
           },
           {
             label: "Sản phẩm có sai lệch",
             value: number(report.productCount),
-            hint: `Tỷ lệ sản phẩm có sai lệch / tổng số sản phẩm: ${affectedProductRate}`,
+            hint: (
+              <>
+                <strong className="text-2xl font-extrabold tabular-nums leading-none">{affectedProductRate}</strong>{" "}
+                <span className="whitespace-nowrap text-sm font-semibold">tổng số sản phẩm</span>
+              </>
+            ),
+            hintClassName: "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-indigo-200 px-3 py-2.5 text-indigo-950 ring-1 ring-inset ring-indigo-300",
             icon: Package,
             theme: "border-indigo-200 bg-indigo-50 text-indigo-950",
           },
           {
             label: "Chưa phân loại nguyên nhân",
             value: number(report.unclassifiedCount),
-            hint: `Tỷ lệ phiếu chưa phân loại nguyên nhân / tổng phiếu sai lệch: ${report.total ? percent((report.unclassifiedCount / report.total) * 100) : "—"}`,
+            hint: (
+              <>
+                <strong className="text-2xl font-extrabold tabular-nums leading-none">
+                  {report.total ? percent((report.unclassifiedCount / report.total) * 100) : "—"}
+                </strong>{" "}
+                <span className="whitespace-nowrap text-sm font-semibold">tổng phiếu sai lệch</span>
+              </>
+            ),
+            hintClassName: "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-orange-200 px-3 py-2.5 text-orange-950 ring-1 ring-inset ring-orange-300",
             icon: Tags,
             theme: "border-orange-200 bg-orange-50 text-orange-950",
           },
           {
+            label: "Chưa có nguyên nhân",
+            value: number(report.missingCause),
+            hint: (
+              <>
+                <strong className="text-2xl font-extrabold tabular-nums leading-none">
+                  {report.total ? percent((report.missingCause / report.total) * 100) : "—"}
+                </strong>{" "}
+                <span className="whitespace-nowrap text-sm font-semibold">tổng phiếu sai lệch</span>
+              </>
+            ),
+            hintClassName: "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-yellow-200 px-3 py-2.5 text-yellow-950 ring-1 ring-inset ring-yellow-300",
+            icon: FileWarning,
+            theme: "border-yellow-200 bg-yellow-50 text-yellow-950",
+          },
+          {
             label: "Chưa có phương án xử lý",
             value: number(report.unplannedCount),
-            hint: `Tỷ lệ phiếu chưa có phương án xử lý / tổng phiếu sai lệch: ${report.total ? percent((report.unplannedCount / report.total) * 100) : "—"}`,
+            hint: (
+              <>
+                <strong className="text-2xl font-extrabold tabular-nums leading-none">
+                  {report.total ? percent((report.unplannedCount / report.total) * 100) : "—"}
+                </strong>{" "}
+                <span className="whitespace-nowrap text-sm font-semibold">tổng phiếu sai lệch</span>
+              </>
+            ),
+            hintClassName: "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-sky-200 px-3 py-2.5 text-sky-950 ring-1 ring-inset ring-sky-300",
             icon: ClipboardList,
             theme: "border-sky-200 bg-sky-50 text-sky-950",
           },
           {
             label: "Đã ghi nhận kết quả",
             value: number(report.resultCount),
-            hint: `Tỷ lệ phiếu có kết quả xử lý / tổng phiếu sai lệch: ${report.total ? percent(report.resultRate) : "—"}`,
+            hint: (
+              <>
+                <strong className="text-2xl font-extrabold tabular-nums leading-none">
+                  {report.total ? percent(report.resultRate) : "—"}
+                </strong>{" "}
+                <span className="whitespace-nowrap text-sm font-semibold">tổng phiếu sai lệch</span>
+              </>
+            ),
+            hintClassName: "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-emerald-200 px-3 py-2.5 text-emerald-950 ring-1 ring-inset ring-emerald-300",
             icon: CheckCircle2,
             theme: "border-emerald-200 bg-emerald-50 text-emerald-950",
           },
@@ -499,7 +360,9 @@ export default function DeviationReport({
               <metric.icon aria-hidden="true" className="size-5 shrink-0 opacity-70" />
             </div>
             <p className="mt-3 text-3xl font-bold tabular-nums">{metric.value}</p>
-            <p className="mt-2 text-xs leading-relaxed text-slate-600">{metric.hint}</p>
+            <p className={`mt-2 leading-relaxed ${metric.hintClassName ?? "text-xs text-slate-600"}`}>
+              {metric.hint}
+            </p>
           </div>
         ))}
       </div>
@@ -574,43 +437,50 @@ export default function DeviationReport({
               title="Cơ cấu nhóm nguyên nhân"
               subtitle="Tỷ trọng số phiếu theo từng nhóm nguyên nhân."
             >
-              <Plot hasData={report.causes.length > 0} height={280}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={report.causes} dataKey="count" nameKey="name" outerRadius="85%">
-                      {report.causes.map((cause, index) => (
-                        <Cell key={cause.name} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value, name) => [
-                        `${number(Number(value))} phiếu · ${percent((Number(value) / report.total) * 100)}`,
-                        name,
-                      ]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Plot>
-              <ul className="space-y-2">
-                {report.causes.map((cause, index) => (
-                  <li key={cause.name} className="flex items-center justify-between gap-3 text-xs">
-                    <span className="flex min-w-0 items-center gap-2 text-slate-600">
-                      <span
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+              <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="mx-auto aspect-square w-full max-w-[280px] min-w-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={report.causes} dataKey="count" nameKey="name" outerRadius="85%">
+                        {report.causes.map((cause, index) => (
+                          <Cell key={cause.name} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, name) => [
+                          `${number(Number(value))} phiếu · ${percent((Number(value) / report.total) * 100)}`,
+                          name,
+                        ]}
                       />
-                      {cause.name}
-                    </span>
-                    <span className="whitespace-nowrap font-semibold tabular-nums">
-                      {number(cause.count)} phiếu · {percent(cause.percentage)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-xs text-slate-500">
-                Chưa phân loại: {number(report.unclassifiedCount)} phiếu. Nhóm này được giữ trong phân tích để phản ánh
-                đầy đủ dữ liệu.
-              </p>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="min-w-0">
+                  <ul className="space-y-3">
+                    {report.causes.map((cause, index) => (
+                      <li
+                        key={cause.name}
+                        className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-slate-100 pb-2 text-xs"
+                      >
+                        <span className="flex min-w-0 items-start gap-2 text-slate-600">
+                          <span
+                            className="mt-0.5 size-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <span className="min-w-0 break-words">{cause.name}</span>
+                        </span>
+                        <span className="whitespace-nowrap font-semibold tabular-nums">
+                          {number(cause.count)} phiếu · {percent(cause.percentage)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-4 text-xs leading-relaxed text-slate-500">
+                    Chưa phân loại: {number(report.unclassifiedCount)} phiếu. Nhóm này được giữ trong phân tích để phản ánh
+                    đầy đủ dữ liệu.
+                  </p>
+                </div>
+              </div>
             </Panel>
           </div>
 
@@ -619,45 +489,55 @@ export default function DeviationReport({
               title="Cơ cấu tình trạng hồ sơ"
               subtitle="Tỷ trọng phiếu theo mức độ cập nhật phương án và kết quả xử lý."
             >
-              <Plot hasData={report.total > 0} height={250}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={report.stages.filter((stage) => stage.count > 0)}
-                      dataKey="count"
-                      nameKey="label"
-                      innerRadius="55%"
-                      outerRadius="80%"
-                      paddingAngle={3}
+              <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="mx-auto w-full max-w-[280px] min-w-0">
+                  <Plot hasData={report.total > 0} height={250}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={report.stages.filter((stage) => stage.count > 0)}
+                          dataKey="count"
+                          nameKey="label"
+                          innerRadius="55%"
+                          outerRadius="80%"
+                          paddingAngle={3}
+                        >
+                          {report.stages
+                            .filter((stage) => stage.count > 0)
+                            .map((stage) => (
+                              <Cell key={stage.key} fill={stage.color} />
+                            ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value, name) => [
+                            `${number(Number(value))} phiếu · ${percent((Number(value) / report.total) * 100)}`,
+                            name,
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Plot>
+                </div>
+                <ul className="min-w-0 space-y-3">
+                  {report.stages.map((stage) => (
+                    <li
+                      key={stage.key}
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-slate-100 pb-2 text-xs"
                     >
-                      {report.stages
-                        .filter((stage) => stage.count > 0)
-                        .map((stage) => (
-                          <Cell key={stage.key} fill={stage.color} />
-                        ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value, name) => [
-                        `${number(Number(value))} phiếu · ${percent((Number(value) / report.total) * 100)}`,
-                        name,
-                      ]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Plot>
-              <ul className="space-y-2">
-                {report.stages.map((stage) => (
-                  <li key={stage.key} className="flex items-center justify-between gap-3 text-xs">
-                    <span className="flex items-center gap-2 text-slate-600">
-                      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: stage.color }} />
-                      {stage.label}
-                    </span>
-                    <span className="whitespace-nowrap font-semibold tabular-nums">
-                      {number(stage.count)} · {percent((stage.count / report.total) * 100)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                      <span className="flex min-w-0 items-start gap-2 text-slate-600">
+                        <span
+                          className="mt-0.5 size-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: stage.color }}
+                        />
+                        <span className="min-w-0 break-words">{stage.label}</span>
+                      </span>
+                      <span className="whitespace-nowrap font-semibold tabular-nums">
+                        {number(stage.count)} · {percent((stage.count / report.total) * 100)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </Panel>
             <Panel
               title="10 sản phẩm có nhiều sai lệch nhất"
@@ -764,127 +644,16 @@ export default function DeviationReport({
               </p>
             </Panel>
             <Panel
-              title="Tuổi hồ sơ chưa có kết quả"
-              subtitle={`Số ngày từ ngày ghi nhận đến hôm nay (${dayLabel(today)}), chỉ tính phiếu chưa có kết quả xử lý.`}
+              title="Mật độ sai lệch theo ngày"
+              subtitle="Mỗi ô là một ngày, mỗi cột là một tuần. Di chuột lên ô để xem ngày và số phiếu; màu xanh càng đậm, số phiếu càng nhiều."
+              className="xl:col-span-2"
             >
-              <Plot hasData={report.pendingCount > report.unknownAgeCount}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={report.ages}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip formatter={tooltipNumber} />
-                    <Bar dataKey="count" name="Phiếu chưa có kết quả" radius={[5, 5, 0, 0]} maxBarSize={60}>
-                      {report.ages.map((point, index) => (
-                        <Cell key={point.name} fill={["#bae6fd", "#38bdf8", "#fbbf24", "#fb923c", "#f43f5e"][index]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </Plot>
-              <p className="mt-2 text-xs text-slate-500">
-                Tuổi lớn nhất:{" "}
-                {report.pendingCount > report.unknownAgeCount ? `${number(report.oldestPending)} ngày` : "—"}.{" "}
-                {report.unknownAgeCount > 0 ? `${number(report.unknownAgeCount)} phiếu thiếu ngày hợp lệ.` : ""} Tuổi hồ
-                sơ không phải thời gian hoàn tất hay chỉ số quá hạn.
-              </p>
-            </Panel>
-            <Panel
-              title="Mật độ phát sinh theo thứ trong tuần"
-              subtitle={`Bản đồ nhiệt theo ${report.resolutionLabel} tạo phiếu và thứ trong tuần. Ô càng đậm, số phiếu càng nhiều.`}
-            >
-              {report.heatmap.length ? (
-                <>
-                  <div className="relative overflow-x-auto rounded-lg border">
-                    <table className="w-full min-w-[420px] text-center text-xs">
-                      <caption className="sr-only">Số phiếu theo kỳ phát sinh và thứ trong tuần</caption>
-                      <thead className="sticky top-0 z-[1] bg-slate-50">
-                        <tr>
-                          <th scope="col" className="p-2 text-left">
-                            Kỳ
-                          </th>
-                          {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((day) => (
-                            <th scope="col" key={day} className="p-2">
-                              {day}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {report.heatmap.map((point) => (
-                          <tr key={point.key}>
-                            <th
-                              scope="row"
-                              className="whitespace-nowrap p-2 text-left font-medium text-slate-600"
-                              title={point.tooltipLabel}
-                            >
-                              {report.resolutionLabel === "ngày" ? dayLabel(point.key) : point.label}
-                            </th>
-                            {point.weekdays.map((count, index) => (
-                              <td key={index} className="p-1">
-                                <div
-                                  className="rounded p-2 font-medium tabular-nums"
-                                  title={`${point.tooltipLabel} · ${["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"][index]}: ${count} phiếu`}
-                                  style={{
-                                    backgroundColor: count
-                                      ? `rgba(79, 70, 229, ${0.15 + (count / heatMax) * 0.85})`
-                                      : "#f1f5f9",
-                                    color: count / heatMax >= 0.5 ? "white" : "#334155",
-                                  }}
-                                >
-                                  {count}
-                                </div>
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="mt-3 flex items-center justify-end gap-2 text-xs text-slate-500">
-                    <span>0</span>
-                    {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-                      <span
-                        key={ratio}
-                        className="h-3 w-5 rounded-sm"
-                        style={{ backgroundColor: ratio ? `rgba(79, 70, 229, ${0.15 + ratio * 0.85})` : "#f1f5f9" }}
-                      />
-                    ))}
-                    <span>{number(heatMax)} phiếu</span>
-                  </div>
-                </>
-              ) : (
-                <Plot hasData={false}>{null}</Plot>
-              )}
+              <DeviationCalendarHeatmap heatmap={report.heatmap} />
             </Panel>
           </div>
 
-          <Panel
-            title="Mức độ đầy đủ của dữ liệu"
-            subtitle="Các chỉ số dưới đây giúp ưu tiên bổ sung thông tin để phân tích nguyên nhân và tác động chính xác hơn."
-          >
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {[
-                ["Thiếu nguyên nhân", report.missingCause],
-                ["Chưa phân loại nguyên nhân", report.unclassifiedCount],
-                ["Thiếu số lượng ảnh hưởng", report.missingQuantity],
-                ["Thiếu ngày hợp lệ", report.undatedCount],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-lg bg-slate-50 p-3">
-                  <p className="text-sm text-slate-500">{label}</p>
-                  <p className="mt-2 text-xl font-semibold tabular-nums text-slate-900">
-                    {number(Number(value))}
-                    <span className="ml-2 text-xs font-normal text-slate-500">
-                      phiếu · {percent((Number(value) / report.total) * 100)}
-                    </span>
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Panel>
         </>
       )}
-      <DeviationTable key={JSON.stringify([filters, range])} rows={filtered} />
     </div>
   );
 }

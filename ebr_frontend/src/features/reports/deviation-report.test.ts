@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildDeviationReport,
+  buildDeviationHeatmap,
   EMPTY_DEVIATION_FILTERS,
   filterDeviationRows,
   normalizeDeviation,
@@ -101,9 +102,64 @@ test("all-time stage buckets align with the common timeline, including empty mon
   );
   assert.equal(report.timeline.at(-1)?.cumulative, 3);
   assert.equal(
-    report.heatmap.reduce((sum, point) => sum + point.weekdays.reduce((a, b) => a + b, 0), 0),
+    report.heatmap.total,
     3,
   );
+});
+
+test("calendar heatmap counts individual Vietnam dates and fills missing days, independent of monthly trends", () => {
+  const report = buildDeviationReport(
+    rows([
+      { created_at: "2026-05-04" },
+      { created_at: "2026-05-04T17:30:00Z" }, // May 5 in Vietnam.
+      { created_at: "2026-05-05" },
+      { created_at: "2026-09-30" },
+      {},
+    ]),
+    { from: "2026-05-01", to: "2026-10-31" },
+  );
+  const calendar = report.heatmap;
+  const cells = calendar.weeks.flatMap((week) => week.days).filter((cell) => cell !== null);
+  assert.equal(report.resolutionLabel, "tháng");
+  assert.equal(cells.length, 184);
+  assert.equal(calendar.total, 4);
+  assert.equal(calendar.maxCount, 2);
+  assert.deepEqual(calendar.weeks[0].days.slice(0, 5), [null, null, null, null, null]);
+  assert.equal(calendar.weeks[0].days[5]?.day, "2026-05-01");
+  assert.equal(cells.find((cell) => cell.day === "2026-05-04")?.count, 1);
+  assert.equal(cells.find((cell) => cell.day === "2026-05-05")?.count, 2);
+  assert.equal(cells.find((cell) => cell.day === "2026-05-06")?.count, 0);
+  assert.equal(cells.reduce((sum, cell) => sum + cell.count, 0), 4);
+  assert.deepEqual(calendar.months.map((month) => month.key), [
+    "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10",
+  ]);
+});
+
+test("calendar heatmap respects range edges, Sunday columns and four green intensity levels", () => {
+  const calendar = buildDeviationHeatmap(
+    ["2026-10-03", "2026-10-04", ...Array(2).fill("2026-10-05"), ...Array(3).fill("2026-10-06"), ...Array(4).fill("2026-10-07"), "2026-10-09"],
+    { from: "2026-10-04", to: "2026-10-08" },
+  );
+  assert.equal(calendar.weeks.length, 1);
+  assert.equal(calendar.weeks[0].days[0]?.day, "2026-10-04");
+  assert.deepEqual(calendar.weeks[0].days.map((cell) => cell?.level ?? null), [1, 2, 3, 4, 0, null, null]);
+  assert.equal(calendar.total, 10);
+});
+
+test("calendar heatmap handles empty ranges, leap days, year boundaries and all-time data", () => {
+  assert.equal(buildDeviationHeatmap([], null).weeks.length, 0);
+  assert.equal(buildDeviationHeatmap([], { from: "2026-10-02", to: "2026-10-01" }).weeks.length, 0);
+  assert.equal(buildDeviationHeatmap([], { from: "2026-02-30", to: "2026-03-01" }).weeks.length, 0);
+  const emptyRange = buildDeviationHeatmap([], { from: "2024-02-28", to: "2024-03-01" });
+  assert.equal(emptyRange.total, 0);
+  assert.equal(emptyRange.maxCount, 0);
+  assert.deepEqual(emptyRange.weeks.flatMap((week) => week.days).filter((cell) => cell !== null).map((cell) => [cell.day, cell.count, cell.level]), [
+    ["2024-02-28", 0, 0], ["2024-02-29", 0, 0], ["2024-03-01", 0, 0],
+  ]);
+  const allTime = buildDeviationHeatmap(["2027-01-01", "2026-12-31"], null);
+  assert.equal(allTime.from, "2026-12-31");
+  assert.equal(allTime.to, "2027-01-01");
+  assert.deepEqual(allTime.months.map((month) => month.key), ["2026-12", "2027-01"]);
 });
 
 test("groups quantities by their own unit without inventing missing quantities or units", () => {

@@ -131,6 +131,50 @@ function countsBy(rows: DeviationRow[], key: (row: DeviationRow) => string) {
   );
 }
 
+export function buildDeviationHeatmap(days: string[], range: { from: string; to: string } | null) {
+  const sorted = [...days].sort();
+  const from = range?.from ?? sorted[0];
+  const to = range?.to ?? sorted.at(-1);
+  const weeks: { key: string; days: ({ day: string; count: number; level: number } | null)[] }[] = [];
+  const months: { key: string; label: string; column: number }[] = [];
+  const empty = { weeks, months, from: null, to: null, maxCount: 0, total: 0 };
+  if (!from || !to || getReportDay(from) !== from || getReportDay(to) !== to || from > to) return empty;
+
+  const counts = new Map<string, number>();
+  days.forEach((day) => {
+    if (day >= from && day <= to) counts.set(day, (counts.get(day) ?? 0) + 1);
+  });
+  const maxCount = Array.from(counts.values()).reduce((max, count) => Math.max(max, count), 0);
+  const total = Array.from(counts.values()).reduce((sum, count) => sum + count, 0);
+  // Dates are already normalized to Vietnam time; use UTC for calendar arithmetic.
+  // GitHub lays out weeks from Sunday to Saturday, with one column per week.
+  const cursor = new Date(`${from}T00:00:00Z`);
+  cursor.setUTCDate(cursor.getUTCDate() - cursor.getUTCDay());
+  const end = new Date(`${to}T00:00:00Z`);
+  let previousMonth = "";
+  while (cursor <= end) {
+    const key = cursor.toISOString().slice(0, 10);
+    const week: (typeof weeks)[number] = { key, days: [] };
+    for (let weekday = 0; weekday < 7; weekday += 1) {
+      const day = cursor.toISOString().slice(0, 10);
+      if (day < from || day > to) {
+        week.days.push(null);
+      } else {
+        const month = day.slice(0, 7);
+        if (month !== previousMonth) {
+          months.push({ key: month, label: `T${cursor.getUTCMonth() + 1}`, column: weeks.length });
+          previousMonth = month;
+        }
+        const count = counts.get(day) ?? 0;
+        week.days.push({ day, count, level: count ? Math.ceil((count / maxCount) * 4) : 0 });
+      }
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    weeks.push(week);
+  }
+  return { weeks, months, from, to, maxCount, total };
+}
+
 export function buildDeviationReport(rows: DeviationRow[], range: { from: string; to: string } | null) {
   const dated = rows.filter((row): row is DeviationRow & { day: string } => row.day !== null);
   const time = buildTimeSummary(
@@ -212,16 +256,6 @@ export function buildDeviationReport(rows: DeviationRow[], range: { from: string
     name: bucket.name,
     count: pending.filter((row) => row.age !== null && row.age >= bucket.min && row.age <= bucket.max).length,
   }));
-  const weekdayCounts = new Map<string, number[]>();
-  time.points.forEach((point) => weekdayCounts.set(point.key, Array(7).fill(0)));
-  // Aggregate weekdays within the same adaptive period used by the trend.
-  const periodKeys = time.points.map((point) => point.key);
-  dated.forEach((row) => {
-    const period = periodKeys.findLast((key) => row.day >= key);
-    if (!period) return;
-    const weekday = (new Date(`${row.day}T00:00:00Z`).getUTCDay() + 6) % 7;
-    weekdayCounts.get(period)![weekday] += 1;
-  });
   return {
     total: rows.length,
     affectedOrders: new Set(rows.map((row) => row.orderId).filter((id) => id !== null)).size,
@@ -251,7 +285,7 @@ export function buildDeviationReport(rows: DeviationRow[], range: { from: string
     })),
     quantities: Array.from(quantities.values()).sort((a, b) => a.unit.localeCompare(b.unit, "vi")),
     ages,
-    heatmap: time.points.map((point) => ({ ...point, weekdays: weekdayCounts.get(point.key)! })),
+    heatmap: buildDeviationHeatmap(dated.map((row) => row.day), commonRange),
   };
 }
 
