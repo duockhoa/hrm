@@ -94,9 +94,6 @@ export default function FinishedProductOutputChart({
           </div>
         )}
       </div>
-      <p className="mt-3 text-xs text-gray-500">
-        Kế hoạch = tổng số lượng kế hoạch trên lệnh thành phẩm. Thực tế (hộp) = số kiện × số hộp/kiện + số hộp lẻ. Cộng các phiếu tổng kết thuộc cùng lô; lô chưa có tổng kết vẫn được tính vào kế hoạch.
-      </p>
     </section>
   );
 }
