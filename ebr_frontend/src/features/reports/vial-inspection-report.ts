@@ -164,21 +164,10 @@ export function buildVialInspectionReport(rows: VialInspectionRow[], range: Vial
     };
   });
   const totalErrors = rows.reduce((sum, row) => sum + row.knownTotal, 0);
-  let cumulativeShare = 0;
   const defects = VIAL_DEFECTS.map((defect) => ({
     ...defect,
     count: rows.reduce((sum, row) => sum + (row.counts[defect.key] ?? 0), 0),
   }));
-  const pareto = [...defects]
-    .sort((a, b) => b.count - a.count)
-    .map((defect) => {
-      cumulativeShare += defect.count;
-      return {
-        ...defect,
-        share: totalErrors ? (defect.count / totalErrors) * 100 : 0,
-        cumulative: totalErrors ? (cumulativeShare / totalErrors) * 100 : 0,
-      };
-    });
   const groupRows = (key: (row: VialInspectionRow) => string, label: (row: VialInspectionRow) => string) => {
     const groups = new Map<
       string,
@@ -240,11 +229,6 @@ export function buildVialInspectionReport(rows: VialInspectionRow[], range: Vial
     name: bucket.name,
     count: complete.filter((row) => row.total! >= bucket.min && row.total! <= bucket.max).length,
   }));
-  const heatmap = time.points.map((point) => ({ ...point, weekdays: Array<number>(7).fill(0) }));
-  dated.forEach((row) => {
-    const point = heatmap.findLast((period) => row.day >= period.key);
-    if (point) point.weekdays[(new Date(`${row.day}T00:00:00Z`).getUTCDay() + 6) % 7] += row.knownTotal;
-  });
   return {
     total: rows.length,
     totalErrors,
@@ -266,9 +250,7 @@ export function buildVialInspectionReport(rows: VialInspectionRow[], range: Vial
     timeline,
     resolutionLabel: time.resolutionLabel,
     defects,
-    pareto,
     histogram,
-    heatmap,
     products: groupRows(
       (row) => row.productKey,
       (row) => row.product,
@@ -281,17 +263,5 @@ export function buildVialInspectionReport(rows: VialInspectionRow[], range: Vial
       (row) => row.creatorKey,
       (row) => row.creator,
     ).sort((a, b) => b.records - a.records),
-    scatter: rows
-      .filter((row) => row.counts.fiber_vial_count !== null && row.counts.damaged_count !== null)
-      .map((row) => ({
-        fiber: row.counts.fiber_vial_count!,
-        damaged: row.counts.damaged_count!,
-        total: row.total,
-        product: row.product,
-        lot: row.lot,
-        bag: row.bag,
-        id: row.source.id,
-        creator: row.creator,
-      })),
   };
 }

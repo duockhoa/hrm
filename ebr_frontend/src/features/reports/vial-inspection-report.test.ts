@@ -133,7 +133,7 @@ test("excludes cancelled orders by default and keeps records available on explic
   assert.equal(report.totalErrors, 5);
 });
 
-test("all-time defect series align across empty months and heatmap sums correct weekdays", () => {
+test("all-time defect series align across empty months", () => {
   const rows = buildVialInspectionRows(
     [
       check(1, { created_at: "2026-01-01", fiber_vial_count: 2 }),
@@ -155,14 +155,6 @@ test("all-time defect series align across empty months and heatmap sums correct 
     ],
   );
   assert.equal(report.timeline.at(-1)?.cumulative, 9);
-  assert.equal(report.heatmap[0].weekdays[3], 2);
-  assert.equal(report.heatmap[5].weekdays[0], 4);
-  assert.equal(
-    report.heatmap.reduce((sum, point) => sum + point.weekdays.reduce((a, b) => a + b, 0), 0),
-    9,
-  );
-  assert.equal(report.pareto[0].key, "damaged_count");
-  assert.equal(report.pareto.at(-1)?.cumulative, 100);
 });
 
 test("histogram bucket boundaries cover each complete record exactly once", () => {
@@ -178,7 +170,6 @@ test("histogram bucket boundaries cover each complete record exactly once", () =
     report.histogram.map((point) => point.count),
     [1, 2, 2, 2, 1],
   );
-  assert.equal(report.scatter.length, 8);
 });
 
 test("handles missing order/bag IDs, strict counts, and empty data without invented rates", () => {
