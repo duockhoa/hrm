@@ -8,8 +8,6 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ReportProductFilter from "./report-product-filter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_ROUTES } from "@/lib/api-routes";
@@ -19,7 +17,6 @@ import {
   buildVialInspectionRows,
   EMPTY_VIAL_FILTERS,
   filterVialInspectionRows,
-  VIAL_DEFECTS,
   type ReportVialInspection,
   type VialReportFilters,
   type VialReportRange,
@@ -86,39 +83,6 @@ function VialInspectionSummary({ report }: { report: Report }) {
   );
 }
 
-function FilterSelect({
-  id,
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <div className="min-w-0 space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={id} className="w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Tất cả</SelectItem>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
 export default function VialInspectionReport({ range }: { range: VialReportRange }) {
   const [filters, setFilters] = useState<VialReportFilters>(EMPTY_VIAL_FILTERS);
   const checks = useSWR<ReportVialInspection[]>(
@@ -137,9 +101,9 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
   }, [rows]);
   const filtered = useMemo(() => filterVialInspectionRows(rows, filters), [rows, filters]);
   const report = useMemo(() => buildVialInspectionReport(filtered, range), [filtered, range]);
-  const setFilter = (key: "product" | "defect", value: string) =>
+  const setFilter = (key: "product", value: string) =>
     setFilters((current) => ({ ...current, [key]: value }));
-  const activeFilters = filters.product !== "all" || filters.defect !== "all";
+  const activeFilters = filters.product !== "all";
 
   if (checks.isLoading)
     return (
@@ -176,13 +140,6 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
             onChange={(value) => setFilter("product", value)}
             options={options.products}
           />
-          <FilterSelect
-            id="vial-defect"
-            label="Nhóm lỗi"
-            value={filters.defect}
-            onChange={(value) => setFilter("defect", value)}
-            options={VIAL_DEFECTS.map((defect) => ({ value: defect.key, label: defect.label }))}
-          />
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p aria-live="polite" className="text-sm text-slate-500">
@@ -205,7 +162,7 @@ export default function VialInspectionReport({ range }: { range: VialReportRange
       <VialInspectionSummary report={report} />
 
       {filtered.length ? (
-        <VialInspectionReportCharts report={report} />
+        <VialInspectionReportCharts report={report} byOrder={filters.product !== "all"} />
       ) : (
         <div role="status" className="rounded-xl border border-dashed bg-white p-8 text-center">
           <FileSearch className="mx-auto mb-3 size-8 text-slate-400" />

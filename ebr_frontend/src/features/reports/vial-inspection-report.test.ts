@@ -157,6 +157,45 @@ test("all-time defect series align across empty months", () => {
   assert.equal(report.timeline.at(-1)?.cumulative, 9);
 });
 
+test("sums batch sizes once per order in each time bucket and per-order trend", () => {
+  const report = buildVialInspectionReport(buildVialInspectionRows([
+    check(1, { fiber_vial_count: 10, productionOrder: { planned_quatity: 1000 } }),
+    check(2, { particulate_count: 20, productionOrder: { planned_quatity: 1000 } }),
+    check(3, { production_order_id: 2, damaged_count: 30, productionOrder: { planned_quatity: "2000" } }),
+    check(4, { created_at: "2026-10-02", fiber_vial_count: 5, productionOrder: { planned_quatity: 1000 } }),
+  ], range), range);
+  assert.equal(report.timeline[0].batchSize, 3000);
+  assert.equal(report.timeline[0].errors / report.timeline[0].batchSize! * 100, 2);
+  assert.equal(report.timeline[1].batchSize, 1000);
+  assert.equal(report.timeline[2].batchSize, null);
+  const order = report.orders.find((point) => point.orderId === "1")!;
+  assert.equal(order.batchSize, 1000);
+  assert.equal(order.errors, 35);
+});
+
+test("deduplicates batch sizes across different days in a monthly bucket", () => {
+  const report = buildVialInspectionReport(buildVialInspectionRows([
+    check(1, { created_at: "2026-01-01", productionOrder: { planned_quatity: 1000 } }),
+    check(2, { created_at: "2026-01-20", productionOrder: { planned_quatity: 1000 } }),
+    check(3, { created_at: "2026-06-01", productionOrder: { planned_quatity: 1000 } }),
+  ], null), null);
+  assert.equal(report.timeline[0].batchSize, 1000);
+  assert.equal(report.timeline[1].batchSize, null);
+  assert.equal(report.timeline[5].batchSize, 1000);
+});
+
+test("missing, zero, or invalid batch sizes do not produce misleading denominators", () => {
+  for (const batchSize of [undefined, null, 0, -1, "invalid"]) {
+    const report = buildVialInspectionReport(buildVialInspectionRows([
+      check(1, { fiber_vial_count: 10, productionOrder: { planned_quatity: 1000 } }),
+      check(2, { production_order_id: 2, damaged_count: 5, productionOrder: { planned_quatity: batchSize } }),
+    ], range), range);
+    assert.equal(report.timeline[0].batchSize, null);
+    assert.equal(report.timeline[0].errors, 15);
+    assert.equal(report.orders.find((point) => point.orderId === "2")?.batchSize, null);
+  }
+});
+
 test("histogram bucket boundaries cover each complete record exactly once", () => {
   const counts = [0, 1, 5, 6, 10, 11, 20, 21];
   const report = buildVialInspectionReport(

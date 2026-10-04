@@ -11,6 +11,8 @@ export type ReportVialInspection = ProductionOrderVialInspectionCheck & {
     lot_no?: string | null;
     status?: string | null;
     date_manufacture?: string | null;
+    planned_quatity?: number | string | null;
+    planned_quantity?: number | string | null;
     item?: { item_code?: string | null; item_name?: string | null } | null;
   } | null;
 };
@@ -93,6 +95,7 @@ export function buildVialInspectionRows(checks: ReportVialInspection[], range: V
         total,
         result,
         orderId: orderId == null ? null : String(orderId),
+        batchSize: vialCount(order?.planned_quatity ?? order?.planned_quantity),
         orderLabel: text(order?.production_order_code) || (orderId == null ? "Chưa rõ lệnh" : `#${orderId}`),
         itemCode,
         productKey,
@@ -148,15 +151,37 @@ export function buildVialInspectionReport(rows: VialInspectionRow[], range: Vial
     ).points;
   };
   const defectSeries = VIAL_DEFECTS.map(({ key }) => series(dated, (row) => row.counts[key] ?? 0));
+  const orderBatchSizes = new Map<string, number | null>();
+  rows.forEach((row) => {
+    if (row.orderId !== null && !orderBatchSizes.has(row.orderId)) {
+      orderBatchSizes.set(row.orderId, row.batchSize !== null && row.batchSize > 0 ? row.batchSize : null);
+    }
+  });
+  const orderRows = new Map<string, VialInspectionRow[]>();
+  dated.forEach((row) => {
+    const key = row.orderId ?? `unknown:${row.key}`;
+    const subset = orderRows.get(key) ?? [];
+    subset.push(row);
+    orderRows.set(key, subset);
+  });
+  const batchSeries = Array.from(orderRows, ([key, subset]) => ({
+    batchSize: orderBatchSizes.get(key) ?? null,
+    points: series(subset, () => 1),
+  }));
   let cumulative = 0;
   const timeline = time.points.map((point, index) => {
     const values = VIAL_DEFECTS.map((_, defectIndex) => defectSeries[defectIndex][index]?.count ?? 0);
     const errors = values.reduce((sum, value) => sum + value, 0);
     cumulative += errors;
+    const batches = batchSeries.filter((batch) => (batch.points[index]?.count ?? 0) > 0);
+    const batchSize = batches.length && batches.every((batch) => batch.batchSize !== null)
+      ? batches.reduce((sum, batch) => sum + batch.batchSize!, 0)
+      : null;
     return {
       ...point,
       errors,
       cumulative,
+      batchSize,
       fiber_vial_count: values[0],
       particulate_count: values[1],
       damaged_count: values[2],
@@ -184,6 +209,7 @@ export function buildVialInspectionReport(rows: VialInspectionRow[], range: Vial
         incomplete: number;
         product: string;
         orderId: string | null;
+        orderLabel: string;
         lot: string;
       }
     >();
@@ -202,6 +228,7 @@ export function buildVialInspectionReport(rows: VialInspectionRow[], range: Vial
         incomplete: 0,
         product: row.product,
         orderId: row.orderId,
+        orderLabel: row.orderLabel,
         lot: row.lot,
       };
       group.records += 1;
@@ -258,7 +285,7 @@ export function buildVialInspectionReport(rows: VialInspectionRow[], range: Vial
     orders: groupRows(
       (row) => row.orderId ?? `unknown:${row.key}`,
       (row) => `${row.orderLabel} · Lô ${row.lot}`,
-    ),
+    ).map((order) => ({ ...order, batchSize: orderBatchSizes.get(order.orderId ?? "") ?? null })),
     creators: groupRows(
       (row) => row.creatorKey,
       (row) => row.creator,

@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import {
-  Area,
   CartesianGrid,
   Cell,
   ComposedChart,
@@ -24,6 +23,7 @@ import {
 
 type Report = ReturnType<typeof buildVialInspectionReport>;
 const tooltipNumber = (value: unknown, name: unknown) => [number(Number(value)), String(name)];
+const ratePercent = (value: number) => `${value.toLocaleString("vi-VN", { maximumFractionDigits: 4 })}%`;
 function Plot({ hasData, children, height = 320 }: { hasData: boolean; children: ReactNode; height?: number }) {
   return (
     <div style={{ height }} className="min-w-0">
@@ -38,52 +38,77 @@ function Plot({ hasData, children, height = 320 }: { hasData: boolean; children:
   );
 }
 
-export default function VialInspectionReportCharts({ report }: { report: Report }) {
-  const timeTick = (key: string) => report.timeline.find((point) => point.key === key)?.label ?? key;
-  const timeTooltip = (key: unknown) =>
-    report.timeline.find((point) => point.key === String(key))?.tooltipLabel ?? String(key);
+export default function VialInspectionReportCharts({ report, byOrder = false }: { report: Report; byOrder?: boolean }) {
+  const chartData = byOrder
+    ? [...report.orders]
+        .sort((a, b) => a.orderLabel.localeCompare(b.orderLabel, "vi", { numeric: true }))
+        .map((point) => ({ ...point, label: point.orderLabel, tooltipLabel: point.name }))
+    : report.timeline;
+  const points = chartData.map((point) => ({
+    key: point.key,
+    label: point.label,
+    tooltipLabel: point.tooltipLabel,
+    errors: point.errors,
+    fiber_vial_count: point.fiber_vial_count,
+    particulate_count: point.particulate_count,
+    damaged_count: point.damaged_count,
+    other_defect_count: point.other_defect_count,
+    batchSize: point.batchSize,
+  }));
+  const ratePoints = points.map((point) => {
+    const rate = (count: number) => point.batchSize === null ? null : (count / point.batchSize) * 100;
+    return {
+      ...point,
+      errors: rate(point.errors),
+      fiber_vial_count: rate(point.fiber_vial_count),
+      particulate_count: rate(point.particulate_count),
+      damaged_count: rate(point.damaged_count),
+      other_defect_count: rate(point.other_defect_count),
+    };
+  });
+  const axisTick = (key: string) => points.find((point) => point.key === key)?.label ?? key;
+  const axisTooltip = (key: unknown) =>
+    points.find((point) => point.key === String(key))?.tooltipLabel ?? String(key);
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-3">
         <Panel
-          title="Xu hướng phiếu soi và lỗi ghi nhận"
-          subtitle={`Theo ${report.resolutionLabel} ghi nhận phiếu; số phiếu và tổng lượt lỗi có hai trục riêng.`}
+          title="Xu hướng lỗi ghi nhận"
+          subtitle={byOrder
+            ? "Tổng lượt lỗi và số lượng từng nhóm lỗi theo mã lệnh của sản phẩm đã chọn."
+            : `Tổng lượt lỗi và số lượng từng nhóm lỗi theo ${report.resolutionLabel} ghi nhận phiếu.`}
           className="xl:col-span-2"
         >
-          <Plot hasData={report.timeline.length > 0}>
+          <Plot hasData={chartData.length > 0}>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={report.timeline} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="vial-inspection-records-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0.03} />
-                  </linearGradient>
-                </defs>
+              <ComposedChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="key" tickFormatter={timeTick} minTickGap={24} />
-                <YAxis yAxisId="records" allowDecimals={false} />
-                <YAxis yAxisId="errors" orientation="right" allowDecimals={false} />
-                <Tooltip formatter={tooltipNumber} labelFormatter={timeTooltip} />
+                <XAxis dataKey="key" tickFormatter={axisTick} minTickGap={24} />
+                <YAxis yAxisId="errors" allowDecimals={false} />
+                <Tooltip formatter={tooltipNumber} labelFormatter={axisTooltip} />
                 <Legend />
-                <Area
-                  yAxisId="records"
-                  dataKey="count"
-                  type="monotone"
-                  name="Số phiếu (trục trái)"
-                  stroke="#0ea5e9"
-                  fill="url(#vial-inspection-records-fill)"
-                  strokeWidth={2.5}
-                />
                 <Line
                   yAxisId="errors"
                   dataKey="errors"
                   type="monotone"
-                  name="Lượt lỗi (trục phải)"
-                  stroke="#f43f5e"
+                  name="Tổng lượt lỗi"
+                  stroke="#475569"
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
                 />
+                {report.defects.map((defect) => (
+                  <Line
+                    key={defect.key}
+                    yAxisId="errors"
+                    dataKey={defect.key}
+                    type="monotone"
+                    name={defect.label}
+                    stroke={defect.color}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                ))}
               </ComposedChart>
             </ResponsiveContainer>
           </Plot>
@@ -134,6 +159,46 @@ export default function VialInspectionReportCharts({ report }: { report: Report 
           </ul>
         </Panel>
       </div>
+      <Panel
+        title="Xu hướng tỷ lệ lỗi soi lọ (%)"
+        subtitle={byOrder
+          ? "Tổng lượt lỗi và từng nhóm lỗi / cỡ lô của lệnh × 100%. Mốc thiếu cỡ lô hoặc cỡ lô bằng 0 không hiển thị tỷ lệ."
+          : `Tổng lượt lỗi và từng nhóm lỗi / tổng cỡ lô các lệnh có phiếu soi trong từng ${report.resolutionLabel} × 100%. Mỗi lệnh chỉ cộng cỡ lô một lần trong mỗi mốc; mốc thiếu cỡ lô hoặc cỡ lô bằng 0 không hiển thị tỷ lệ.`}
+      >
+        <Plot hasData={ratePoints.some((point) => point.errors !== null)}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={ratePoints} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="key" tickFormatter={axisTick} minTickGap={24} />
+              <YAxis tickFormatter={ratePercent} width={85} />
+              <Tooltip
+                formatter={(value, name) => [ratePercent(Number(value)), String(name)]}
+                labelFormatter={axisTooltip}
+              />
+              <Legend />
+              <Line
+                dataKey="errors"
+                type="monotone"
+                name="Tổng lượt lỗi"
+                stroke="#475569"
+                strokeWidth={2.5}
+                dot={{ r: 3 }}
+              />
+              {report.defects.map((defect) => (
+                <Line
+                  key={defect.key}
+                  dataKey={defect.key}
+                  type="monotone"
+                  name={defect.label}
+                  stroke={defect.color}
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+              ))}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </Plot>
+      </Panel>
     </div>
   );
 }
