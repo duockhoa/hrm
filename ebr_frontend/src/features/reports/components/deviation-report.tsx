@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  Factory,
   FileWarning,
   Package,
   RotateCcw,
@@ -323,9 +324,13 @@ function DeviationTable({ rows }: { rows: DeviationRow[] }) {
 
 export default function DeviationReport({
   deviations,
+  totalProductionOrders,
+  totalProducts,
   range,
 }: {
   deviations: ReportDeviation[];
+  totalProductionOrders: number | "…" | "—";
+  totalProducts: number | "…" | "—";
   range: { from: string; to: string } | null;
 }) {
   const [filters, setFilters] = useState<DeviationFilters>(EMPTY_DEVIATION_FILTERS);
@@ -349,6 +354,11 @@ export default function DeviationReport({
   );
   const filtered = useMemo(() => filterDeviationRows(rows, filters), [rows, filters]);
   const report = useMemo(() => buildDeviationReport(filtered, range), [filtered, range]);
+  const affectedLotRate = typeof totalProductionOrders === "number"
+    ? totalProductionOrders > 0
+      ? percent((report.affectedOrders / totalProductionOrders) * 100)
+      : "—"
+    : totalProductionOrders;
   const unit = report.quantities.some((item) => item.unit === selectedUnit)
     ? selectedUnit
     : (report.quantities[0]?.unit ?? "");
@@ -413,8 +423,22 @@ export default function DeviationReport({
         </div>
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
         {[
+          {
+            label: "Tổng số lệnh sản xuất",
+            value: typeof totalProductionOrders === "number" ? number(totalProductionOrders) : totalProductionOrders,
+            hint: "Lệnh trong kỳ, không gồm lệnh đã hủy",
+            icon: Factory,
+            theme: "border-blue-200 bg-blue-50 text-blue-950",
+          },
+          {
+            label: "Tổng số sản phẩm",
+            value: typeof totalProducts === "number" ? number(totalProducts) : totalProducts,
+            hint: "Sản phẩm có lệnh trong kỳ, không gồm lệnh đã hủy",
+            icon: Package,
+            theme: "border-emerald-200 bg-emerald-50 text-emerald-950",
+          },
           {
             label: "Tổng phiếu sai lệch",
             value: number(report.total),
@@ -425,7 +449,7 @@ export default function DeviationReport({
           {
             label: "Lệnh có sai lệch",
             value: number(report.affectedOrders),
-            hint: "Đếm từng mã lệnh một lần",
+            hint: `Tỷ lệ lô sai lệch / tổng số lô: ${affectedLotRate}`,
             icon: FileWarning,
             theme: "border-rose-200 bg-rose-50 text-rose-950",
           },

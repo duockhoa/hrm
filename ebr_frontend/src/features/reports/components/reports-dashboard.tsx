@@ -460,7 +460,12 @@ export default function ReportsDashboard() {
         ) : null}
 
         {reportType === "deviations" && !isReportLoading && !reportError && !rangeError ? (
-          <DeviationReport deviations={productionOrderDeviations} range={isAllTime ? null : range} />
+          <DeviationReport
+            deviations={productionOrderDeviations}
+            totalProductionOrders={isLoading ? "…" : error ? "—" : productionOrders.length}
+            totalProducts={isLoading ? "…" : error ? "—" : productCount}
+            range={isAllTime ? null : range}
+          />
         ) : null}
 
         {reportType === "production" && !isLoading && !error && !rangeError ? (
