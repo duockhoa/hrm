@@ -226,6 +226,7 @@ export function buildDeviationReport(rows: DeviationRow[], range: { from: string
     total: rows.length,
     affectedOrders: new Set(rows.map((row) => row.orderId).filter((id) => id !== null)).size,
     productCount: productGroups.size,
+    unplannedCount: rows.filter((row) => !reportText(row.source.handling_plan)).length,
     pendingCount: pending.length,
     resultCount: rows.length - pending.length,
     resultRate: rows.length ? ((rows.length - pending.length) / rows.length) * 100 : 0,

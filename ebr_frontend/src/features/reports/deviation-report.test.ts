@@ -63,6 +63,23 @@ test("deduplicates order IDs and product codes, keeps undated records out of tim
   );
 });
 
+test("counts missing handling plans independently of handling results", () => {
+  const report = buildDeviationReport(
+    rows([
+      {},
+      { handling_plan: null },
+      { handling_plan: "   " },
+      { handling_result: "Đã xử lý" },
+      { handling_plan: "Kiểm tra" },
+      { handling_plan: "Kiểm tra", handling_result: "Đã xử lý" },
+    ]),
+    null,
+  );
+  assert.equal(report.unplannedCount, 4);
+  assert.equal(report.total, 6);
+  assert.equal(buildDeviationReport([], null).unplannedCount, 0);
+});
+
 test("all-time stage buckets align with the common timeline, including empty months", () => {
   const report = buildDeviationReport(
     rows([

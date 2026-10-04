@@ -11,6 +11,7 @@ import {
   FileWarning,
   Package,
   RotateCcw,
+  Tags,
 } from "lucide-react";
 import {
   Area,
@@ -354,11 +355,21 @@ export default function DeviationReport({
   );
   const filtered = useMemo(() => filterDeviationRows(rows, filters), [rows, filters]);
   const report = useMemo(() => buildDeviationReport(filtered, range), [filtered, range]);
+  const deviationOrderRate = typeof totalProductionOrders === "number"
+    ? totalProductionOrders > 0
+      ? percent((report.total / totalProductionOrders) * 100)
+      : "—"
+    : totalProductionOrders;
   const affectedLotRate = typeof totalProductionOrders === "number"
     ? totalProductionOrders > 0
       ? percent((report.affectedOrders / totalProductionOrders) * 100)
       : "—"
     : totalProductionOrders;
+  const affectedProductRate = typeof totalProducts === "number"
+    ? totalProducts > 0
+      ? percent((report.productCount / totalProducts) * 100)
+      : "—"
+    : totalProducts;
   const unit = report.quantities.some((item) => item.unit === selectedUnit)
     ? selectedUnit
     : (report.quantities[0]?.unit ?? "");
@@ -442,7 +453,7 @@ export default function DeviationReport({
           {
             label: "Tổng phiếu sai lệch",
             value: number(report.total),
-            hint: "Phiếu phù hợp thời gian và bộ lọc",
+            hint: `Tỷ lệ phiếu sai lệch / tổng lệnh sản xuất: ${deviationOrderRate}`,
             icon: AlertTriangle,
             theme: "border-amber-200 bg-amber-50 text-amber-950",
           },
@@ -454,32 +465,32 @@ export default function DeviationReport({
             theme: "border-rose-200 bg-rose-50 text-rose-950",
           },
           {
-            label: "Sản phẩm liên quan",
+            label: "Sản phẩm có sai lệch",
             value: number(report.productCount),
-            hint: "Nhóm theo mã sản phẩm nếu có",
+            hint: `Tỷ lệ sản phẩm có sai lệch / tổng số sản phẩm: ${affectedProductRate}`,
             icon: Package,
             theme: "border-indigo-200 bg-indigo-50 text-indigo-950",
           },
           {
-            label: "Chưa có kết quả",
-            value: number(report.pendingCount),
-            hint: "Gồm chưa có / đã có phương án",
+            label: "Chưa phân loại nguyên nhân",
+            value: number(report.unclassifiedCount),
+            hint: `Tỷ lệ phiếu chưa phân loại nguyên nhân / tổng phiếu sai lệch: ${report.total ? percent((report.unclassifiedCount / report.total) * 100) : "—"}`,
+            icon: Tags,
+            theme: "border-orange-200 bg-orange-50 text-orange-950",
+          },
+          {
+            label: "Chưa có phương án xử lý",
+            value: number(report.unplannedCount),
+            hint: `Tỷ lệ phiếu chưa có phương án xử lý / tổng phiếu sai lệch: ${report.total ? percent((report.unplannedCount / report.total) * 100) : "—"}`,
             icon: ClipboardList,
             theme: "border-sky-200 bg-sky-50 text-sky-950",
           },
           {
             label: "Đã ghi nhận kết quả",
             value: number(report.resultCount),
-            hint: "Có nội dung kết quả xử lý",
+            hint: `Tỷ lệ phiếu có kết quả xử lý / tổng phiếu sai lệch: ${report.total ? percent(report.resultRate) : "—"}`,
             icon: CheckCircle2,
             theme: "border-emerald-200 bg-emerald-50 text-emerald-950",
-          },
-          {
-            label: "Tỷ lệ có kết quả",
-            value: report.total ? percent(report.resultRate) : "—",
-            hint: "Phiếu có kết quả / tổng phiếu",
-            icon: CheckCircle2,
-            theme: "border-violet-200 bg-violet-50 text-violet-950",
           },
         ].map((metric) => (
           <div key={metric.label} className={`rounded-xl border p-4 ${metric.theme}`}>
