@@ -1,75 +1,42 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import {
   Activity,
   CheckCircle2,
-  ChevronDown,
-  ChevronRight,
   ClipboardList,
-  ExternalLink,
   Factory,
   Package,
   RotateCcw,
-  Search,
   Target,
   TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ReportProductFilter from "./report-product-filter";
 import ProductionReportProductLines from "./production-report-product-lines";
 import { API_ROUTES } from "@/lib/api-routes";
 import { productOrdersService } from "@/services/index.service";
-import { getReportDay } from "../report-date";
 import {
   buildProductionReport,
   buildProductionRows,
   EMPTY_PRODUCTION_FILTERS,
   filterProductionRows,
   PRODUCTION_STATES,
-  summaryQuantity,
   type ProductionFilters,
   type ProductionRange,
-  type ProductionRow,
   type ProductionSummary,
   type ReportProductionOrder,
 } from "../production-report";
 import ProductionReportCharts, {
   formatProductionNumber as number,
   formatProductionPercent as percent,
-  productionDayLabel as dayLabel,
   ProductionPanel,
 } from "./production-report-charts";
 
 const EMPTY_SUMMARIES: ProductionSummary[] = [];
-const categoryLabel = (category: string) =>
-  category === "finished" ? "Thành phẩm" : category === "semi" ? "Bán thành phẩm" : "Chưa phân loại";
-const plannedLabel = (row: ProductionRow) =>
-  row.planned === null ? "Chưa ghi nhận" : `${number(row.planned)} ${row.unit || "(chưa rõ đơn vị)"}`;
-const actualLabel = (row: ProductionRow, hasData: boolean) =>
-  row.category !== "finished"
-    ? "—"
-    : !hasData
-      ? "Chưa tải được"
-      : row.actual === null
-        ? "Chưa có số lượng"
-        : `${number(row.actual)} hộp`;
-
-function StateBadge({ row }: { row: ProductionRow }) {
-  const state = PRODUCTION_STATES.find((item) => item.key === row.status)!;
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
-      <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: state.color }} />
-      {row.statusLabel}
-    </span>
-  );
-}
-
 function FilterSelect({
   id,
   label,
@@ -102,284 +69,6 @@ function FilterSelect({
         </SelectContent>
       </Select>
     </div>
-  );
-}
-
-function OrderDetails({ row, hasSummaryData }: { row: ProductionRow; hasSummaryData: boolean }) {
-  return (
-    <div className="space-y-4 p-4">
-      <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Mã lệnh", row.source.production_order_code || row.id],
-          ["Nhóm sản phẩm", categoryLabel(row.category)],
-          ["Dòng sản phẩm", row.productLine],
-          ["Ngày tạo lệnh", dayLabel(getReportDay(row.source.creation_date) ?? getReportDay(row.source.created_at))],
-          ["Ngày bắt đầu", dayLabel(getReportDay(row.source.start_date))],
-          ["Ngày sản xuất", dayLabel(getReportDay(row.source.date_manufacture))],
-          ["Hạn dùng", dayLabel(getReportDay(row.source.expire_date))],
-          ["Quy cách đóng gói", row.source.packing_specification || "Chưa ghi nhận"],
-          ["Kho", row.warehouse],
-          ["Kế hoạch", plannedLabel(row)],
-          ["Thực tế thành phẩm", actualLabel(row, hasSummaryData)],
-          [
-            "Chênh lệch thực tế − kế hoạch",
-            hasSummaryData && row.difference !== null
-              ? `${row.difference > 0 ? "+" : ""}${number(row.difference)} hộp`
-              : "—",
-          ],
-          ["Đạt kế hoạch", hasSummaryData ? percent(row.achievement) : "—"],
-        ].map(([label, value]) => (
-          <div key={label}>
-            <dt className="text-xs font-medium text-slate-500">{label}</dt>
-            <dd className="mt-1 break-words font-medium text-slate-800">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      {row.source.remarks ? (
-        <div>
-          <p className="text-xs font-medium text-slate-500">Ghi chú lệnh</p>
-          <p className="mt-1 whitespace-pre-wrap break-words text-sm">{row.source.remarks}</p>
-        </div>
-      ) : null}
-      {row.category === "finished" ? (
-        <div className="rounded-lg border bg-white p-3">
-          <h3 className="mb-2 text-sm font-semibold">
-            Phiếu tổng kết thành phẩm ({hasSummaryData ? row.summaries.length : "—"})
-          </h3>
-          {!hasSummaryData ? (
-            <p className="text-sm text-slate-500">Dữ liệu tổng kết chưa sẵn sàng.</p>
-          ) : row.summaries.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-xs">
-                <thead className="text-slate-500">
-                  <tr>
-                    {["Phiếu / Ngày", "Số kiện", "Hộp/kiện", "Hộp lẻ", "Tổng (hộp)", "Người lập", "Ghi chú"].map(
-                      (title) => (
-                        <th key={title} scope="col" className="p-2">
-                          {title}
-                        </th>
-                      ),
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {row.summaries.map((summary, index) => (
-                    <tr key={summary.id ?? index} className="border-t align-top">
-                      <td className="p-2">
-                        #{summary.id ?? "—"}
-                        <p className="mt-1 text-slate-500">{dayLabel(getReportDay(summary.created_at))}</p>
-                      </td>
-                      {[
-                        summary.package_count,
-                        summary.boxes_per_package,
-                        summary.loose_box_count,
-                        summaryQuantity(summary),
-                      ].map((value, cell) => (
-                        <td key={cell} className="p-2 tabular-nums">
-                          {value == null ? "—" : number(Number(value))}
-                        </td>
-                      ))}
-                      <td className="p-2">
-                        {summary.createdBy?.name || summary.createdBy?.username || "Chưa ghi nhận"}
-                      </td>
-                      <td className="max-w-64 whitespace-pre-wrap break-words p-2">{summary.note || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">Lệnh chưa có phiếu tổng kết thành phẩm.</p>
-          )}
-        </div>
-      ) : null}
-      <Button variant="outline" size="sm" asChild className="gap-2">
-        <Link href={`/product-orders/${encodeURIComponent(row.id)}`}>
-          <ExternalLink className="size-3.5" />
-          Xem hồ sơ lệnh sản xuất
-        </Link>
-      </Button>
-    </div>
-  );
-}
-
-function ProductionTable({ rows, hasSummaryData }: { rows: ProductionRow[]; hasSummaryData: boolean }) {
-  const [page, setPage] = useState(1);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [sort, setSort] = useState("newest");
-  const pageCount = Math.max(1, Math.ceil(rows.length / 10));
-  const activePage = Math.min(page, pageCount);
-  const sorted = useMemo(
-    () =>
-      [...rows].sort((a, b) => {
-        if (sort === "achievement-low")
-          return (
-            (a.achievement ?? Infinity) - (b.achievement ?? Infinity) ||
-            a.id.localeCompare(b.id, "vi", { numeric: true })
-          );
-        if (sort === "actual-high")
-          return (b.actual ?? -1) - (a.actual ?? -1) || a.id.localeCompare(b.id, "vi", { numeric: true });
-        return (b.day ?? "").localeCompare(a.day ?? "") || b.id.localeCompare(a.id, "vi", { numeric: true });
-      }),
-    [rows, sort],
-  );
-  const visible = sorted.slice((activePage - 1) * 10, activePage * 10);
-  return (
-    <ProductionPanel
-      title="Chi tiết lệnh sản xuất"
-      subtitle="Mở từng lệnh để xem ngày sản xuất, quy cách, kế hoạch, chênh lệch và các phiếu tổng kết. Sản lượng thực tế hiện có cho thành phẩm, theo hộp."
-    >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">{number(rows.length)} lệnh phù hợp</p>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="production-sort" className="text-xs">
-            Sắp xếp
-          </Label>
-          <Select
-            value={sort}
-            onValueChange={(value) => {
-              setSort(value);
-              setPage(1);
-              setExpanded(null);
-            }}
-          >
-            <SelectTrigger id="production-sort" className="w-52">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Ngày sản xuất mới nhất</SelectItem>
-              <SelectItem value="achievement-low" disabled={!hasSummaryData}>
-                Mức đạt kế hoạch thấp nhất
-              </SelectItem>
-              <SelectItem value="actual-high" disabled={!hasSummaryData}>
-                Sản lượng thực tế cao nhất
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full min-w-[1150px] text-left text-sm">
-          <caption className="sr-only">Danh sách lệnh sản xuất và sản lượng</caption>
-          <thead className="bg-slate-50 text-xs text-slate-600">
-            <tr>
-              {[
-                "Lệnh / Số lô",
-                "Sản phẩm",
-                "Ngày sản xuất",
-                "Trạng thái",
-                "Kho",
-                "Kế hoạch",
-                "Thực tế (hộp)",
-                "Đạt kế hoạch",
-              ].map((title) => (
-                <th key={title} scope="col" className="px-3 py-3 font-semibold">
-                  {title}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((row) => {
-              const open = expanded === row.id;
-              return (
-                <Fragment key={row.id}>
-                  <tr className="border-t align-top hover:bg-slate-50/60">
-                    <td className="px-3 py-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto gap-1 px-0 text-indigo-700"
-                        onClick={() => setExpanded(open ? null : row.id)}
-                        aria-expanded={open}
-                        aria-controls={`production-detail-${row.id}`}
-                        aria-label={`${open ? "Ẩn" : "Xem"} chi tiết lệnh ${row.id}`}
-                      >
-                        {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}#
-                        {row.source.production_order_code || row.id}
-                      </Button>
-                      <p className="mt-1 text-xs text-slate-500">Lô: {row.lot}</p>
-                    </td>
-                    <td className="max-w-64 px-3 py-3">
-                      <p className="font-medium">{row.product}</p>
-                      <p className="mt-1 text-xs text-slate-500">{categoryLabel(row.category)}</p>
-                      <p className="mt-1 text-xs text-slate-500">Dòng: {row.productLine}</p>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3">
-                      {dayLabel(row.day)}
-                      {row.dateFallback && row.day ? (
-                        <p className="mt-1 text-xs text-slate-400">Theo ngày tạo lệnh</p>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-3">
-                      <StateBadge row={row} />
-                    </td>
-                    <td className="px-3 py-3">{row.warehouse}</td>
-                    <td className="px-3 py-3 tabular-nums">{plannedLabel(row)}</td>
-                    <td className="px-3 py-3 tabular-nums">{actualLabel(row, hasSummaryData)}</td>
-                    <td className="px-3 py-3">
-                      <span
-                        className={`font-semibold tabular-nums ${row.achievement !== null && row.achievement >= 100 ? "text-emerald-700" : row.achievement !== null && row.achievement < 95 ? "text-amber-700" : "text-slate-600"}`}
-                      >
-                        {hasSummaryData ? percent(row.achievement) : "—"}
-                      </span>
-                    </td>
-                  </tr>
-                  {open ? (
-                    <tr id={`production-detail-${row.id}`} className="border-t bg-indigo-50/30">
-                      <td colSpan={8}>
-                        <OrderDetails row={row} hasSummaryData={hasSummaryData} />
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
-              );
-            })}
-            {!rows.length ? (
-              <tr>
-                <td colSpan={8} className="p-8 text-center text-slate-500">
-                  Không có lệnh sản xuất phù hợp bộ lọc.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-        <p>
-          {rows.length
-            ? `${(activePage - 1) * 10 + 1}–${Math.min(activePage * 10, rows.length)} / ${number(rows.length)} lệnh`
-            : "0 lệnh"}
-        </p>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={activePage === 1}
-            onClick={() => {
-              setPage(activePage - 1);
-              setExpanded(null);
-            }}
-          >
-            Trước
-          </Button>
-          <span>
-            Trang {activePage}/{pageCount}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={activePage === pageCount}
-            onClick={() => {
-              setPage(activePage + 1);
-              setExpanded(null);
-            }}
-          >
-            Sau
-          </Button>
-        </div>
-      </div>
-    </ProductionPanel>
   );
 }
 
@@ -495,19 +184,6 @@ export default function ProductionReport({
             options={units.map((value) => ({ value, label: value }))}
             all={false}
           />
-          <div className="space-y-2">
-            <Label htmlFor="production-search">Tìm lệnh sản xuất</Label>
-            <div className="relative">
-              <Search aria-hidden="true" className="absolute left-3 top-2.5 size-4 text-slate-400" />
-              <Input
-                id="production-search"
-                value={filters.search}
-                onChange={(event) => setFilter("search", event.target.value)}
-                className="pl-9"
-                placeholder="Mã lệnh, sản phẩm, số lô, ghi chú…"
-              />
-            </div>
-          </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -670,39 +346,6 @@ export default function ProductionReport({
               </table>
             </div>
           </ProductionPanel>
-          <ProductionPanel
-            title="Thông tin cần bổ sung"
-            subtitle="Lọc theo ngày sản xuất của lô; thiếu ngày sản xuất dùng ngày tạo lệnh. Lệnh thiếu cả hai ngày chỉ xuất hiện khi chọn tất cả thời gian."
-          >
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {[
-                ["Dùng ngày tạo thay ngày sản xuất", number(report.dateFallbackCount)],
-                ["Thiếu ngày hợp lệ", number(report.undatedCount)],
-                ["Thiếu số lượng kế hoạch", number(report.missingPlanCount)],
-                ["Thiếu đơn vị kế hoạch", number(report.missingUnitCount)],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-lg bg-slate-50 p-3">
-                  <p className="text-sm text-slate-500">{label}</p>
-                  <p className="mt-2 text-xl font-semibold tabular-nums">
-                    {value}
-                    <span className="ml-2 text-xs font-normal text-slate-500">lệnh</span>
-                  </p>
-                </div>
-              ))}
-            </div>
-            {hasSummaryData && report.incomparableCount > 0 ? (
-              <p className="mt-3 text-xs text-slate-500">
-                {number(report.incomparableCount)} lệnh có thực tế nhưng không đủ kế hoạch lớn hơn 0 theo hộp để tính tỷ
-                lệ đạt.
-              </p>
-            ) : null}
-            {hasSummaryData && report.invalidSummaryCount > 0 ? (
-              <p className="mt-2 text-xs text-amber-700">
-                {number(report.invalidSummaryCount)} phiếu tổng kết có số lượng không hợp lệ, chưa được cộng vào thực
-                tế.
-              </p>
-            ) : null}
-          </ProductionPanel>
         </>
       ) : (
         <div role="status" className="rounded-xl border border-dashed bg-white p-8 text-center">
@@ -711,8 +354,6 @@ export default function ProductionReport({
           <p className="mt-1 text-sm text-slate-500">Thay đổi khoảng thời gian hoặc bộ lọc để xem dữ liệu.</p>
         </div>
       )}
-
-      <ProductionTable key={JSON.stringify([filters, range])} rows={filtered} hasSummaryData={hasSummaryData} />
     </div>
   );
 }
