@@ -15,6 +15,12 @@ const EMPTY_OUTPUT: ProductionSummary[] = [];
 const EMPTY_PACKAGING: PostSecondaryPackagingSummary[] = [];
 const number = (value: number) => value.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
 const percent = (value: number) => `${value.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`;
+const outputHighlight = (achievement: number | null) => {
+  if (achievement === null) return "";
+  if (achievement < 90 || achievement > 110) return "font-semibold text-red-800";
+  if (achievement < 95 || achievement > 105) return "font-semibold text-yellow-800";
+  return "";
+};
 const quantities = (group: UnitQuantities) => Object.entries(group)
   .sort(([a], [b]) => a.localeCompare(b, "vi"))
   .map(([unit, quantity]) => `${number(quantity)} ${unit}`).join("; ") || "0";
@@ -55,7 +61,10 @@ export default function OutputLossReport({ orders, range }: {
       <section className="overflow-hidden rounded-xl border bg-white">
         <div className="border-b p-4">
           <h2 className="text-base font-semibold">Báo cáo sản lượng, hư hao</h2>
-          <p className="mt-1 text-sm text-gray-500">{filtered.length} lô thành phẩm · Sản lượng tổng kết tính bằng hộp. Số lượng chờ xử lý, chờ huỷ theo đơn vị đã ghi nhận.</p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span className="text-red-800">Đỏ: dưới 90% hoặc trên 110% kế hoạch</span>
+            <span className="text-yellow-800">Vàng: từ 90% đến dưới 95% hoặc trên 105% đến 110% kế hoạch</span>
+          </div>
         </div>
         {error ? <p role="alert" className="p-6 text-center text-sm text-red-600">Không thể tải dữ liệu sản lượng, hư hao. Vui lòng thử lại sau.</p>
           : loading ? <div className="p-4"><Skeleton className="h-64 w-full" /></div>
@@ -80,8 +89,8 @@ export default function OutputLossReport({ orders, range }: {
                   <TableCell className="font-medium">{row.lot}</TableCell>
                   <TableCell className="max-w-sm whitespace-normal">{row.source.item?.item_name?.trim() || row.source.description?.trim() || "Chưa rõ sản phẩm"}</TableCell>
                   <TableCell className="text-right tabular-nums">{row.planned === null ? "Chưa ghi nhận" : `${number(row.planned)} ${row.unit || "chưa rõ đơn vị"}`}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.actual === null ? "Chưa tổng kết" : number(row.actual)}</TableCell>
-                  <TableCell className="text-right tabular-nums" title={row.achievement === null ? "Cần sản lượng tổng kết và kế hoạch lớn hơn 0, cùng đơn vị hộp." : undefined}>{row.achievement === null ? "—" : percent(row.achievement)}</TableCell>
+                  <TableCell className={`text-right tabular-nums ${outputHighlight(row.achievement)}`}>{row.actual === null ? "Chưa tổng kết" : number(row.actual)}</TableCell>
+                  <TableCell className={`text-right tabular-nums ${outputHighlight(row.achievement)}`} title={row.achievement === null ? "Cần sản lượng tổng kết và kế hoạch lớn hơn 0, cùng đơn vị hộp." : undefined}>{row.achievement === null ? "—" : percent(row.achievement)}</TableCell>
                   <TableCell className="text-right tabular-nums">{row.hasPackagingSummary ? quantities(row.pending) : "Chưa tổng kết"}</TableCell>
                   <TableCell className="text-right tabular-nums">{row.hasPackagingSummary ? quantities(row.cancellation) : "Chưa tổng kết"}</TableCell>
                 </TableRow>) : <TableRow><TableCell colSpan={9} className="h-24 text-center text-gray-500">Không có lô thành phẩm phù hợp với bộ lọc.</TableCell></TableRow>}
@@ -89,8 +98,8 @@ export default function OutputLossReport({ orders, range }: {
               {filtered.length ? <TableFooter><TableRow>
                 <TableCell colSpan={4}>Tổng cộng đã ghi nhận</TableCell>
                 <TableCell className="text-right tabular-nums">{filtered.some((row) => row.planned !== null) ? quantities(totals.planned) : "—"}</TableCell>
-                <TableCell className="text-right tabular-nums">{filtered.some((row) => row.actual !== null) ? number(totals.actual) : "—"}</TableCell>
-                <TableCell className="text-right tabular-nums" title="Tổng sản lượng / tổng kế hoạch của các lô có đủ dữ liệu và cùng đơn vị hộp × 100.">{totals.achievement === null ? "—" : percent(totals.achievement)}</TableCell>
+                <TableCell className={`text-right tabular-nums ${outputHighlight(totals.achievement)}`}>{filtered.some((row) => row.actual !== null) ? number(totals.actual) : "—"}</TableCell>
+                <TableCell className={`text-right tabular-nums ${outputHighlight(totals.achievement)}`} title="Tổng sản lượng / tổng kế hoạch của các lô có đủ dữ liệu và cùng đơn vị hộp × 100.">{totals.achievement === null ? "—" : percent(totals.achievement)}</TableCell>
                 <TableCell className="text-right tabular-nums">{filtered.some((row) => row.hasPackagingSummary) ? quantities(totals.pending) : "—"}</TableCell>
                 <TableCell className="text-right tabular-nums">{filtered.some((row) => row.hasPackagingSummary) ? quantities(totals.cancellation) : "—"}</TableCell>
               </TableRow></TableFooter> : null}
