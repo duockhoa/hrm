@@ -268,6 +268,7 @@ const PRODUCTION_ORDERS = {
     `/production-orders/semi-finished-product-summaries/${summaryId}`,
   postSecondaryPackagingSummaries: (id: string | number) =>
     `/production-orders/${id}/post-secondary-packaging-summaries`,
+  postSecondaryPackagingReport: "/production-orders/post-secondary-packaging-summaries",
   postSecondaryPackagingSummaryDetail: (summaryId: string | number) =>
     `/production-orders/post-secondary-packaging-summaries/${summaryId}`,
   postSecondaryPackagingPendingProcessItems: (summaryId: string | number) =>

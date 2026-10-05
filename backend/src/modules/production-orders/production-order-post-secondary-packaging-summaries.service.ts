@@ -57,6 +57,18 @@ const summaryInclude = {
 export class ProductionOrderPostSecondaryPackagingSummariesService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  async findAllForReport() {
+    return this.prismaService.productionOrderPostSecondaryPackagingSummaries.findMany({
+      select: {
+        id: true,
+        production_order_id: true,
+        unit: true,
+        pendingProcessItems: { select: { id: true, pending_quantity: true } },
+        pendingCancellationItems: { select: { id: true, cancellation_quantity: true } },
+      },
+    });
+  }
+
   async findById(summaryId: number) {
     const summary =
       await this.prismaService.productionOrderPostSecondaryPackagingSummaries.findUnique(

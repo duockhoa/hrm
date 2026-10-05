@@ -2026,6 +2026,11 @@ const fetchPostSecondaryPackagingSummaries = async (id: string | number) => {
   return response.data;
 };
 
+const fetchPostSecondaryPackagingReport = async (): Promise<PostSecondaryPackagingSummary[]> => {
+  const response = await axiosClient.get(API_ROUTES.productionOrders.postSecondaryPackagingReport);
+  return response.data;
+};
+
 const fetchPostSecondaryPackagingSummaryById = async (
   summaryId: string | number,
 ): Promise<PostSecondaryPackagingSummary> => {
@@ -2682,6 +2687,7 @@ const productOrdersService = {
   updateSemiFinishedProductSummary,
   deleteSemiFinishedProductSummary,
   fetchPostSecondaryPackagingSummaries,
+  fetchPostSecondaryPackagingReport,
   fetchPostSecondaryPackagingSummaryById,
   createPostSecondaryPackagingSummary,
   updatePostSecondaryPackagingSummary,

@@ -37,6 +37,7 @@ import { getReportDay, getProductionOrderReportDay } from "../report-date";
 import FinishedProductOutputChart from "./finished-product-output-chart";
 import DeviationReport from "./deviation-report";
 import ProductionReport from "./production-report";
+import OutputLossReport from "./output-loss-report";
 import VialInspectionReport from "./vial-inspection-report";
 import { getDeviationReportDay, type ReportDeviation } from "../deviation-report";
 import type { ReportProductionOrder } from "../production-report";
@@ -366,6 +367,7 @@ export default function ReportsDashboard() {
                 <SelectItem value="overview">Tổng quan</SelectItem>
                 <SelectItem value="deviations">Báo cáo sai lệch</SelectItem>
                 <SelectItem value="production">Báo cáo sản xuất</SelectItem>
+                <SelectItem value="output-loss">Báo cáo sản lượng, hư hao</SelectItem>
                 <SelectItem value="vial-inspections">Báo cáo soi lọ</SelectItem>
               </SelectContent>
             </Select>
@@ -429,7 +431,9 @@ export default function ReportsDashboard() {
         className="relative min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain rounded-b-lg bg-gray-50 p-4"
       >
         {!rangeError && reportType === "overview" ? <p className="text-sm text-gray-600">Tổng quan · {isAllTime ? "Tất cả thời gian" : `${formatReportDate(range.from)} – ${formatReportDate(range.to)}`}</p> : null}
-        {isReportLoading && !rangeError ? <ReportSkeleton /> : null}
+        {isReportLoading && !rangeError ? (
+          reportType === "output-loss" ? <Skeleton className="h-80 rounded-xl" /> : <ReportSkeleton />
+        ) : null}
 
         {!isReportLoading && reportError && !rangeError ? (
           <div role="alert" className="rounded-md border border-red-100 bg-red-50 p-6 text-center text-sm text-red-600">
@@ -449,6 +453,10 @@ export default function ReportsDashboard() {
 
         {reportType === "production" && !isLoading && !error && !rangeError ? (
           <ProductionReport orders={data ?? EMPTY_PRODUCTION_ORDERS} range={isAllTime ? null : range} />
+        ) : null}
+
+        {reportType === "output-loss" && !isLoading && !error && !rangeError ? (
+          <OutputLossReport orders={data ?? EMPTY_PRODUCTION_ORDERS} range={isAllTime ? null : range} />
         ) : null}
 
         {reportType === "vial-inspections" && !rangeError ? (

@@ -466,6 +466,12 @@ export class ProductionOrdersController {
     return this.productionOrderFinishedProductSummariesService.findAll();
   }
 
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ)
+  @Get('post-secondary-packaging-summaries')
+  async findAllPostSecondaryPackagingSummaries() {
+    return this.productionOrderPostSecondaryPackagingSummariesService.findAllForReport();
+  }
+
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('finished-product-summaries/:summaryId')
   async findFinishedProductSummaryById(
