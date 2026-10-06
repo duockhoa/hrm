@@ -30,7 +30,6 @@ export type WarehouseReceiptItemPayload = Pick<
   | "supplier_name"
   | "manufacturer_name"
   | "note"
-  | "received_at"
 >;
 
 const warehouseReceiptItemsService = {

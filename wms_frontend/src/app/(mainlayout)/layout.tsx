@@ -20,16 +20,16 @@ const menuItems = [
     url: "/home",
   },
   {
-    id: "items",
-    name: "Danh sách nguyên liệu",
-    icon: <Package className="size-5 shrink-0" />,
-    url: "/items",
-  },
-  {
     id: "warehouse-temperature-humidity-checks",
     name: "Kiểm tra nhiệt độ, độ ẩm kho",
     icon: <Thermometer className="size-5 shrink-0" />,
     url: "/warehouse-temperature-humidity-checks",
+  },
+  {
+    id: "items",
+    name: "Danh sách nguyên liệu",
+    icon: <Package className="size-5 shrink-0" />,
+    url: "/items",
   },
   {
     id: "about",
