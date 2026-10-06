@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { matchesSearchKeyword } from "@/lib/search-utils";
-import useRawMaterialsStore from "@/store/raw-materials.store";
+import { normalizeSearchText } from "@/lib/search-utils";
+import useRawMaterialsStore, { type RawMaterialOption } from "@/store/raw-materials.store";
 import warehouseReceiptItemsService, {
   type WarehouseReceiptItem,
   type WarehouseReceiptItemPayload,
@@ -68,20 +68,18 @@ export default function ReceiptForm({
   const [error, setError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const [itemCode, setItemCode] = useState(data?.item_code ?? "");
+  const [itemSearchQuery, setItemSearchQuery] = useState("");
+  const filterItems = useCallback(
+    (item: RawMaterialOption) => item.searchText.includes(itemSearchQuery),
+    [itemSearchQuery],
+  );
   const [manufacturerLotNumber, setManufacturerLotNumber] = useState(data?.manufacturer_lot_number ?? "");
   const [manualLotNumber, setManualLotNumber] = useState<string | null>(data?.lot_number ?? null);
   const [formCreatedAt] = useState(() => new Date());
   const lotNumber = manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, formCreatedAt);
-  const items = useRawMaterialsStore((state) => state.items);
+  const itemOptions = useRawMaterialsStore((state) => state.itemOptions);
   const itemsStatus = useRawMaterialsStore((state) => state.status);
   const itemsLoading = itemsStatus === "idle" || itemsStatus === "loading";
-  const itemOptions = useMemo(() =>
-    items.map((item) => ({
-      value: item.item_code,
-      label: item.item_name
-        ? `${item.item_name} (${item.item_code})`
-        : item.item_code,
-    })), [items]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -154,6 +152,10 @@ export default function ReceiptForm({
           <Combobox
             autoHighlight
             items={itemOptions}
+            limit={50}
+            onInputValueChange={(query) =>
+              setItemSearchQuery(normalizeSearchText(query).trim())
+            }
             value={itemOptions.find((item) => item.value === itemCode) ?? null}
             onValueChange={(item) => {
               setItemCode(item?.value ?? "");
@@ -162,7 +164,7 @@ export default function ReceiptForm({
             itemToStringLabel={(item) => item.label}
             itemToStringValue={(item) => item.value}
             isItemEqualToValue={(item, value) => item.value === value.value}
-            filter={(item, query) => matchesSearchKeyword([item.label], query)}
+            filter={filterItems}
             disabled={isSubmitting || itemsLoading}
           >
             <ComboboxInput
