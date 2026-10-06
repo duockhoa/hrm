@@ -97,7 +97,7 @@ export default function ApplicationAccessGuard({
             <div className="application-access-progress-indicator h-full w-2/5 bg-blue-600" />
           </div>
           <p className="mt-6 text-2xl font-bold tracking-[0.08em] text-blue-700 sm:text-3xl sm:tracking-[0.12em] md:text-4xl">
-            KHO DƯỢC KHOA
+            KHO DUOC KHOA
           </p>
           <p className="mt-2 text-xs font-semibold tracking-[0.2em] text-gray-400 sm:text-sm md:text-base">
             GMP COMPLIANCE
