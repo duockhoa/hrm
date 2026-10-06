@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import useSWR from "swr";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,10 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { Item } from "@/features/items/types";
-import { API_ROUTES } from "@/lib/api-routes";
 import { matchesSearchKeyword } from "@/lib/search-utils";
-import itemsService from "@/services/items.service";
+import useRawMaterialsStore from "@/store/raw-materials.store";
 import warehouseReceiptItemsService, {
   type WarehouseReceiptItem,
   type WarehouseReceiptItemPayload,
@@ -75,27 +72,16 @@ export default function ReceiptForm({
   const [manualLotNumber, setManualLotNumber] = useState<string | null>(data?.lot_number ?? null);
   const [formCreatedAt] = useState(() => new Date());
   const lotNumber = manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, formCreatedAt);
-  const { data: items, error: itemsError, isLoading: itemsLoading, mutate: reloadItems } = useSWR<Item[]>(
-    API_ROUTES.items.rawMaterials,
-    itemsService.fetchRawMaterials,
-  );
-  const itemOptions = useMemo(() => {
-    const availableItems = [...(items ?? [])];
-    if (
-      data &&
-      !data.item_code.startsWith("TP") &&
-      !data.item_code.startsWith("BTP") &&
-      !availableItems.some((item) => item.item_code === data.item_code)
-    ) {
-      availableItems.unshift(data.item);
-    }
-    return availableItems.map((item) => ({
+  const items = useRawMaterialsStore((state) => state.items);
+  const itemsStatus = useRawMaterialsStore((state) => state.status);
+  const itemsLoading = itemsStatus === "idle" || itemsStatus === "loading";
+  const itemOptions = useMemo(() =>
+    items.map((item) => ({
       value: item.item_code,
       label: item.item_name
         ? `${item.item_name} (${item.item_code})`
         : item.item_code,
-    }));
-  }, [items, data]);
+    })), [items]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -197,11 +183,11 @@ export default function ReceiptForm({
               </ComboboxList>
             </ComboboxContent>
           </Combobox>
-          {itemsError && (
+          {itemsStatus === "error" && (
             <div role="alert" className="text-sm text-red-600">
               Không thể tải danh sách hàng.
-              <Button type="button" variant="link" disabled={isSubmitting} onClick={() => void reloadItems()}>
-                Thử lại
+              <Button type="button" variant="link" disabled={isSubmitting} onClick={() => window.location.reload()}>
+                Tải lại ứng dụng
               </Button>
             </div>
           )}

@@ -8,6 +8,7 @@ import { API_ROUTES } from "@/lib/api-routes";
 import { usersService } from "@/services/index.service";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useUsersStore from "@/store/users.store";
+import useRawMaterialsStore from "@/store/raw-materials.store";
 import { Boxes, Info, Package, Thermometer } from "lucide-react";
 import { useEffect } from "react";
 import useSWR from "swr";
@@ -38,6 +39,14 @@ const menuItems = [
     url: "/about",
   },
 ];
+
+function RawMaterialsLoader() {
+  const loadItems = useRawMaterialsStore((state) => state.loadItems);
+  useEffect(() => {
+    void loadItems();
+  }, [loadItems]);
+  return null;
+}
 
 export default function MainLayout({
   children,
@@ -70,6 +79,7 @@ export default function MainLayout({
 
   return (
     <ApplicationAccessGuard>
+      <RawMaterialsLoader />
       <div className="flex h-screen flex-col">
         <Header />
         <div className="flex flex-1 overflow-hidden">

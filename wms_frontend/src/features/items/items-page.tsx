@@ -4,23 +4,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useRef } from "react";
 import { AiOutlineRight } from "react-icons/ai";
-import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
-import { API_ROUTES } from "@/lib/api-routes";
 import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
-import itemsService from "@/services/items.service";
+import useRawMaterialsStore from "@/store/raw-materials.store";
 import useSearchStore from "@/store/search.store";
 import ItemRow from "./item-row";
-import type { Item } from "./types";
 
 const collator = new Intl.Collator("vi-VN", { numeric: true, sensitivity: "base" });
 
 export default function ItemsPage() {
-  const { data, error, isLoading, mutate } = useSWR<Item[]>(
-    API_ROUTES.items.rawMaterials,
-    itemsService.fetchRawMaterials,
-  );
+  const data = useRawMaterialsStore((state) => state.items);
+  const status = useRawMaterialsStore((state) => state.status);
+  const isLoading = status === "idle" || status === "loading";
   const router = useRouter();
   const pathname = usePathname();
   const searchScopePath = getSearchScopePath(pathname);
@@ -52,10 +48,10 @@ export default function ItemsPage() {
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
         {isLoading ? (
           Array.from({ length: 10 }, (_, index) => <ItemRow key={index} item={null} />)
-        ) : error ? (
+        ) : status === "error" ? (
           <div role="alert" className="p-4 text-center text-sm text-red-600">
             <p>Không thể tải danh sách nguyên liệu.</p>
-            <Button variant="outline" className="mt-2" onClick={() => void mutate()}>Thử lại</Button>
+            <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>Tải lại ứng dụng</Button>
           </div>
         ) : filteredItems.length ? (
           filteredItems.map((item) => (
