@@ -22,7 +22,6 @@ export type WarehouseTemperatureHumidityCheckPayload = {
   requirement: string;
   temperature: number;
   humidity: number;
-  is_passed: boolean;
 };
 
 const warehouseTemperatureHumidityChecksService = {

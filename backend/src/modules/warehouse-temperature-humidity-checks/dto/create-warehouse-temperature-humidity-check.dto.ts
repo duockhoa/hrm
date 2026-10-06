@@ -12,11 +12,4 @@ export class CreateWarehouseTemperatureHumidityCheckDto {
 
   @ApiProperty({ example: 65.2, minimum: 0, maximum: 100 })
   humidity: number;
-
-  @ApiProperty({
-    type: Boolean,
-    example: true,
-    description: 'Kết quả kiểm tra: true = Đạt, false = Không đạt',
-  })
-  is_passed: boolean;
 }

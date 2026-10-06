@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
+import { CircleCheck, CircleHelp, CircleX } from "lucide-react";
 import {
   QrInputButton,
   QrScanDialog,
@@ -11,17 +12,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import warehouseTemperatureHumidityChecksService, {
   type WarehouseTemperatureHumidityCheck,
   type WarehouseTemperatureHumidityCheckPayload,
 } from "@/services/warehouse-temperature-humidity-checks.service";
+
+const DEFAULT_REQUIREMENT = [
+  "Nhiệt độ: 15-30 °C  Độ ẩm ≤ 75 %",
+  "Trong điều kiện khắc nghiệt tại 1 số thời điểm trong ngày nhiệt độ không quá 32°C",
+  "và độ ẩm không quá 80%",
+].join("\n");
+
+function parseMeasurement(value: string, min: number, max: number) {
+  const number = Number(value);
+  return /^-?\d+(?:\.\d{1,2})?$/.test(value) &&
+    Number.isFinite(number) &&
+    number >= min &&
+    number <= max
+    ? number
+    : null;
+}
 
 const locationQrKeys = [
   "location",
@@ -95,13 +105,14 @@ export default function CheckForm({
   const [isLocationQrScannerOpen, setIsLocationQrScannerOpen] = useState(false);
   const [location, setLocation] = useState(data?.location ?? "");
   const [error, setError] = useState("");
-  const [result, setResult] = useState(
-    data?.is_passed === true
-      ? "true"
-      : data?.is_passed === false
-        ? "false"
-        : "",
-  );
+  const [temperature, setTemperature] = useState(data?.temperature ?? "");
+  const [humidity, setHumidity] = useState(data?.humidity ?? "");
+  const measuredTemperature = parseMeasurement(temperature, -999.99, 999.99);
+  const measuredHumidity = parseMeasurement(humidity, 0, 100);
+  const result =
+    measuredTemperature === null || measuredHumidity === null
+      ? null
+      : measuredTemperature <= 32 && measuredHumidity <= 80;
 
   const handleQrScan = useCallback((decodedText: string) => {
     const scannedValue = parseQrLocation(decodedText);
@@ -130,21 +141,11 @@ export default function CheckForm({
       setError("Yêu cầu vượt quá giới hạn 65535 byte UTF-8.");
       return;
     }
-    if (result !== "true" && result !== "false") {
-      setError("Vui lòng chọn kết quả Đạt hoặc Không đạt.");
-      return;
-    }
     for (const field of ["temperature", "humidity"]) {
       const value = text(field);
-      const number = Number(value);
       const min = field === "humidity" ? 0 : -999.99;
       const max = field === "humidity" ? 100 : 999.99;
-      if (
-        !/^-?\d+(?:\.\d{1,2})?$/.test(value) ||
-        !Number.isFinite(number) ||
-        number < min ||
-        number > max
-      ) {
+      if (parseMeasurement(value, min, max) === null) {
         setError(
           `${field === "humidity" ? "Độ ẩm" : "Nhiệt độ"} phải từ ${min} đến ${max}, tối đa 2 chữ số thập phân.`,
         );
@@ -156,7 +157,6 @@ export default function CheckForm({
       requirement,
       temperature: Number(text("temperature")),
       humidity: Number(text("humidity")),
-      is_passed: result === "true",
     };
     try {
       setIsSubmitting(true);
@@ -172,6 +172,10 @@ export default function CheckForm({
             ),
           )
         : payload;
+      if (data && data.is_passed !== result) {
+        changes.temperature = payload.temperature;
+        changes.humidity = payload.humidity;
+      }
       if (data && Object.keys(changes).length === 0) {
         onCancel();
         return;
@@ -224,7 +228,7 @@ export default function CheckForm({
             id="check-requirement"
             name="requirement"
             rows={4}
-            defaultValue={data?.requirement ?? ""}
+            defaultValue={data?.requirement ?? DEFAULT_REQUIREMENT}
             required
           />
         </div>
@@ -237,7 +241,8 @@ export default function CheckForm({
             step="0.01"
             min={-999.99}
             max={999.99}
-            defaultValue={data?.temperature ?? ""}
+            value={temperature}
+            onChange={(event) => setTemperature(event.target.value)}
             required
           />
         </div>
@@ -250,29 +255,42 @@ export default function CheckForm({
             step="0.01"
             min={0}
             max={100}
-            defaultValue={data?.humidity ?? ""}
+            value={humidity}
+            onChange={(event) => setHumidity(event.target.value)}
             required
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="check-result">Kết quả *</Label>
-          <Select
-            value={result}
-            onValueChange={setResult}
-            disabled={isSubmitting}
-          >
-            <SelectTrigger
+          <Label htmlFor="check-result">Kết quả tự động</Label>
+          <div role="status" aria-live="polite" aria-atomic="true">
+            <Button
               id="check-result"
-              className="w-full"
-              aria-required="true"
+              type="button"
+              disabled
+              aria-describedby="check-result-rule"
+              className={`h-12 w-full border text-base font-semibold disabled:opacity-100 ${
+                result === null
+                  ? "border-slate-200 bg-slate-100 text-slate-600"
+                  : result
+                    ? "border-green-700 bg-green-700 text-white"
+                    : "border-red-700 bg-red-700 text-white"
+              }`}
             >
-              <SelectValue placeholder="Chọn kết quả kiểm tra" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">Đạt</SelectItem>
-              <SelectItem value="false">Không đạt</SelectItem>
-            </SelectContent>
-          </Select>
+              {result === null ? (
+                <CircleHelp className="size-5" aria-hidden="true" />
+              ) : result ? (
+                <CircleCheck className="size-5" aria-hidden="true" />
+              ) : (
+                <CircleX className="size-5" aria-hidden="true" />
+              )}
+              {result === null ? "Chưa đánh giá" : result ? "Đạt" : "Không đạt"}
+            </Button>
+          </div>
+          <p id="check-result-rule" className="text-sm text-muted-foreground">
+            {result === null
+              ? "Nhập nhiệt độ và độ ẩm để tự động đánh giá."
+              : "Không đạt khi nhiệt độ > 32°C hoặc độ ẩm > 80%."}
+          </p>
         </div>
       </fieldset>
       {error && (

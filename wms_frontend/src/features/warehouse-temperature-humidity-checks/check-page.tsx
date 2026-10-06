@@ -41,7 +41,6 @@ import CheckForm, { checkError } from "./check-form";
 
 const columns = [
   "Vị trí",
-  "Yêu cầu",
   "Nhiệt độ (°C)",
   "Độ ẩm (%RH)",
   "Kết quả",
@@ -51,7 +50,6 @@ const columns = [
 function rowValues(check: WarehouseTemperatureHumidityCheck) {
   return [
     check.location,
-    check.requirement,
     check.temperature,
     check.humidity,
     formatCheckResult(check.is_passed),
@@ -81,7 +79,12 @@ export default function CheckPage({
   const groups = useMemo(() => {
     const result = new Map<string, WarehouseTemperatureHumidityCheck[]>();
     for (const check of data ?? []) {
-      if (!matchesSearchKeyword([check.id, ...rowValues(check)], search))
+      if (
+        !matchesSearchKeyword(
+          [check.id, check.requirement, ...rowValues(check)],
+          search,
+        )
+      )
         continue;
       const date = new Date(check.created_at).toLocaleDateString("vi-VN", {
         timeZone: "Asia/Ho_Chi_Minh",
@@ -127,7 +130,7 @@ export default function CheckPage({
             )}
           </div>
         ) : (
-          <table className="w-full min-w-[1100px] caption-bottom border-t text-[13px]">
+          <table className="w-full min-w-[900px] caption-bottom border-t text-[13px]">
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow className="hover:bg-transparent">
                 {columns.map((label) => (
@@ -184,7 +187,23 @@ export default function CheckPage({
                             key={columns[index]}
                             className="max-w-72 whitespace-pre-wrap break-words border-r px-3 last:border-r-0"
                           >
-                            {value}
+                            {columns[index] === "Kết quả" ? (
+                              <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                                <span
+                                  aria-hidden="true"
+                                  className={`size-3.5 shrink-0 rounded-full ${
+                                    check.is_passed === true
+                                      ? "bg-green-600"
+                                      : check.is_passed === false
+                                        ? "bg-red-600"
+                                        : "bg-gray-400"
+                                  }`}
+                                />
+                                {value}
+                              </span>
+                            ) : (
+                              value
+                            )}
                           </TableCell>
                         ))}
                       </TableRow>

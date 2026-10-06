@@ -21,20 +21,20 @@ Ví dụ POST:
   "location": "Kho nguyên liệu - A1",
   "requirement": "Nhiệt độ 15–30 °C; độ ẩm không quá 75 %RH",
   "temperature": 25.5,
-  "humidity": 65.25,
-  "is_passed": true
+  "humidity": 65.25
 }
 ```
 
-POST yêu cầu đủ 5 trường trên; PATCH nhận ít nhất 1 trường. Nhiệt độ và độ ẩm phải là số JSON,
+POST yêu cầu đủ 4 trường trên; PATCH nhận ít nhất 1 trường. Nhiệt độ và độ ẩm phải là số JSON,
 tối đa 2 chữ số thập phân. Nhiệt độ: -999.99 đến 999.99 °C; độ ẩm: 0 đến 100 %RH.
 Vị trí tối đa 255 ký tự; yêu cầu tối đa 65.535 byte UTF-8, không được để trống.
 Không nhận `checked_by_id`, `created_at`, `updated_at` hoặc trường ngoài danh sách.
 
-`is_passed` phải là boolean JSON: `true` = Đạt, `false` = Không đạt. Kết quả do người kiểm tra
-đánh giá theo yêu cầu; API không tự suy luận từ trường `requirement` dạng văn bản.
-Bản ghi cũ chưa được đánh giá có `is_passed: null`; POST/PATCH không nhận `null`.
-PATCH bỏ qua `is_passed` sẽ giữ nguyên kết quả hiện có. Ví dụ cập nhật kết quả: `{ "is_passed": false }`.
+`is_passed` do backend tự tính: nhiệt độ > 32°C hoặc độ ẩm > 80% là Không đạt (`false`);
+còn lại là Đạt (`true`). Đúng 32°C và 80% vẫn Đạt. POST/PATCH không nhận `is_passed`
+trong body. Khi PATCH, backend tính lại từ số đo mới kết hợp với số đo đang lưu.
+Quy tắc cố định này không phân tích nội dung văn bản `requirement`.
+Bản ghi lịch sử giữ kết quả đã lưu cho đến khi được cập nhật; không sửa hàng loạt dữ liệu cũ.
 
 Response kèm `is_passed` và `checkedBy: { id, username, name }`. Prisma trả các giá trị Decimal dưới dạng chuỗi JSON.
 Lỗi dữ liệu: 400; chưa đăng nhập: 401; không tìm thấy: 404; xung đột quan hệ: 409.

@@ -18,7 +18,6 @@ const allowedFields = new Set([
   'requirement',
   'temperature',
   'humidity',
-  'is_passed',
 ]);
 
 @Injectable()
@@ -78,7 +77,10 @@ export class WarehouseTemperatureHumidityChecksService {
     const data = this.buildData(dto, false);
     if (!Object.keys(data).length)
       throw new BadRequestException('No update data provided');
-    await this.findById(id);
+    const existing = await this.findById(id);
+    data.is_passed =
+      (data.temperature ?? existing.temperature).lte(32) &&
+      (data.humidity ?? existing.humidity).lte(80);
     try {
       return await this.prisma.warehouseTemperatureHumidityChecks.update({
         where: { id },
@@ -150,10 +152,8 @@ export class WarehouseTemperatureHumidityChecksService {
         );
       data[field] = new Prisma.Decimal(value);
     }
-    if (creating || dto.is_passed !== undefined) {
-      if (typeof dto.is_passed !== 'boolean')
-        throw new BadRequestException('is_passed must be a boolean');
-      data.is_passed = dto.is_passed;
+    if (creating) {
+      data.is_passed = data.temperature!.lte(32) && data.humidity!.lte(80);
     }
     return data;
   }
