@@ -21,8 +21,13 @@ export class CreateWarehouseReceiptItemDto {
   @ApiPropertyOptional({ type: String, maxLength: 255, nullable: true })
   packaging_specification?: string | null;
 
-  @ApiPropertyOptional({ type: String, maxLength: 255, nullable: true })
-  supplier_name?: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: 191,
+    nullable: true,
+    description: 'CardCode of a SAP business partner with CardType cSupplier',
+  })
+  supplier_code?: string | null;
 
   @ApiPropertyOptional({ type: String, maxLength: 255, nullable: true })
   manufacturer_name?: string | null;

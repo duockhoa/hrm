@@ -110,7 +110,12 @@ export default function ReceiptDetail({
     ["Số lô nhà sản xuất", data.manufacturer_lot_number],
     ["Hạn dùng", formatExpiryDate(data.expiry_date)],
     ["Quy cách đóng gói", data.packaging_specification],
-    ["Nhà cung cấp", data.supplier_name],
+    [
+      "Nhà cung cấp",
+      data.supplier
+        ? `${data.supplier.card_name} (${data.supplier.card_code})`
+        : data.supplier_name,
+    ],
     ["Nhà sản xuất", data.manufacturer_name],
     ["Ghi chú", data.note],
     ["Thời điểm nhập", formatReceiptDateTime(data.received_at)],

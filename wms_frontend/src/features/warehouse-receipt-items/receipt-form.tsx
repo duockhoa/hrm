@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import useSWR from "swr";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { normalizeSearchText } from "@/lib/search-utils";
-import useRawMaterialsStore, { type RawMaterialOption } from "@/store/raw-materials.store";
+import useRawMaterialsStore, {
+  type RawMaterialOption,
+} from "@/store/raw-materials.store";
+import businessPartnersService, {
+  SUPPLIERS_URL,
+} from "@/services/business-partners.service";
 import warehouseReceiptItemsService, {
   type WarehouseReceiptItem,
   type WarehouseReceiptItemPayload,
@@ -39,7 +45,7 @@ const textFields = [
   ["manufacturer_lot_number", "Số lô nhà sản xuất", 100, false],
   ["lot_number", "Số lô", 100, true],
   ["packaging_specification", "Quy cách đóng gói", 255, false],
-  ["supplier_name", "Nhà cung cấp", 255, false],
+  ["supplier_code", "Nhà cung cấp", 191, false],
   ["manufacturer_name", "Nhà sản xuất", 255, false],
 ] as const;
 
@@ -51,7 +57,9 @@ function defaultLotNumber(manufacturerLotNumber: string, date: Date) {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
-  }).format(date).replaceAll("/", "");
+  })
+    .format(date)
+    .replaceAll("/", "");
   return `${lot}-${dateSuffix}`;
 }
 
@@ -73,13 +81,43 @@ export default function ReceiptForm({
     (item: RawMaterialOption) => item.searchText.includes(itemSearchQuery),
     [itemSearchQuery],
   );
-  const [manufacturerLotNumber, setManufacturerLotNumber] = useState(data?.manufacturer_lot_number ?? "");
-  const [manualLotNumber, setManualLotNumber] = useState<string | null>(data?.lot_number ?? null);
+  const [manufacturerLotNumber, setManufacturerLotNumber] = useState(
+    data?.manufacturer_lot_number ?? "",
+  );
+  const [manualLotNumber, setManualLotNumber] = useState<string | null>(
+    data?.lot_number ?? null,
+  );
   const [formCreatedAt] = useState(() => new Date());
-  const lotNumber = manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, formCreatedAt);
+  const lotNumber =
+    manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, formCreatedAt);
   const itemOptions = useRawMaterialsStore((state) => state.itemOptions);
   const itemsStatus = useRawMaterialsStore((state) => state.status);
   const itemsLoading = itemsStatus === "idle" || itemsStatus === "loading";
+  const [supplierCode, setSupplierCode] = useState(data?.supplier_code ?? "");
+  const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
+  const {
+    data: suppliers,
+    error: suppliersError,
+    isLoading: suppliersLoading,
+    mutate: reloadSuppliers,
+  } = useSWR(SUPPLIERS_URL, businessPartnersService.listSuppliers);
+  const supplierOptions = useMemo(
+    () =>
+      (suppliers ?? []).map((supplier) => {
+        const label = `${supplier.card_name} (${supplier.card_code})`;
+        return {
+          value: supplier.card_code,
+          label,
+          searchText: normalizeSearchText(label),
+        };
+      }),
+    [suppliers],
+  );
+  const filterSuppliers = useCallback(
+    (supplier: RawMaterialOption) =>
+      supplier.searchText.includes(supplierSearchQuery),
+    [supplierSearchQuery],
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -92,16 +130,26 @@ export default function ReceiptForm({
     }
     const payload: WarehouseReceiptItemPayload = {
       item_code: itemCode,
-      lot_number: (manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, new Date())).trim(),
+      lot_number: (
+        manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, new Date())
+      ).trim(),
       manufacturer_lot_number: text("manufacturer_lot_number") || null,
       packaging_specification: text("packaging_specification") || null,
-      supplier_name: text("supplier_name") || null,
+      supplier_code: supplierCode || null,
       manufacturer_name: text("manufacturer_name") || null,
       expiry_date: text("expiry_date") || null,
       note: note || null,
     };
     if (!itemOptions.some((item) => item.value === itemCode)) {
       setError("Vui lòng chọn mã hàng trong danh sách.");
+      return;
+    }
+    if (
+      supplierCode &&
+      supplierCode !== data?.supplier_code &&
+      !supplierOptions.some((supplier) => supplier.value === supplierCode)
+    ) {
+      setError("Vui lòng chọn nhà cung cấp trong danh sách.");
       return;
     }
     if (!payload.lot_number) {
@@ -170,7 +218,11 @@ export default function ReceiptForm({
             <ComboboxInput
               id="receipt-item-code"
               className="w-full"
-              placeholder={itemsLoading ? "Đang tải danh sách hàng..." : "Gõ tên hoặc mã hàng để chọn"}
+              placeholder={
+                itemsLoading
+                  ? "Đang tải danh sách hàng..."
+                  : "Gõ tên hoặc mã hàng để chọn"
+              }
               disabled={isSubmitting || itemsLoading}
               showClear
             />
@@ -188,39 +240,119 @@ export default function ReceiptForm({
           {itemsStatus === "error" && (
             <div role="alert" className="text-sm text-red-600">
               Không thể tải danh sách hàng.
-              <Button type="button" variant="link" disabled={isSubmitting} onClick={() => window.location.reload()}>
+              <Button
+                type="button"
+                variant="link"
+                disabled={isSubmitting}
+                onClick={() => window.location.reload()}
+              >
                 Tải lại ứng dụng
               </Button>
             </div>
           )}
         </div>
-        {textFields.map(([key, label, maxLength, required]) => (
-          <div key={key} className="space-y-2">
-            <Label htmlFor={`receipt-${key}`}>
-              {label}
-              {required ? " *" : ""}
-            </Label>
-            <Input
-              id={`receipt-${key}`}
-              name={key}
-              {...(key === "manufacturer_lot_number"
-                ? {
-                    value: manufacturerLotNumber,
-                    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                      setManufacturerLotNumber(event.target.value),
+        {textFields.map(([key, label, maxLength, required]) =>
+          key === "supplier_code" ? (
+            <div key={key} className="space-y-2">
+              <Label htmlFor="receipt-supplier-code">Nhà cung cấp</Label>
+              <Combobox
+                autoHighlight
+                items={supplierOptions}
+                limit={50}
+                onInputValueChange={(query) =>
+                  setSupplierSearchQuery(normalizeSearchText(query).trim())
+                }
+                value={
+                  supplierOptions.find(
+                    (supplier) => supplier.value === supplierCode,
+                  ) ?? null
+                }
+                onValueChange={(supplier) => {
+                  setSupplierCode(supplier?.value ?? "");
+                  setError("");
+                }}
+                itemToStringLabel={(supplier) => supplier.label}
+                itemToStringValue={(supplier) => supplier.value}
+                isItemEqualToValue={(supplier, value) =>
+                  supplier.value === value.value
+                }
+                filter={filterSuppliers}
+                disabled={isSubmitting || suppliersLoading || !!suppliersError}
+              >
+                <ComboboxInput
+                  id="receipt-supplier-code"
+                  className="w-full"
+                  placeholder={
+                    suppliersLoading
+                      ? "Đang tải danh sách nhà cung cấp..."
+                      : "Gõ tên hoặc mã nhà cung cấp để chọn"
                   }
-                : key === "lot_number"
+                  disabled={
+                    isSubmitting || suppliersLoading || !!suppliersError
+                  }
+                  showClear
+                />
+                <ComboboxContent portalContainer={formRef}>
+                  <ComboboxEmpty>
+                    Không tìm thấy nhà cung cấp phù hợp.
+                  </ComboboxEmpty>
+                  <ComboboxList>
+                    {(supplier) => (
+                      <ComboboxItem key={supplier.value} value={supplier}>
+                        {supplier.label}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+              {suppliersError && (
+                <div role="alert" className="text-sm text-red-600">
+                  Không thể tải danh sách nhà cung cấp.
+                  <Button
+                    type="button"
+                    variant="link"
+                    disabled={isSubmitting}
+                    onClick={() => void reloadSuppliers()}
+                  >
+                    Tải lại
+                  </Button>
+                </div>
+              )}
+              {!data?.supplier_code && data?.supplier_name && (
+                <p className="text-sm text-muted-foreground">
+                  Nhà cung cấp đã nhập trước đây: {data.supplier_name}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div key={key} className="space-y-2">
+              <Label htmlFor={`receipt-${key}`}>
+                {label}
+                {required ? " *" : ""}
+              </Label>
+              <Input
+                id={`receipt-${key}`}
+                name={key}
+                {...(key === "manufacturer_lot_number"
                   ? {
-                      value: lotNumber,
+                      value: manufacturerLotNumber,
                       onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                        setManualLotNumber(event.target.value),
+                        setManufacturerLotNumber(event.target.value),
                     }
-                  : { defaultValue: data?.[key] ?? "" })}
-              maxLength={maxLength}
-              required={required}
-            />
-          </div>
-        ))}
+                  : key === "lot_number"
+                    ? {
+                        value: lotNumber,
+                        onChange: (
+                          event: React.ChangeEvent<HTMLInputElement>,
+                        ) => setManualLotNumber(event.target.value),
+                      }
+                    : { defaultValue: data?.[key] ?? "" })}
+                maxLength={maxLength}
+                required={required}
+              />
+            </div>
+          ),
+        )}
         <div className="space-y-2">
           <Label htmlFor="receipt-expiry">Hạn dùng</Label>
           <Input

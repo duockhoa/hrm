@@ -10,6 +10,12 @@ export type WarehouseReceiptItem = {
   expiry_date: string | null;
   packaging_specification: string | null;
   supplier_name: string | null;
+  supplier_code: string | null;
+  supplier: {
+    card_code: string;
+    card_name: string;
+    tax_code: string | null;
+  } | null;
   manufacturer_name: string | null;
   note: string | null;
   received_at: string;
@@ -27,7 +33,7 @@ export type WarehouseReceiptItemPayload = Pick<
   | "lot_number"
   | "expiry_date"
   | "packaging_specification"
-  | "supplier_name"
+  | "supplier_code"
   | "manufacturer_name"
   | "note"
 >;

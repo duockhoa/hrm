@@ -21,7 +21,7 @@ Tất cả endpoint yêu cầu `Authorization: Bearer <access_token>`, không y�
   "lot_number": "LOT-2026-001",
   "expiry_date": "2027-12-31",
   "packaging_specification": "Thùng 20 kg",
-  "supplier_name": "Công ty cung cấp A",
+  "supplier_code": "NC.NĐ.0168",
   "manufacturer_name": "Nhà sản xuất B",
   "note": "Kiểm tra bao bì khi nhận hàng",
   "received_at": "2026-10-01T08:00:00+07:00"
@@ -32,7 +32,8 @@ Tất cả endpoint yêu cầu `Authorization: Bearer <access_token>`, không y�
 - `entered_by_id` tự lấy từ tài khoản đăng nhập và giữ nguyên khi sửa; không gửi trong body.
 - `expiry_date` nhận ngày hợp lệ dạng `YYYY-MM-DD` hoặc `null`.
 - `received_at` nhận ISO datetime có múi giờ; mặc định là thời điểm tạo nếu bỏ qua. API trả thời gian theo UTC; frontend hiển thị theo múi giờ người dùng.
-- Các trường chuỗi tuỳ chọn nhận `null` hoặc chuỗi rỗng để xoá giá trị. Giới hạn: mã hàng 191 ký tự, số lô 100 ký tự, quy cách/nhà cung cấp/nhà sản xuất 255 ký tự, ghi chú 65535 byte UTF-8.
+- `supplier_code` là `CardCode` của đối tác loại `cSupplier` trong bảng `business_partners`, tối đa 191 ký tự. Nhận `null` hoặc chuỗi rỗng để bỏ nhà cung cấp. Không gửi `supplier_name` trong POST/PATCH.
+- Các trường chuỗi tuỳ chọn nhận `null` hoặc chuỗi rỗng để xoá giá trị. Giới hạn: mã hàng 191 ký tự, số lô 100 ký tự, quy cách/nhà sản xuất 255 ký tự, ghi chú 65535 byte UTF-8.
 - `created_at`, `updated_at` do hệ thống quản lý. Trường ngoài danh sách cho phép trả lỗi 400.
 
 ## Sửa và xoá
@@ -41,6 +42,8 @@ PATCH chỉ gửi các trường cần đổi, ví dụ `{"note": "Đã kiểm t
 
 DELETE xoá bản ghi khỏi bảng, trả bản ghi vừa xoá. Lịch sử thao tác được ghi qua audit log hiện tại.
 
-POST trả 201; các API khác trả 200. Bản ghi trả về gồm dữ liệu đã lưu, `item` (mã hàng, tên hàng, đơn vị tính) và `enteredBy` (id, username, tên người nhập). GET danh sách trả mảng, sắp xếp thời điểm nhập giảm dần.
+POST trả 201; các API khác trả 200. Bản ghi trả về gồm dữ liệu đã lưu, `item` (mã hàng, tên hàng, đơn vị tính), `supplier` (card_code, card_name, tax_code hoặc null) và `enteredBy` (id, username, tên người nhập). GET danh sách trả mảng, sắp xếp thời điểm nhập giảm dần.
+
+Migration `20261006020000_link_receipt_suppliers` thêm khóa ngoại nullable `supplier_code` và ghép tên nhà cung cấp cũ chỉ khi tên khớp đúng một đối tác loại `cSupplier`. `supplier_name` giữ lại để hiển thị dữ liệu lịch sử chưa ghép được. Khi chọn hoặc xóa nhà cung cấp qua `supplier_code`, tên nhập tay cũ được xóa; sửa trường khác vẫn giữ nguyên nhà cung cấp. Khóa ngoại chặn xóa đối tác đang được phiếu tham chiếu.
 
 Swagger có các endpoint và schema body trong nhóm `warehouse-receipt-items` tại `/api-docs`.

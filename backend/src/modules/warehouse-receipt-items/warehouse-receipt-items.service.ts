@@ -13,18 +13,19 @@ import { UpdateWarehouseReceiptItemDto } from './dto/update-warehouse-receipt-it
 
 const receiptInclude = {
   item: { select: { item_code: true, item_name: true, unit: true } },
+  supplier: { select: { card_code: true, card_name: true, tax_code: true } },
   enteredBy: { select: { id: true, username: true, name: true } },
 } satisfies Prisma.WarehouseReceiptItemsInclude;
 
 const optionalTextLimits = {
   manufacturer_lot_number: 100,
   packaging_specification: 255,
-  supplier_name: 255,
   manufacturer_name: 255,
   note: 65535,
 } as const;
 const allowedFields = new Set([
   'item_code',
+  'supplier_code',
   'lot_number',
   'expiry_date',
   'received_at',
@@ -64,6 +65,8 @@ export class WarehouseReceiptItemsService {
     }
     const data = this.buildData(dto, true);
     await this.ensureItemExists(data.item_code as string);
+    if (typeof data.supplier_code === 'string')
+      await this.ensureSupplierExists(data.supplier_code);
     const enteredBy = await this.prisma.users.findFirst({
       where: { id: enteredById, deleted_at: null },
       select: { id: true },
@@ -91,6 +94,8 @@ export class WarehouseReceiptItemsService {
       throw new BadRequestException('No update data provided');
     if (data.item_code !== undefined)
       await this.ensureItemExists(data.item_code as string);
+    if (typeof data.supplier_code === 'string')
+      await this.ensureSupplierExists(data.supplier_code);
     try {
       return await this.prisma.warehouseReceiptItems.update({
         where: { id },
@@ -121,6 +126,14 @@ export class WarehouseReceiptItemsService {
     }
     if (creating || dto.lot_number !== undefined) {
       data.lot_number = this.requiredText(dto.lot_number, 'lot_number', 100);
+    }
+    if (dto.supplier_code !== undefined) {
+      data.supplier_code =
+        dto.supplier_code === null || dto.supplier_code === ''
+          ? null
+          : this.requiredText(dto.supplier_code, 'supplier_code', 191);
+      // Explicit supplier selection or clearing replaces the legacy free-text name.
+      data.supplier_name = null;
     }
     for (const [field, limit] of Object.entries(optionalTextLimits)) {
       const key = field as keyof typeof optionalTextLimits;
@@ -219,9 +232,20 @@ export class WarehouseReceiptItemsService {
         throw new NotFoundException('Warehouse receipt item not found');
       if (error.code === 'P2003')
         throw new ConflictException(
-          'Related item or user no longer exists, or this receipt is in use',
+          'Related item, supplier or user no longer exists, or this receipt is in use',
         );
     }
     throw error;
+  }
+
+  private async ensureSupplierExists(card_code: string) {
+    const supplier = await this.prisma.businessPartners.findUnique({
+      where: { card_code },
+      select: { card_type: true },
+    });
+    if (!supplier || supplier.card_type !== 'cSupplier')
+      throw new BadRequestException(
+        'Supplier does not exist or is not a supplier',
+      );
   }
 }

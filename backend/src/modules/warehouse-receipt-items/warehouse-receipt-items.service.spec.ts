@@ -16,6 +16,7 @@ describe('WarehouseReceiptItemsService', () => {
       delete: jest.fn(),
     },
     items: { findFirst: jest.fn() },
+    businessPartners: { findUnique: jest.fn() },
     users: { findFirst: jest.fn() },
   };
   const service = new WarehouseReceiptItemsService(
@@ -26,6 +27,9 @@ describe('WarehouseReceiptItemsService', () => {
     jest.resetAllMocks();
     prisma.items.findFirst.mockResolvedValue({ item_code: 'NL001' });
     prisma.users.findFirst.mockResolvedValue({ id: 7 });
+    prisma.businessPartners.findUnique.mockResolvedValue({
+      card_type: 'cSupplier',
+    });
     prisma.warehouseReceiptItems.findUnique.mockResolvedValue({ id: 1 });
   });
 
@@ -111,14 +115,98 @@ describe('WarehouseReceiptItemsService', () => {
     await service.update(1, {
       note: null,
       expiry_date: null,
-      supplier_name: ' New supplier ',
+      supplier_code: ' NC001 ',
     });
     expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 1 },
-        data: { note: null, expiry_date: null, supplier_name: 'New supplier' },
+        data: {
+          note: null,
+          expiry_date: null,
+          supplier_code: 'NC001',
+          supplier_name: null,
+        },
       }),
     );
+  });
+
+  it('creates a receipt with a supplier relation and includes supplier details', async () => {
+    await service.create(
+      { item_code: 'NL001', lot_number: 'L01', supplier_code: ' NC001 ' },
+      { id: 7 },
+    );
+    expect(prisma.businessPartners.findUnique).toHaveBeenCalledWith({
+      where: { card_code: 'NC001' },
+      select: { card_type: true },
+    });
+    expect(prisma.warehouseReceiptItems.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          supplier_code: 'NC001',
+          supplier_name: null,
+        }),
+        include: expect.objectContaining({
+          supplier: {
+            select: { card_code: true, card_name: true, tax_code: true },
+          },
+        }),
+      }),
+    );
+  });
+
+  it.each([null, { card_type: 'cCustomer' }, { card_type: 'cLid' }])(
+    'rejects missing and non-supplier partners on create/update: %j',
+    async (partner) => {
+      prisma.businessPartners.findUnique.mockResolvedValue(partner);
+      await expect(
+        service.create(
+          { item_code: 'NL001', lot_number: 'L01', supplier_code: 'KH001' },
+          { id: 7 },
+        ),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.update(1, { supplier_code: 'KH001' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.warehouseReceiptItems.create).not.toHaveBeenCalled();
+      expect(prisma.warehouseReceiptItems.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([null, ''])(
+    'clears the relation and legacy name for supplier_code %j',
+    async (supplier_code) => {
+      await service.update(1, { supplier_code });
+      expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { supplier_code: null, supplier_name: null },
+        }),
+      );
+      expect(prisma.businessPartners.findUnique).not.toHaveBeenCalled();
+    },
+  );
+
+  it('preserves the existing supplier when updating unrelated fields', async () => {
+    await service.update(1, { note: 'Checked' });
+    expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { note: 'Checked' } }),
+    );
+    expect(prisma.businessPartners.findUnique).not.toHaveBeenCalled();
+  });
+
+  it.each([123, 'A'.repeat(192), '   '])(
+    'rejects invalid supplier codes %j',
+    async (supplier_code) => {
+      await expect(
+        service.update(1, { supplier_code } as never),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.warehouseReceiptItems.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects free-text supplier names in new write requests', async () => {
+    await expect(
+      service.update(1, { supplier_name: 'Free text' } as never),
+    ).rejects.toThrow('Unknown field: supplier_name');
   });
 
   it('rejects empty updates, null required fields and excessively long text', async () => {

@@ -58,7 +58,7 @@ function rowValues(receipt: WarehouseReceiptItem) {
     receipt.lot_number,
     formatExpiryDate(receipt.expiry_date),
     receipt.packaging_specification,
-    receipt.supplier_name,
+    receipt.supplier?.card_name ?? receipt.supplier_name,
     receipt.manufacturer_name,
     receipt.note,
     formatReceiptDateTime(receipt.received_at),
@@ -89,7 +89,12 @@ export default function ReceiptPage({
     for (const receipt of data ?? []) {
       if (
         !matchesSearchKeyword(
-          [receipt.id, ...rowValues(receipt), receipt.item?.unit],
+          [
+            receipt.id,
+            ...rowValues(receipt),
+            receipt.item?.unit,
+            receipt.supplier_code,
+          ],
           search,
         )
       )
@@ -294,7 +299,9 @@ export default function ReceiptPage({
       <Dialog open={creating} onOpenChange={setCreating}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto md:max-w-[640px]">
           <DialogHeader>
-            <DialogTitle className="text-center">Thêm hàng nhập kho</DialogTitle>
+            <DialogTitle className="text-center">
+              Thêm hàng nhập kho
+            </DialogTitle>
           </DialogHeader>
           <ReceiptForm
             onCancel={() => setCreating(false)}

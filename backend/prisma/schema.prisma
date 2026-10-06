@@ -431,6 +431,7 @@ model RegistrationNumbers {
 }
 
 model BusinessPartners {
+  warehouseReceiptItems WarehouseReceiptItems[] @relation("WarehouseReceiptSupplier")
   id                    Int       @id @default(autoincrement())
   card_code             String    @unique @db.VarChar(191)
   card_name             String    @db.Text
@@ -501,6 +502,7 @@ model WarehouseReceiptItems {
   expiry_date             DateTime? @db.Date
   packaging_specification String?   @db.VarChar(255)
   supplier_name           String?   @db.VarChar(255)
+  supplier_code           String?   @db.VarChar(191)
   manufacturer_name       String?   @db.VarChar(255)
   note                    String?   @db.Text
   entered_by_id           Int
@@ -508,9 +510,11 @@ model WarehouseReceiptItems {
   created_at              DateTime  @default(now()) @db.DateTime(3)
   updated_at              DateTime  @default(now()) @updatedAt @db.DateTime(3)
   item                    Items     @relation(fields: [item_code], references: [item_code], onDelete: Restrict)
+  supplier                BusinessPartners? @relation("WarehouseReceiptSupplier", fields: [supplier_code], references: [card_code], onDelete: Restrict)
   enteredBy               Users     @relation("WarehouseReceiptItemEnteredBy", fields: [entered_by_id], references: [id], onDelete: Restrict)
 
   @@index([item_code])
+  @@index([supplier_code])
   @@index([entered_by_id])
   @@index([lot_number])
   @@index([expiry_date])
