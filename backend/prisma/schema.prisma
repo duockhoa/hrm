@@ -430,6 +430,47 @@ model RegistrationNumbers {
   @@map("registration_numbers")
 }
 
+model BusinessPartners {
+  id                    Int       @id @default(autoincrement())
+  card_code             String    @unique @db.VarChar(191)
+  card_name             String    @db.Text
+  card_type             String    @db.VarChar(30)
+  group_code            Int?
+  tax_code              String?   @db.VarChar(255)
+  foreign_name          String?   @db.Text
+  address               String?   @db.Text
+  custom_address        String?   @db.Text
+  city                  String?   @db.VarChar(255)
+  country_code          String?   @db.VarChar(10)
+  phone                 String?   @db.VarChar(255)
+  phone_secondary       String?   @db.VarChar(255)
+  mobile                String?   @db.VarChar(255)
+  email                 String?   @db.VarChar(255)
+  contact_person        String?   @db.VarChar(255)
+  is_valid              Boolean?
+  valid_from            DateTime? @db.Date
+  valid_to              DateTime? @db.Date
+  is_frozen             Boolean?
+  frozen_from           DateTime? @db.Date
+  frozen_to             DateTime? @db.Date
+  notes                 String?   @db.Text
+  partner_origin        String?   @db.VarChar(255)
+  custom_partner_label  String?   @db.VarChar(255)
+  custom_contact_person String?   @db.VarChar(255)
+  custom_phone          String?   @db.VarChar(255)
+  sap_created_date      DateTime? @db.Date
+  sap_created_time      String?   @db.VarChar(20)
+  sap_updated_date      DateTime? @db.Date
+  sap_updated_time      String?   @db.VarChar(20)
+  last_synced_at        DateTime  @db.DateTime(3)
+  created_at            DateTime  @default(now()) @db.DateTime(3)
+  updated_at            DateTime  @default(now()) @updatedAt @db.DateTime(3)
+
+  @@index([card_type, card_code])
+  @@index([group_code])
+  @@map("business_partners")
+}
+
 model Items {
   warehouseReceiptItems   WarehouseReceiptItems[]
   item_code               String                             @id

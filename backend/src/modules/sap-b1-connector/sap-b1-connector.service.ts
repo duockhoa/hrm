@@ -2,6 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma.service';
 import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
+import { Prisma } from '@prisma/client';
+import {
+  SAP_BP_DATE_FIELDS,
+  SAP_BP_STRING_FIELDS,
+  SAP_BP_TYPES,
+  SapBusinessPartner,
+} from './sap-business-partner';
 
 const SAP_ITEM_CODE_MAX_LENGTH = 191;
 
@@ -16,6 +23,84 @@ export class SapB1ConnectorService {
     private readonly sapB1Client: SapB1ServiceLayerClient,
   ) {}
   private readonly logger = new Logger(SapB1ConnectorService.name);
+  private businessPartnersSyncRunning = false;
+
+  @Cron('0 */30 * * * *')
+  async handleCronSyncBusinessPartners() {
+    if (this.businessPartnersSyncRunning) return;
+    this.businessPartnersSyncRunning = true;
+    try {
+      const partners = await this.sapB1Client.getBusinessPartners();
+      for (const partner of partners) {
+        try {
+          const data = this.mapBusinessPartner(partner);
+          await this.prismaService.businessPartners.upsert({
+            where: { card_code: data.card_code },
+            create: data,
+            update: data,
+          });
+        } catch (error) {
+          this.logger.warn(
+            `Failed to sync business partner ${partner.CardCode ?? '(missing code)'}: ${error instanceof Error ? error.message : error}`,
+          );
+        }
+      }
+      this.logger.log(
+        `Business partner sync finished: ${partners.length} records fetched`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch/sync business partners: ${error instanceof Error ? error.message : error}`,
+      );
+    } finally {
+      this.businessPartnersSyncRunning = false;
+    }
+  }
+
+  private mapBusinessPartner(
+    partner: SapBusinessPartner,
+  ): Prisma.BusinessPartnersCreateInput {
+    const card_code = this.requireSapString(partner.CardCode, 'CardCode');
+    const card_name = this.requireSapString(partner.CardName, 'CardName');
+    const card_type = this.requireSapString(partner.CardType, 'CardType');
+    if (card_code.length > 191)
+      throw new Error('CardCode exceeds 191 characters');
+    if (!SAP_BP_TYPES.some((type) => type === card_type))
+      throw new Error(`Invalid CardType: ${card_type}`);
+    if (partner.GroupCode != null && !Number.isInteger(partner.GroupCode))
+      throw new Error('Invalid GroupCode');
+
+    const strings = Object.fromEntries(
+      Object.entries(SAP_BP_STRING_FIELDS).map(([column, field]) => [
+        column,
+        partner[field] || null,
+      ]),
+    );
+    const dates = Object.fromEntries(
+      Object.entries(SAP_BP_DATE_FIELDS).map(([column, field]) => [
+        column,
+        partner[field] ? this.parseSapDate(partner[field]) : null,
+      ]),
+    );
+    return {
+      ...strings,
+      ...dates,
+      card_code,
+      card_name,
+      card_type,
+      group_code: partner.GroupCode ?? null,
+      is_valid: this.parseSapBoolean(partner.Valid),
+      is_frozen: this.parseSapBoolean(partner.Frozen),
+      last_synced_at: new Date(),
+    };
+  }
+
+  private parseSapBoolean(value: string | null | undefined): boolean | null {
+    if (!value) return null;
+    if (value === 'tYES') return true;
+    if (value === 'tNO') return false;
+    throw new Error(`Invalid SAP boolean: ${value}`);
+  }
 
   private parseSapDate(value: string | null | undefined): Date {
     if (!value) {

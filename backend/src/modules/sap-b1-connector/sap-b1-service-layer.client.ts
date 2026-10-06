@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import * as https from 'https';
+import { SAP_BP_SELECT, SapBusinessPartner } from './sap-business-partner';
 
 type SapPagedResponse<T> = {
   value?: T[];
@@ -46,6 +47,12 @@ export class SapB1ServiceLayerClient {
   async getItems() {
     return this.fetchAllPages(
       'Items?$select=ItemCode,ItemName,SalesUnit,U_MDK,ManageBatchNumbers',
+    );
+  }
+
+  async getBusinessPartners() {
+    return this.fetchAllPages<SapBusinessPartner>(
+      `BusinessPartners?$select=${SAP_BP_SELECT}&$orderby=CardCode`,
     );
   }
 
