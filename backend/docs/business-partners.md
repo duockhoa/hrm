@@ -10,7 +10,6 @@ và khách hàng tiềm năng (`cLid`) từ company SAP cấu hình qua `SAP_COM
 - Sử dụng session và cơ chế đọc hết các trang SAP của đồng bộ items.
 - Upsert từng bản ghi theo `CardCode`; lỗi một bản ghi không dừng các bản ghi khác.
 - Không chạy hai lượt đồng bộ đối tác cùng lúc trong một tiến trình backend.
-- `last_synced_at` cập nhật sau mỗi lần lưu thành công, kể cả dữ liệu không đổi.
 - Không xóa bản ghi nội bộ khi đối tác không xuất hiện trong kết quả SAP.
 - Không đồng bộ ngay khi khởi động; lượt đầu chạy theo lịch cron, giống items.
 - Giữ riêng `Address` và `U_Diachi`, `ContactPerson` và `U_NLH`, `Phone1` và

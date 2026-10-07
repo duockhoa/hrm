@@ -91,7 +91,6 @@ export class SapB1ConnectorService {
       group_code: partner.GroupCode ?? null,
       is_valid: this.parseSapBoolean(partner.Valid),
       is_frozen: this.parseSapBoolean(partner.Frozen),
-      last_synced_at: new Date(),
     };
   }
 

@@ -47,7 +47,6 @@ describe('SAP business partner sync', () => {
         is_frozen: false,
         sap_updated_date: new Date('2025-04-11T00:00:00Z'),
         sap_updated_time: '11:18:18',
-        last_synced_at: expect.any(Date),
       }),
       update: expect.any(Object),
     });
