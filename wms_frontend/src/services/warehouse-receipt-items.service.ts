@@ -5,6 +5,8 @@ export const WAREHOUSE_RECEIPT_ITEMS_URL = "/warehouse-receipt-items";
 export type WarehouseReceiptItem = {
   id: number;
   item_code: string;
+  quantity: string | number | null;
+  unit: string | null;
   manufacturer_lot_number: string | null;
   lot_number: string;
   expiry_date: string | null;
@@ -29,6 +31,8 @@ export type WarehouseReceiptItem = {
 export type WarehouseReceiptItemPayload = Pick<
   WarehouseReceiptItem,
   | "item_code"
+  | "quantity"
+  | "unit"
   | "manufacturer_lot_number"
   | "lot_number"
   | "expiry_date"

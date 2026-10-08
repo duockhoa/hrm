@@ -517,6 +517,8 @@ model Items {
 model WarehouseReceiptItems {
   id                      Int       @id @default(autoincrement())
   item_code               String    @db.VarChar(191)
+  quantity                Decimal?  @db.Decimal(12, 3)
+  unit                    String?   @db.VarChar(191)
   manufacturer_lot_number String?   @db.VarChar(100)
   lot_number              String    @db.VarChar(100)
   expiry_date             DateTime? @db.Date

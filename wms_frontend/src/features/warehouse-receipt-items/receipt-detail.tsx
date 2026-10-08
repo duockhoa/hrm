@@ -25,6 +25,10 @@ export const formatReceiptDateTime = (value: string) =>
   new Date(value).toLocaleString("vi-VN");
 export const formatExpiryDate = (value: string | null) =>
   value ? value.slice(0, 10).split("-").reverse().join("/") : "";
+export const formatReceiptQuantity = (value: string | number | null) =>
+  value == null
+    ? ""
+    : Number(value).toLocaleString("vi-VN", { maximumFractionDigits: 3 });
 
 export default function ReceiptDetail({
   id,
@@ -105,7 +109,8 @@ export default function ReceiptDetail({
   const fields = [
     ["Mã hàng", data.item_code],
     ["Tên hàng", data.item?.item_name],
-    ["Đơn vị tính", data.item?.unit],
+    ["Số lượng", formatReceiptQuantity(data.quantity)],
+    ["Đơn vị tính", data.unit],
     ["Số lô", data.lot_number],
     ["Số lô nhà sản xuất", data.manufacturer_lot_number],
     ["Hạn dùng", formatExpiryDate(data.expiry_date)],

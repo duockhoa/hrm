@@ -1,6 +1,6 @@
 # API hàng nhập kho
 
-Bảng `warehouse_receipt_items`: mỗi bản ghi là một mặt hàng theo lô trong một lần nhập kho. Cho phép cùng mã hàng và số lô xuất hiện trong nhiều lần nhập. Bảng lưu thông tin hàng/lô, chưa tính tồn kho vì chưa có số lượng nhập.
+Bảng `warehouse_receipt_items`: mỗi bản ghi là một mặt hàng theo lô trong một lần nhập kho. Cho phép cùng mã hàng và số lô xuất hiện trong nhiều lần nhập. Bảng lưu thông tin hàng/lô, số lượng và đơn vị tính của từng lần nhập.
 
 Tất cả endpoint yêu cầu `Authorization: Bearer <access_token>`, không yêu cầu quyền riêng. Người dùng đã đăng nhập có thể xem danh sách, xem chi tiết, thêm, sửa và xoá hàng nhập kho. Migration `20261001010000_remove_warehouse_receipt_item_permissions` xoá các quyền `warehouse-receipt-items.*` và các liên kết vai trò tương ứng đã được tạo trước đây.
 
@@ -17,6 +17,8 @@ Tất cả endpoint yêu cầu `Authorization: Bearer <access_token>`, không y�
 ```json
 {
   "item_code": "NL001",
+  "quantity": "125.5",
+  "unit": "kg",
   "manufacturer_lot_number": "NSX-2026-001",
   "lot_number": "LOT-2026-001",
   "expiry_date": "2027-12-31",
@@ -29,6 +31,8 @@ Tất cả endpoint yêu cầu `Authorization: Bearer <access_token>`, không y�
 ```
 
 - Bắt buộc `item_code`, `lot_number`: chuỗi không rỗng. Mã hàng phải tồn tại và chưa bị xoá.
+- `quantity` tuỳ chọn, nhận số hoặc chuỗi số thập phân dương, tối đa 3 chữ số thập phân và `999999999.999`; nhận `null` để xoá. Lưu bằng `DECIMAL(12,3)`, response trả dạng chuỗi để giữ độ chính xác.
+- `unit` tuỳ chọn, là đơn vị tính lưu riêng cho bản ghi, tối đa 191 ký tự; nhận `null` hoặc chuỗi rỗng để xoá. Form điền sẵn đơn vị từ mã hàng, cho phép sửa. Migration lấy đơn vị từ danh mục cho dữ liệu cũ và để số lượng là `null`.
 - `entered_by_id` tự lấy từ tài khoản đăng nhập và giữ nguyên khi sửa; không gửi trong body.
 - `expiry_date` nhận ngày hợp lệ dạng `YYYY-MM-DD` hoặc `null`.
 - `received_at` nhận ISO datetime có múi giờ; mặc định là thời điểm tạo nếu bỏ qua. API trả thời gian theo UTC; frontend hiển thị theo múi giờ người dùng.

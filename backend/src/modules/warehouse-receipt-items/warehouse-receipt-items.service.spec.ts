@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
+import { Prisma } from '@prisma/client';
 import { WarehouseReceiptItemsService } from './warehouse-receipt-items.service';
 
 describe('WarehouseReceiptItemsService', () => {
@@ -234,6 +235,86 @@ describe('WarehouseReceiptItemsService', () => {
     await service.delete(1);
     expect(prisma.warehouseReceiptItems.delete).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 1 } }),
+    );
+  });
+
+  it.each([125.5, ' 125.500 '])(
+    'stores quantity %j as a decimal and trims the unit',
+    async (quantity) => {
+      await service.create(
+        { item_code: 'NL001', lot_number: 'L01', quantity, unit: ' kg ' },
+        { id: 7 },
+      );
+      expect(prisma.warehouseReceiptItems.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            quantity: new Prisma.Decimal('125.5'),
+            unit: 'kg',
+          }),
+        }),
+      );
+    },
+  );
+
+  it.each([
+    0,
+    -1,
+    '',
+    ' ',
+    'abc',
+    '1.2345',
+    '1e3',
+    '1000000000',
+    Infinity,
+    NaN,
+    true,
+    {},
+  ])('rejects invalid quantity %j on create and update', async (quantity) => {
+    await expect(
+      service.create(
+        { item_code: 'NL001', lot_number: 'L01', quantity } as never,
+        { id: 7 },
+      ),
+    ).rejects.toThrow(BadRequestException);
+    await expect(service.update(1, { quantity } as never)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(prisma.warehouseReceiptItems.create).not.toHaveBeenCalled();
+    expect(prisma.warehouseReceiptItems.update).not.toHaveBeenCalled();
+  });
+
+  it.each(['0.001', '999999999.999'])(
+    'accepts the quantity boundary %s',
+    async (quantity) => {
+      await service.update(1, { quantity });
+      expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { quantity: new Prisma.Decimal(quantity) },
+        }),
+      );
+    },
+  );
+
+  it('allows clearing quantity and unit', async () => {
+    await service.update(1, { quantity: null, unit: '' });
+    expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { quantity: null, unit: null },
+      }),
+    );
+  });
+
+  it.each([123, 'A'.repeat(192)])('rejects invalid units %j', async (unit) => {
+    await expect(service.update(1, { unit } as never)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(prisma.warehouseReceiptItems.update).not.toHaveBeenCalled();
+  });
+
+  it('updates the unit without overwriting the quantity', async () => {
+    await service.update(1, { unit: ' thùng ' });
+    expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { unit: 'thùng' } }),
     );
   });
 });

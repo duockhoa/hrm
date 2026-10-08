@@ -35,6 +35,9 @@ export function receiptError(error: unknown, fallback: string) {
     if (error.response?.status === 404)
       return "Không tìm thấy bản ghi hàng nhập kho.";
     const message = error.response?.data?.message;
+    if (typeof message === "string" && message.startsWith("quantity ")) {
+      return "Số lượng phải lớn hơn 0, không vượt quá 999.999.999,999 và có tối đa 3 chữ số thập phân.";
+    }
     if (Array.isArray(message)) return message.join("; ");
     if (typeof message === "string") return message;
   }
@@ -91,6 +94,15 @@ export default function ReceiptForm({
   const lotNumber =
     manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, formCreatedAt);
   const itemOptions = useRawMaterialsStore((state) => state.itemOptions);
+  const items = useRawMaterialsStore((state) => state.items);
+  const [manualUnit, setManualUnit] = useState<string | null>(
+    data ? (data.unit ?? "") : null,
+  );
+  const unit =
+    manualUnit ??
+    items.find((item) => item.item_code === itemCode)?.unit ??
+    (itemCode === data?.item_code ? data.item?.unit : "") ??
+    "";
   const itemsStatus = useRawMaterialsStore((state) => state.status);
   const itemsLoading = itemsStatus === "idle" || itemsStatus === "loading";
   const [supplierCode, setSupplierCode] = useState(data?.supplier_code ?? "");
@@ -123,6 +135,18 @@ export default function ReceiptForm({
     event.preventDefault();
     const values = new FormData(event.currentTarget);
     const text = (key: string) => String(values.get(key) ?? "").trim();
+    const quantity = text("quantity");
+    if (
+      quantity &&
+      (!/^\d+(?:\.\d{1,3})?$/.test(quantity) ||
+        Number(quantity) <= 0 ||
+        Number(quantity) > 999999999.999)
+    ) {
+      setError(
+        "Số lượng phải lớn hơn 0, không vượt quá 999.999.999,999 và có tối đa 3 chữ số thập phân.",
+      );
+      return;
+    }
     const note = text("note");
     if (new TextEncoder().encode(note).length > 65535) {
       setError("Ghi chú vượt quá giới hạn 65535 byte UTF-8.");
@@ -130,6 +154,8 @@ export default function ReceiptForm({
     }
     const payload: WarehouseReceiptItemPayload = {
       item_code: itemCode,
+      quantity: quantity || null,
+      unit: unit.trim() || null,
       lot_number: (
         manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, new Date())
       ).trim(),
@@ -170,7 +196,11 @@ export default function ReceiptForm({
                 value !==
                 (key === "expiry_date"
                   ? (data.expiry_date?.slice(0, 10) ?? null)
-                  : data[key as keyof WarehouseReceiptItem]),
+                  : key === "quantity"
+                    ? data.quantity == null
+                      ? null
+                      : String(data.quantity)
+                    : data[key as keyof WarehouseReceiptItem]),
             ),
           )
         : payload;
@@ -207,6 +237,7 @@ export default function ReceiptForm({
             value={itemOptions.find((item) => item.value === itemCode) ?? null}
             onValueChange={(item) => {
               setItemCode(item?.value ?? "");
+              setManualUnit(null);
               setError("");
             }}
             itemToStringLabel={(item) => item.label}
@@ -250,6 +281,33 @@ export default function ReceiptForm({
               </Button>
             </div>
           )}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="receipt-quantity">Số lượng</Label>
+            <Input
+              id="receipt-quantity"
+              name="quantity"
+              type="number"
+              inputMode="decimal"
+              min="0.001"
+              max="999999999.999"
+              step="0.001"
+              defaultValue={data?.quantity ?? ""}
+              placeholder="Nhập số lượng"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="receipt-unit">Đơn vị tính</Label>
+            <Input
+              id="receipt-unit"
+              name="unit"
+              value={unit}
+              onChange={(event) => setManualUnit(event.target.value)}
+              maxLength={191}
+              placeholder="Ví dụ: kg, g, thùng"
+            />
+          </div>
         </div>
         {textFields.map(([key, label, maxLength, required]) =>
           key === "supplier_code" ? (

@@ -35,6 +35,7 @@ import warehouseReceiptItemsService, {
 } from "@/services/warehouse-receipt-items.service";
 import ReceiptDetail, {
   formatExpiryDate,
+  formatReceiptQuantity,
   formatReceiptDateTime,
 } from "./receipt-detail";
 import ReceiptForm, { receiptError } from "./receipt-form";
@@ -42,6 +43,8 @@ import ReceiptForm, { receiptError } from "./receipt-form";
 const columns = [
   "Mã hàng",
   "Tên hàng",
+  "Số lượng",
+  "Đơn vị tính",
   "Số lô",
   "Hạn dùng",
   "Quy cách đóng gói",
@@ -55,6 +58,8 @@ function rowValues(receipt: WarehouseReceiptItem) {
   return [
     receipt.item_code,
     receipt.item?.item_name,
+    formatReceiptQuantity(receipt.quantity),
+    receipt.unit,
     receipt.lot_number,
     formatExpiryDate(receipt.expiry_date),
     receipt.packaging_specification,
@@ -89,12 +94,7 @@ export default function ReceiptPage({
     for (const receipt of data ?? []) {
       if (
         !matchesSearchKeyword(
-          [
-            receipt.id,
-            ...rowValues(receipt),
-            receipt.item?.unit,
-            receipt.supplier_code,
-          ],
+          [receipt.id, ...rowValues(receipt), receipt.supplier_code],
           search,
         )
       )

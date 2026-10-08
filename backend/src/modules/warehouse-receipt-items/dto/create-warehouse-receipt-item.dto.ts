@@ -4,6 +4,23 @@ export class CreateWarehouseReceiptItemDto {
   @ApiProperty({ maxLength: 191, example: 'NL001' })
   item_code: string;
 
+  @ApiPropertyOptional({
+    oneOf: [{ type: 'number' }, { type: 'string' }],
+    nullable: true,
+    example: '125.5',
+    description:
+      'Positive quantity, at most 3 decimal places and 999999999.999',
+  })
+  quantity?: number | string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: 191,
+    nullable: true,
+    example: 'kg',
+  })
+  unit?: string | null;
+
   @ApiProperty({ maxLength: 100, example: 'LOT-2026-001' })
   lot_number: string;
 

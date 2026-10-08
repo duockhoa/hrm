@@ -18,6 +18,7 @@ const receiptInclude = {
 } satisfies Prisma.WarehouseReceiptItemsInclude;
 
 const optionalTextLimits = {
+  unit: 191,
   manufacturer_lot_number: 100,
   packaging_specification: 255,
   manufacturer_name: 255,
@@ -25,6 +26,7 @@ const optionalTextLimits = {
 } as const;
 const allowedFields = new Set([
   'item_code',
+  'quantity',
   'supplier_code',
   'lot_number',
   'expiry_date',
@@ -121,6 +123,9 @@ export class WarehouseReceiptItemsService {
 
   private buildData(dto: UpdateWarehouseReceiptItemDto, creating: boolean) {
     const data: Prisma.WarehouseReceiptItemsUncheckedUpdateInput = {};
+    if (dto.quantity !== undefined) {
+      data.quantity = this.normalizeQuantity(dto.quantity);
+    }
     if (creating || dto.item_code !== undefined) {
       data.item_code = this.requiredText(dto.item_code, 'item_code', 191);
     }
@@ -192,6 +197,28 @@ export class WarehouseReceiptItemsService {
       data.received_at = new Date(value);
     }
     return data;
+  }
+
+  private normalizeQuantity(value: unknown) {
+    if (value === null) return null;
+    if (typeof value !== 'number' && typeof value !== 'string') {
+      throw new BadRequestException(
+        'quantity must be a positive decimal with at most 3 decimal places',
+      );
+    }
+    const text = String(value).trim();
+    if (!/^\d+(?:\.\d{1,3})?$/.test(text)) {
+      throw new BadRequestException(
+        'quantity must be a positive decimal with at most 3 decimal places',
+      );
+    }
+    const quantity = new Prisma.Decimal(text);
+    if (quantity.lte(0) || quantity.gt('999999999.999')) {
+      throw new BadRequestException(
+        'quantity must be greater than 0 and at most 999999999.999',
+      );
+    }
+    return quantity;
   }
 
   private validateBody(dto: unknown) {
