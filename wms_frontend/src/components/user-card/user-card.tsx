@@ -10,6 +10,7 @@ import { useLogout } from "@/hooks/use-logout";
 import {
   LayoutGrid,
   LogOut,
+  Settings,
   User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -103,6 +104,10 @@ export default function UserCard({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
+          <DropdownMenuItem onClick={() => router.push("/setting")}>
+            <Settings className="mr-2 h-4 w-4" />
+            Cài đặt
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
               router.push("/profile");

@@ -18,6 +18,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SapB1ConnectorModule } from './modules/sap-b1-connector/sap-b1-connector.module';
 import { ItemsModule } from './modules/items/items.module';
 import { BusinessPartnersModule } from './modules/business-partners/business-partners.module';
+import { ManufacturersModule } from './modules/manufacturers/manufacturers.module';
 import { ProductionOrdersModule } from './modules/production-orders/production-orders.module';
 import { ProductionSpecificationsModule } from './modules/production-specifications/production-specifications.module';
 import { ProductionOrderDeviationsModule } from './modules/production-order-deviations/production-order-deviations.module';
@@ -60,6 +61,7 @@ import { WarehouseTemperatureHumidityChecksModule } from './modules/warehouse-te
     SapB1ConnectorModule,
     ItemsModule,
     BusinessPartnersModule,
+    ManufacturersModule,
     ProductionOrdersModule,
     ProductionOrderDeviationsModule,
     ProductionSpecificationsModule,

@@ -29,6 +29,7 @@ model AuditLogs {
 }
 
 model Users {
+  createdManufacturers Manufacturers[] @relation("ManufacturerCreator")
   checkedWarehouseTemperatureHumidityChecks WarehouseTemperatureHumidityChecks[] @relation("WarehouseTemperatureHumidityChecker")
   enteredWarehouseReceiptItems                          WarehouseReceiptItems[]                                         @relation("WarehouseReceiptItemEnteredBy")
   id                                                    Int                                                             @id @default(autoincrement())
@@ -428,6 +429,26 @@ model RegistrationNumbers {
   productionOrderRegistrationNumbers ProductionOrderRegistrationNumbers[]
 
   @@map("registration_numbers")
+}
+
+model Manufacturers {
+  id                Int      @id @default(autoincrement())
+  manufacturer_code String   @unique @db.VarChar(100)
+  manufacturer_name String   @db.VarChar(255)
+  created_by_id     Int?
+  createdBy         Users?   @relation("ManufacturerCreator", fields: [created_by_id], references: [id], onDelete: Restrict)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @default(now()) @updatedAt
+
+  @@index([created_by_id])
+  @@map("manufacturers")
+}
+
+model ManufacturerCodeSequence {
+  id          Int @id
+  last_number Int @default(0)
+
+  @@map("manufacturer_code_sequence")
 }
 
 model BusinessPartners {

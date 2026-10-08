@@ -8,6 +8,7 @@ const protectedPaths = [
   "/warehouse-temperature-humidity-checks",
   "/label",
   "/profile",
+  "/setting",
 ];
 const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const cookieDomain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN;

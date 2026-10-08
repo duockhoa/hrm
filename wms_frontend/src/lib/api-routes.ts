@@ -84,6 +84,10 @@ const DOSAGE_FORMS = {
 };
 
 export const API_ROUTES = {
+  manufacturers: {
+    base: "/manufacturers",
+    detail: (id: number) => `/manufacturers/${id}`,
+  },
   warehouseTemperatureHumidityChecks: {
     base: "/warehouse-temperature-humidity-checks",
     detail: (id: number) => `/warehouse-temperature-humidity-checks/${id}`,
