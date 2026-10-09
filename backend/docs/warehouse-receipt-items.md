@@ -32,7 +32,7 @@ Tất cả endpoint yêu cầu `Authorization: Bearer <access_token>`, không y�
 
 - Bắt buộc `item_code`, `lot_number`: chuỗi không rỗng. Mã hàng phải tồn tại và chưa bị xoá.
 - `quantity` tuỳ chọn, nhận số hoặc chuỗi số thập phân dương, tối đa 3 chữ số thập phân và `999999999.999`; nhận `null` để xoá. Lưu bằng `DECIMAL(12,3)`, response trả dạng chuỗi để giữ độ chính xác.
-- `unit` tuỳ chọn, là đơn vị tính lưu riêng cho bản ghi, tối đa 191 ký tự; nhận `null` hoặc chuỗi rỗng để xoá. Form điền sẵn đơn vị từ mã hàng, cho phép sửa. Migration lấy đơn vị từ danh mục cho dữ liệu cũ và để số lượng là `null`.
+- `unit` tuỳ chọn, là đơn vị tính lưu riêng cho bản ghi, tối đa 191 ký tự. Khi tạo mới hoặc đổi sang mã hàng khác mà không gửi `unit`, API mặc định lấy đơn vị từ mã hàng. Sửa các trường khác hoặc gửi lại cùng mã hàng sẽ giữ nguyên đơn vị đã lưu. Nhận `null` hoặc chuỗi rỗng để xoá, hoặc gửi đơn vị khác để ghi đè mặc định. Form hiển thị đơn vị bằng chữ mờ sau ô số lượng, lấy từ mã hàng khi chọn/đổi mã hoặc khi bản ghi chưa có đơn vị. Migration lấy đơn vị từ danh mục cho dữ liệu cũ và để số lượng là `null`.
 - `entered_by_id` tự lấy từ tài khoản đăng nhập và giữ nguyên khi sửa; không gửi trong body.
 - `expiry_date` nhận ngày hợp lệ dạng `YYYY-MM-DD` hoặc `null`.
 - `received_at` nhận ISO datetime có múi giờ; mặc định là thời điểm tạo nếu bỏ qua. API trả thời gian theo UTC; frontend hiển thị theo múi giờ người dùng.

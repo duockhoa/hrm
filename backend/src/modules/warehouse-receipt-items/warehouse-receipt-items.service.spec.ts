@@ -37,7 +37,10 @@ describe('WarehouseReceiptItemsService', () => {
       (callback: (tx: typeof prisma) => Promise<unknown>) => callback(prisma),
     );
     prisma.$queryRaw.mockResolvedValue([{ id: 1 }]);
-    prisma.items.findFirst.mockResolvedValue({ item_code: 'NL001' });
+    prisma.items.findFirst.mockResolvedValue({
+      item_code: 'NL001',
+      unit: 'kg',
+    });
     prisma.users.findFirst.mockResolvedValue({ id: 7 });
     prisma.businessPartners.findUnique.mockResolvedValue({
       card_type: 'cSupplier',
@@ -60,6 +63,7 @@ describe('WarehouseReceiptItemsService', () => {
       expect.objectContaining({
         data: {
           item_code: 'NL001',
+          unit: 'kg',
           lot_number: 'L01',
           note: null,
           entered_by_id: 7,
@@ -325,6 +329,91 @@ describe('WarehouseReceiptItemsService', () => {
       BadRequestException,
     );
     expect(prisma.warehouseReceiptItems.update).not.toHaveBeenCalled();
+  });
+
+  it('defaults the unit from the item when creating without a unit', async () => {
+    prisma.items.findFirst.mockResolvedValue({
+      item_code: 'NL001',
+      unit: ' kg ',
+    });
+    await service.create({ item_code: 'NL001', lot_number: 'L01' }, { id: 7 });
+    expect(prisma.warehouseReceiptItems.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ unit: 'kg' }),
+      }),
+    );
+  });
+
+  it.each([null, ''])(
+    'preserves an explicitly cleared unit on create: %j',
+    async (unit) => {
+      await service.create(
+        { item_code: 'NL001', lot_number: 'L01', unit },
+        { id: 7 },
+      );
+      expect(prisma.warehouseReceiptItems.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ unit: null }),
+        }),
+      );
+    },
+  );
+
+  it('preserves an explicit unit override on create', async () => {
+    await service.create(
+      { item_code: 'NL001', lot_number: 'L01', unit: 'thùng' },
+      { id: 7 },
+    );
+    expect(prisma.warehouseReceiptItems.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ unit: 'thùng' }),
+      }),
+    );
+  });
+
+  it('uses null when the selected item has no unit', async () => {
+    prisma.items.findFirst.mockResolvedValue({
+      item_code: 'NL001',
+      unit: null,
+    });
+    await service.create({ item_code: 'NL001', lot_number: 'L01' }, { id: 7 });
+    expect(prisma.warehouseReceiptItems.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ unit: null }),
+      }),
+    );
+  });
+
+  it('defaults to the new item unit when changing the item without a unit', async () => {
+    prisma.warehouseReceiptItems.findUnique.mockResolvedValue({
+      id: 1,
+      item_code: 'NL001',
+      unit: 'thùng',
+    });
+    prisma.items.findFirst.mockResolvedValue({ item_code: 'NL002', unit: 'g' });
+    await service.update(1, { item_code: 'NL002' });
+    expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { item_code: 'NL002', unit: 'g' } }),
+    );
+  });
+
+  it('preserves the saved unit when the same item code is submitted again', async () => {
+    prisma.warehouseReceiptItems.findUnique.mockResolvedValue({
+      id: 1,
+      item_code: 'NL001',
+      unit: 'thùng',
+    });
+    await service.update(1, { item_code: 'NL001' });
+    expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { item_code: 'NL001' } }),
+    );
+  });
+
+  it('preserves an explicit unit when changing the item', async () => {
+    await service.update(1, { item_code: 'NL002', unit: 'thùng' });
+    expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { item_code: 'NL002', unit: 'thùng' } }),
+    );
   });
 
   it('updates the unit without overwriting the quantity', async () => {

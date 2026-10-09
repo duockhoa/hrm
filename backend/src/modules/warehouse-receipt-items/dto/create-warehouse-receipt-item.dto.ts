@@ -18,6 +18,7 @@ export class CreateWarehouseReceiptItemDto {
     maxLength: 191,
     nullable: true,
     example: 'kg',
+    description: 'Defaults to the selected item unit when omitted',
   })
   unit?: string | null;
 

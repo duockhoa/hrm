@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
@@ -95,11 +95,8 @@ export default function ReceiptForm({
     manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, formCreatedAt);
   const itemOptions = useRawMaterialsStore((state) => state.itemOptions);
   const items = useRawMaterialsStore((state) => state.items);
-  const [manualUnit, setManualUnit] = useState<string | null>(
-    data ? (data.unit ?? "") : null,
-  );
   const unit =
-    manualUnit ??
+    (itemCode === data?.item_code ? data.unit : null) ??
     items.find((item) => item.item_code === itemCode)?.unit ??
     (itemCode === data?.item_code ? data.item?.unit : "") ??
     "";
@@ -237,7 +234,6 @@ export default function ReceiptForm({
             value={itemOptions.find((item) => item.value === itemCode) ?? null}
             onValueChange={(item) => {
               setItemCode(item?.value ?? "");
-              setManualUnit(null);
               setError("");
             }}
             itemToStringLabel={(item) => item.label}
@@ -281,33 +277,6 @@ export default function ReceiptForm({
               </Button>
             </div>
           )}
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="receipt-quantity">Số lượng</Label>
-            <Input
-              id="receipt-quantity"
-              name="quantity"
-              type="number"
-              inputMode="decimal"
-              min="0.001"
-              max="999999999.999"
-              step="0.001"
-              defaultValue={data?.quantity ?? ""}
-              placeholder="Nhập số lượng"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="receipt-unit">Đơn vị tính</Label>
-            <Input
-              id="receipt-unit"
-              name="unit"
-              value={unit}
-              onChange={(event) => setManualUnit(event.target.value)}
-              maxLength={191}
-              placeholder="Ví dụ: kg, g, thùng"
-            />
-          </div>
         </div>
         {textFields.map(([key, label, maxLength, required]) =>
           key === "supplier_code" ? (
@@ -383,32 +352,63 @@ export default function ReceiptForm({
               )}
             </div>
           ) : (
-            <div key={key} className="space-y-2">
-              <Label htmlFor={`receipt-${key}`}>
-                {label}
-                {required ? " *" : ""}
-              </Label>
-              <Input
-                id={`receipt-${key}`}
-                name={key}
-                {...(key === "manufacturer_lot_number"
-                  ? {
-                      value: manufacturerLotNumber,
-                      onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                        setManufacturerLotNumber(event.target.value),
-                    }
-                  : key === "lot_number"
+            <Fragment key={key}>
+              <div className="space-y-2">
+                <Label htmlFor={`receipt-${key}`}>
+                  {label}
+                  {required ? " *" : ""}
+                </Label>
+                <Input
+                  id={`receipt-${key}`}
+                  name={key}
+                  {...(key === "manufacturer_lot_number"
                     ? {
-                        value: lotNumber,
+                        value: manufacturerLotNumber,
                         onChange: (
                           event: React.ChangeEvent<HTMLInputElement>,
-                        ) => setManualLotNumber(event.target.value),
+                        ) => setManufacturerLotNumber(event.target.value),
                       }
-                    : { defaultValue: data?.[key] ?? "" })}
-                maxLength={maxLength}
-                required={required}
-              />
-            </div>
+                    : key === "lot_number"
+                      ? {
+                          value: lotNumber,
+                          onChange: (
+                            event: React.ChangeEvent<HTMLInputElement>,
+                          ) => setManualLotNumber(event.target.value),
+                        }
+                      : { defaultValue: data?.[key] ?? "" })}
+                  maxLength={maxLength}
+                  required={required}
+                />
+              </div>
+              {key === "lot_number" && (
+                <div className="space-y-2">
+                  <Label htmlFor="receipt-quantity">Số lượng</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="receipt-quantity"
+                      name="quantity"
+                      type="number"
+                      inputMode="decimal"
+                      min="0.001"
+                      max="999999999.999"
+                      step="0.001"
+                      defaultValue={data?.quantity ?? ""}
+                      placeholder="Nhập số lượng"
+                      className="min-w-0 flex-1"
+                      aria-describedby="receipt-quantity-unit"
+                    />
+                    <span
+                      id="receipt-quantity-unit"
+                      className="max-w-32 shrink-0 truncate text-sm text-gray-400"
+                      title={unit}
+                      aria-label="Đơn vị tính"
+                    >
+                      {unit}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </Fragment>
           ),
         )}
         <div className="space-y-2">

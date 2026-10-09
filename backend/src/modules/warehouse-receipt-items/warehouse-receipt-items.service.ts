@@ -69,7 +69,8 @@ export class WarehouseReceiptItemsService {
       throw new UnauthorizedException('Authenticated user not found');
     }
     const data = this.buildData(dto, true);
-    await this.ensureItemExists(data.item_code as string);
+    const item = await this.ensureItemExists(data.item_code as string);
+    if (dto.unit === undefined) data.unit = item.unit?.trim() || null;
     if (typeof data.supplier_code === 'string')
       await this.ensureSupplierExists(data.supplier_code);
     const enteredBy = await this.prisma.users.findFirst({
@@ -93,12 +94,16 @@ export class WarehouseReceiptItemsService {
 
   async update(id: number, dto: UpdateWarehouseReceiptItemDto) {
     this.validateBody(dto);
-    await this.findById(id);
+    const receipt = await this.findById(id);
     const data = this.buildData(dto, false);
     if (Object.keys(data).length === 0)
       throw new BadRequestException('No update data provided');
-    if (data.item_code !== undefined)
-      await this.ensureItemExists(data.item_code as string);
+    if (data.item_code !== undefined) {
+      const item = await this.ensureItemExists(data.item_code as string);
+      if (dto.unit === undefined && data.item_code !== receipt.item_code) {
+        data.unit = item.unit?.trim() || null;
+      }
+    }
     if (typeof data.supplier_code === 'string')
       await this.ensureSupplierExists(data.supplier_code);
     try {
@@ -261,10 +266,11 @@ export class WarehouseReceiptItemsService {
   private async ensureItemExists(item_code: string) {
     const item = await this.prisma.items.findFirst({
       where: { item_code, deleted_at: null },
-      select: { item_code: true },
+      select: { item_code: true, unit: true },
     });
     if (!item)
       throw new BadRequestException('Item does not exist or has been deleted');
+    return item;
   }
 
   private handleWriteError(error: unknown): never {
