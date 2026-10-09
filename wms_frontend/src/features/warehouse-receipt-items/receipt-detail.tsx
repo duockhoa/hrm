@@ -20,6 +20,8 @@ import warehouseReceiptItemsService, {
   type WarehouseReceiptItem,
 } from "@/services/warehouse-receipt-items.service";
 import ReceiptForm, { receiptError } from "./receipt-form";
+import { RECEIPT_ATTACHMENT_GROUPS } from "./receipt-attachments";
+import { ReceiptImageGallery } from "./receipt-image-picker";
 
 export const formatReceiptDateTime = (value: string) =>
   new Date(value).toLocaleString("vi-VN");
@@ -45,6 +47,7 @@ export default function ReceiptDetail({
   );
   const { mutate: mutateGlobal } = useSWRConfig();
   const [editing, setEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -147,13 +150,35 @@ export default function ReceiptDetail({
         {fields.map(([label, value]) => (
           <FieldDisplay key={label} lable={label ?? ""} value={value ?? ""} />
         ))}
+        {RECEIPT_ATTACHMENT_GROUPS.map(({ type, label }) => {
+          const images = (data.attachments ?? []).filter(
+            (image) => image.attachment_type === type,
+          );
+          return images.length ? (
+            <div key={type} className="space-y-2">
+              <p className="text-sm font-medium">
+                {label} ({images.length})
+              </p>
+              <ReceiptImageGallery images={images} />
+            </div>
+          ) : null;
+        })}
       </div>
-      <Dialog open={editing} onOpenChange={setEditing}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto md:max-w-[640px]">
+      <Dialog
+        open={editing}
+        onOpenChange={(open) => {
+          if (!isSaving) setEditing(open);
+        }}
+      >
+        <DialogContent
+          showCloseButton={!isSaving}
+          className="max-h-[90dvh] overflow-y-auto md:max-w-[640px]"
+        >
           <DialogHeader>
             <DialogTitle>Sửa hàng nhập kho</DialogTitle>
           </DialogHeader>
           <ReceiptForm
+            onSubmittingChange={setIsSaving}
             data={data}
             onCancel={() => setEditing(false)}
             onSaved={(saved) => {

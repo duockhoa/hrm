@@ -17,6 +17,7 @@ export function getOriginalImageUrl(
   const query = queryIndex >= 0 ? withoutHash.slice(queryIndex + 1) : "";
   const params = new URLSearchParams(query);
 
+  params.delete("thumbnail");
   params.set("original", "true");
 
   return `${pathname}?${params.toString()}${hash}`;

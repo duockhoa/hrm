@@ -1,9 +1,11 @@
 import axiosClient from "@/lib/axios-client";
+import type { ReceiptAttachment } from "@/features/warehouse-receipt-items/receipt-attachments";
 
 export const WAREHOUSE_RECEIPT_ITEMS_URL = "/warehouse-receipt-items";
 
 export type WarehouseReceiptItem = {
   id: number;
+  attachments: ReceiptAttachment[];
   item_code: string;
   quantity: string | number | null;
   unit: string | null;

@@ -65,7 +65,6 @@ function rowValues(receipt: WarehouseReceiptItem) {
     receipt.packaging_specification,
     receipt.supplier?.card_name ?? receipt.supplier_name,
     receipt.manufacturer?.manufacturer_name ?? receipt.manufacturer_name,
-    receipt.manufacturer_code,
     receipt.note,
     formatReceiptDateTime(receipt.received_at),
     receipt.enteredBy?.name || receipt.enteredBy?.username,
@@ -86,6 +85,7 @@ export default function ReceiptPage({
   const [actionsContainer, setActionsContainer] =
     useState<HTMLDivElement | null>(null);
   const [creating, setCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { data, error, isLoading, mutate } = useSWR(
     WAREHOUSE_RECEIPT_ITEMS_URL,
     warehouseReceiptItemsService.list,
@@ -95,7 +95,12 @@ export default function ReceiptPage({
     for (const receipt of data ?? []) {
       if (
         !matchesSearchKeyword(
-          [receipt.id, ...rowValues(receipt), receipt.supplier_code],
+          [
+            receipt.id,
+            ...rowValues(receipt),
+            receipt.supplier_code,
+            receipt.manufacturer_code,
+          ],
           search,
         )
       )
@@ -297,14 +302,23 @@ export default function ReceiptPage({
           </ResizablePanelGroup>
         </div>
       )}
-      <Dialog open={creating} onOpenChange={setCreating}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto md:max-w-[640px]">
+      <Dialog
+        open={creating}
+        onOpenChange={(open) => {
+          if (!isSaving) setCreating(open);
+        }}
+      >
+        <DialogContent
+          showCloseButton={!isSaving}
+          className="max-h-[90dvh] overflow-y-auto md:max-w-[640px]"
+        >
           <DialogHeader>
             <DialogTitle className="text-center">
               Thêm hàng nhập kho
             </DialogTitle>
           </DialogHeader>
           <ReceiptForm
+            onSubmittingChange={setIsSaving}
             onCancel={() => setCreating(false)}
             onSaved={(saved) => {
               setCreating(false);

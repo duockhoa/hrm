@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useMemo, useRef, useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { normalizeSearchText } from "@/lib/search-utils";
 import { API_ROUTES } from "@/lib/api-routes";
 import manufacturersService from "@/services/manufacturers.service";
+import receiptAttachmentsService from "@/services/warehouse-receipt-attachments.service";
 import useRawMaterialsStore, {
   type RawMaterialOption,
 } from "@/store/raw-materials.store";
@@ -28,7 +29,15 @@ import businessPartnersService, {
 import warehouseReceiptItemsService, {
   type WarehouseReceiptItem,
   type WarehouseReceiptItemPayload,
+  WAREHOUSE_RECEIPT_ITEMS_URL,
 } from "@/services/warehouse-receipt-items.service";
+import ReceiptImagePicker from "./receipt-image-picker";
+import {
+  RECEIPT_ATTACHMENT_GROUPS,
+  emptyReceiptImages,
+  saveReceiptImages,
+  validateReceiptImages,
+} from "./receipt-attachments";
 
 export function receiptError(error: unknown, fallback: string) {
   if (isAxiosError(error)) {
@@ -51,6 +60,29 @@ export function receiptError(error: unknown, fallback: string) {
     if (typeof message === "string") return message;
   }
   return fallback;
+}
+
+function receiptImageError(error: unknown) {
+  if (isAxiosError(error)) {
+    if (error.response?.status === 413) return "Ảnh vượt quá giới hạn 5 MB.";
+    if (error.response?.status === 401) return "Phiên đăng nhập đã hết hạn.";
+    if (error.response?.status === 404)
+      return "Không tìm thấy hàng nhập kho hoặc ảnh cần xoá.";
+    const message = error.response?.data?.message;
+    const messages: Record<string, string> = {
+      "File content is not a valid image":
+        "File đã chọn không phải ảnh hợp lệ.",
+      "Image content does not match MIME type":
+        "Định dạng ảnh không khớp với nội dung file.",
+      "files must be JPG, PNG, WEBP or GIF images":
+        "Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF.",
+      "Invalid image or image exceeds 5 MB":
+        "Ảnh không hợp lệ hoặc vượt quá giới hạn 5 MB.",
+    };
+    if (typeof message === "string" && messages[message])
+      return messages[message];
+  }
+  return "Không thể lưu một số thay đổi ảnh.";
 }
 
 const textFields = [
@@ -79,14 +111,22 @@ export default function ReceiptForm({
   data,
   onCancel,
   onSaved,
+  onSubmittingChange,
 }: {
   data?: WarehouseReceiptItem;
   onCancel: () => void;
   onSaved: (receipt: WarehouseReceiptItem) => void;
+  onSubmittingChange?: (submitting: boolean) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const submittingRef = useRef(false);
+  const savedReceiptRef = useRef(data);
+  const { mutate } = useSWRConfig();
+  const [pendingImages, setPendingImages] = useState(emptyReceiptImages);
+  const [attachments, setAttachments] = useState(data?.attachments ?? []);
+  const [removedImageIds, setRemovedImageIds] = useState<number[]>([]);
   const [itemCode, setItemCode] = useState(data?.item_code ?? "");
   const [itemSearchQuery, setItemSearchQuery] = useState("");
   const filterItems = useCallback(
@@ -166,6 +206,7 @@ export default function ReceiptForm({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submittingRef.current) return;
     const values = new FormData(event.currentTarget);
     const text = (key: string) => String(values.get(key) ?? "").trim();
     const quantity = text("quantity");
@@ -235,39 +276,93 @@ export default function ReceiptForm({
       setError("Số lô không được vượt quá 100 ký tự.");
       return;
     }
+    for (const { type } of RECEIPT_ATTACHMENT_GROUPS) {
+      const imageError = validateReceiptImages(pendingImages[type]);
+      if (imageError) {
+        setError(imageError);
+        return;
+      }
+    }
+    let savingImages = false;
     try {
+      submittingRef.current = true;
       setIsSubmitting(true);
+      onSubmittingChange?.(true);
       setError("");
-      const changes = data
+      const baseline = savedReceiptRef.current;
+      const changes = baseline
         ? Object.fromEntries(
             Object.entries(payload).filter(
               ([key, value]) =>
                 value !==
                 (key === "expiry_date"
-                  ? (data.expiry_date?.slice(0, 10) ?? null)
+                  ? (baseline.expiry_date?.slice(0, 10) ?? null)
                   : key === "quantity"
-                    ? data.quantity == null
+                    ? baseline.quantity == null
                       ? null
-                      : String(data.quantity)
-                    : data[key as keyof WarehouseReceiptItem]),
+                      : String(baseline.quantity)
+                    : baseline[key as keyof WarehouseReceiptItem]),
             ),
           )
         : payload;
-      if (data && Object.keys(changes).length === 0) {
-        onCancel();
-        return;
-      }
-      const saved = data
-        ? await warehouseReceiptItemsService.update(data.id, changes)
+      const saved = baseline
+        ? Object.keys(changes).length
+          ? await warehouseReceiptItemsService.update(baseline.id, changes)
+          : baseline
         : await warehouseReceiptItemsService.create(payload);
+      savedReceiptRef.current = saved;
+      savingImages = true;
+      await saveReceiptImages({
+        receiptId: saved.id,
+        pending: pendingImages,
+        removedIds: removedImageIds,
+        api: receiptAttachmentsService,
+        onUploaded: (type, uploaded) => {
+          savedReceiptRef.current = {
+            ...savedReceiptRef.current!,
+            attachments: [
+              ...(savedReceiptRef.current?.attachments ?? []),
+              ...uploaded,
+            ],
+          };
+          setAttachments((current) => [...current, ...uploaded]);
+          setPendingImages((current) => ({ ...current, [type]: [] }));
+        },
+        onDeleted: (id) => {
+          savedReceiptRef.current = {
+            ...savedReceiptRef.current!,
+            attachments: (savedReceiptRef.current?.attachments ?? []).filter(
+              (image) => image.id !== id,
+            ),
+          };
+          setAttachments((current) =>
+            current.filter((image) => image.id !== id),
+          );
+          setRemovedImageIds((current) =>
+            current.filter((imageId) => imageId !== id),
+          );
+        },
+      });
       toast.success(
         data ? "Đã cập nhật hàng nhập kho." : "Đã thêm hàng nhập kho.",
       );
-      onSaved(saved);
+      onSaved(savedReceiptRef.current!);
     } catch (error) {
-      setError(receiptError(error, "Không thể lưu hàng nhập kho."));
+      if (savingImages && savedReceiptRef.current) {
+        setError(
+          `Hàng nhập kho #${savedReceiptRef.current.id} đã được lưu. ${receiptImageError(error)} Bấm Lưu để thử lại hoặc bỏ chọn ảnh không hợp lệ.`,
+        );
+        void mutate(WAREHOUSE_RECEIPT_ITEMS_URL);
+        void mutate(
+          `${WAREHOUSE_RECEIPT_ITEMS_URL}/${savedReceiptRef.current.id}`,
+        );
+      } else {
+        setError(receiptError(error, "Không thể lưu hàng nhập kho."));
+      }
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
+      onSubmittingChange?.(false);
     }
   }
 
@@ -553,6 +648,41 @@ export default function ReceiptForm({
             defaultValue={data?.expiry_date?.slice(0, 10) ?? ""}
           />
         </div>
+        {RECEIPT_ATTACHMENT_GROUPS.map(({ type, label }) => (
+          <ReceiptImagePicker
+            key={type}
+            label={label}
+            files={pendingImages[type]}
+            images={attachments.filter(
+              (image) =>
+                image.attachment_type === type &&
+                !removedImageIds.includes(image.id),
+            )}
+            disabled={isSubmitting}
+            onChange={(files) => {
+              setPendingImages((current) => ({ ...current, [type]: files }));
+              setError("");
+            }}
+            onRemove={(id) => {
+              setRemovedImageIds((current) => [...current, id]);
+              setError("");
+            }}
+          />
+        ))}
+        {!!removedImageIds.length && (
+          <p className="text-xs text-gray-500">
+            {removedImageIds.length} ảnh đã chọn bỏ sẽ được xoá khi bấm Lưu.
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              disabled={isSubmitting}
+              onClick={() => setRemovedImageIds([])}
+            >
+              Hoàn tác bỏ ảnh
+            </Button>
+          </p>
+        )}
         <div className="space-y-2">
           <Label htmlFor="receipt-note">Ghi chú</Label>
           <Textarea
