@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Camera, ImageUp } from "lucide-react";
+import { Camera, ImageUp, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import * as z from "zod";
+import AuthenticatedImage from "@/components/authenticated-image/authenticated-image";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -31,8 +32,37 @@ import { productionOrderDeviationsService } from "@/services/index.service";
 import useUserStore from "@/store/user.store";
 import useUsersStore from "@/store/users.store";
 
-const MAX_DEVIATION_IMAGE_COUNT = 5;
+const MAX_DEVIATION_IMAGE_COUNT = 10;
+const DEVIATION_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 const NO_APPROVER_VALUE = "none";
+
+function SelectedDeviationImage({ file }: { file: File }) {
+  const [preview, setPreview] = React.useState<{
+    file: File;
+    src: string;
+  } | null>(null);
+  React.useEffect(() => {
+    const src = URL.createObjectURL(file);
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setPreview({ file, src });
+    });
+    return () => {
+      active = false;
+      URL.revokeObjectURL(src);
+    };
+  }, [file]);
+  return (
+    <AuthenticatedImage
+      src={preview?.file === file ? preview.src : undefined}
+      alt={file.name}
+      width={240}
+      height={160}
+      className="h-28 w-full rounded-none border-0"
+      loading="eager"
+    />
+  );
+}
 
 const formSchema = z.object({
   deviation_content: z
@@ -117,14 +147,28 @@ export default function FormAddProductionOrderDeviation({
     ];
 
     if (nextImages.length > MAX_DEVIATION_IMAGE_COUNT) {
-      toast.error(`Chỉ được chọn tối đa ${MAX_DEVIATION_IMAGE_COUNT} hình ảnh.`);
+      toast.error(
+        `Chỉ được chọn tối đa ${MAX_DEVIATION_IMAGE_COUNT} hình ảnh.`,
+      );
+      return;
+    }
+    for (const file of selectedImages) {
+      if (!DEVIATION_IMAGE_ACCEPT.split(",").includes(file.type)) {
+        toast.error(`Ảnh "${file.name}" phải là JPG, PNG, WEBP hoặc GIF.`);
+        return;
+      }
+      if (!file.size || file.size > 5 * 1024 * 1024) {
+        toast.error(
+          `Ảnh "${file.name}" phải có dữ liệu và không vượt quá 5 MB.`,
+        );
+        return;
+      }
     }
 
-    form.setValue(
-      "deviation_images",
-      nextImages.slice(0, MAX_DEVIATION_IMAGE_COUNT),
-      { shouldValidate: true },
-    );
+    form.setValue("deviation_images", nextImages, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -266,10 +310,14 @@ export default function FormAddProductionOrderDeviation({
                   <Input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept={DEVIATION_IMAGE_ACCEPT}
                     multiple
-                    disabled={form.formState.isSubmitting}
+                    disabled={
+                      form.formState.isSubmitting ||
+                      field.value.length >= MAX_DEVIATION_IMAGE_COUNT
+                    }
                     className="sr-only"
+                    aria-label="Chọn file ảnh sai lệch"
                     onChange={(event) => {
                       addImages(event.target.files);
                       event.target.value = "";
@@ -278,10 +326,14 @@ export default function FormAddProductionOrderDeviation({
                   <Input
                     ref={cameraInputRef}
                     type="file"
-                    accept="image/*"
+                    accept={DEVIATION_IMAGE_ACCEPT}
                     capture="environment"
-                    disabled={form.formState.isSubmitting}
+                    disabled={
+                      form.formState.isSubmitting ||
+                      field.value.length >= MAX_DEVIATION_IMAGE_COUNT
+                    }
                     className="sr-only"
+                    aria-label="Chụp ảnh sai lệch"
                     onChange={(event) => {
                       addImages(event.target.files);
                       event.target.value = "";
@@ -291,7 +343,10 @@ export default function FormAddProductionOrderDeviation({
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={form.formState.isSubmitting}
+                      disabled={
+                        form.formState.isSubmitting ||
+                        field.value.length >= MAX_DEVIATION_IMAGE_COUNT
+                      }
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <ImageUp className="size-4" />
@@ -300,7 +355,10 @@ export default function FormAddProductionOrderDeviation({
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={form.formState.isSubmitting}
+                      disabled={
+                        form.formState.isSubmitting ||
+                        field.value.length >= MAX_DEVIATION_IMAGE_COUNT
+                      }
                       onClick={() => cameraInputRef.current?.click()}
                     >
                       <Camera className="size-4" />
@@ -308,15 +366,54 @@ export default function FormAddProductionOrderDeviation({
                     </Button>
                   </div>
                   {field.value.length > 0 ? (
-                    <div className="rounded border bg-gray-50 p-2 text-xs text-gray-600">
+                    <div
+                      className="rounded border bg-gray-50 p-2 text-xs text-gray-600"
+                      aria-live="polite"
+                    >
                       <p className="font-medium text-gray-700">
-                        Đã chọn {field.value.length} ảnh
+                        Đã chọn {field.value.length} ảnh mới
                       </p>
                     </div>
                   ) : null}
                   <p className="text-xs text-gray-500">
-                    Tối đa {MAX_DEVIATION_IMAGE_COUNT} hình ảnh.
+                    JPG, PNG, WEBP hoặc GIF; tối đa 5 MB/ảnh và{" "}
+                    {MAX_DEVIATION_IMAGE_COUNT} ảnh mới mỗi lần lưu.
                   </p>
+                  {field.value.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {field.value.map((file, index) => (
+                        <div
+                          key={`${file.name}-${file.lastModified}-${index}`}
+                          className="relative overflow-hidden rounded border bg-gray-50"
+                        >
+                          <SelectedDeviationImage file={file} />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon-sm"
+                            className="absolute right-1 top-1"
+                            disabled={form.formState.isSubmitting}
+                            aria-label={`Bỏ chọn ${file.name}`}
+                            onClick={() =>
+                              field.onChange(
+                                field.value.filter(
+                                  (_, fileIndex) => fileIndex !== index,
+                                ),
+                              )
+                            }
+                          >
+                            <X className="size-4" />
+                          </Button>
+                          <p
+                            className="truncate px-2 py-1 text-xs"
+                            title={file.name}
+                          >
+                            {file.name}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

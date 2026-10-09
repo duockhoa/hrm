@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, ImageUp, X } from "lucide-react";
 import { toast } from "sonner";
 import AuthenticatedImage from "@/components/authenticated-image/authenticated-image";
@@ -10,16 +10,22 @@ import { Label } from "@/components/ui/label";
 import {
   MAX_RECEIPT_IMAGES_PER_UPLOAD,
   RECEIPT_IMAGE_ACCEPT,
+  createReceiptImagePreview,
   validateReceiptImages,
   type ReceiptAttachment,
 } from "./receipt-attachments";
 
 function SelectedImage({ file }: { file: File }) {
-  const src = useMemo(() => URL.createObjectURL(file), [file]);
-  useEffect(() => () => URL.revokeObjectURL(src), [src]);
+  const [preview, setPreview] = useState<{ file: File; src: string } | null>(
+    null,
+  );
+  useEffect(
+    () => createReceiptImagePreview(file, (src) => setPreview({ file, src })),
+    [file],
+  );
   return (
     <AuthenticatedImage
-      src={src}
+      src={preview?.file === file ? preview.src : undefined}
       alt={file.name}
       width={240}
       height={160}

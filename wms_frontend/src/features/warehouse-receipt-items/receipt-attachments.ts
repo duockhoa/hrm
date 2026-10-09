@@ -31,6 +31,22 @@ export const emptyReceiptImages = (): PendingReceiptImages => ({
 export const MAX_RECEIPT_IMAGES_PER_UPLOAD = 10;
 export const RECEIPT_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 
+// Each effect setup owns a fresh URL; a cancelled setup must not publish it.
+export function createReceiptImagePreview(
+  file: File,
+  onReady: (src: string) => void,
+) {
+  const src = URL.createObjectURL(file);
+  let active = true;
+  queueMicrotask(() => {
+    if (active) onReady(src);
+  });
+  return () => {
+    active = false;
+    URL.revokeObjectURL(src);
+  };
+}
+
 export function validateReceiptImages(files: File[]) {
   if (files.length > MAX_RECEIPT_IMAGES_PER_UPLOAD)
     return `Chỉ được chọn tối đa ${MAX_RECEIPT_IMAGES_PER_UPLOAD} ảnh mới cho mỗi loại chứng từ trong một lần lưu.`;

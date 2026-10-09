@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   emptyReceiptImages,
+  createReceiptImagePreview,
   saveReceiptImages,
   validateReceiptImages,
   type ReceiptAttachment,
@@ -11,6 +12,54 @@ import { getOriginalImageUrl } from "../../lib/image-url";
 
 const image = (name = "image.jpg", type = "image/jpeg", size = 1) =>
   new File([new Uint8Array(size)], name, { type });
+
+test("preview remains readable after Strict Mode effect cleanup and setup", async () => {
+  const file = new File(["image-content"], "image.png", { type: "image/png" });
+  const published: string[] = [];
+  const onReady = (src: string) => published.push(src);
+  const firstCleanup = createReceiptImagePreview(file, onReady);
+  firstCleanup();
+  const finalCleanup = createReceiptImagePreview(file, onReady);
+  try {
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    assert.equal(published.length, 1);
+    const response = await fetch(published[0]);
+    assert.equal(response.headers.get("content-type"), "image/png");
+    assert.equal(await response.text(), "image-content");
+  } finally {
+    finalCleanup();
+  }
+  await assert.rejects(fetch(published[0]));
+});
+
+test("cancelled previews publish no stale URL when the selected file changes", async () => {
+  const published: string[] = [];
+  const firstCleanup = createReceiptImagePreview(image("old.jpg"), (src) =>
+    published.push(src),
+  );
+  firstCleanup();
+  const newFile = new File(["new-image"], "new.jpg", { type: "image/jpeg" });
+  const finalCleanup = createReceiptImagePreview(newFile, (src) =>
+    published.push(src),
+  );
+  try {
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    assert.equal(published.length, 1);
+    assert.equal(await (await fetch(published[0])).text(), "new-image");
+  } finally {
+    finalCleanup();
+  }
+});
+
+test("closing the form before a preview is ready does not publish a revoked URL", async () => {
+  const published: string[] = [];
+  const cleanup = createReceiptImagePreview(image(), (src) =>
+    published.push(src),
+  );
+  cleanup();
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  assert.deepEqual(published, []);
+});
 
 const attachment = (
   id: number,
