@@ -5,10 +5,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { Prisma } from '@prisma/client';
+import { removeReceiptAttachments } from './receipt-attachment-files';
+
+jest.mock('./receipt-attachment-files', () => ({
+  removeReceiptAttachments: jest.fn(),
+}));
 import { WarehouseReceiptItemsService } from './warehouse-receipt-items.service';
 
 describe('WarehouseReceiptItemsService', () => {
   const prisma = {
+    $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
     warehouseReceiptItems: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -26,6 +33,10 @@ describe('WarehouseReceiptItemsService', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    prisma.$transaction.mockImplementation(
+      (callback: (tx: typeof prisma) => Promise<unknown>) => callback(prisma),
+    );
+    prisma.$queryRaw.mockResolvedValue([{ id: 1 }]);
     prisma.items.findFirst.mockResolvedValue({ item_code: 'NL001' });
     prisma.users.findFirst.mockResolvedValue({ id: 7 });
     prisma.businessPartners.findUnique.mockResolvedValue({
@@ -232,7 +243,12 @@ describe('WarehouseReceiptItemsService', () => {
   });
 
   it('deletes an existing receipt', async () => {
+    prisma.warehouseReceiptItems.delete.mockResolvedValue({
+      id: 1,
+      attachments: [{ file_path: '/test/image.jpg' }],
+    });
     await service.delete(1);
+    expect(removeReceiptAttachments).toHaveBeenCalledWith(['/test/image.jpg']);
     expect(prisma.warehouseReceiptItems.delete).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 1 } }),
     );

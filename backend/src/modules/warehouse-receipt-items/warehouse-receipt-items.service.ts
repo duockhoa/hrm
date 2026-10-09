@@ -10,11 +10,14 @@ import { isISO8601 } from 'class-validator';
 import { PrismaService } from 'src/prisma.service';
 import { CreateWarehouseReceiptItemDto } from './dto/create-warehouse-receipt-item.dto';
 import { UpdateWarehouseReceiptItemDto } from './dto/update-warehouse-receipt-item.dto';
+import { receiptAttachmentInclude } from './warehouse-receipt-attachments.service';
+import { removeReceiptAttachments } from './receipt-attachment-files';
 
 const receiptInclude = {
   item: { select: { item_code: true, item_name: true, unit: true } },
   supplier: { select: { card_code: true, card_name: true, tax_code: true } },
   enteredBy: { select: { id: true, username: true, name: true } },
+  attachments: { include: receiptAttachmentInclude, orderBy: { id: 'asc' } },
 } satisfies Prisma.WarehouseReceiptItemsInclude;
 
 const optionalTextLimits = {
@@ -112,10 +115,21 @@ export class WarehouseReceiptItemsService {
   async delete(id: number) {
     await this.findById(id);
     try {
-      return await this.prisma.warehouseReceiptItems.delete({
-        where: { id },
-        include: receiptInclude,
+      const deleted = await this.prisma.$transaction(async (tx) => {
+        const receipts = await tx.$queryRaw<
+          Array<{ id: number }>
+        >`SELECT id FROM warehouse_receipt_items WHERE id = ${id} FOR UPDATE`;
+        if (!receipts.length)
+          throw new NotFoundException('Warehouse receipt item not found');
+        return tx.warehouseReceiptItems.delete({
+          where: { id },
+          include: receiptInclude,
+        });
       });
+      await removeReceiptAttachments(
+        deleted?.attachments?.map((attachment) => attachment.file_path) ?? [],
+      );
+      return deleted;
     } catch (error) {
       this.handleWriteError(error);
     }

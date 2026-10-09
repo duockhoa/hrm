@@ -51,3 +51,7 @@ POST trả 201; các API khác trả 200. Bản ghi trả về gồm dữ liệu
 Migration `20261006020000_link_receipt_suppliers` thêm khóa ngoại nullable `supplier_code` và ghép tên nhà cung cấp cũ chỉ khi tên khớp đúng một đối tác loại `cSupplier`. `supplier_name` giữ lại để hiển thị dữ liệu lịch sử chưa ghép được. Khi chọn hoặc xóa nhà cung cấp qua `supplier_code`, tên nhập tay cũ được xóa; sửa trường khác vẫn giữ nguyên nhà cung cấp. Khóa ngoại chặn xóa đối tác đang được phiếu tham chiếu.
 
 Swagger có các endpoint và schema body trong nhóm `warehouse-receipt-items` tại `/api-docs`.
+
+Ảnh phiếu xuất kho, COA và hoá đơn được quản lý bằng API riêng;
+xem [API ảnh chứng từ](warehouse-receipt-attachments.md). Response hàng nhập kho
+trả thêm mảng `attachments`. Khi xoá hàng nhập kho, các ảnh đính kèm cũng được xoá.
