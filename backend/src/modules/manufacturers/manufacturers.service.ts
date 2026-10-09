@@ -134,6 +134,11 @@ export class ManufacturersService {
       if (error.code === 'P2025') {
         throw new NotFoundException('Manufacturer not found');
       }
+      if (error.code === 'P2003') {
+        throw new ConflictException(
+          'Manufacturer is referenced by warehouse receipts or its creator no longer exists',
+        );
+      }
     }
     throw error;
   }

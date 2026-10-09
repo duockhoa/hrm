@@ -19,6 +19,11 @@ export type WarehouseReceiptItem = {
     tax_code: string | null;
   } | null;
   manufacturer_name: string | null;
+  manufacturer_code: string | null;
+  manufacturer: {
+    manufacturer_code: string;
+    manufacturer_name: string;
+  } | null;
   note: string | null;
   received_at: string;
   entered_by_id: number;
@@ -31,16 +36,17 @@ export type WarehouseReceiptItem = {
 export type WarehouseReceiptItemPayload = Pick<
   WarehouseReceiptItem,
   | "item_code"
-  | "quantity"
   | "unit"
   | "manufacturer_lot_number"
   | "lot_number"
   | "expiry_date"
   | "packaging_specification"
-  | "supplier_code"
-  | "manufacturer_name"
+  | "manufacturer_code"
   | "note"
->;
+> & {
+  quantity: string | number;
+  supplier_code: string;
+};
 
 const warehouseReceiptItemsService = {
   async list(): Promise<WarehouseReceiptItem[]> {

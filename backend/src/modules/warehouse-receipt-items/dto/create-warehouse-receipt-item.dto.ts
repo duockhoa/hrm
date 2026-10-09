@@ -4,14 +4,13 @@ export class CreateWarehouseReceiptItemDto {
   @ApiProperty({ maxLength: 191, example: 'NL001' })
   item_code: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     oneOf: [{ type: 'number' }, { type: 'string' }],
-    nullable: true,
     example: '125.5',
     description:
       'Positive quantity, at most 3 decimal places and 999999999.999',
   })
-  quantity?: number | string | null;
+  quantity: number | string;
 
   @ApiPropertyOptional({
     type: String,
@@ -39,16 +38,21 @@ export class CreateWarehouseReceiptItemDto {
   @ApiPropertyOptional({ type: String, maxLength: 255, nullable: true })
   packaging_specification?: string | null;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: String,
     maxLength: 191,
-    nullable: true,
     description: 'CardCode of a SAP business partner with CardType cSupplier',
   })
-  supplier_code?: string | null;
+  supplier_code: string;
 
-  @ApiPropertyOptional({ type: String, maxLength: 255, nullable: true })
-  manufacturer_name?: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: 100,
+    nullable: true,
+    example: 'NSX0001',
+    description: 'Code of a manufacturer in the manufacturers catalog',
+  })
+  manufacturer_code?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   note?: string | null;

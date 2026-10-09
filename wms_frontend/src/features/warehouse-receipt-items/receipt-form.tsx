@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { normalizeSearchText } from "@/lib/search-utils";
+import { API_ROUTES } from "@/lib/api-routes";
+import manufacturersService from "@/services/manufacturers.service";
 import useRawMaterialsStore, {
   type RawMaterialOption,
 } from "@/store/raw-materials.store";
@@ -35,6 +37,13 @@ export function receiptError(error: unknown, fallback: string) {
     if (error.response?.status === 404)
       return "Không tìm thấy bản ghi hàng nhập kho.";
     const message = error.response?.data?.message;
+    if (message === "quantity is required") return "Vui lòng nhập số lượng.";
+    if (message === "supplier_code is required")
+      return "Vui lòng chọn nhà cung cấp.";
+    if (message === "Supplier does not exist or is not a supplier")
+      return "Vui lòng chọn nhà cung cấp hợp lệ trong danh sách.";
+    if (message === "Manufacturer does not exist")
+      return "Nhà sản xuất không còn tồn tại. Vui lòng chọn lại trong danh sách.";
     if (typeof message === "string" && message.startsWith("quantity ")) {
       return "Số lượng phải lớn hơn 0, không vượt quá 999.999.999,999 và có tối đa 3 chữ số thập phân.";
     }
@@ -48,8 +57,8 @@ const textFields = [
   ["manufacturer_lot_number", "Số lô nhà sản xuất", 100, false],
   ["lot_number", "Số lô", 100, true],
   ["packaging_specification", "Quy cách đóng gói", 255, false],
-  ["supplier_code", "Nhà cung cấp", 191, false],
-  ["manufacturer_name", "Nhà sản xuất", 255, false],
+  ["supplier_code", "Nhà cung cấp", 191, true],
+  ["manufacturer_code", "Nhà sản xuất", 100, false],
 ] as const;
 
 function defaultLotNumber(manufacturerLotNumber: string, date: Date) {
@@ -127,21 +136,55 @@ export default function ReceiptForm({
       supplier.searchText.includes(supplierSearchQuery),
     [supplierSearchQuery],
   );
+  const [manufacturerCode, setManufacturerCode] = useState(
+    data?.manufacturer_code ?? "",
+  );
+  const [manufacturerSearchQuery, setManufacturerSearchQuery] = useState("");
+  const {
+    data: manufacturers,
+    error: manufacturersError,
+    isLoading: manufacturersLoading,
+    mutate: reloadManufacturers,
+  } = useSWR(API_ROUTES.manufacturers.base, manufacturersService.fetchAll);
+  const manufacturerOptions = useMemo(
+    () =>
+      (manufacturers ?? []).map((manufacturer) => {
+        const label = `${manufacturer.manufacturer_name} (${manufacturer.manufacturer_code})`;
+        return {
+          value: manufacturer.manufacturer_code,
+          label,
+          searchText: normalizeSearchText(label),
+        };
+      }),
+    [manufacturers],
+  );
+  const filterManufacturers = useCallback(
+    (manufacturer: RawMaterialOption) =>
+      manufacturer.searchText.includes(manufacturerSearchQuery),
+    [manufacturerSearchQuery],
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const values = new FormData(event.currentTarget);
     const text = (key: string) => String(values.get(key) ?? "").trim();
     const quantity = text("quantity");
+    if (!quantity) {
+      setError("Vui lòng nhập số lượng.");
+      return;
+    }
     if (
-      quantity &&
-      (!/^\d+(?:\.\d{1,3})?$/.test(quantity) ||
-        Number(quantity) <= 0 ||
-        Number(quantity) > 999999999.999)
+      !/^\d+(?:\.\d{1,3})?$/.test(quantity) ||
+      Number(quantity) <= 0 ||
+      Number(quantity) > 999999999.999
     ) {
       setError(
         "Số lượng phải lớn hơn 0, không vượt quá 999.999.999,999 và có tối đa 3 chữ số thập phân.",
       );
+      return;
+    }
+    if (!supplierCode.trim()) {
+      setError("Vui lòng chọn nhà cung cấp.");
       return;
     }
     const note = text("note");
@@ -151,15 +194,15 @@ export default function ReceiptForm({
     }
     const payload: WarehouseReceiptItemPayload = {
       item_code: itemCode,
-      quantity: quantity || null,
+      quantity,
       unit: unit.trim() || null,
       lot_number: (
         manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, new Date())
       ).trim(),
       manufacturer_lot_number: text("manufacturer_lot_number") || null,
       packaging_specification: text("packaging_specification") || null,
-      supplier_code: supplierCode || null,
-      manufacturer_name: text("manufacturer_name") || null,
+      supplier_code: supplierCode,
+      manufacturer_code: manufacturerCode || null,
       expiry_date: text("expiry_date") || null,
       note: note || null,
     };
@@ -168,11 +211,20 @@ export default function ReceiptForm({
       return;
     }
     if (
-      supplierCode &&
       supplierCode !== data?.supplier_code &&
       !supplierOptions.some((supplier) => supplier.value === supplierCode)
     ) {
       setError("Vui lòng chọn nhà cung cấp trong danh sách.");
+      return;
+    }
+    if (
+      manufacturerCode &&
+      manufacturerCode !== data?.manufacturer_code &&
+      !manufacturerOptions.some(
+        (manufacturer) => manufacturer.value === manufacturerCode,
+      )
+    ) {
+      setError("Vui lòng chọn nhà sản xuất trong danh sách.");
       return;
     }
     if (!payload.lot_number) {
@@ -281,7 +333,7 @@ export default function ReceiptForm({
         {textFields.map(([key, label, maxLength, required]) =>
           key === "supplier_code" ? (
             <div key={key} className="space-y-2">
-              <Label htmlFor="receipt-supplier-code">Nhà cung cấp</Label>
+              <Label htmlFor="receipt-supplier-code">Nhà cung cấp *</Label>
               <Combobox
                 autoHighlight
                 items={supplierOptions}
@@ -308,6 +360,7 @@ export default function ReceiptForm({
               >
                 <ComboboxInput
                   id="receipt-supplier-code"
+                  aria-required="true"
                   className="w-full"
                   placeholder={
                     suppliersLoading
@@ -351,6 +404,83 @@ export default function ReceiptForm({
                 </p>
               )}
             </div>
+          ) : key === "manufacturer_code" ? (
+            <div key={key} className="space-y-2">
+              <Label htmlFor="receipt-manufacturer-code">Nhà sản xuất</Label>
+              <Combobox
+                autoHighlight
+                items={manufacturerOptions}
+                limit={50}
+                onInputValueChange={(query) =>
+                  setManufacturerSearchQuery(normalizeSearchText(query).trim())
+                }
+                value={
+                  manufacturerOptions.find(
+                    (manufacturer) => manufacturer.value === manufacturerCode,
+                  ) ?? null
+                }
+                onValueChange={(manufacturer) => {
+                  setManufacturerCode(manufacturer?.value ?? "");
+                  setError("");
+                }}
+                itemToStringLabel={(manufacturer) => manufacturer.label}
+                itemToStringValue={(manufacturer) => manufacturer.value}
+                isItemEqualToValue={(manufacturer, value) =>
+                  manufacturer.value === value.value
+                }
+                filter={filterManufacturers}
+                disabled={
+                  isSubmitting || manufacturersLoading || !!manufacturersError
+                }
+              >
+                <ComboboxInput
+                  id="receipt-manufacturer-code"
+                  className="w-full"
+                  placeholder={
+                    manufacturersLoading
+                      ? "Đang tải danh sách nhà sản xuất..."
+                      : "Gõ tên hoặc mã nhà sản xuất để chọn"
+                  }
+                  disabled={
+                    isSubmitting || manufacturersLoading || !!manufacturersError
+                  }
+                  showClear
+                />
+                <ComboboxContent portalContainer={formRef}>
+                  <ComboboxEmpty>
+                    Không tìm thấy nhà sản xuất phù hợp.
+                  </ComboboxEmpty>
+                  <ComboboxList>
+                    {(manufacturer) => (
+                      <ComboboxItem
+                        key={manufacturer.value}
+                        value={manufacturer}
+                      >
+                        {manufacturer.label}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+              {manufacturersError && (
+                <div role="alert" className="text-sm text-red-600">
+                  Không thể tải danh sách nhà sản xuất.
+                  <Button
+                    type="button"
+                    variant="link"
+                    disabled={isSubmitting}
+                    onClick={() => void reloadManufacturers()}
+                  >
+                    Tải lại
+                  </Button>
+                </div>
+              )}
+              {!data?.manufacturer_code && data?.manufacturer_name && (
+                <p className="text-sm text-muted-foreground">
+                  Nhà sản xuất đã nhập trước đây: {data.manufacturer_name}
+                </p>
+              )}
+            </div>
           ) : (
             <Fragment key={key}>
               <div className="space-y-2">
@@ -382,11 +512,12 @@ export default function ReceiptForm({
               </div>
               {key === "lot_number" && (
                 <div className="space-y-2">
-                  <Label htmlFor="receipt-quantity">Số lượng</Label>
+                  <Label htmlFor="receipt-quantity">Số lượng *</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="receipt-quantity"
                       name="quantity"
+                      required
                       type="number"
                       inputMode="decimal"
                       min="0.001"

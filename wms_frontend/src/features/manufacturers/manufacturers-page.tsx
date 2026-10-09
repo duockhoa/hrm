@@ -39,6 +39,8 @@ function getErrorMessage(error: unknown, fallback: string) {
       "Không tìm thấy nhà sản xuất. Vui lòng tải lại danh sách.",
     "Manufacturer code already exists":
       "Mã nhà sản xuất đã tồn tại. Vui lòng thử lại.",
+    "Manufacturer is referenced by warehouse receipts or its creator no longer exists":
+      "Nhà sản xuất đang được hàng nhập kho tham chiếu hoặc tài khoản người thêm không còn tồn tại.",
     "manufacturer_name is required and must be a string":
       "Vui lòng nhập tên nhà sản xuất.",
     "manufacturer_name must not exceed 255 characters":

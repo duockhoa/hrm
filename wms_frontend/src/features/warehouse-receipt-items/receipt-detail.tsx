@@ -121,7 +121,12 @@ export default function ReceiptDetail({
         ? `${data.supplier.card_name} (${data.supplier.card_code})`
         : data.supplier_name,
     ],
-    ["Nhà sản xuất", data.manufacturer_name],
+    [
+      "Nhà sản xuất",
+      data.manufacturer
+        ? `${data.manufacturer.manufacturer_name} (${data.manufacturer.manufacturer_code})`
+        : data.manufacturer_name,
+    ],
     ["Ghi chú", data.note],
     ["Thời điểm nhập", formatReceiptDateTime(data.received_at)],
     ["Người nhập", data.enteredBy?.name || data.enteredBy?.username],

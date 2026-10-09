@@ -16,6 +16,9 @@ import { removeReceiptAttachments } from './receipt-attachment-files';
 const receiptInclude = {
   item: { select: { item_code: true, item_name: true, unit: true } },
   supplier: { select: { card_code: true, card_name: true, tax_code: true } },
+  manufacturer: {
+    select: { manufacturer_code: true, manufacturer_name: true },
+  },
   enteredBy: { select: { id: true, username: true, name: true } },
   attachments: { include: receiptAttachmentInclude, orderBy: { id: 'asc' } },
 } satisfies Prisma.WarehouseReceiptItemsInclude;
@@ -24,13 +27,13 @@ const optionalTextLimits = {
   unit: 191,
   manufacturer_lot_number: 100,
   packaging_specification: 255,
-  manufacturer_name: 255,
   note: 65535,
 } as const;
 const allowedFields = new Set([
   'item_code',
   'quantity',
   'supplier_code',
+  'manufacturer_code',
   'lot_number',
   'expiry_date',
   'received_at',
@@ -73,6 +76,8 @@ export class WarehouseReceiptItemsService {
     if (dto.unit === undefined) data.unit = item.unit?.trim() || null;
     if (typeof data.supplier_code === 'string')
       await this.ensureSupplierExists(data.supplier_code);
+    if (typeof data.manufacturer_code === 'string')
+      await this.ensureManufacturerExists(data.manufacturer_code);
     const enteredBy = await this.prisma.users.findFirst({
       where: { id: enteredById, deleted_at: null },
       select: { id: true },
@@ -106,6 +111,8 @@ export class WarehouseReceiptItemsService {
     }
     if (typeof data.supplier_code === 'string')
       await this.ensureSupplierExists(data.supplier_code);
+    if (typeof data.manufacturer_code === 'string')
+      await this.ensureManufacturerExists(data.manufacturer_code);
     try {
       return await this.prisma.warehouseReceiptItems.update({
         where: { id },
@@ -142,7 +149,7 @@ export class WarehouseReceiptItemsService {
 
   private buildData(dto: UpdateWarehouseReceiptItemDto, creating: boolean) {
     const data: Prisma.WarehouseReceiptItemsUncheckedUpdateInput = {};
-    if (dto.quantity !== undefined) {
+    if (creating || dto.quantity !== undefined) {
       data.quantity = this.normalizeQuantity(dto.quantity);
     }
     if (creating || dto.item_code !== undefined) {
@@ -151,13 +158,21 @@ export class WarehouseReceiptItemsService {
     if (creating || dto.lot_number !== undefined) {
       data.lot_number = this.requiredText(dto.lot_number, 'lot_number', 100);
     }
-    if (dto.supplier_code !== undefined) {
-      data.supplier_code =
-        dto.supplier_code === null || dto.supplier_code === ''
-          ? null
-          : this.requiredText(dto.supplier_code, 'supplier_code', 191);
-      // Explicit supplier selection or clearing replaces the legacy free-text name.
+    if (creating || dto.supplier_code !== undefined) {
+      data.supplier_code = this.requiredText(
+        dto.supplier_code,
+        'supplier_code',
+        191,
+      );
+      // Explicit supplier selection replaces the legacy free-text name.
       data.supplier_name = null;
+    }
+    if (dto.manufacturer_code !== undefined) {
+      data.manufacturer_code =
+        dto.manufacturer_code === null || dto.manufacturer_code === ''
+          ? null
+          : this.requiredText(dto.manufacturer_code, 'manufacturer_code', 100);
+      data.manufacturer_name = null;
     }
     for (const [field, limit] of Object.entries(optionalTextLimits)) {
       const key = field as keyof typeof optionalTextLimits;
@@ -219,7 +234,13 @@ export class WarehouseReceiptItemsService {
   }
 
   private normalizeQuantity(value: unknown) {
-    if (value === null) return null;
+    if (
+      value === undefined ||
+      value === null ||
+      (typeof value === 'string' && !value.trim())
+    ) {
+      throw new BadRequestException('quantity is required');
+    }
     if (typeof value !== 'number' && typeof value !== 'string') {
       throw new BadRequestException(
         'quantity must be a positive decimal with at most 3 decimal places',
@@ -279,7 +300,7 @@ export class WarehouseReceiptItemsService {
         throw new NotFoundException('Warehouse receipt item not found');
       if (error.code === 'P2003')
         throw new ConflictException(
-          'Related item, supplier or user no longer exists, or this receipt is in use',
+          'Related item, supplier, manufacturer or user no longer exists, or this receipt is in use',
         );
     }
     throw error;
@@ -294,5 +315,14 @@ export class WarehouseReceiptItemsService {
       throw new BadRequestException(
         'Supplier does not exist or is not a supplier',
       );
+  }
+
+  private async ensureManufacturerExists(manufacturer_code: string) {
+    const manufacturer = await this.prisma.manufacturers.findUnique({
+      where: { manufacturer_code },
+      select: { manufacturer_code: true },
+    });
+    if (!manufacturer)
+      throw new BadRequestException('Manufacturer does not exist');
   }
 }

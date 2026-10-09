@@ -27,6 +27,8 @@ Các bản ghi có trước migration có `created_by_id` và `createdBy` bằng
 vì không có thông tin xác định người thêm.
 
 Dữ liệu không hợp lệ trả HTTP 400; ID không tồn tại trả HTTP 404.
+Nhà sản xuất được liên kết với hàng nhập kho bằng `manufacturer_code`.
+Xoá nhà sản xuất đang được hàng nhập kho tham chiếu trả HTTP 409.
 
 Áp dụng migration trong thư mục `backend`:
 

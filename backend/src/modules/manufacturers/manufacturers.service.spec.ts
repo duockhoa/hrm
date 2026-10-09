@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -228,5 +229,10 @@ describe('Manufacturers', () => {
       where: { id: 1 },
       include,
     });
+  });
+
+  it('returns a conflict when deleting a manufacturer referenced by receipts', async () => {
+    manufacturers.delete.mockRejectedValue(databaseError('P2003'));
+    await expect(service.delete(1)).rejects.toBeInstanceOf(ConflictException);
   });
 });
