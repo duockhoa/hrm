@@ -109,11 +109,13 @@ function defaultLotNumber(manufacturerLotNumber: string, date: Date) {
 
 export default function ReceiptForm({
   data,
+  receiptHistory = [],
   onCancel,
   onSaved,
   onSubmittingChange,
 }: {
   data?: WarehouseReceiptItem;
+  receiptHistory?: WarehouseReceiptItem[];
   onCancel: () => void;
   onSaved: (receipt: WarehouseReceiptItem) => void;
   onSubmittingChange?: (submitting: boolean) => void;
@@ -138,6 +140,9 @@ export default function ReceiptForm({
   );
   const [manualLotNumber, setManualLotNumber] = useState<string | null>(
     data?.lot_number ?? null,
+  );
+  const [packagingSpecification, setPackagingSpecification] = useState(
+    data?.packaging_specification ?? "",
   );
   const [formCreatedAt] = useState(() => new Date());
   const lotNumber =
@@ -380,7 +385,19 @@ export default function ReceiptForm({
             }
             value={itemOptions.find((item) => item.value === itemCode) ?? null}
             onValueChange={(item) => {
-              setItemCode(item?.value ?? "");
+              const nextItemCode = item?.value ?? "";
+              if (!data && nextItemCode !== itemCode) {
+                // Receipt history is ordered by received_at descending, then id.
+                const latestReceipt = receiptHistory.find(
+                  (receipt) => receipt.item_code === nextItemCode,
+                );
+                setPackagingSpecification(
+                  latestReceipt?.packaging_specification ?? "",
+                );
+                setSupplierCode(latestReceipt?.supplier_code ?? "");
+                setManufacturerCode(latestReceipt?.manufacturer_code ?? "");
+              }
+              setItemCode(nextItemCode);
               setError("");
             }}
             itemToStringLabel={(item) => item.label}
@@ -600,7 +617,12 @@ export default function ReceiptForm({
                             event: React.ChangeEvent<HTMLInputElement>,
                           ) => setManualLotNumber(event.target.value),
                         }
-                      : { defaultValue: data?.[key] ?? "" })}
+                      : {
+                          value: packagingSpecification,
+                          onChange: (
+                            event: React.ChangeEvent<HTMLInputElement>,
+                          ) => setPackagingSpecification(event.target.value),
+                        })}
                   maxLength={maxLength}
                   required={required}
                 />

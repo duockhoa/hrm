@@ -132,7 +132,11 @@ export default function ReceiptPage({
             <AiOutlineRight />
             <Link href="/home">Kiểm hàng nhập kho</Link>
           </div>
-          <Button size="sm" onClick={() => setCreating(true)}>
+          <Button
+            size="sm"
+            disabled={isLoading}
+            onClick={() => setCreating(true)}
+          >
             <Plus className="size-4" /> Thêm
           </Button>
         </div>
@@ -318,6 +322,7 @@ export default function ReceiptPage({
             </DialogTitle>
           </DialogHeader>
           <ReceiptForm
+            receiptHistory={data}
             onSubmittingChange={setIsSaving}
             onCancel={() => setCreating(false)}
             onSaved={(saved) => {
