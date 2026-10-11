@@ -1,11 +1,12 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import { ChangeEvent, useRef, useState } from "react";
-import { Camera, Loader2, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
-import SharedAuthenticatedImage from "@/components/authenticated-image/authenticated-image";
+import { Button } from "@/components/ui/button";
+import SteamSterilizationImagePicker from "./steam-sterilization-image-picker";
 import FieldDisplay from "@/components/field-display/field-display";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_ROUTES } from "@/lib/api-routes";
@@ -48,34 +49,25 @@ const dateTime = (value?: string | null) =>
       })
     : "—";
 
-const imageCaptureFields = [
-  { name: "configuration_image", label: "Chụp ảnh cấu hình" },
-  { name: "indicator_image", label: "Chụp ảnh chỉ thị" },
+const imageFields = [
+  {
+    name: "configuration_image",
+    path: "configuration_image_path",
+    label: "Ảnh cấu hình",
+  },
+  {
+    name: "indicator_image",
+    path: "indicator_image_path",
+    label: "Ảnh chỉ thị",
+  },
   {
     name: "reached_temperature_image",
-    label: "Chụp ảnh đạt nhiệt",
+    path: "reached_temperature_image_path",
+    label: "Ảnh đạt nhiệt",
   },
 ] as const;
 
-const imageDisplayFields = [
-  { path: "configuration_image_path", label: "Ảnh cấu hình" },
-  { path: "indicator_image_path", label: "Ảnh chỉ thị" },
-  { path: "reached_temperature_image_path", label: "Ảnh đạt nhiệt" },
-] as const;
-
-function AuthenticatedImage({ path, label }: { path: string; label: string }) {
-  return (
-    <SharedAuthenticatedImage
-      src={path}
-      alt={label}
-      className="h-48 w-full rounded-none border-0"
-      height={192}
-      width={320}
-      loading="lazy"
-      objectFit="contain"
-    />
-  );
-}
+type ImageFieldName = (typeof imageFields)[number]["name"];
 
 export default function SteamSterilizationCheckDetail({
   id,
@@ -84,41 +76,47 @@ export default function SteamSterilizationCheckDetail({
   id: string | number;
   onClose: () => void;
 }) {
-  const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [uploadingField, setUploadingField] = useState<ImageFieldName | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
-  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const uploadInProgressRef = useRef(false);
+  const [pendingImages, setPendingImages] = useState<
+    Record<ImageFieldName, File | null>
+  >({
+    configuration_image: null,
+    indicator_image: null,
+    reached_temperature_image: null,
+  });
   const detailKey =
     API_ROUTES.productionOrders.steamSterilizationCheckDetail(id);
   const { data, error } = useSWR<SteamSterilizationCheck>(detailKey, () =>
     productionOrdersService.fetchSteamSterilizationCheckById(id),
   );
 
-  const handleCapture = async (
-    fieldName: string,
-    event: ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error("Ảnh phải có dung lượng không quá 20 MB.");
-      return;
-    }
+  const handleSaveImage = async (fieldName: ImageFieldName) => {
+    const file = pendingImages[fieldName];
+    if (!file || uploadInProgressRef.current || isDeleting) return;
 
     const payload = new FormData();
     payload.append(fieldName, file);
 
     try {
+      uploadInProgressRef.current = true;
       setUploadingField(fieldName);
-      await productionOrdersService.updateSteamSterilizationCheck(id, payload);
-      await mutate(detailKey);
+      const saved: SteamSterilizationCheck =
+        await productionOrdersService.updateSteamSterilizationCheck(
+          id,
+          payload,
+        );
+      await mutate(detailKey, saved, { revalidate: false });
+      setPendingImages((current) => ({ ...current, [fieldName]: null }));
       if (data?.production_order_id) {
-        await mutate(
+        void mutate(
           API_ROUTES.productionOrders.steamSterilizationChecks(
             data.production_order_id,
           ),
-        );
+        ).catch(() => undefined);
       }
       toast.success("Đã lưu ảnh tiệt trùng.");
     } catch (uploadError: any) {
@@ -126,6 +124,7 @@ export default function SteamSterilizationCheckDetail({
         uploadError?.response?.data?.message ?? "Không thể lưu ảnh tiệt trùng.",
       );
     } finally {
+      uploadInProgressRef.current = false;
       setUploadingField(null);
     }
   };
@@ -206,46 +205,8 @@ export default function SteamSterilizationCheckDetail({
           </button>
         }
         onClose={onClose}
+        showCloseButton={uploadingField === null && !isDeleting}
       />
-      <div className="border-b py-3">
-        <div className="flex flex-wrap justify-start gap-2">
-          {imageCaptureFields.map((field) => (
-            <div
-              key={field.name}
-              className="inline-flex flex-col items-center p-0.5 md:p-1"
-            >
-              <input
-                ref={(element) => {
-                  inputRefs.current[field.name] = element;
-                }}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                capture="environment"
-                className="hidden"
-                onChange={(event) => void handleCapture(field.name, event)}
-              />
-              <button
-                type="button"
-                title={field.label}
-                className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-center text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
-                disabled={uploadingField !== null}
-                onClick={() => inputRefs.current[field.name]?.click()}
-              >
-                {uploadingField === field.name ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Camera className="size-4" />
-                )}
-              </button>
-              <div className="w-[82px] md:w-[90px]">
-                <p className="mt-1 text-center text-[13px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-                  {uploadingField === field.name ? "Đang tải..." : field.label}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
       <div className="mt-4 flex flex-col gap-4">
         <FieldDisplay
           lable="Mã lệnh sản xuất"
@@ -267,27 +228,49 @@ export default function SteamSterilizationCheckDetail({
         <FieldDisplay lable="Người nhập" value={userLabel(data.createdBy)} />
         <div className="border-t pt-4 text-left">
           <h2 className="mb-3 text-lg font-semibold">Hình ảnh tiệt trùng</h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {imageDisplayFields.map((image) => {
-              const imagePath = data[image.path];
-              return (
-                <div
-                  key={image.path}
-                  className="overflow-hidden rounded border bg-gray-50"
-                >
-                  <p className="border-b bg-white px-3 py-2 text-sm font-semibold text-gray-700">
-                    {image.label}
-                  </p>
-                  {imagePath ? (
-                    <AuthenticatedImage path={imagePath} label={image.label} />
-                  ) : (
-                    <div className="flex h-48 items-center justify-center text-sm text-gray-500">
-                      Chưa có ảnh
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="space-y-4">
+            {imageFields.map((image) => (
+              <div key={image.name} className="space-y-2">
+                <SteamSterilizationImagePicker
+                  label={image.label}
+                  file={pendingImages[image.name]}
+                  savedPath={data[image.path]}
+                  disabled={uploadingField !== null || isDeleting}
+                  onChange={(file) =>
+                    setPendingImages((current) => ({
+                      ...current,
+                      [image.name]: file,
+                    }))
+                  }
+                />
+                {pendingImages[image.name] && (
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={uploadingField !== null || isDeleting}
+                      onClick={() =>
+                        setPendingImages((current) => ({
+                          ...current,
+                          [image.name]: null,
+                        }))
+                      }
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={uploadingField !== null || isDeleting}
+                      onClick={() => void handleSaveImage(image.name)}
+                    >
+                      {uploadingField === image.name
+                        ? "Đang lưu..."
+                        : "Lưu ảnh"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

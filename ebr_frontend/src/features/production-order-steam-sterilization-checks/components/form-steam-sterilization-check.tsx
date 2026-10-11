@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
-import { Camera, ImageUp } from "lucide-react";
+import { FormEvent, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,8 @@ import {
   QrInputButton,
   QrScanDialog,
 } from "@/components/qr-scan-dialog/qr-scan-dialog";
+
+import SteamSterilizationImagePicker from "./steam-sterilization-image-picker";
 
 const equipmentQrKeys = [
   "equipment_name",
@@ -56,8 +57,6 @@ export default function FormSteamSterilizationCheck({
     null,
   );
   const [isEquipmentScannerOpen, setIsEquipmentScannerOpen] = useState(false);
-  const configurationFileInputRef = useRef<HTMLInputElement>(null);
-  const configurationCameraInputRef = useRef<HTMLInputElement>(null);
   const { data: currentUser, isLoading: isLoadingCurrentUser } = useSWR(
     API_ROUTES.users.me,
     userService.fetcherMe,
@@ -75,7 +74,9 @@ export default function FormSteamSterilizationCheck({
     }
 
     for (const [key, value] of raw.entries()) {
-      if (value instanceof File ? value.size > 0 : String(value).trim() !== "") {
+      if (
+        value instanceof File ? value.size > 0 : String(value).trim() !== ""
+      ) {
         payload.append(key, value);
       }
     }
@@ -130,83 +131,46 @@ export default function FormSteamSterilizationCheck({
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="setting_temperature">Nhiệt độ cài đặt (°C)</Label>
-          <Input id="setting_temperature" name="setting_temperature" type="number" min="0.01" max="999999.99" step="0.01" disabled={isSubmitting} />
+          <Input
+            id="setting_temperature"
+            name="setting_temperature"
+            type="number"
+            min="0.01"
+            max="999999.99"
+            step="0.01"
+            disabled={isSubmitting}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="setting_time">Thời gian cài đặt (phút)</Label>
-          <Input id="setting_time" name="setting_time" type="number" min="1" step="1" disabled={isSubmitting} />
+          <Input
+            id="setting_time"
+            name="setting_time"
+            type="number"
+            min="1"
+            step="1"
+            disabled={isSubmitting}
+          />
         </div>
       </div>
-      <div className="space-y-2">
-        <Label>Ảnh cấu hình hấp</Label>
-        <Input
-          ref={configurationFileInputRef}
-          id="configuration_image_file"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          disabled={isSubmitting}
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-            if (!file) return;
-            if (file.size > 20 * 1024 * 1024) {
-              toast.error("Ảnh cấu hình hấp phải có dung lượng không quá 20 MB.");
-              return;
-            }
-            setConfigurationImage(file);
-          }}
-        />
-        <Input
-          ref={configurationCameraInputRef}
-          id="configuration_image_camera"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          capture="environment"
-          disabled={isSubmitting}
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-            if (!file) return;
-            if (file.size > 20 * 1024 * 1024) {
-              toast.error("Ảnh cấu hình hấp phải có dung lượng không quá 20 MB.");
-              return;
-            }
-            setConfigurationImage(file);
-          }}
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isSubmitting}
-            onClick={() => configurationFileInputRef.current?.click()}
-          >
-            <ImageUp className="size-4" />
-            Chọn file
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isSubmitting}
-            onClick={() => configurationCameraInputRef.current?.click()}
-          >
-            <Camera className="size-4" />
-            Chụp ảnh
-          </Button>
-        </div>
-        {configurationImage ? (
-          <div className="rounded border bg-gray-50 p-2 text-xs text-gray-600">
-            <p className="font-medium text-gray-700">
-              Đã chọn: {configurationImage.name}
-            </p>
-          </div>
-        ) : null}
-      </div>
+      <SteamSterilizationImagePicker
+        label="Ảnh cấu hình hấp"
+        file={configurationImage}
+        disabled={isSubmitting}
+        onChange={setConfigurationImage}
+      />
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Hủy</Button>
-        <Button type="submit" disabled={isSubmitting || isLoadingCurrentUser}>{isSubmitting ? "Đang lưu..." : "Lưu"}</Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
+          Hủy
+        </Button>
+        <Button type="submit" disabled={isSubmitting || isLoadingCurrentUser}>
+          {isSubmitting ? "Đang lưu..." : "Lưu"}
+        </Button>
       </div>
       <QrScanDialog
         open={isEquipmentScannerOpen}

@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Camera, ImageUp, X } from "lucide-react";
+import { Camera, ImageUp } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import * as z from "zod";
-import AuthenticatedImage from "@/components/authenticated-image/authenticated-image";
+import SelectedImagePreview from "@/components/selected-image-preview/selected-image-preview";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -35,34 +35,6 @@ import useUsersStore from "@/store/users.store";
 const MAX_DEVIATION_IMAGE_COUNT = 10;
 const DEVIATION_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 const NO_APPROVER_VALUE = "none";
-
-function SelectedDeviationImage({ file }: { file: File }) {
-  const [preview, setPreview] = React.useState<{
-    file: File;
-    src: string;
-  } | null>(null);
-  React.useEffect(() => {
-    const src = URL.createObjectURL(file);
-    let active = true;
-    queueMicrotask(() => {
-      if (active) setPreview({ file, src });
-    });
-    return () => {
-      active = false;
-      URL.revokeObjectURL(src);
-    };
-  }, [file]);
-  return (
-    <AuthenticatedImage
-      src={preview?.file === file ? preview.src : undefined}
-      alt={file.name}
-      width={240}
-      height={160}
-      className="h-28 w-full rounded-none border-0"
-      loading="eager"
-    />
-  );
-}
 
 const formSchema = z.object({
   deviation_content: z
@@ -382,35 +354,18 @@ export default function FormAddProductionOrderDeviation({
                   {field.value.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {field.value.map((file, index) => (
-                        <div
+                        <SelectedImagePreview
                           key={`${file.name}-${file.lastModified}-${index}`}
-                          className="relative overflow-hidden rounded border bg-gray-50"
-                        >
-                          <SelectedDeviationImage file={file} />
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon-sm"
-                            className="absolute right-1 top-1"
-                            disabled={form.formState.isSubmitting}
-                            aria-label={`Bỏ chọn ${file.name}`}
-                            onClick={() =>
-                              field.onChange(
-                                field.value.filter(
-                                  (_, fileIndex) => fileIndex !== index,
-                                ),
-                              )
-                            }
-                          >
-                            <X className="size-4" />
-                          </Button>
-                          <p
-                            className="truncate px-2 py-1 text-xs"
-                            title={file.name}
-                          >
-                            {file.name}
-                          </p>
-                        </div>
+                          file={file}
+                          disabled={form.formState.isSubmitting}
+                          onRemove={() =>
+                            field.onChange(
+                              field.value.filter(
+                                (_, fileIndex) => fileIndex !== index,
+                              ),
+                            )
+                          }
+                        />
                       ))}
                     </div>
                   )}
