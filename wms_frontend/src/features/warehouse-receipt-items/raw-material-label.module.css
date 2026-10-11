@@ -1,0 +1,102 @@
+.page {
+  min-height: 100vh;
+  padding: 10px;
+  background: #fff;
+  color: #000;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.message {
+  padding: 10px;
+}
+
+.wrapper {
+  width: 510px;
+  border: 2px solid #000;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.label {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  color: #000;
+  background: #fff;
+}
+
+.headingColumn { width: 104px; }
+.valueColumn { width: 185px; }
+.containerColumn { width: 117px; }
+
+.label th,
+.label td {
+  height: 35px;
+  padding: 3px 4px;
+  border-right: 1px dotted #000;
+  border-bottom: 1px dotted #000;
+  vertical-align: middle;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.label tr > :last-child { border-right: 0; }
+.label tbody tr:last-child > * { border-bottom: 0; }
+
+.label .title {
+  height: 38px;
+  font-size: 28px;
+  text-align: center;
+}
+
+.label .nameRow > * { height: 69px; }
+.label .primaryValue { font-size: 24px; }
+
+.label .qrCell {
+  padding: 4px;
+  text-align: center;
+  border-left: 1px dotted #000;
+  border-right: 0;
+}
+
+.qrCell svg {
+  display: block;
+  width: 168px;
+  height: 168px;
+  margin: auto;
+}
+
+.label .containerHeading {
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.editable {
+  display: block;
+  width: 100%;
+  min-height: 1.2em;
+  outline: none;
+  white-space: pre-wrap;
+}
+
+.editable:focus {
+  outline: 1px dashed #2563eb;
+  background: #eff6ff;
+}
+
+@media print {
+  .page { min-height: 0; padding: 0; }
+  .toolbar { display: none; }
+  .wrapper { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .editable:focus { outline: none; background: transparent; }
+}

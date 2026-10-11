@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import useSWR, { useSWRConfig } from "swr";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Tags, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
 import FieldDisplay from "@/components/field-display/field-display";
@@ -144,6 +145,22 @@ export default function ReceiptDetail({
         onClose={onClose}
         showCloseButton={false}
       />
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-gray-200 py-3">
+        <Link
+          href={`/label/raw-material-label?id=${data.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex flex-col items-center p-0.5 md:p-1"
+          aria-label="Tạo nhãn nguyên liệu"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 md:h-10 md:w-10">
+            <Tags className="size-5" />
+          </span>
+          <span className="mt-1 w-[68px] text-center text-[12px] font-semibold leading-tight text-gray-700 md:w-[90px] md:text-[14px]">
+            Tạo nhãn NL
+          </span>
+        </Link>
+      </div>
       <div className="mt-4 flex flex-col gap-4 text-left [&_p]:whitespace-pre-wrap">
         {fields.map(([label, value]) => (
           <FieldDisplay key={label} lable={label ?? ""} value={value ?? ""} />
