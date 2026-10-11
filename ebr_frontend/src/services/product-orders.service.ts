@@ -155,6 +155,7 @@ type CreateFriabilityCheckPayload = {
 
 type CreateDisintegrationCheckPayload = {
   requirement?: string | null;
+  upper_limit?: number | null;
   dosage_form_stage: string;
   unit_1_passed: boolean;
   unit_2_passed?: boolean | null;

@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ProductionOrderDisintegrationChecksService } from './production-order-disintegration-checks.service';
 
@@ -127,6 +128,7 @@ describe('ProductionOrderDisintegrationChecksService', () => {
         data: {
           production_order_id: 2031,
           requirement: null,
+          upper_limit: null,
           dosage_form_stage: 'film_coated_tablet',
           unit_1_passed: true,
           unit_2_passed: true,
@@ -172,6 +174,59 @@ describe('ProductionOrderDisintegrationChecksService', () => {
       }),
     );
   });
+
+  it.each([15, '15,123456', 0, '999999999999.999999'])(
+    'stores the submitted disintegration upper limit %s as a decimal',
+    async (upperLimit) => {
+      prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+      await service.create(
+        2031,
+        {
+          upper_limit: upperLimit,
+          dosage_form_stage: 'tablet',
+          unit_1_passed: true,
+        },
+        { id: 7 },
+      );
+
+      expect(
+        prismaService.productionOrderDisintegrationChecks.create,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            upper_limit: new Prisma.Decimal(
+              String(upperLimit).replace(',', '.'),
+            ),
+          }),
+        }),
+      );
+    },
+  );
+
+  it.each([-1, 'invalid', '15.1234567', '1000000000000', Infinity, true])(
+    'rejects an invalid disintegration upper limit %s',
+    async (upperLimit) => {
+      prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+
+      await expect(
+        service.create(
+          2031,
+          {
+            upper_limit: upperLimit as number,
+            dosage_form_stage: 'tablet',
+            unit_1_passed: true,
+          },
+          { id: 7 },
+        ),
+      ).rejects.toThrow(
+        'upper_limit must be non-negative and fit DECIMAL(18, 6)',
+      );
+      expect(
+        prismaService.productionOrderDisintegrationChecks.create,
+      ).not.toHaveBeenCalled();
+    },
+  );
 
   it('throws NotFoundException when the production order does not exist', async () => {
     prismaService.productionOrders.findUnique.mockResolvedValue(null);
@@ -235,6 +290,66 @@ describe('ProductionOrderDisintegrationChecksService', () => {
         data: { requirement: null },
       }),
     );
+  });
+
+  it('updates only the upper limit when it is provided', async () => {
+    prismaService.productionOrderDisintegrationChecks.findUnique.mockResolvedValue(
+      { id: 1, upper_limit: new Prisma.Decimal(15) },
+    );
+
+    await service.update(1, { upper_limit: '12,123456' });
+
+    expect(
+      prismaService.productionOrderDisintegrationChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { upper_limit: new Prisma.Decimal('12.123456') },
+      }),
+    );
+  });
+
+  it('preserves the stored upper limit when updating only results', async () => {
+    prismaService.productionOrderDisintegrationChecks.findUnique.mockResolvedValue(
+      { id: 1, upper_limit: new Prisma.Decimal('15.123456') },
+    );
+
+    await service.update(1, { unit_1_passed: false });
+
+    expect(
+      prismaService.productionOrderDisintegrationChecks.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { unit_1_passed: false } }),
+    );
+  });
+
+  it.each([null, '  '])(
+    'clears an upper limit set to %s',
+    async (upperLimit) => {
+      prismaService.productionOrderDisintegrationChecks.findUnique.mockResolvedValue(
+        { id: 1, upper_limit: new Prisma.Decimal(15) },
+      );
+
+      await service.update(1, { upper_limit: upperLimit });
+
+      expect(
+        prismaService.productionOrderDisintegrationChecks.update,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { upper_limit: null } }),
+      );
+    },
+  );
+
+  it('rejects an invalid upper limit when updating a check', async () => {
+    prismaService.productionOrderDisintegrationChecks.findUnique.mockResolvedValue(
+      { id: 1 },
+    );
+
+    await expect(service.update(1, { upper_limit: -1 })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(
+      prismaService.productionOrderDisintegrationChecks.update,
+    ).not.toHaveBeenCalled();
   });
 
   it('rejects a non-string requirement', async () => {

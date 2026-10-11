@@ -1689,6 +1689,7 @@ model ProductionOrderDisintegrationChecks {
   production_order_id Int
   productionOrder     ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "po_disintegration_checks_po_id_fkey")
   requirement         String?          @db.Text
+  upper_limit         Decimal?         @db.Decimal(18, 6)
   dosage_form_stage   String
   unit_1_passed       Boolean
   unit_2_passed       Boolean?

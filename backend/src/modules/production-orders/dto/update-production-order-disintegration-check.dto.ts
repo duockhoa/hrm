@@ -1,5 +1,6 @@
 export class UpdateProductionOrderDisintegrationCheckDto {
   requirement?: string | null;
+  upper_limit?: number | string | null;
   dosage_form_stage?: string | null;
   unit_1_passed?: boolean | number | string | null;
   unit_2_passed?: boolean | number | string | null;

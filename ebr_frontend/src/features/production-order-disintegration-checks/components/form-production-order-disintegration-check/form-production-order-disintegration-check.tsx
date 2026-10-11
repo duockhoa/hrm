@@ -20,7 +20,7 @@ import type { DisintegrationCheckPayload } from "../../types";
 import {
   DOSAGE_FORM_STAGE_OPTIONS,
   UNIT_KEYS,
-  buildDisintegrationRequirement,
+  calculateDisintegrationRequirement,
 } from "../../utils";
 import PassFailToggle, {
   type PassFailValue,
@@ -60,9 +60,10 @@ export default function FormProductionOrderDisintegrationCheck({
   const disintegrationChecksKey = productionOrderId
     ? API_ROUTES.productionOrders.disintegrationChecks(productionOrderId)
     : null;
-  const requirement = buildDisintegrationRequirement(
+  const calculatedRequirement = calculateDisintegrationRequirement(
     item?.productionSpecification ?? item,
   );
+  const requirement = calculatedRequirement.requirement;
 
   const resetForm = () => {
     setDosageFormStage("");
@@ -110,6 +111,7 @@ export default function FormProductionOrderDisintegrationCheck({
       }),
       {
         requirement: requirement || null,
+        upper_limit: calculatedRequirement.upper_limit,
         dosage_form_stage: dosageFormStage,
       } as DisintegrationCheckPayload,
     );

@@ -1,3 +1,11 @@
+import { parseControlLimit } from "@/lib/check-control-limits";
+
+type DisintegrationSpecification = {
+  disintegration_time_control_limit?: string | number | null;
+  disintegration_time_allowed_limit?: string | number | null;
+  disintegration_time_unit?: string | null;
+};
+
 const DOSAGE_FORM_STAGE_OPTIONS = [
   { value: "tablet", label: "Viên nén" },
   { value: "film_coated_tablet", label: "Viên bao phim" },
@@ -32,14 +40,7 @@ const formatRequirementValue = (
 };
 
 const buildDisintegrationRequirement = (
-  specification:
-    | {
-        disintegration_time_control_limit?: string | number | null;
-        disintegration_time_allowed_limit?: string | number | null;
-        disintegration_time_unit?: string | null;
-      }
-    | null
-    | undefined,
+  specification: DisintegrationSpecification | null | undefined,
 ) => {
   if (!specification) {
     return "";
@@ -61,6 +62,16 @@ const buildDisintegrationRequirement = (
     .filter(Boolean)
     .join("\n");
 };
+
+const calculateDisintegrationRequirement = (
+  specification: DisintegrationSpecification | null | undefined,
+) => ({
+  requirement: buildDisintegrationRequirement(specification),
+  upper_limit: parseControlLimit(
+    specification?.disintegration_time_control_limit,
+    6,
+  ),
+});
 
 const formatDateTime = (value: string | null | undefined) => {
   if (!value) {
@@ -124,6 +135,7 @@ const getUserLabel = (
 
 export {
   buildDisintegrationRequirement,
+  calculateDisintegrationRequirement,
   DOSAGE_FORM_STAGE_OPTIONS,
   UNIT_KEYS,
   formatDateTime,

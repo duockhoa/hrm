@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { calculateDisintegrationRequirement } from "../features/production-order-disintegration-checks/utils";
 import {
   calculateFilmCoatedTabletWeightRequirement,
   calculateGranulesInBagNetWeightRequirement,
@@ -16,6 +17,7 @@ import {
   calculateVolumeRequirement,
 } from "../features/production-order-volume-checks/utils";
 import {
+  parseControlLimit,
   storedControlLimits,
   type CheckControlLimits,
 } from "./check-control-limits";
@@ -179,4 +181,42 @@ test("edit payloads preserve stored calculated limits as numbers", () => {
     0.42,
   );
   expectLimits(storedControlLimits({}), null, null);
+});
+
+test("disintegration forms send the numeric control time limit with full precision", () => {
+  const calculated = calculateDisintegrationRequirement({
+    disintegration_time_control_limit: "15,123456",
+    disintegration_time_allowed_limit: 30,
+    disintegration_time_unit: "phút",
+  });
+  const payload = JSON.parse(JSON.stringify(calculated));
+
+  assert.equal(payload.upper_limit, 15.123456);
+  assert.equal(typeof payload.upper_limit, "number");
+  assert.match(payload.requirement, /15,123456 phút/);
+  assert.match(payload.requirement, /30 phút/);
+});
+
+test("missing disintegration control time remains null, independent of allowed time", () => {
+  for (const value of [undefined, null, "", "  ", "invalid"]) {
+    const calculated = calculateDisintegrationRequirement({
+      disintegration_time_control_limit: value,
+      disintegration_time_allowed_limit: 30,
+    });
+    assert.equal(calculated.upper_limit, null);
+  }
+  assert.deepEqual(calculateDisintegrationRequirement(undefined), {
+    requirement: "",
+    upper_limit: null,
+  });
+  assert.equal(
+    calculateDisintegrationRequirement({ disintegration_time_control_limit: 0 })
+      .upper_limit,
+    0,
+  );
+});
+
+test("disintegration edits preserve the stored upper limit to six decimal places", () => {
+  assert.equal(parseControlLimit("15.123456", 6), 15.123456);
+  assert.equal(parseControlLimit(null, 6), null);
 });

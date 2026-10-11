@@ -11,6 +11,7 @@ type ProductionOrderDisintegrationCheck = {
   id?: number | string;
   production_order_id?: number | string | null;
   requirement?: string | null;
+  upper_limit?: number | string | null;
   dosage_form_stage?: string | null;
   unit_1_passed?: boolean | null;
   unit_2_passed?: boolean | null;
@@ -27,6 +28,7 @@ type ProductionOrderDisintegrationCheck = {
 
 type DisintegrationCheckPayload = {
   requirement?: string | null;
+  upper_limit?: number | null;
   dosage_form_stage: string;
   unit_1_passed: boolean;
   unit_2_passed?: boolean | null;

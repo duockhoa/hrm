@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { API_ROUTES } from "@/lib/api-routes";
+import { parseControlLimit } from "@/lib/check-control-limits";
 import productionOrdersService from "@/services/product-orders.service";
 import type {
   DisintegrationCheckPayload,
@@ -100,6 +101,7 @@ export default function EditDisintegrationCheckForm({
           unitResults[unitKey] === "" ? null : unitResults[unitKey] === "pass",
       }),
       {
+        upper_limit: parseControlLimit(data.upper_limit, 6),
         dosage_form_stage: dosageFormStage,
       } as DisintegrationCheckPayload,
     );

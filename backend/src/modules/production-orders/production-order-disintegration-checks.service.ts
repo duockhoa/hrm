@@ -101,6 +101,7 @@ export class ProductionOrderDisintegrationChecksService {
           dto?.requirement,
           'requirement',
         ),
+        upper_limit: this.normalizeOptionalUpperLimit(dto?.upper_limit),
         dosage_form_stage: this.normalizeRequiredString(
           dto?.dosage_form_stage,
           'dosage_form_stage',
@@ -167,6 +168,12 @@ export class ProductionOrderDisintegrationChecksService {
       data.requirement = this.normalizeOptionalText(
         updateDto.requirement,
         'requirement',
+      );
+    }
+
+    if ('upper_limit' in updateDto) {
+      data.upper_limit = this.normalizeOptionalUpperLimit(
+        updateDto.upper_limit,
       );
     }
 
@@ -245,6 +252,27 @@ export class ProductionOrderDisintegrationChecksService {
     const normalizedValue = value.trim();
 
     return normalizedValue || null;
+  }
+
+  private normalizeOptionalUpperLimit(value: unknown): Prisma.Decimal | null {
+    if (value == null || (typeof value === 'string' && !value.trim())) {
+      return null;
+    }
+
+    const normalizedValue =
+      typeof value === 'number'
+        ? String(value)
+        : typeof value === 'string'
+          ? value.trim().replace(',', '.')
+          : '';
+
+    if (!/^\d{1,12}(?:\.\d{1,6})?$/.test(normalizedValue)) {
+      throw new BadRequestException(
+        'upper_limit must be non-negative and fit DECIMAL(18, 6)',
+      );
+    }
+
+    return new Prisma.Decimal(normalizedValue);
   }
 
   private normalizePassResult(value: unknown, fieldName: string) {
