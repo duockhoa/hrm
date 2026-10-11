@@ -133,8 +133,6 @@ export default function ReceiptDetail({
     ["Ghi chú", data.note],
     ["Thời điểm nhập", formatReceiptDateTime(data.received_at)],
     ["Người nhập", data.enteredBy?.name || data.enteredBy?.username],
-    ["Ngày tạo", formatReceiptDateTime(data.created_at)],
-    ["Ngày cập nhật", formatReceiptDateTime(data.updated_at)],
   ];
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
