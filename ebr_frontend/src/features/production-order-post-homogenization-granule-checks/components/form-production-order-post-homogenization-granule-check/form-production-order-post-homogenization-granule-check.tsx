@@ -7,6 +7,7 @@ import { mutate } from "swr";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import SelectedImagePreview from "@/components/selected-image-preview/selected-image-preview";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -333,9 +334,15 @@ export default function FormProductionOrderPostHomogenizationGranuleCheck({
                 </Button>
               </div>
               {image ? (
-                <div className="rounded border bg-gray-50 p-2 text-xs text-gray-600">
-                  <p className="font-medium text-gray-700">Đã chọn 1 ảnh</p>
-                  <p className="mt-1 break-words">{image.name}</p>
+                <div className="max-w-xs">
+                  <SelectedImagePreview
+                    file={image}
+                    disabled={form.formState.isSubmitting}
+                    onRemove={() => {
+                      setImage(null);
+                      setFileInputKey((key) => key + 1);
+                    }}
+                  />
                 </div>
               ) : null}
               <p className="text-xs text-gray-500">

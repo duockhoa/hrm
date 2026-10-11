@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import useSWR, { mutate as mutateGlobal } from "swr";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
 import FieldDisplay from "@/components/field-display/field-display";
+import SelectedImagePreview from "@/components/selected-image-preview/selected-image-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -293,28 +294,20 @@ function EditAttachmentForm({
           {files.length > 0 ? (
             <div className="space-y-2 rounded border bg-gray-50 p-3">
               <p className="text-sm font-medium">Đã chọn {files.length} ảnh mới</p>
-              {files.map((file, index) => (
-                <div
-                  key={`${file.name}-${file.lastModified}-${index}`}
-                  className="flex items-center justify-between gap-2 text-sm"
-                >
-                  <span className="min-w-0 truncate">{file.name}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {files.map((file, index) => (
+                  <SelectedImagePreview
+                    key={`${file.name}-${file.lastModified}-${index}`}
+                    file={file}
                     disabled={isSubmitting}
-                    onClick={() =>
+                    onRemove={() =>
                       setFiles((current) =>
                         current.filter((_, fileIndex) => fileIndex !== index),
                       )
                     }
-                    aria-label={`Bỏ chọn ${file.name}`}
-                  >
-                    <X className="size-4" />
-                  </Button>
-                </div>
-              ))}
+                  />
+                ))}
+              </div>
             </div>
           ) : null}
         </div>

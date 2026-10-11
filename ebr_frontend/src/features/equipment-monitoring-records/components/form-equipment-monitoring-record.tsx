@@ -2,6 +2,7 @@
 
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
 import AuthenticatedImage from "@/components/authenticated-image/authenticated-image";
+import SelectedImagePreview from "@/components/selected-image-preview/selected-image-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +37,7 @@ import type {
   EquipmentParameter,
 } from "@/features/equipment/types";
 import type { ItemEquipment } from "@/features/item-equipment/types";
-import { Camera, Eye, ImageUp, Loader2, Settings2, X } from "lucide-react";
+import { Camera, Eye, ImageUp, Loader2, Settings2 } from "lucide-react";
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { mutate } from "swr";
@@ -151,29 +152,18 @@ function EquipmentMonitoringImagePicker({
         </Button>
       </div>
       {images.length > 0 ? (
-        <div className="space-y-2 rounded border bg-gray-50 p-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {images.map((image, index) => (
-            <div
+            <SelectedImagePreview
               key={`${image.name}-${image.lastModified}-${index}`}
-              className="flex items-center justify-between gap-2 text-sm"
-            >
-              <span className="min-w-0 truncate text-gray-700">
-                {image.name}
-              </span>
-              <button
-                type="button"
-                aria-label={`Bỏ ảnh ${image.name}`}
-                disabled={disabled}
-                className="shrink-0 rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-red-600 disabled:opacity-50"
-                onClick={() =>
-                  onChange(
-                    images.filter((_, imageIndex) => imageIndex !== index),
-                  )
-                }
-              >
-                <X className="size-4" />
-              </button>
-            </div>
+              file={image}
+              disabled={disabled}
+              onRemove={() =>
+                onChange(
+                  images.filter((_, imageIndex) => imageIndex !== index),
+                )
+              }
+            />
           ))}
         </div>
       ) : null}

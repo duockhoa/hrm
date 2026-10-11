@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import * as z from "zod";
+import SelectedImagePreview from "@/components/selected-image-preview/selected-image-preview";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -248,6 +249,18 @@ export default function FormProductionOrderExtractionSummary({
                 }}
               />
             </FormControl>
+            {image && (
+              <div className="max-w-xs">
+                <SelectedImagePreview
+                  file={image}
+                  disabled={form.formState.isSubmitting}
+                  onRemove={() => {
+                    setImage(null);
+                    setImageInputKey((key) => key + 1);
+                  }}
+                />
+              </div>
+            )}
           </FormItem>
 
           <FormField

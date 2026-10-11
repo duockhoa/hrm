@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Camera, ImageUp, X } from "lucide-react";
+import { Camera, ImageUp } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
+import SelectedImagePreview from "@/components/selected-image-preview/selected-image-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -387,38 +388,36 @@ export default function FormProductionOrderSensoryCheck({
               </Button>
             </div>
             {images.length > 0 ? (
-              <div className="space-y-2 rounded border bg-gray-50 p-2 text-xs text-gray-600">
+              <div
+                className="rounded border bg-gray-50 p-2 text-xs text-gray-600"
+                aria-live="polite"
+              >
                 <p className="font-medium text-gray-700">
                   Đã chọn {images.length} ảnh
                 </p>
-                {images.map((image, index) => (
-                  <div
-                    key={`${image.name}-${image.lastModified}-${index}`}
-                    className="flex items-center justify-between gap-2"
-                  >
-                    <span className="min-w-0 truncate">{image.name}</span>
-                    <button
-                      type="button"
-                      aria-label={`Bỏ ảnh ${image.name}`}
-                      disabled={isSubmitting}
-                      className="shrink-0 rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-red-600"
-                      onClick={() =>
-                        setImages((currentImages) =>
-                          currentImages.filter(
-                            (_, imageIndex) => imageIndex !== index,
-                          ),
-                        )
-                      }
-                    >
-                      <X className="size-4" />
-                    </button>
-                  </div>
-                ))}
               </div>
             ) : null}
             <p className="text-xs text-gray-500">
               Tối đa 10 ảnh cho mỗi lần thử, tối đa 20MB/ảnh.
             </p>
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {images.map((image, index) => (
+                  <SelectedImagePreview
+                    key={`${image.name}-${image.lastModified}-${index}`}
+                    file={image}
+                    disabled={isSubmitting}
+                    onRemove={() =>
+                      setImages((currentImages) =>
+                        currentImages.filter(
+                          (_, imageIndex) => imageIndex !== index,
+                        ),
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

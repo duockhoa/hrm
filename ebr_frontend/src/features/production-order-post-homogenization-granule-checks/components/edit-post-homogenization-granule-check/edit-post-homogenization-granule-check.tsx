@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import * as z from "zod";
+import SelectedImagePreview from "@/components/selected-image-preview/selected-image-preview";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -340,23 +341,17 @@ export default function EditPostHomogenizationGranuleCheck({
                 <Camera className="size-4" />
                 Chụp ảnh
               </Button>
-              {image ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
+            </div>
+            {image ? (
+              <div className="max-w-xs">
+                <SelectedImagePreview
+                  file={image}
+                  disabled={form.formState.isSubmitting}
+                  onRemove={() => {
                     setImage(null);
                     setFileInputKey((key) => key + 1);
                   }}
-                >
-                  Bỏ ảnh
-                </Button>
-              ) : null}
-            </div>
-            {image ? (
-              <div className="rounded border bg-gray-50 p-2 text-xs text-gray-600">
-                <p className="font-medium text-gray-700">Đã chọn 1 ảnh</p>
-                <p className="mt-1 break-words">{image.name}</p>
+                />
               </div>
             ) : null}
             <p className="text-xs text-gray-500">
