@@ -41,17 +41,24 @@
 
 .label th,
 .label td {
+  /* Draw individual dots so printing cannot turn dotted borders into dashes. */
+  --line-bottom: radial-gradient(circle, #666 0.45px, transparent 0.6px);
+  --line-left: radial-gradient(circle, #666 0.45px, transparent 0.6px);
   height: 35px;
   padding: 3px 4px;
-  border-right: 1px dotted #000;
-  border-bottom: 1px dotted #000;
+  border-left: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  background-image: var(--line-bottom), var(--line-left);
+  background-position: left bottom, left top;
+  background-repeat: repeat-x, repeat-y;
+  background-size: 3px 1px, 1px 3px;
   vertical-align: middle;
   text-align: left;
   overflow-wrap: anywhere;
 }
 
-.label tr > :last-child { border-right: 0; }
-.label tbody tr:last-child > * { border-bottom: 0; }
+.label tr > :first-child { --line-left: none; border-left: 0; }
+.label tbody tr:last-child > * { --line-bottom: none; border-bottom: 0; }
 
 .label .title {
   height: 38px;
@@ -65,8 +72,6 @@
 .label .qrCell {
   padding: 4px;
   text-align: center;
-  border-left: 1px dotted #000;
-  border-right: 0;
 }
 
 .qrCell svg {
