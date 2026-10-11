@@ -29,7 +29,6 @@ import {
   formatApprovalStatus,
   formatDateTime,
   formatPackageType,
-  getFileNameFromPath,
   getUserLabel,
 } from "@/features/production-order-date-checks/utils";
 import useMobile from "@/hooks/use-mobile";
@@ -57,15 +56,22 @@ const getStatusClassName = (status: string | null | undefined) => {
   return "border-amber-200 bg-amber-50 text-amber-700";
 };
 
-const groupChecksByCreatedDate = (checks: ProductionOrderDateCheck[]) => {
+const getLastImageUploadTime = (check: ProductionOrderDateCheck) =>
+  check.last_image_uploaded_at
+    ? new Date(check.last_image_uploaded_at).getTime()
+    : NaN;
+
+const groupChecksByLastImageUploadDate = (
+  checks: ProductionOrderDateCheck[],
+) => {
   const groups = new Map<string, ProductionOrderDateCheck[]>();
   checks.forEach((check) => {
-    const value = check.created_at ?? check.checked_at;
+    const value = check.last_image_uploaded_at;
     const date = value ? new Date(value) : null;
     const label =
       date && !Number.isNaN(date.getTime())
         ? date.toLocaleDateString("vi-VN")
-        : "Không rõ ngày tạo";
+        : "Không rõ ngày tải ảnh";
     const group = groups.get(label);
     if (group) {
       group.push(check);
@@ -107,37 +113,45 @@ export default function ProductionOrderDateChecksPage() {
 
   const filteredChecks = useMemo(
     () =>
-      (data ?? []).filter((check) =>
-        matchesSearchKeyword(
-          [
-            check.id,
-            check.production_order_id,
-            check.productionOrder?.production_order_code,
-            check.productionOrder?.lot_no,
-            check.productionOrder?.item_code,
-            getProductLabel(check),
-            check.package_type,
-            formatPackageType(check.package_type),
-            check.approval_status,
-            formatApprovalStatus(check.approval_status),
-            check.request_file_path,
-            check.created_at,
-            formatDateTime(check.created_at),
-            check.checked_at,
-            formatDateTime(check.checked_at),
-            check.last_image_uploaded_at,
-            formatDateTime(check.last_image_uploaded_at),
-            getUserLabel(check.last_image_uploaded_by),
-            getUserLabel(check.createdBy),
-            getUserLabel(check.approvedBy),
-          ],
-          searchKeyword,
+      (data ?? [])
+        .filter(
+          (check) =>
+            Number.isFinite(getLastImageUploadTime(check)) &&
+            matchesSearchKeyword(
+              [
+                check.id,
+                check.production_order_id,
+                check.productionOrder?.production_order_code,
+                check.productionOrder?.lot_no,
+                check.productionOrder?.item_code,
+                getProductLabel(check),
+                check.package_type,
+                formatPackageType(check.package_type),
+                check.approval_status,
+                formatApprovalStatus(check.approval_status),
+                check.request_file_path,
+                check.created_at,
+                formatDateTime(check.created_at),
+                check.checked_at,
+                formatDateTime(check.checked_at),
+                check.last_image_uploaded_at,
+                formatDateTime(check.last_image_uploaded_at),
+                getUserLabel(check.last_image_uploaded_by),
+                getUserLabel(check.createdBy),
+                getUserLabel(check.approvedBy),
+              ],
+              searchKeyword,
+            ),
+        )
+        .sort(
+          (a, b) =>
+            getLastImageUploadTime(b) - getLastImageUploadTime(a) ||
+            Number(b.id ?? 0) - Number(a.id ?? 0),
         ),
-      ),
     [data, searchKeyword],
   );
   const groupedChecks = useMemo(
-    () => groupChecksByCreatedDate(filteredChecks),
+    () => groupChecksByLastImageUploadDate(filteredChecks),
     [filteredChecks],
   );
   const selectedCheck = (data ?? []).find(
@@ -169,8 +183,11 @@ export default function ProductionOrderDateChecksPage() {
           <table className="w-full min-w-[1200px] caption-bottom border-t text-[13px]">
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow className="hover:bg-transparent">
+                <TableHead className="w-32 border-r px-3 font-bold text-gray-900">
+                  Mã sản phẩm
+                </TableHead>
                 <TableHead className="w-72 border-r px-3 font-bold text-gray-900">
-                  Sản phẩm
+                  Tên sản phẩm
                 </TableHead>
                 <TableHead className="w-32 border-r px-3 font-bold text-gray-900">
                   Số lô
@@ -181,16 +198,13 @@ export default function ProductionOrderDateChecksPage() {
                 <TableHead className="w-44 border-r px-3 font-bold text-gray-900">
                   Thời điểm kiểm tra
                 </TableHead>
-                <TableHead className="w-44 border-r px-3 font-bold text-gray-900">
-                  Tải ảnh gần nhất
-                </TableHead>
                 <TableHead className="w-40 border-r px-3 font-bold text-gray-900">
                   Người tải ảnh gần nhất
                 </TableHead>
                 <TableHead className="w-32 border-r px-3 font-bold text-gray-900">
                   Trạng thái
                 </TableHead>
-                <TableHead className="w-64 border-r px-3 font-bold text-gray-900">
+                <TableHead className="w-28 border-r px-3 font-bold text-gray-900">
                   File yêu cầu
                 </TableHead>
                 <TableHead className="w-40 border-r px-3 font-bold text-gray-900">
@@ -247,6 +261,9 @@ export default function ProductionOrderDateChecksPage() {
                             }
                           }}
                         >
+                          <TableCell className="border-r px-3">
+                            {check.productionOrder?.item_code ?? ""}
+                          </TableCell>
                           <TableCell className="max-w-72 whitespace-normal break-words border-r px-3">
                             {getProductLabel(check)}
                           </TableCell>
@@ -258,11 +275,6 @@ export default function ProductionOrderDateChecksPage() {
                           </TableCell>
                           <TableCell className="border-r px-3">
                             {formatDateTime(check.checked_at)}
-                          </TableCell>
-                          <TableCell className="border-r px-3">
-                            {check.last_image_uploaded_at
-                              ? formatDateTime(check.last_image_uploaded_at)
-                              : "Chưa có ảnh"}
                           </TableCell>
                           <TableCell className="max-w-40 whitespace-normal break-words border-r px-3">
                             {getUserLabel(check.last_image_uploaded_by) || "—"}
@@ -277,9 +289,8 @@ export default function ProductionOrderDateChecksPage() {
                               {formatApprovalStatus(check.approval_status)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="max-w-64 whitespace-normal break-words border-r px-3">
-                            {getFileNameFromPath(check.request_file_path) ||
-                              "Không có"}
+                          <TableCell className="border-r px-3">
+                            {check.request_file_path ? "Có" : "Không có"}
                           </TableCell>
                           <TableCell className="max-w-40 whitespace-normal break-words border-r px-3">
                             {getUserLabel(check.createdBy)}
@@ -300,7 +311,7 @@ export default function ProductionOrderDateChecksPage() {
                   >
                     {searchKeyword.trim()
                       ? "Không tìm thấy phiếu theo dõi In Date phù hợp."
-                      : "Chưa có phiếu theo dõi In Date nào."}
+                      : "Chưa có phiếu theo dõi In Date đã tải ảnh."}
                   </TableCell>
                 </TableRow>
               )}
