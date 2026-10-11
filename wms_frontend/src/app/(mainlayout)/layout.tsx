@@ -9,7 +9,7 @@ import { usersService } from "@/services/index.service";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useUsersStore from "@/store/users.store";
 import useRawMaterialsStore from "@/store/raw-materials.store";
-import { Boxes, Info, Package, Thermometer } from "lucide-react";
+import { Boxes, Info, Package, PackageSearch, Thermometer } from "lucide-react";
 import { useEffect } from "react";
 import useSWR from "swr";
 
@@ -25,6 +25,12 @@ const menuItems = [
     name: "Kiểm tra nhiệt độ, độ ẩm kho",
     icon: <Thermometer className="size-5 shrink-0" />,
     url: "/warehouse-temperature-humidity-checks",
+  },
+  {
+    id: "finished-product-summaries",
+    name: "Danh sách tổng kết thành phẩm",
+    icon: <PackageSearch className="size-5 shrink-0" />,
+    url: "/finished-product-summaries",
   },
   {
     id: "items",
@@ -82,9 +88,11 @@ export default function MainLayout({
       <RawMaterialsLoader />
       <div className="flex h-screen flex-col">
         <Header />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar isOpen={isOpen} data={menuItems} isMobile={isMobile} />
-          <div className="flex-1 overflow-auto bg-blue-50 p-2">{children}</div>
+          <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-blue-50 p-2">
+            {children}
+          </div>
         </div>
       </div>
     </ApplicationAccessGuard>

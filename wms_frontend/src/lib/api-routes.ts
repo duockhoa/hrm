@@ -45,6 +45,15 @@ const PRODUCTION_SPECIFICATIONS = {
   base: "/production-specifications",
 };
 
+const PRODUCTION_ORDERS = {
+  base: "/production-orders",
+  finishedProductSummaries: "/production-orders/finished-product-summaries",
+  finishedProductSummary: (id: string | number) =>
+    `/production-orders/${id}/finished-product-summaries`,
+  finishedProductSummaryDetail: (summaryId: string | number) =>
+    `/production-orders/finished-product-summaries/${summaryId}`,
+};
+
 const FEATURES = {
   base: "/features",
   byKey: (key: string) => `/features/key/${encodeURIComponent(key)}`,
@@ -99,6 +108,7 @@ export const API_ROUTES = {
   companies: COMPANY,
   items: ITEMS,
   productionSpecifications: PRODUCTION_SPECIFICATIONS,
+  productionOrders: PRODUCTION_ORDERS,
   features: FEATURES,
   productLines: PRODUCT_LINES,
   registrationNumbers: REGISTRATION_NUMBERS,

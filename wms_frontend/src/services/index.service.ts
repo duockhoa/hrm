@@ -6,8 +6,10 @@ import equipmentService from "./equipment.service";
 import dosageFormsService from "./dosage-forms.service";
 import manufacturersService from "./manufacturers.service";
 import warehouseTemperatureHumidityChecksService from "./warehouse-temperature-humidity-checks.service";
+import productOrdersService from "./product-orders.service";
 
 export {
+  productOrdersService,
   manufacturersService,
   warehouseTemperatureHumidityChecksService,
   userService,
