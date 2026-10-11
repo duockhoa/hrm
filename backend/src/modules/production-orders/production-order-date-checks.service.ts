@@ -74,10 +74,57 @@ export class ProductionOrderDateChecksService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async findAll() {
-    return this.prismaService.productionOrderDateChecks.findMany({
-      include: productionOrderDateCheckInclude,
+    const checks = await this.prismaService.productionOrderDateChecks.findMany({
+      include: { ...productionOrderDateCheckInclude, images: false },
       orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     });
+
+    if (checks.length === 0) {
+      return [];
+    }
+
+    const latestUploads =
+      await this.prismaService.productionOrderDateCheckImages.groupBy({
+        by: ['date_check_id'],
+        where: { date_check_id: { in: checks.map((check) => check.id) } },
+        _max: { created_at: true },
+      });
+    const latestUploadFilters = latestUploads.flatMap((upload) =>
+      upload._max.created_at
+        ? [
+            {
+              date_check_id: upload.date_check_id,
+              created_at: upload._max.created_at,
+            },
+          ]
+        : [],
+    );
+    const latestImages = latestUploadFilters.length
+      ? await this.prismaService.productionOrderDateCheckImages.findMany({
+          where: { OR: latestUploadFilters },
+          select: {
+            date_check_id: true,
+            created_at: true,
+            createdBy: {
+              select: { id: true, name: true, username: true, email: true },
+            },
+          },
+          // If upload timestamps match, the image with the highest id wins.
+          orderBy: { id: 'desc' },
+          distinct: ['date_check_id'],
+        })
+      : [];
+    const latestImageByCheck = new Map(
+      latestImages.map((image) => [image.date_check_id, image]),
+    );
+
+    return checks.map((check) => ({
+      ...check,
+      last_image_uploaded_at:
+        latestImageByCheck.get(check.id)?.created_at ?? null,
+      last_image_uploaded_by:
+        latestImageByCheck.get(check.id)?.createdBy ?? null,
+    }));
   }
 
   async findById(checkId: number) {

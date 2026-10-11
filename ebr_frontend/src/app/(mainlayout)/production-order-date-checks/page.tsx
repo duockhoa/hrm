@@ -39,6 +39,7 @@ import productionOrdersService from "@/services/product-orders.service";
 import useSearchStore from "@/store/search.store";
 
 const LIST_PATH = "/production-order-date-checks";
+const COLUMN_COUNT = 10;
 
 const getProductLabel = (check: ProductionOrderDateCheck) =>
   check.productionOrder?.item?.item_name ??
@@ -78,7 +79,7 @@ const groupChecksByCreatedDate = (checks: ProductionOrderDateCheck[]) => {
 function DateChecksTableSkeleton() {
   return Array.from({ length: 8 }, (_, rowIndex) => (
     <TableRow key={rowIndex}>
-      {Array.from({ length: 8 }, (_, cellIndex) => (
+      {Array.from({ length: COLUMN_COUNT }, (_, cellIndex) => (
         <TableCell key={cellIndex} className="border-r">
           <Skeleton className="h-4 w-full min-w-16" />
         </TableCell>
@@ -124,6 +125,9 @@ export default function ProductionOrderDateChecksPage() {
             formatDateTime(check.created_at),
             check.checked_at,
             formatDateTime(check.checked_at),
+            check.last_image_uploaded_at,
+            formatDateTime(check.last_image_uploaded_at),
+            getUserLabel(check.last_image_uploaded_by),
             getUserLabel(check.createdBy),
             getUserLabel(check.approvedBy),
           ],
@@ -177,6 +181,12 @@ export default function ProductionOrderDateChecksPage() {
                 <TableHead className="w-44 border-r px-3 font-bold text-gray-900">
                   Thời điểm kiểm tra
                 </TableHead>
+                <TableHead className="w-44 border-r px-3 font-bold text-gray-900">
+                  Tải ảnh gần nhất
+                </TableHead>
+                <TableHead className="w-40 border-r px-3 font-bold text-gray-900">
+                  Người tải ảnh gần nhất
+                </TableHead>
                 <TableHead className="w-32 border-r px-3 font-bold text-gray-900">
                   Trạng thái
                 </TableHead>
@@ -199,7 +209,7 @@ export default function ProductionOrderDateChecksPage() {
                   <Fragment key={group.label}>
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
                       <TableCell
-                        colSpan={8}
+                        colSpan={COLUMN_COUNT}
                         className="border-r px-3 font-semibold text-gray-900"
                       >
                         {group.label}
@@ -250,6 +260,14 @@ export default function ProductionOrderDateChecksPage() {
                             {formatDateTime(check.checked_at)}
                           </TableCell>
                           <TableCell className="border-r px-3">
+                            {check.last_image_uploaded_at
+                              ? formatDateTime(check.last_image_uploaded_at)
+                              : "Chưa có ảnh"}
+                          </TableCell>
+                          <TableCell className="max-w-40 whitespace-normal break-words border-r px-3">
+                            {getUserLabel(check.last_image_uploaded_by) || "—"}
+                          </TableCell>
+                          <TableCell className="border-r px-3">
                             <Badge
                               variant="outline"
                               className={getStatusClassName(
@@ -277,7 +295,7 @@ export default function ProductionOrderDateChecksPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={COLUMN_COUNT}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     {searchKeyword.trim()

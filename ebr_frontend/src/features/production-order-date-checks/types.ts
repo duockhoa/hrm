@@ -28,6 +28,8 @@ type ProductionOrderDateCheck = {
   created_by_id?: number | string | null;
   approved_by_id?: number | string | null;
   checked_at?: string | null;
+  last_image_uploaded_at?: string | null;
+  last_image_uploaded_by?: DateCheckUser | null;
   approved_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
