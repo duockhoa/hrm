@@ -2027,6 +2027,12 @@ export class ProductionOrdersController {
   }
 
   @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ)
+  @Get('date-checks')
+  async findAllDateChecks() {
+    return this.productionOrderDateChecksService.findAll();
+  }
+
+  @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ)
   @Get('date-checks/:checkId')
   async findDateCheckById(@Param('checkId', ParseIntPipe) checkId: number) {
     return this.productionOrderDateChecksService.findById(checkId);

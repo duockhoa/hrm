@@ -239,6 +239,7 @@ const PRODUCTION_ORDERS = {
     `/production-orders/${id}/ten-shell-weight-check`,
   tenShellWeightCheckDetail: (checkId: string | number) =>
     `/production-orders/ten-shell-weight-checks/${checkId}`,
+  allDateChecks: "/production-orders/date-checks",
   dateChecks: (id: string | number) => `/production-orders/${id}/date-checks`,
   dateCheckDetail: (checkId: string | number) =>
     `/production-orders/date-checks/${checkId}`,

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   CalendarCheck,
   Check,
@@ -214,9 +215,13 @@ function EditDateCheckForm({
 export default function DateCheckDetail({
   id,
   onClose,
+  showCloseButton = true,
+  externalActionsContainer,
 }: {
   id: string | number;
   onClose: () => void;
+  showCloseButton?: boolean;
+  externalActionsContainer?: HTMLElement | null;
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [openingFilePath, setOpeningFilePath] = React.useState<string | null>(
@@ -233,11 +238,16 @@ export default function DateCheckDetail({
     : null;
   const isPending = data?.approval_status === "pending";
 
+  const refreshLists = async () => {
+    await Promise.all([
+      mutateGlobal(API_ROUTES.productionOrders.allDateChecks),
+      listKey ? mutateGlobal(listKey) : Promise.resolve(),
+    ]);
+  };
+
   const refresh = async () => {
     await mutate();
-    if (listKey) {
-      await mutateGlobal(listKey);
-    }
+    await refreshLists();
   };
 
   const handleApproval = async (approvalStatus: "approved" | "rejected") => {
@@ -277,9 +287,7 @@ export default function DateCheckDetail({
       setIsSubmitting(true);
       await productionOrdersService.deleteDateCheck(id);
       toast.success("Đã xóa phiếu kiểm tra date.");
-      if (listKey) {
-        await mutateGlobal(listKey);
-      }
+      await refreshLists();
       onClose();
     } catch (deleteError: any) {
       toast.error(
@@ -315,12 +323,12 @@ export default function DateCheckDetail({
     const fileWindow = window.open("about:blank", "_blank");
 
     if (!fileWindow) {
-      toast.error("TrÃ¬nh duyá»‡t Ä‘ang cháº·n tab má»›i.");
+      toast.error("Trình duyệt đang chặn tab mới.");
       return;
     }
 
     fileWindow.opener = null;
-    fileWindow.document.write("Äang táº£i file...");
+    fileWindow.document.write("Đang tải file...");
 
     try {
       setOpeningFilePath(filePath);
@@ -338,9 +346,7 @@ export default function DateCheckDetail({
       }, 60_000);
     } catch (fileError: any) {
       fileWindow.close();
-      toast.error(
-        getErrorMessage(fileError, "KhÃ´ng thá»ƒ má»Ÿ file yÃªu cáº§u."),
-      );
+      toast.error(getErrorMessage(fileError, "Không thể mở file yêu cầu."));
     } finally {
       setOpeningFilePath(null);
     }
@@ -349,7 +355,11 @@ export default function DateCheckDetail({
   if (error) {
     return (
       <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Kiểm tra date" onClose={onClose} />
+        <DetailPanelHeader
+          title="Kiểm tra date"
+          onClose={onClose}
+          showCloseButton={showCloseButton}
+        />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy phiếu kiểm tra date.
         </div>
@@ -361,27 +371,32 @@ export default function DateCheckDetail({
     return <DateCheckDetailSkeleton />;
   }
 
+  const detailActions = isPending ? (
+    <Button
+      type="button"
+      variant="destructive"
+      size="icon-sm"
+      disabled={isSubmitting}
+      onClick={handleDeleteCheck}
+      aria-label="Xóa phiếu kiểm tra date"
+      title="Xóa"
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  ) : null;
+  const usesExternalActions = externalActionsContainer !== undefined;
+
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+      {usesExternalActions && externalActionsContainer
+        ? createPortal(detailActions, externalActionsContainer)
+        : null}
       <DetailPanelHeader
         title={`Kiểm tra date #${data.id}`}
         subtitle={formatDateTime(data.checked_at)}
-        actions={
-          isPending ? (
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon-sm"
-              disabled={isSubmitting}
-              onClick={handleDeleteCheck}
-              aria-label="Xóa phiếu kiểm tra date"
-              title="Xóa"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          ) : null
-        }
+        actions={usesExternalActions ? undefined : detailActions}
         onClose={onClose}
+        showCloseButton={showCloseButton}
       />
 
       {isPending ? (
@@ -429,7 +444,23 @@ export default function DateCheckDetail({
       <div className="mt-4 flex flex-col gap-4">
         <FieldDisplay
           lable="Mã lệnh sản xuất"
-          value={formatText(data.production_order_id)}
+          value={formatText(
+            data.productionOrder?.production_order_code ??
+              data.production_order_id,
+          )}
+        />
+        <FieldDisplay
+          lable="Sản phẩm"
+          value={
+            data.productionOrder?.item?.item_name ??
+            data.productionOrder?.description ??
+            data.productionOrder?.item_code ??
+            ""
+          }
+        />
+        <FieldDisplay
+          lable="Số lô"
+          value={data.productionOrder?.lot_no ?? ""}
         />
         <FieldDisplay
           lable="Loại bao bì"
@@ -462,7 +493,7 @@ export default function DateCheckDetail({
               >
                 <FileText className="size-4" />
                 {openingFilePath === data.request_file_path
-                  ? "Äang má»Ÿ file..."
+                  ? "Đang mở file..."
                   : getFileNameFromPath(data.request_file_path)}
               </button>
             ) : (

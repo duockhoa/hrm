@@ -237,6 +237,7 @@ describe('ProductionOrdersController', () => {
     findImageFile: jest.Mock;
   };
   let productionOrderDateChecksService: {
+    findAll: jest.Mock;
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -564,6 +565,7 @@ describe('ProductionOrdersController', () => {
       findImageFile: jest.fn(),
     };
     productionOrderDateChecksService = {
+      findAll: jest.fn(),
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
@@ -1039,6 +1041,7 @@ describe('ProductionOrdersController', () => {
       ],
       ['getDateCheckImage', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ],
       ['getDateCheckRequestFile', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ],
+      ['findAllDateChecks', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ],
       ['findDateCheckById', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ],
       ['updateDateCheck', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.UPDATE],
       ['approveDateCheck', PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.UPDATE],
@@ -3094,6 +3097,24 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderSteamSterilizationChecksService.delete,
     ).toHaveBeenCalledWith(1);
+  });
+
+  it('exposes the global date-check list with the existing read permission', async () => {
+    const handler = ProductionOrdersController.prototype.findAllDateChecks;
+    expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe('date-checks');
+    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+      RequestMethod.GET,
+    );
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, handler)).toEqual([
+      PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ,
+    ]);
+
+    const checks = [
+      { id: 2, production_order_id: 2032 },
+      { id: 1, production_order_id: 2031 },
+    ];
+    productionOrderDateChecksService.findAll.mockResolvedValue(checks);
+    await expect(controller.findAllDateChecks()).resolves.toBe(checks);
   });
 
   it('gets date checks for a production order', async () => {

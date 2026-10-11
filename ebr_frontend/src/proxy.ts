@@ -14,6 +14,7 @@ const protectedPaths = [
   "/pressure-differentials",
   "/product-orders",
   "/production-order-deviations",
+  "/production-order-date-checks",
   "/semi-finished-products",
   "/raw-materials",
   "/reports",

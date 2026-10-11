@@ -33,6 +33,16 @@ type ProductionOrderDateCheck = {
   updated_at?: string | null;
   createdBy?: DateCheckUser | null;
   approvedBy?: DateCheckUser | null;
+  productionOrder?: {
+    id?: number | string;
+    production_order_code?: string | null;
+    lot_no?: string | null;
+    item_code?: string | null;
+    description?: string | null;
+    item?: {
+      item_name?: string | null;
+    } | null;
+  } | null;
   images?: DateCheckImage[] | null;
 };
 

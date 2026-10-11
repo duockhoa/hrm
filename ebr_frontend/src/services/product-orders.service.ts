@@ -1667,6 +1667,13 @@ const deleteTenShellWeightCheck = async (checkId: string | number) => {
   return response.data;
 };
 
+const fetchAllDateChecks = async () => {
+  const response = await axiosClient.get(
+    API_ROUTES.productionOrders.allDateChecks,
+  );
+  return response.data;
+};
+
 const fetchDateChecks = async (id: string | number) => {
   const response = await axiosClient.get(
     API_ROUTES.productionOrders.dateChecks(id),
@@ -2658,6 +2665,7 @@ const productOrdersService = {
   upsertTenShellWeightCheck,
   updateTenShellWeightCheck,
   deleteTenShellWeightCheck,
+  fetchAllDateChecks,
   fetchDateChecks,
   fetchDateCheckById,
   createDateCheck,

@@ -81,7 +81,10 @@ export default function FormProductionOrderDateCheck({
       );
       toast.success("Đã tạo phiếu kiểm tra date.");
       resetForm();
-      await mutate(dateChecksKey);
+      await Promise.all([
+        mutate(dateChecksKey),
+        mutate(API_ROUTES.productionOrders.allDateChecks),
+      ]);
       onClose?.();
     } catch (error: any) {
       toast.error(

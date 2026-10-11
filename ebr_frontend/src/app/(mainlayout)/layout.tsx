@@ -10,6 +10,7 @@ import { useSidebarStore } from "@/store/sidebar-store";
 import useUsersStore from "@/store/users.store";
 import {
   Boxes,
+  CalendarCheck,
   ChartColumn,
   ClipboardList,
   ClipboardCheck,
@@ -94,6 +95,12 @@ const data = [
     name: "Sai lệch",
     icon: <TriangleAlert className="size-5 shrink-0" />,
     url: "/production-order-deviations",
+  },
+  {
+    id: "production-order-date-checks",
+    name: "Phiếu theo dõi In Date",
+    icon: <CalendarCheck className="size-5 shrink-0" />,
+    url: "/production-order-date-checks",
   },
   {
     id: "filter-usage-records",

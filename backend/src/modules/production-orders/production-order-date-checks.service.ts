@@ -73,6 +73,13 @@ const productionOrderDateCheckInclude = {
 export class ProductionOrderDateChecksService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  async findAll() {
+    return this.prismaService.productionOrderDateChecks.findMany({
+      include: productionOrderDateCheckInclude,
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    });
+  }
+
   async findById(checkId: number) {
     const dateCheck =
       await this.prismaService.productionOrderDateChecks.findUnique({
