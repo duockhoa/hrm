@@ -3,10 +3,10 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import {
-  CalendarCheck,
   Check,
   FileText,
   ImagePlus,
+  Pencil,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,12 @@ import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-hea
 import FieldDisplay from "@/components/field-display/field-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -224,6 +230,7 @@ export default function DateCheckDetail({
   externalActionsContainer?: HTMLElement | null;
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isEditFormOpen, setIsEditFormOpen] = React.useState(false);
   const [openingFilePath, setOpeningFilePath] = React.useState<string | null>(
     null,
   );
@@ -372,17 +379,28 @@ export default function DateCheckDetail({
   }
 
   const detailActions = isPending ? (
-    <Button
-      type="button"
-      variant="destructive"
-      size="icon-sm"
-      disabled={isSubmitting}
-      onClick={handleDeleteCheck}
-      aria-label="Xóa phiếu kiểm tra date"
-      title="Xóa"
-    >
-      <Trash2 className="h-4 w-4" />
-    </Button>
+    <>
+      <Button
+        type="button"
+        size="sm"
+        disabled={isSubmitting}
+        onClick={() => setIsEditFormOpen(true)}
+        className="bg-black text-white hover:bg-gray-800"
+      >
+        <Pencil className="size-4" /> Sửa
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        disabled={isSubmitting}
+        onClick={handleDeleteCheck}
+        aria-label="Xóa phiếu kiểm tra date"
+        title="Xóa"
+        className="bg-black text-white hover:bg-gray-800"
+      >
+        <Trash2 className="size-4" /> Xóa
+      </Button>
+    </>
   ) : null;
   const usesExternalActions = externalActionsContainer !== undefined;
 
@@ -400,22 +418,35 @@ export default function DateCheckDetail({
       />
 
       {isPending ? (
+        <Dialog
+          modal={false}
+          open={isEditFormOpen}
+          onOpenChange={setIsEditFormOpen}
+        >
+          <DialogContent className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="sr-only">
+                Sửa phiếu kiểm tra date
+              </DialogTitle>
+            </DialogHeader>
+            <div className="min-h-0 overflow-y-auto pr-1">
+              <EditDateCheckForm
+                checkId={id}
+                initialPackageType={data.package_type}
+                onSaved={refresh}
+                onClose={() => setIsEditFormOpen(false)}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {isPending ? (
         <div className="mt-4 rounded border bg-gray-50 p-3 text-left">
           <div className="mb-2 text-sm font-semibold text-gray-700">
             Thao tác
           </div>
           <div className="flex flex-wrap items-start gap-2">
-            <OpenFormButton
-              icon={<CalendarCheck />}
-              name="Sửa"
-              form={
-                <EditDateCheckForm
-                  checkId={id}
-                  initialPackageType={data.package_type}
-                  onSaved={refresh}
-                />
-              }
-            />
             <OpenFormButton
               icon={<ImagePlus />}
               name="Thêm ảnh"
