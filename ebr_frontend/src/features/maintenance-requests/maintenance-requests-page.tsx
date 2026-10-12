@@ -108,6 +108,10 @@ export default function MaintenanceRequestsPage() {
               {items.map((record) => {
                 const reporterName =
                   record.reporterName?.trim() || record.reporter?.name?.trim();
+                const equipmentLabel =
+                  [record.equipment?.code, record.equipment?.name]
+                    .filter(Boolean)
+                    .join(" - ") || "—";
                 const locked = isRequestLocked(record);
                 return (
                   <div
@@ -125,8 +129,11 @@ export default function MaintenanceRequestsPage() {
                       >
                         {record.title}
                       </p>
-                      <p className="mt-1 truncate text-sm text-gray-600">
-                        {record.equipment?.code} · {record.requestCode}
+                      <p
+                        className="mt-1 truncate text-sm text-gray-600"
+                        title={equipmentLabel}
+                      >
+                        {equipmentLabel}
                       </p>
                       <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-600">
                         {record.description}
