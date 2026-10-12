@@ -36,6 +36,7 @@ export async function buildDateChecksHtml(
         thung: 'Thùng',
         ong_be: 'Ống bẻ',
         tui_nhom: 'Túi nhôm',
+        tuyp: 'Tuýp',
       }[check.package_type] ?? check.package_type,
     );
     rows += row('Thời điểm kiểm tra', date(check.checked_at));
