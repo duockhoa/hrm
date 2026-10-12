@@ -200,18 +200,6 @@ export default function PostSecondaryPackagingSummaryDetail({
   const listKey = parentOrderId
     ? API_ROUTES.productionOrders.postSecondaryPackagingSummaries(parentOrderId)
     : null;
-  const { data: summaryList = [] } = useSWR<PostSecondaryPackagingSummary[]>(
-    listKey,
-    () =>
-      productionOrdersService.fetchPostSecondaryPackagingSummaries(
-        parentOrderId ?? "",
-      ),
-  );
-  const usedSemiFinishedOrderIds = summaryList
-    .map((summary) => summary.semi_finished_product_order_id)
-    .filter((orderId): orderId is string | number =>
-      orderId !== null && orderId !== undefined
-    );
 
   const deleteSummary = async () => {
     try {
@@ -424,7 +412,6 @@ export default function PostSecondaryPackagingSummaryDetail({
           <PostSecondaryPackagingSummaryForm
             productionOrderId={parentOrderId ?? ""}
             data={data}
-            usedSemiFinishedOrderIds={usedSemiFinishedOrderIds}
             onCancel={() => setIsEditing(false)}
             onSaved={() => setIsEditing(false)}
           />

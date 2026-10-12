@@ -67,9 +67,6 @@ export default function InlinePostSecondaryPackagingSummaries({
     () => productionOrdersService.fetchPostSecondaryPackagingSummaries(id),
   );
   const summaries = Array.isArray(data) ? data : [];
-  const usedOrderIds = summaries
-    .map((summary) => summary.semi_finished_product_order_id)
-    .filter((id): id is string | number => id !== null && id !== undefined);
 
   if (selectedSummaryId !== null) {
     return (
@@ -129,7 +126,6 @@ export default function InlinePostSecondaryPackagingSummaries({
             </DialogHeader>
             <PostSecondaryPackagingSummaryForm
               productionOrderId={id}
-              usedSemiFinishedOrderIds={usedOrderIds}
               onCancel={() => setIsCreating(false)}
               onSaved={(createdSummary) => {
                 setIsCreating(false);

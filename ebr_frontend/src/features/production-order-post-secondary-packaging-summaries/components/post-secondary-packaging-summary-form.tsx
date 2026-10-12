@@ -104,13 +104,11 @@ const toOrderOption = (order: SummaryProductionOrder): OrderOption => {
 export default function PostSecondaryPackagingSummaryForm({
   productionOrderId,
   data,
-  usedSemiFinishedOrderIds = [],
   onSaved,
   onCancel,
 }: {
   productionOrderId: string | number;
   data?: PostSecondaryPackagingSummary | null;
-  usedSemiFinishedOrderIds?: Array<string | number>;
   onSaved?: (summary: PostSecondaryPackagingSummary) => void;
   onCancel?: () => void;
 }) {
@@ -144,26 +142,18 @@ export default function PostSecondaryPackagingSummaryForm({
     },
   });
 
-  const options = useMemo<OrderOption[]>(() => {
-    const usedIds = new Set(usedSemiFinishedOrderIds.map(String));
-    const selectedId = String(data?.semi_finished_product_order_id ?? "");
-
-    return semiFinishedOrders
-      .filter((order) => {
-        if (order.id === null || order.id === undefined) return false;
-        const orderId = String(order.id);
-        return (
-          orderId !== String(productionOrderId) &&
-          (!usedIds.has(orderId) || orderId === selectedId)
-        );
-      })
-      .map(toOrderOption);
-  }, [
-    data?.semi_finished_product_order_id,
-    productionOrderId,
-    semiFinishedOrders,
-    usedSemiFinishedOrderIds,
-  ]);
+  const options = useMemo<OrderOption[]>(
+    () =>
+      semiFinishedOrders
+        .filter(
+          (order) =>
+            order.id !== null &&
+            order.id !== undefined &&
+            String(order.id) !== String(productionOrderId),
+        )
+        .map(toOrderOption),
+    [productionOrderId, semiFinishedOrders],
+  );
 
   const selectedValue = useWatch({
     control: form.control,
@@ -239,7 +229,7 @@ export default function PostSecondaryPackagingSummaryForm({
               : "Thêm tổng kết BTP hoàn thiện"}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Mỗi lô BTP chỉ được tổng kết một lần trong lô thành phẩm này.
+            Có thể tổng kết nhiều lần cho cùng một lô BTP trong lô đóng gói cấp 2 này.
           </p>
         </div>
 
