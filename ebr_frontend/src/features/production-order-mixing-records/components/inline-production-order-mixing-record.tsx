@@ -247,7 +247,7 @@ export default function InlineProductionOrderMixingRecord({
               ) : null}
             </div>
           </div>
-          {!isLoading && !error ? (
+          {!embedded && !isLoading && !error ? (
             <Button
               type="button"
               className="shrink-0 self-end bg-slate-900 text-white hover:bg-slate-800 sm:self-auto"
@@ -336,6 +336,10 @@ export default function InlineProductionOrderMixingRecord({
                 </div>
               </div>
             ))}
+          </div>
+        ) : embedded ? (
+          <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
+            chưa có dữ liệu
           </div>
         ) : (
           <div className="mt-4 flex min-h-40 flex-col items-center justify-center rounded border border-dashed px-4 text-center">
