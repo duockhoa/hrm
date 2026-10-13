@@ -70,10 +70,14 @@ const formatBatchSize = (value: number | string | null) => {
 
 export default function InlineProductionOrderMixingRecord({
   productionOrder,
+  embedded = false,
   onClose,
+  onSelectRecord,
 }: {
   productionOrder: any;
-  onClose: () => void;
+  embedded?: boolean;
+  onClose?: () => void;
+  onSelectRecord?: (record: ProductionOrderMixingRecord) => void;
 }) {
   const productionOrderId =
     productionOrder?.id ??
@@ -204,26 +208,43 @@ export default function InlineProductionOrderMixingRecord({
       <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
         <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="mt-0.5 shrink-0"
-              onClick={onClose}
-              title="Quay lại chi tiết lệnh sản xuất"
-              aria-label="Quay lại chi tiết lệnh sản xuất"
-            >
-              <ArrowLeft className="size-5" />
-            </Button>
+            {!embedded && onClose ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="mt-0.5 shrink-0"
+                onClick={onClose}
+                title="Quay lại chi tiết lệnh sản xuất"
+                aria-label="Quay lại chi tiết lệnh sản xuất"
+              >
+                <ArrowLeft className="size-5" />
+              </Button>
+            ) : null}
             <div className="min-w-0">
-              <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
-                Phiếu pha chế
-              </h2>
-              <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
-                {itemCode}
-                {itemName ? ` - ${itemName}` : ""}
-                {lotNumber ? ` - Lô ${lotNumber}` : ""}
-              </p>
+              <div className="flex items-center gap-3">
+                <h2
+                  className={
+                    embedded
+                      ? "text-lg font-semibold"
+                      : "text-2xl font-bold leading-tight text-blue-500 md:text-3xl"
+                  }
+                >
+                  Phiếu pha chế
+                </h2>
+                {embedded && records ? (
+                  <span className="rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700">
+                    {records.length}
+                  </span>
+                ) : null}
+              </div>
+              {!embedded ? (
+                <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
+                  {itemCode}
+                  {itemName ? ` - ${itemName}` : ""}
+                  {lotNumber ? ` - Lô ${lotNumber}` : ""}
+                </p>
+              ) : null}
             </div>
           </div>
           {!isLoading && !error ? (
@@ -255,7 +276,13 @@ export default function InlineProductionOrderMixingRecord({
               >
                 <button
                   type="button"
-                  onClick={() => setSelectedRecord(record)}
+                  onClick={() => {
+                    if (onSelectRecord) {
+                      onSelectRecord(record);
+                    } else {
+                      setSelectedRecord(record);
+                    }
+                  }}
                   className="flex min-w-0 flex-1 items-center justify-between gap-4 px-3 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
                 >
                   <div className="flex min-w-0 items-start gap-3">

@@ -41,7 +41,11 @@ import { InlinePrimaryPackagingConfirmations } from "@/features/production-order
 import { InlineProductionOrderSamplingRecords } from "@/features/production-order-sampling-records";
 import { InlineProductionOrderDisinfectantPreparations } from "@/features/production-order-disinfectant-preparations";
 import { InlineProductionOrderAttachments } from "@/features/production-order-attachments";
-import { InlineProductionOrderMixingRecord } from "@/features/production-order-mixing-records";
+import {
+  InlineProductionOrderMixingRecord,
+  ProductionOrderMixingRecordDetail,
+  type ProductionOrderMixingRecord,
+} from "@/features/production-order-mixing-records";
 import { getEnabledProductionOrderFeatureKeys } from "@/features/features";
 import {
   InlineMaterialSummarySection,
@@ -61,7 +65,7 @@ import {
 } from "@/services/index.service";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import HomePage from "../page";
 
 export default function DetailLotPage() {
@@ -71,6 +75,8 @@ export default function DetailLotPage() {
   const [detailSelection, setDetailSelection] =
     useState<ProductionOrderDetailSelection | null>(null);
   const [showMixingRecord, setShowMixingRecord] = useState(false);
+  const [selectedMixingRecord, setSelectedMixingRecord] =
+    useState<ProductionOrderMixingRecord | null>(null);
   const DetailComponent = detailSelection
     ? DETAIL_COMPONENTS[detailSelection.type]
     : null;
@@ -84,6 +90,7 @@ export default function DetailLotPage() {
     "section",
     [
       "production_order_deviations",
+      "mixing_records",
       "environment_checks",
       "line_clearance_checks",
       "secondary_packaging_checks",
@@ -340,7 +347,22 @@ export default function DetailLotPage() {
           className="min-h-0 min-w-0 overflow-auto p-2 md:p-4"
           minSize={0}
         >
-          {showMixingRecord ? (
+          {selectedMixingRecord ? (
+            <div className="flex flex-col items-center rounded">
+              <ProductionOrderMixingRecordDetail
+                key={selectedMixingRecord.id}
+                recordId={selectedMixingRecord.id}
+                productionOrder={data}
+                initialRecord={selectedMixingRecord}
+                onClose={() => {
+                  setSelectedMixingRecord(null);
+                  void mutate(
+                    API_ROUTES.productionOrders.mixingRecords(params.id),
+                  );
+                }}
+              />
+            </div>
+          ) : showMixingRecord ? (
             <div className="flex flex-col items-center rounded">
               <InlineProductionOrderMixingRecord
                 productionOrder={data}
@@ -441,6 +463,21 @@ export default function DetailLotPage() {
                 </div>
               ) : null}
               {orderedSectionKeys.map((sectionKey) => {
+                if (sectionKey === "mixing_records") {
+                  return (
+                    <div
+                      key={sectionKey}
+                      className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
+                    >
+                      <InlineProductionOrderMixingRecord
+                        productionOrder={data}
+                        embedded
+                        onSelectRecord={setSelectedMixingRecord}
+                      />
+                    </div>
+                  );
+                }
+
                 if (sectionKey === "production_order_attachments") {
                   return (
                     <div

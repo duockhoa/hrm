@@ -2186,6 +2186,8 @@ Tất cả API trong nhóm này cần `Auth: Bearer`. Các API `GET` không yêu
 
 `group_name` chỉ là metadata phục vụ hiển thị/phân nhóm; không làm thay đổi quyền truy cập hay trạng thái bật/tắt feature.
 
+Section **Phiếu pha chế** trong chi tiết lô sản xuất dùng key `mixing_records`, kind `section`, nhóm `Biểu mẫu Pha chế`. Bật/tắt và thứ tự của section được cấu hình riêng qua `item_features`, độc lập với action `view_mixing_record`. Migration khởi tạo section từ cấu hình action hiện có cho từng item và giữ nguyên cấu hình section nếu đã tồn tại.
+
 ### Lấy danh sách feature
 
 ```http
