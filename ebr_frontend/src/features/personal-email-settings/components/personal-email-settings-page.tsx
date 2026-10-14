@@ -3,32 +3,22 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { API_ROUTES } from "@/lib/api-routes";
 import { matchesSearchKeyword } from "@/lib/search-utils";
 import { cn } from "@/lib/utils";
 import personalEmailSettingsService from "@/services/personal-email-settings.service";
 import userService from "@/services/user.service";
-import { isAxiosError } from "axios";
-import { Loader2, Mail, RefreshCw, Save, Search, Trash2 } from "lucide-react";
+import { Loader2, Mail, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import type { EmailType, PersonalEmailRecipients } from "../types";
+import PersonalEmailRecipientsSection from "./personal-email-recipients-section";
 
-function getErrorMessage(error: unknown) {
-  if (isAxiosError(error)) {
-    const message = error.response?.data?.message;
-    if (typeof message === "string") return message;
-    if (Array.isArray(message)) return message.join(". ");
-  }
-  return "Không thể cập nhật người nhận email. Vui lòng thử lại.";
-}
 
 function PersonalEmailWorkspace({ userId }: { userId: number }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
   const {
     data: types = [],
@@ -68,7 +58,6 @@ function PersonalEmailWorkspace({ userId }: { userId: number }) {
     configurations.find(
       (configuration) => configuration.email_type_id === selected?.id,
     )?.email ?? "";
-  const email = selected ? (drafts[selected.id] ?? savedEmail) : "";
   const loading = typesLoading || personalLoading;
   const error = typesError || personalError;
 
@@ -80,38 +69,23 @@ function PersonalEmailWorkspace({ userId }: { userId: number }) {
     }
   };
 
-  const save = async (remove = false) => {
-    if (!selected || saving) return;
-    setSaving(true);
-    try {
-      const result = remove
-        ? await personalEmailSettingsService.deletePersonal(selected.id)
-        : await personalEmailSettingsService.savePersonal(selected.id, email);
-      await reloadPersonal(
-        (current) => {
-          const remaining = (current ?? []).filter(
-            (configuration) =>
-              configuration.email_type_id !== result.email_type_id,
-          );
-          return result.email ? [...remaining, result] : remaining;
-        },
-        { revalidate: false },
-      );
-      setDrafts((current) => {
-        const next = { ...current };
-        delete next[result.email_type_id];
-        return next;
-      });
-      toast.success(
-        result.email
-          ? "Đã lưu người nhận email cá nhân."
-          : "Đã xóa cấu hình email cá nhân.",
-      );
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      setSaving(false);
-    }
+  const updateRecipients = async (emails: string[]) => {
+    if (!selected) return;
+    const result = emails.length
+      ? await personalEmailSettingsService.savePersonal(
+          selected.id,
+          emails.join(","),
+        )
+      : await personalEmailSettingsService.deletePersonal(selected.id);
+    await reloadPersonal(
+      (current) => {
+        const remaining = (current ?? []).filter(
+          (configuration) => configuration.email_type_id !== result.email_type_id,
+        );
+        return result.email ? [...remaining, result] : remaining;
+      },
+      { revalidate: false },
+    );
   };
 
   return (
@@ -220,65 +194,15 @@ function PersonalEmailWorkspace({ userId }: { userId: number }) {
                     {savedEmail ? "Đã cá nhân hoá" : "Chưa thiết lập riêng"}
                   </Badge>
                 </div>
-                <form
-                  className="space-y-4 p-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void save();
-                  }}
-                >
-                  <div>
-                    <label
-                      htmlFor="personal-email-recipients"
-                      className="mb-2 block text-sm font-medium"
-                    >
-                      Người nhận email của tôi
-                    </label>
-                    <Textarea
-                      id="personal-email-recipients"
-                      rows={6}
-                      value={email}
-                      disabled={saving}
-                      onChange={(event) =>
-                        setDrafts((current) => ({
-                          ...current,
-                          [selected.id]: event.target.value,
-                        }))
-                      }
-                      placeholder="qc@example.com,qa@example.com"
-                      aria-describedby="personal-email-hint"
-                    />
-                    <p
-                      id="personal-email-hint"
-                      className="mt-2 text-xs leading-5 text-gray-500"
-                    >
-                      Ngăn cách các địa chỉ bằng dấu phẩy. Để trống để dùng cấu
-                      hình chung.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={saving || !savedEmail}
-                      onClick={() => void save(true)}
-                    >
-                      <Trash2 className="size-4" />
-                      Xóa cá nhân hoá
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={saving || email === savedEmail}
-                    >
-                      {saving ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Save className="size-4" />
-                      )}
-                      {saving ? "Đang lưu..." : "Lưu thay đổi"}
-                    </Button>
-                  </div>
-                </form>
+                <div className="p-4">
+                  <PersonalEmailRecipientsSection
+                    key={selected.id}
+                    emails={savedEmail.split(/[,\s]+/).filter(Boolean)}
+                    busy={saving}
+                    onBusyChange={setSaving}
+                    onChange={updateRecipients}
+                  />
+                </div>
               </section>
             ) : (
               <div className="flex min-h-80 flex-col items-center justify-center rounded-lg border border-dashed bg-white p-8 text-center">
