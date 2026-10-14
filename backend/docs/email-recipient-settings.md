@@ -31,7 +31,7 @@ Gán quyền tại HRM → Vai trò:
 Menu HRM **Email mặc định**, đường dẫn `/email-settings`, hiển thị khi có quyền
 `email-settings.manage`. Cấu hình cá nhân không yêu cầu quyền này; chỉ chủ tài khoản
 có thể xem/sửa/xóa cấu hình của chính mình, kể cả người quản lý email cũng không
-thể dùng API cá nhân để sửa cấu hình người khác. Chưa có giao diện cấu hình cá nhân.
+thể dùng API cá nhân để sửa cấu hình người khác.
 
 Giao diện dùng mẫu list/detail của danh sách nhân sự: `/email-settings` hiển thị
 danh sách loại email, `/email-settings/:id` mở chi tiết. Dùng thanh tìm kiếm chung
@@ -39,6 +39,12 @@ của HRM để tìm theo tên, mã hoặc email người nhận. Có thể thê
 trong chi tiết, nút Chỉnh sửa mở form nhập danh sách email ngăn cách bằng dấu phẩy.
 Trên máy tính, danh sách và chi tiết hiển thị cạnh nhau; trên điện thoại, chỉ mở
 chi tiết và có nút quay lại danh sách.
+
+Trong EBR, menu tài khoản → **Cá nhân hoá email** mở `/personal-email-settings`.
+Giao diện dùng bố cục của Cài đặt EBR: chọn loại email ở cột trái, nhập danh sách
+người nhận riêng ở cột phải. Có thể tìm loại email, lưu hoặc xóa cá nhân hoá.
+Không cần quyền `email-settings.manage`. API cá nhân chỉ nhận `{ email }`, không
+nhận ID người dùng; người sở hữu cấu hình được xác định bằng tài khoản đăng nhập.
 
 ## API
 

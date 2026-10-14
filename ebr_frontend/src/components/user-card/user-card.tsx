@@ -7,12 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLogout } from "@/hooks/use-logout";
-import {
-  LayoutGrid,
-  LogOut,
-  Settings,
-  User,
-} from "lucide-react";
+import { LayoutGrid, LogOut, Mail, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -24,10 +19,7 @@ type UserCardProps = {
   variant?: "default" | "hero";
 };
 
-export default function UserCard({
-  user,
-  variant = "default",
-}: UserCardProps) {
+export default function UserCard({ user, variant = "default" }: UserCardProps) {
   const { logout } = useLogout();
   const router = useRouter();
   const isHero = variant === "hero";
@@ -73,10 +65,7 @@ export default function UserCard({
               ) : (
                 <>
                   <Skeleton
-                    className={cn(
-                      "mb-1 h-4 w-24",
-                      isHero ? "bg-white/12" : "",
-                    )}
+                    className={cn("mb-1 h-4 w-24", isHero ? "bg-white/12" : "")}
                   />
                   <Skeleton
                     className={cn("h-4 w-24", isHero ? "bg-white/12" : "")}
@@ -87,7 +76,9 @@ export default function UserCard({
             <Avatar
               size={isHero ? "lg" : "default"}
               className={cn(
-                isHero ? "ring-2 ring-white/15 shadow-[0_8px_20px_rgba(0,0,0,0.25)]" : "",
+                isHero
+                  ? "ring-2 ring-white/15 shadow-[0_8px_20px_rgba(0,0,0,0.25)]"
+                  : "",
               )}
             >
               {user ? (
@@ -111,6 +102,12 @@ export default function UserCard({
           >
             <Settings className="mr-2 h-4 w-4" />
             Cài đặt
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => router.push("/personal-email-settings")}
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            Cá nhân hoá email
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {

@@ -271,7 +271,8 @@ const PRODUCTION_ORDERS = {
     `/production-orders/semi-finished-product-summaries/${summaryId}`,
   postSecondaryPackagingSummaries: (id: string | number) =>
     `/production-orders/${id}/post-secondary-packaging-summaries`,
-  postSecondaryPackagingReport: "/production-orders/post-secondary-packaging-summaries",
+  postSecondaryPackagingReport:
+    "/production-orders/post-secondary-packaging-summaries",
   postSecondaryPackagingSummaryDetail: (summaryId: string | number) =>
     `/production-orders/post-secondary-packaging-summaries/${summaryId}`,
   postSecondaryPackagingPendingProcessItems: (summaryId: string | number) =>
@@ -405,6 +406,12 @@ const DOSAGE_FORMS = {
 };
 
 export const API_ROUTES = {
+  emailSettings: {
+    types: "/email-settings/types",
+    me: "/email-settings/me",
+    personal: (emailTypeId: string | number) =>
+      `/email-settings/types/${emailTypeId}/me`,
+  },
   auth: AUTH,
   users: USERS,
   internal: INTERNAL,
