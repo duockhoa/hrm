@@ -97,25 +97,23 @@ describe('ProductionOrderDeviationNotificationService', () => {
     expect(payload.html).toContain('Không có hình ảnh đính kèm.');
     expect(payload.html).toContain('alt="DKPHARMA"');
     expect(payload.html).toContain('src="cid:dkpharma_logo"');
-    const attachment = payload.attachments[0];
-    expect(attachment.filename).toBe('sai-lech-1.html');
-    const archive = Buffer.from(attachment.contentBase64, 'base64').toString(
-      'utf8',
-    );
-    expect(archive).toContain('Người báo cáo');
-    const logo = archive.match(
-      /src="data:image\/png;base64,([A-Za-z0-9+/=]+)" alt="DKPHARMA"/,
-    );
-    expect(logo).not.toBeNull();
+    expect(payload.attachments).toBeUndefined();
+    expect(payload.html).toContain('Người báo cáo');
     expect(
-      (await sharp(Buffer.from(logo![1], 'base64')).metadata()).format,
+      (
+        await sharp(
+          Buffer.from(
+            payload.inlineImages.dkpharma_logo.contentBase64,
+            'base64',
+          ),
+        ).metadata()
+      ).format,
     ).toBe('png');
     expect(payload.inlineImages.dkpharma_logo.contentType).toBe('image/png');
-    expect(payload.inlineImages.dkpharma_logo.contentBase64).toBe(logo![1]);
     expect(payload.html).not.toContain('https://');
   });
 
-  it('sends the uploaded image and logo directly as CID blobs and keeps the HTML file self contained', async () => {
+  it('sends the uploaded image and logo inline without an HTML attachment', async () => {
     const filename = `email-test-${randomUUID()}.png`;
     const filePath = join(PRODUCTION_ORDER_DEVIATION_UPLOAD_DIR, filename);
     await mkdir(PRODUCTION_ORDER_DEVIATION_UPLOAD_DIR, { recursive: true });
@@ -148,14 +146,7 @@ describe('ProductionOrderDeviationNotificationService', () => {
         'base64',
       );
       expect((await sharp(buffer).metadata()).format).toBe('jpeg');
-      const htmlFile = Buffer.from(
-        payload.attachments[0].contentBase64,
-        'base64',
-      ).toString('utf8');
-      expect(htmlFile).toContain(
-        `src="data:image/jpeg;base64,${buffer.toString('base64')}"`,
-      );
-      expect(htmlFile).not.toContain('cid:');
+      expect(payload.attachments).toBeUndefined();
     } finally {
       await unlink(filePath);
     }
@@ -195,7 +186,7 @@ describe('ProductionOrderDeviationNotificationService', () => {
     expect(email.sendEmail).not.toHaveBeenCalled();
   });
 
-  it('maps every image CID to its bytes and keeps the attachment self contained', () => {
+  it('maps every image CID to its bytes without creating attachments', () => {
     const file = {
       filename: 'image.jpg',
       contentType: 'image/jpeg',
@@ -213,12 +204,7 @@ describe('ProductionOrderDeviationNotificationService', () => {
     expect(payload.html).toContain('src="cid:image_3"');
     expect(payload.html).not.toContain('https://');
     expect(payload.html).not.toContain('data:image');
-    const archive = Buffer.from(
-      payload.attachments![0].contentBase64,
-      'base64',
-    ).toString('utf8');
-    expect(archive.match(/src="data:image\/jpeg;base64,/g)).toHaveLength(3);
-    expect(archive).not.toContain('https://res.cloudinary.com/');
+    expect(payload.attachments).toBeUndefined();
   });
 
   it('shows a placeholder instead of an unresolved CID when an image file is missing', () => {
@@ -230,11 +216,7 @@ describe('ProductionOrderDeviationNotificationService', () => {
     ]);
     expect(payload.html).toContain('Không thể tải ảnh đính kèm.');
     expect(payload.html).not.toContain('<img');
-    const archive = Buffer.from(
-      payload.attachments![0].contentBase64,
-      'base64',
-    ).toString('utf8');
-    expect(archive).toContain('Không thể tải ảnh đính kèm.');
+    expect(payload.attachments).toBeUndefined();
     expect(payload.inlineImages).toEqual({});
   });
 });

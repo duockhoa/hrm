@@ -12,8 +12,9 @@ describe('Apps Script email adapter', () => {
     'utf8',
   );
   const sendEmail = jest.fn();
+  const getAliases = jest.fn();
   const sandbox = createContext({
-    MailApp: { sendEmail },
+    GmailApp: { sendEmail, getAliases },
     Utilities: {
       base64Decode: (value: string) => Array.from(Buffer.from(value, 'base64')),
       newBlob: (bytes: number[], contentType: string, filename: string) => ({
@@ -34,7 +35,16 @@ describe('Apps Script email adapter', () => {
     sandbox.request = { postData: { contents: JSON.stringify(payload) } };
     return runInContext('doPost(request)', sandbox);
   };
-  beforeEach(() => sendEmail.mockReset());
+  beforeEach(() => {
+    sendEmail.mockReset();
+    getAliases.mockReset().mockReturnValue([]);
+  });
+
+  it('authorizes Gmail without sending a test email', () => {
+    runInContext('authorizeGmail()', sandbox);
+    expect(getAliases).toHaveBeenCalledTimes(1);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
 
   it('keeps existing text and HTML emails working', () => {
     expect(
@@ -46,16 +56,18 @@ describe('Apps Script email adapter', () => {
         senderName: 'App',
       }),
     ).toMatchObject({ status: 'success' });
-    expect(sendEmail).toHaveBeenCalledWith({
-      to: 'a@example.com,b@example.com',
-      subject: 'OTP',
-      body: 'OTP 123456',
-      htmlBody: '<p>123456</p>',
-      name: 'App',
-    });
+    expect(sendEmail).toHaveBeenCalledWith(
+      'a@example.com,b@example.com',
+      'OTP',
+      'OTP 123456',
+      {
+        htmlBody: '<p>123456</p>',
+        name: 'App',
+      },
+    );
   });
 
-  it('decodes images and the HTML attachment into MailApp blobs', () => {
+  it('decodes images and the HTML attachment into GmailApp blobs', () => {
     const contents = Buffer.from('<p>Sai lệch</p>', 'utf8');
     const file = {
       filename: 'detail.html',
@@ -76,7 +88,7 @@ describe('Apps Script email adapter', () => {
         attachments: [file],
       }),
     ).toMatchObject({ status: 'success' });
-    const options = sendEmail.mock.calls[0][0];
+    const options = sendEmail.mock.calls[0][3];
     expect(options.inlineImages.image_1).toMatchObject({
       filename: 'image.jpg',
       contentType: 'image/jpeg',
@@ -147,7 +159,7 @@ describe('Apps Script email adapter', () => {
     expect(
       post({ ...payload, recipients: ['default@example.com'] }),
     ).toMatchObject({ status: 'success' });
-    const options = sendEmail.mock.calls[0][0];
+    const options = sendEmail.mock.calls[0][3];
     const cids = Array.from(
       payload.html!.matchAll(/src="cid:([^"]+)"/g),
       (match) => match[1],
@@ -158,10 +170,8 @@ describe('Apps Script email adapter', () => {
         Buffer.from(options.inlineImages[cid].bytes).toString('base64'),
       ).toBe(payload.inlineImages![cid].contentBase64);
     }
-    const archive = Buffer.from(options.attachments[0].bytes).toString('utf8');
-    expect(archive).toContain('src="data:image/png;base64,');
-    expect(archive).toContain('src="data:image/jpeg;base64,');
-    expect(archive).not.toContain('cid:');
+    expect(payload.attachments).toBeUndefined();
+    expect(options.attachments).toBeUndefined();
     expect(options.htmlBody).not.toContain('https://');
   });
 });

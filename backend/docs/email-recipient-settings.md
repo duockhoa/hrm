@@ -126,15 +126,14 @@ import `EmailModule` và gọi `EmailService.sendConfiguredEmail(code, actorId, 
 
 Chỉ `POST /production-order-deviations` gửi thông báo, sau khi transaction lưu phiếu
 và ảnh thành công. Sửa/xóa phiếu hoặc tạo thất bại không gửi email. Email gồm các
-trường như màn hình chi tiết, ngày giờ Việt Nam, ảnh nhúng trong nội dung và file
-`sai-lech-<id>.html` đính kèm. File HTML chứa ảnh base64 nên xem độc lập được.
+trường như màn hình chi tiết, ngày giờ Việt Nam, logo và ảnh nhúng trong nội dung.
+Không gửi file HTML hoặc tệp đính kèm riêng (`attachments`).
 Đầu thông báo hiển thị logo DKPHARMA rộng 200 px, tự thu nhỏ theo màn hình. Logo
 được đọc từ `templates/batch-report/logo-removebg.png`, gửi base64 trong
 `inlineImages.dkpharma_logo`; HTML tham chiếu `cid:dkpharma_logo`. Nếu thiếu file
 logo, dùng chữ DKPHARMA. Ảnh sai lệch được đọc từ thư mục upload, thu nhỏ tối đa
 1200 × 1200 và chuyển JPEG, gửi qua `inlineImages` với khóa `deviation_image_<n>`.
 Không tải ảnh/logo email lên Cloudinary và không dùng URL ảnh yêu cầu đăng nhập.
-File HTML đính kèm nhúng cả logo và ảnh dưới dạng data URI để xem ngoại tuyến.
 Thông báo sai lệch không dùng `DEVIATION_EMAIL_LOGO_URL` hoặc cấu hình logo OTP;
 chức năng OTP và Cloudinary cho ảnh đại diện giữ nguyên.
 Nếu ảnh bị mất/lỗi, email hiển thị
@@ -151,7 +150,7 @@ lưu không bị xóa, không tự thử gửi lại hoặc gửi bù khi thêm 
    quyền gửi email và cho phép backend gọi Web App như deployment đang dùng.
 3. HRM → **Email mặc định** → **Phiếu sai lệch** → nhập địa chỉ người nhận và lưu.
 
-Backend tiếp tục gửi payload cũ cho email OTP. Khi có ảnh/file, payload bổ sung:
+Backend tiếp tục gửi payload cũ cho email OTP. Thông báo sai lệch gửi ảnh nhúng:
 
 ```json
 {
@@ -166,18 +165,30 @@ Backend tiếp tục gửi payload cũ cho email OTP. Khi có ảnh/file, payloa
       "contentType": "image/jpeg",
       "contentBase64": "..."
     }
-  },
-  "attachments": [{
-    "filename": "sai-lech-123.html",
-    "contentType": "text/html",
-    "contentBase64": "..."
-  }]
+  }
 }
 ```
 
 HTML thông báo dùng `<img src="cid:dkpharma_logo">` và
 `<img src="cid:deviation_image_1">`; script giải mã base64 thành Blob
-và truyền `inlineImages`/`attachments` cho
-[MailApp.sendEmail](https://developers.google.com/apps-script/reference/mail/mail-app).
+và truyền `inlineImages` cho
+[GmailApp.sendEmail](https://developers.google.com/apps-script/reference/gmail/gmail-app#sendEmail(String,String,String,Object)).
 Tổng dung lượng ảnh và file đã giải mã tối đa 16 MB. Deployment cũ chỉ xử lý `html`
-phải được cập nhật và triển khai phiên bản mới để xử lý ảnh CID và file HTML đính kèm.
+phải được cập nhật và triển khai phiên bản mới để xử lý ảnh CID. API gửi email chung
+vẫn hỗ trợ `attachments` khi được yêu cầu, nhưng thông báo sai lệch không gửi trường này.
+
+### Cấp quyền GmailApp
+
+Script dùng `GmailApp.sendEmail(recipients, subject, body, options)` và cần quyền
+`https://mail.google.com/`. Chuyển từ MailApp sang GmailApp vẫn phải cấp quyền Google;
+đổi dịch vụ không tự khắc phục lỗi chưa được ủy quyền.
+
+1. Nếu `appsscript.json` có mảng `oauthScopes`, thêm `https://mail.google.com/` vào
+   mảng và giữ các quyền khác mà dự án vẫn sử dụng.
+2. Trong trình soạn thảo Apps Script, chọn hàm `authorizeGmail` → **Run**, cấp quyền
+   bằng tài khoản triển khai. Hàm chỉ đọc danh sách bí danh để yêu cầu quyền, không gửi email.
+3. **Deploy → Manage deployments → Edit → New version → Deploy**, giữ
+   **Execute as: Me** và cấu hình truy cập đang cho phép backend gọi Web App.
+   Cập nhật deployment hiện hành để giữ URL trong `APPS_SCRIPT_EMAIL_API_URL`.
+
+Payload backend giữ nguyên cho cả OTP và thông báo sai lệch.

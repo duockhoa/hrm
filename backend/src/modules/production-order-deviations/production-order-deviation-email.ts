@@ -103,12 +103,8 @@ export function buildProductionOrderDeviationEmail(
     )
     .join('');
 
-  const render = (standalone: boolean) => {
-    const logoSource = logo?.file
-      ? standalone
-        ? `data:${logo.file.contentType};base64,${logo.file.contentBase64}`
-        : 'cid:dkpharma_logo'
-      : '';
+  const render = () => {
+    const logoSource = logo?.file ? 'cid:dkpharma_logo' : '';
     const branding = logoSource
       ? `<img src="${logoSource}" alt="DKPHARMA" width="200" style="display:block;width:200px;max-width:100%;height:auto;margin:0 0 20px;border:0;outline:none;text-decoration:none">`
       : '<p style="margin:0 0 20px;color:#00796b;font-size:24px;font-weight:700;letter-spacing:1px">DKPHARMA</p>';
@@ -118,11 +114,7 @@ export function buildProductionOrderDeviationEmail(
         `<tr>${images
           .slice(index, index + 2)
           .map((image) => {
-            const source = image.file
-              ? standalone
-                ? `data:${image.file.contentType};base64,${image.file.contentBase64}`
-                : `cid:${text(image.key)}`
-              : '';
+            const source = image.file ? `cid:${text(image.key)}` : '';
             return `<td style="width:50%;padding:8px;vertical-align:top;text-align:center">
           ${
             source
@@ -161,19 +153,12 @@ export function buildProductionOrderDeviationEmail(
       `Phiếu sai lệch mới #${deviation.id}`,
       ...fields.map(([label, value]) => `${label}: ${value ?? '—'}`),
     ].join('\n'),
-    html: render(false),
+    html: render(),
     inlineImages: Object.fromEntries([
       ...images
         .filter((image) => image.file)
         .map((image) => [image.key, image.file!]),
       ...(logo?.file ? [['dkpharma_logo', logo.file]] : []),
     ]),
-    attachments: [
-      {
-        filename: `sai-lech-${deviation.id}.html`,
-        contentType: 'text/html',
-        contentBase64: Buffer.from(render(true), 'utf8').toString('base64'),
-      },
-    ],
   };
 }

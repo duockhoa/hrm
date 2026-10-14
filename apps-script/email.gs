@@ -2,7 +2,8 @@
  * Email Web App used by APPS_SCRIPT_EMAIL_API_URL.
  * Deploy in the email Apps Script project, separately from the data export scripts.
  * Supports the existing payload plus base64 inlineImages and attachments.
- * https://developers.google.com/apps-script/reference/mail/mail-app
+ * https://developers.google.com/apps-script/reference/gmail/gmail-app
+ * Required OAuth scope: https://mail.google.com/
  */
 function doPost(e) {
   try {
@@ -35,11 +36,7 @@ function doPost(e) {
       return Utilities.newBlob(bytes, file.contentType, file.filename.trim());
     }
 
-    const options = {
-      to: recipients.join(","),
-      subject: String(payload.subject),
-      body: payload.message || "Xem nội dung HTML trong email.",
-    };
+    const options = {};
     if (payload.senderName) options.name = payload.senderName;
     if (payload.html) options.htmlBody = payload.html;
     if (payload.inlineImages !== undefined) {
@@ -62,11 +59,21 @@ function doPost(e) {
       if (payload.attachments.length) options.attachments = payload.attachments.map(fileBlob);
     }
 
-    MailApp.sendEmail(options);
+    GmailApp.sendEmail(
+      recipients.join(","),
+      String(payload.subject),
+      payload.message || "Xem nội dung HTML trong email.",
+      options,
+    );
     return emailJsonResponse({ status: "success", message: "Email sent successfully" });
   } catch (error) {
     return emailJsonResponse({ status: "error", message: error.message || String(error) });
   }
+}
+
+/** Run once in the Apps Script editor to authorize Gmail without sending email. */
+function authorizeGmail() {
+  GmailApp.getAliases();
 }
 
 function emailJsonResponse(value) {

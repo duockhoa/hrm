@@ -8475,10 +8475,10 @@ Ghi chú upload:
 
 Thông báo email khi tạo mới:
 
-- Sau khi lưu phiếu và ảnh thành công, gửi email HTML kèm logo DKPHARMA và ảnh nhúng qua `inlineImages`/CID, cùng file `sai-lech-<id>.html` chứa ảnh base64. Không tải ảnh hoặc logo email lên Cloudinary.
+- Sau khi lưu phiếu và ảnh thành công, gửi email HTML với logo DKPHARMA và ảnh hiển thị trực tiếp qua `inlineImages`/CID. Không gửi file HTML đính kèm và không tải ảnh hoặc logo email lên Cloudinary.
 - Chỉ dùng người nhận mặc định của loại `production_order_deviation_created` (Phiếu sai lệch); không áp dụng cấu hình cá nhân hay email người thao tác.
 - Để trống cấu hình thì không gửi email; tạo phiếu vẫn thành công. Lỗi gửi email được ghi log, không làm mất phiếu/ảnh đã lưu và không tự gửi lại.
-- `PUT` và `DELETE` không gửi email. Xem `docs/email-recipient-settings.md` để cập nhật Google Apps Script hỗ trợ ảnh và file đính kèm.
+- `PUT` và `DELETE` không gửi email. Xem `docs/email-recipient-settings.md` để cập nhật Google Apps Script hỗ trợ ảnh nhúng.
 
 ### Cập nhật sai lệch
 
