@@ -29,6 +29,8 @@ model AuditLogs {
 }
 
 model Users {
+  notedMixingRecordParameters ProductionOrderMixingRecordParameters[] @relation("MixingRecordParameterNoteRecorder")
+  uploadedMixingRecordParameterImages ProductionOrderMixingRecordParameters[] @relation("MixingRecordParameterImageUploader")
   uploadedWarehouseReceiptAttachments WarehouseReceiptItemAttachments[] @relation("WarehouseReceiptAttachmentUploader")
   createdManufacturers Manufacturers[] @relation("ManufacturerCreator")
   checkedWarehouseTemperatureHumidityChecks WarehouseTemperatureHumidityChecks[] @relation("WarehouseTemperatureHumidityChecker")
@@ -1098,6 +1100,12 @@ model ProductionOrderMixingRecordParameters {
   result_value                           String?                          @db.Text
   note                                   String?                          @db.Text
   result_image_path                      String?                          @db.Text
+  note_recorded_by_id                     Int?
+  noteRecordedBy                         Users?                           @relation("MixingRecordParameterNoteRecorder", fields: [note_recorded_by_id], references: [id], onDelete: SetNull, map: "po_mixing_parameter_note_recorder_fkey")
+  note_recorded_at                        DateTime?
+  image_uploaded_by_id                    Int?
+  imageUploadedBy                        Users?                           @relation("MixingRecordParameterImageUploader", fields: [image_uploaded_by_id], references: [id], onDelete: SetNull, map: "po_mixing_parameter_image_uploader_fkey")
+  image_uploaded_at                       DateTime?
   recorded_by_id                         Int?
   recordedBy                             Users?                           @relation("ProductionOrderMixingRecordParameterRecorder", fields: [recorded_by_id], references: [id], onDelete: SetNull, map: "po_mixing_record_parameters_recorder_fkey")
   recorded_at                            DateTime?

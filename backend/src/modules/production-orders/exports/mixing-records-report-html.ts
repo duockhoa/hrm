@@ -20,7 +20,11 @@ export const mixingRecordsReportInclude = {
         include: {
           parameters: {
             orderBy: [{ parameter_order: 'asc' }, { id: 'asc' }],
-            include: { recordedBy: { select: { name: true, username: true } } },
+            include: {
+              recordedBy: { select: { name: true, username: true } },
+              noteRecordedBy: { select: { name: true, username: true } },
+              imageUploadedBy: { select: { name: true, username: true } },
+            },
           },
         },
       },
@@ -42,6 +46,15 @@ type Order = {
   unit: string;
   item?: { item_name: string } | null;
 };
+
+const attribution = (
+  label: string,
+  person: { name?: string | null; username?: string | null } | null | undefined,
+  at: Date | null | undefined,
+) =>
+  person || at
+    ? `<br><small>${person ? `${text(label)}: ${text(user(person))}` : ''}${at ? `<br>${text(date(at))}` : ''}</small>`
+    : '';
 
 const result = (parameter: Parameter) => {
   const value = parameter.result_value;
@@ -98,8 +111,8 @@ export async function buildMixingRecordsHtml(
           rows += `<tr ${attributes} data-parameter-id="${parameter.id}">${stepCell}
             <td><strong>${text(parameter.parameter_name)}:</strong> ${text(parameter.requirement)}</td>
             <td>${result(parameter)}${parameter.unit ? ` <span>${text(parameter.unit)}</span>` : ''}</td>
-            <td>${text(parameter.note ?? '')}</td>
-            <td class="mixing-image">${parameter.result_image_path ? await reportImage(parameter.parameter_name, parameter.result_image_path) : ''}</td>
+            <td>${text(parameter.note ?? '')}${attribution('Người ghi chú', parameter.noteRecordedBy, parameter.note_recorded_at)}</td>
+            <td class="mixing-image">${parameter.result_image_path ? await reportImage(parameter.parameter_name, parameter.result_image_path) : ''}${attribution('Người tải ảnh', parameter.imageUploadedBy, parameter.image_uploaded_at)}</td>
             <td class="mixing-performer">${text(parameter.recordedBy ? user(parameter.recordedBy) : '')}${parameter.recorded_at ? `<br><small>${text(date(parameter.recorded_at))}</small>` : ''}</td>
           </tr>`;
         }

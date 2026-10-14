@@ -159,6 +159,20 @@ describe('Mixing record report form', () => {
     );
     expect(html).not.toContain('Không thể hiển thị ảnh');
   });
+  it('prints separate note and image authors and timestamps with escaped names', async () => {
+    const input = record();
+    Object.assign(input.stages[0].steps[0].parameters[0], {
+      noteRecordedBy: { name: 'Tác giả <ghi chú>' },
+      note_recorded_at: new Date('2026-10-14T02:00:00Z'),
+      imageUploadedBy: { name: 'Người <tải ảnh>' },
+      image_uploaded_at: new Date('2026-10-14T03:00:00Z'),
+    });
+    const html = await htmlFor([input]);
+    expect(html).toContain('Người ghi chú: Tác giả &lt;ghi chú&gt;');
+    expect(html).toContain('Người tải ảnh: Người &lt;tải ảnh&gt;');
+    expect(html).toContain('09:00');
+    expect(html).toContain('10:00');
+  });
 });
 
 const describePdf =

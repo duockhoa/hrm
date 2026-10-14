@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ProductionOrderMixingRecordParameter } from "../types";
+import MixingRecordEntryAttribution from "./mixing-record-entry-attribution";
 
 const getErrorMessage = (error: any) =>
   error?.response?.data?.message ||
@@ -17,7 +18,9 @@ export default function MixingRecordNoteInput({
   disabled = false,
 }: {
   parameter: ProductionOrderMixingRecordParameter;
-  onSaved: (updated: ProductionOrderMixingRecordParameter) => void | Promise<unknown>;
+  onSaved: (
+    updated: ProductionOrderMixingRecordParameter,
+  ) => void | Promise<unknown>;
   disabled?: boolean;
 }) {
   const remoteNote = parameter.note ?? "";
@@ -44,10 +47,11 @@ export default function MixingRecordNoteInput({
 
     setIsSaving(true);
     try {
-      const updated = await productionOrderMixingRecordsService.updateParameterResult(
-        parameter.id,
-        { note: normalized || null },
-      );
+      const updated =
+        await productionOrderMixingRecordsService.updateParameterResult(
+          parameter.id,
+          { note: normalized || null },
+        );
       await onSaved(updated);
       setDraft(undefined);
     } catch (error) {
@@ -58,22 +62,29 @@ export default function MixingRecordNoteInput({
   };
 
   return (
-    <div className="relative flex min-h-10 items-stretch">
-      <textarea
-        ref={textareaRef}
-        rows={1}
-        value={draft}
-        disabled={disabled || isSaving}
-        placeholder="Nhập ghi chú"
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={() => void save()}
-        className="block min-h-10 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-2 py-2 font-sans text-sm text-blue-600 outline-none placeholder:text-slate-400 focus:bg-blue-50/50 disabled:cursor-default disabled:opacity-100"
+    <div>
+      <div className="relative flex min-h-10 items-stretch">
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={draft}
+          disabled={disabled || isSaving}
+          placeholder="Nhập ghi chú"
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => void save()}
+          className="block min-h-10 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-2 py-2 font-sans text-sm text-blue-600 outline-none placeholder:text-slate-400 focus:bg-blue-50/50 disabled:cursor-default disabled:opacity-100"
+        />
+        {isSaving ? (
+          <span className="flex shrink-0 items-center px-1">
+            <Loader2 className="size-4 animate-spin text-blue-600" />
+          </span>
+        ) : null}
+      </div>
+      <MixingRecordEntryAttribution
+        person={parameter.noteRecordedBy}
+        at={parameter.note_recorded_at}
+        label="Người ghi chú"
       />
-      {isSaving ? (
-        <span className="flex shrink-0 items-center px-1">
-          <Loader2 className="size-4 animate-spin text-blue-600" />
-        </span>
-      ) : null}
     </div>
   );
 }

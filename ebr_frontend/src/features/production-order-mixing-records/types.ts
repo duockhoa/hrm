@@ -24,6 +24,12 @@ export type ProductionOrderMixingRecordParameter = {
   result_value?: string | number | boolean | null;
   note?: string | null;
   result_image_path?: string | null;
+  note_recorded_by_id?: string | number | null;
+  noteRecordedBy?: MixingActivityTemplateCreator | null;
+  note_recorded_at?: string | null;
+  image_uploaded_by_id?: string | number | null;
+  imageUploadedBy?: MixingActivityTemplateCreator | null;
+  image_uploaded_at?: string | null;
   recorded_by_id?: string | number | null;
   recordedBy?: MixingActivityTemplateCreator | null;
   recorded_by?: MixingActivityTemplateCreator | null;

@@ -203,6 +203,7 @@ export class ProductionOrderMixingRecordsController {
   )
   async uploadParameterImage(
     @Param('parameterId', ParseIntPipe) parameterId: number,
+    @Request() req: any,
     @UploadedFile() image?: Express.Multer.File,
   ) {
     if (!image) {
@@ -213,6 +214,7 @@ export class ProductionOrderMixingRecordsController {
       return await this.productionOrderMixingRecordsService.uploadParameterImage(
         parameterId,
         image,
+        req.user,
       );
     } catch (error) {
       await removeUploadedProductionOrderMixingRecordParameterImage(image);

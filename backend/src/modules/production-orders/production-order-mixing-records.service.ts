@@ -50,6 +50,12 @@ const userSelect = {
   position: true,
 };
 
+const parameterInclude = {
+  recordedBy: { select: userSelect },
+  noteRecordedBy: { select: userSelect },
+  imageUploadedBy: { select: userSelect },
+};
+
 const mixingRecordInclude = {
   createdBy: { select: userSelect },
   qaStaffApprovedBy: { select: userSelect },
@@ -62,7 +68,7 @@ const mixingRecordInclude = {
         include: {
           parameters: {
             orderBy: [{ parameter_order: 'asc' }, { id: 'asc' }],
-            include: { recordedBy: { select: userSelect } },
+            include: parameterInclude,
           },
         },
       },
@@ -149,7 +155,10 @@ export class ProductionOrderMixingRecordsService {
         mixing_activity_template_id: template.id,
         template_version: String(template.version),
         record_type: this.normalizeRecordType(dto?.record_type),
-        description: this.normalizeOptionalText(dto?.description, 'description'),
+        description: this.normalizeOptionalText(
+          dto?.description,
+          'description',
+        ),
         created_by_id: this.normalizeUserId(user),
         stages: {
           create: template.stages.map((stage) => ({
@@ -396,7 +405,7 @@ export class ProductionOrderMixingRecordsService {
         ),
         parameter_order: parameterOrder,
       },
-      include: { recordedBy: { select: userSelect } },
+      include: parameterInclude,
     });
   }
 
@@ -447,16 +456,18 @@ export class ProductionOrderMixingRecordsService {
     return this.prismaService.productionOrderMixingRecordParameters.update({
       where: { id: parameterId },
       data,
-      include: { recordedBy: { select: userSelect } },
+      include: parameterInclude,
     });
   }
 
   async deleteParameter(parameterId: number) {
     const parameter =
-      await this.prismaService.productionOrderMixingRecordParameters.findUnique({
-        where: { id: parameterId },
-        select: { id: true, result_image_path: true },
-      });
+      await this.prismaService.productionOrderMixingRecordParameters.findUnique(
+        {
+          where: { id: parameterId },
+          select: { id: true, result_image_path: true },
+        },
+      );
     if (!parameter) {
       throw new NotFoundException(
         'Production order mixing record parameter not found',
@@ -465,9 +476,9 @@ export class ProductionOrderMixingRecordsService {
 
     const deleted =
       await this.prismaService.productionOrderMixingRecordParameters.delete({
-      where: { id: parameterId },
-      include: { recordedBy: { select: userSelect } },
-    });
+        where: { id: parameterId },
+        include: parameterInclude,
+      });
     await removeProductionOrderMixingRecordParameterImageByPath(
       parameter.result_image_path,
     );
@@ -522,18 +533,24 @@ export class ProductionOrderMixingRecordsService {
         dto.result_image_path,
         'result_image_path',
       );
+      data.image_uploaded_by_id = data.result_image_path
+        ? this.normalizeUserId(user)
+        : null;
+      data.image_uploaded_at = data.result_image_path ? new Date() : null;
     }
 
     if ('note' in dto) {
       data.note = this.normalizeOptionalText(dto.note, 'note');
+      data.note_recorded_by_id = data.note ? this.normalizeUserId(user) : null;
+      data.note_recorded_at = data.note ? new Date() : null;
     }
 
     const updated =
       await this.prismaService.productionOrderMixingRecordParameters.update({
-      where: { id: parameterId },
-      data,
-      include: { recordedBy: { select: userSelect } },
-    });
+        where: { id: parameterId },
+        data,
+        include: parameterInclude,
+      });
 
     if (
       'result_image_path' in dto &&
@@ -550,6 +567,7 @@ export class ProductionOrderMixingRecordsService {
   async uploadParameterImage(
     parameterId: number,
     file: Express.Multer.File,
+    user?: AuthenticatedUser,
   ) {
     const imagePath = getProductionOrderMixingRecordParameterImagePath(file);
     if (!imagePath) {
@@ -561,8 +579,12 @@ export class ProductionOrderMixingRecordsService {
     const updated =
       await this.prismaService.productionOrderMixingRecordParameters.update({
         where: { id: parameterId },
-        data: { result_image_path: imagePath },
-        include: { recordedBy: { select: userSelect } },
+        data: {
+          result_image_path: imagePath,
+          image_uploaded_by_id: this.normalizeUserId(user),
+          image_uploaded_at: new Date(),
+        },
+        include: parameterInclude,
       });
     await removeProductionOrderMixingRecordParameterImageByPath(
       parameter.result_image_path,
@@ -572,7 +594,10 @@ export class ProductionOrderMixingRecordsService {
   }
 
   async findParameterImageFile(filename: string, original = false) {
-    return resolveProductionOrderMixingRecordParameterImageFile(filename, original);
+    return resolveProductionOrderMixingRecordParameterImageFile(
+      filename,
+      original,
+    );
   }
 
   private async ensureMixingRecordExists(recordId: number) {
@@ -643,23 +668,25 @@ export class ProductionOrderMixingRecordsService {
   /** Prevent changes to recorded parameter values after IPC has signed the record. */
   private async findParameterForEntryOrThrow(parameterId: number) {
     const parameter =
-      await this.prismaService.productionOrderMixingRecordParameters.findUnique({
-        where: { id: parameterId },
-        select: {
-          id: true,
-          data_type: true,
-          result_image_path: true,
-          mixingRecordStep: {
-            select: {
-              mixingRecordStage: {
-                select: {
-                  mixingRecord: { select: { ipc_staff_approved_at: true } },
+      await this.prismaService.productionOrderMixingRecordParameters.findUnique(
+        {
+          where: { id: parameterId },
+          select: {
+            id: true,
+            data_type: true,
+            result_image_path: true,
+            mixingRecordStep: {
+              select: {
+                mixingRecordStage: {
+                  select: {
+                    mixingRecord: { select: { ipc_staff_approved_at: true } },
+                  },
                 },
               },
             },
           },
         },
-      });
+      );
 
     if (!parameter) {
       throw new NotFoundException(
@@ -803,7 +830,11 @@ export class ProductionOrderMixingRecordsService {
   }
 
   private normalizeRecordType(value: unknown) {
-    const normalizedValue = this.normalizeRequiredText(value, 'record_type', 50);
+    const normalizedValue = this.normalizeRequiredText(
+      value,
+      'record_type',
+      50,
+    );
     if (
       !MIXING_RECORD_TYPES.includes(
         normalizedValue as (typeof MIXING_RECORD_TYPES)[number],

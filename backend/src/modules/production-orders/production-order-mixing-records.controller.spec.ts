@@ -69,3 +69,14 @@ describe('ProductionOrderMixingRecordsController permissions', () => {
     });
   });
 });
+
+it('passes the authenticated uploader to the image service', async () => {
+  const uploadParameterImage = jest.fn().mockResolvedValue({ id: 12 });
+  const controller = new ProductionOrderMixingRecordsController({
+    uploadParameterImage,
+  } as unknown as ProductionOrderMixingRecordsService);
+  const image = { filename: 'image.jpg' } as Express.Multer.File;
+  const user = { id: 8 };
+  await controller.uploadParameterImage(12, { user }, image);
+  expect(uploadParameterImage).toHaveBeenCalledWith(12, image, user);
+});
