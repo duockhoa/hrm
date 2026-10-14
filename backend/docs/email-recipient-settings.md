@@ -12,8 +12,10 @@ Lưu chuỗi rỗng hoặc chỉ có khoảng trắng/dấu phẩy sẽ xóa c�
 ## Cài đặt
 
 Migration: `20261014020000_add_email_recipient_settings`. Migration tạo ba bảng,
-thêm loại `sampling_request` (Phiếu yêu cầu lấy mẫu) và hai quyền quản trị.
-Không tạo sẵn danh sách người nhận.
+thêm loại `sampling_request` (Phiếu yêu cầu lấy mẫu). Không tạo sẵn danh sách người nhận.
+Migration `20261014030000_consolidate_email_management_permission` gộp quyền quản trị
+thành `email-settings.manage` (Quản lý email), chuyển các vai trò đã có quyền cũ
+sang quyền mới rồi xóa hai quyền cũ.
 
 Trong thư mục `backend`:
 
@@ -24,29 +26,36 @@ npx prisma generate
 
 Gán quyền tại HRM → Vai trò:
 
-- `email-settings.read`: xem người nhận mặc định.
-- `email-settings.update`: quản lý loại email và người nhận mặc định; bao gồm quyền xem.
+- `email-settings.manage` (Quản lý email): quản lý loại email và xem/sửa/xóa người nhận mặc định.
 
-Menu HRM **Email mặc định**, đường dẫn `/email-settings`, hiển thị khi có một trong
-hai quyền. Người có quyền xem chỉ đọc; người có quyền sửa có thể lưu/xóa mặc định.
-Chưa có giao diện cấu hình cá nhân.
+Menu HRM **Email mặc định**, đường dẫn `/email-settings`, hiển thị khi có quyền
+`email-settings.manage`. Cấu hình cá nhân không yêu cầu quyền này; chỉ chủ tài khoản
+có thể xem/sửa/xóa cấu hình của chính mình, kể cả người quản lý email cũng không
+thể dùng API cá nhân để sửa cấu hình người khác. Chưa có giao diện cấu hình cá nhân.
+
+Giao diện dùng mẫu list/detail của danh sách nhân sự: `/email-settings` hiển thị
+danh sách loại email, `/email-settings/:id` mở chi tiết. Dùng thanh tìm kiếm chung
+của HRM để tìm theo tên, mã hoặc email người nhận. Có thể thêm loại email mới;
+trong chi tiết, nút Chỉnh sửa mở form nhập danh sách email ngăn cách bằng dấu phẩy.
+Trên máy tính, danh sách và chi tiết hiển thị cạnh nhau; trên điện thoại, chỉ mở
+chi tiết và có nút quay lại danh sách.
 
 ## API
 
 Tất cả API yêu cầu Bearer token. Cấu hình cá nhân luôn lấy `user_id` từ tài khoản
 đăng nhập; không nhận `user_id` trong body hay URL.
 
-| Method | URL                                 | Quyền / chức năng                                                                                          |
-| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| GET    | `/email-settings/types`             | Đăng nhập; danh sách loại email                                                                            |
-| POST   | `/email-settings/types`             | `email-settings.update`; thêm loại email                                                                   |
-| PATCH  | `/email-settings/types/:id`         | `email-settings.update`; đổi tên loại email                                                                |
-| GET    | `/email-settings/defaults`          | `email-settings.read` hoặc `email-settings.update`; tất cả loại cùng `defaultRecipients`, có thể là `null` |
-| PUT    | `/email-settings/types/:id/default` | `email-settings.update`; tạo/cập nhật mặc định                                                             |
-| DELETE | `/email-settings/types/:id/default` | `email-settings.update`; xóa mặc định                                                                      |
-| GET    | `/email-settings/me`                | Đăng nhập; danh sách cấu hình cá nhân kèm `emailType`                                                      |
-| PUT    | `/email-settings/types/:id/me`      | Đăng nhập; tạo/cập nhật cấu hình cá nhân                                                                   |
-| DELETE | `/email-settings/types/:id/me`      | Đăng nhập; xóa cấu hình cá nhân                                                                            |
+| Method | URL                                 | Quyền / chức năng                                                               |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------------- |
+| GET    | `/email-settings/types`             | Đăng nhập; danh sách loại email                                                 |
+| POST   | `/email-settings/types`             | `email-settings.manage`; thêm loại email                                        |
+| PATCH  | `/email-settings/types/:id`         | `email-settings.manage`; đổi tên loại email                                     |
+| GET    | `/email-settings/defaults`          | `email-settings.manage`; tất cả loại cùng `defaultRecipients`, có thể là `null` |
+| PUT    | `/email-settings/types/:id/default` | `email-settings.manage`; tạo/cập nhật mặc định                                  |
+| DELETE | `/email-settings/types/:id/default` | `email-settings.manage`; xóa mặc định                                           |
+| GET    | `/email-settings/me`                | Đăng nhập; danh sách cấu hình cá nhân kèm `emailType`                           |
+| PUT    | `/email-settings/types/:id/me`      | Đăng nhập; tạo/cập nhật cấu hình cá nhân                                        |
+| DELETE | `/email-settings/types/:id/me`      | Đăng nhập; xóa cấu hình cá nhân                                                 |
 
 Body POST loại email:
 

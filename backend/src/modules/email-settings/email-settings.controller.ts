@@ -48,14 +48,14 @@ export class EmailSettingsController {
   }
 
   @Post('types')
-  @Permissions(EMAIL_SETTINGS_PERMISSIONS.UPDATE)
+  @Permissions(EMAIL_SETTINGS_PERMISSIONS.MANAGE)
   @ApiOperation({ summary: 'Tạo loại email' })
   createType(@Body() dto: CreateEmailTypeDto) {
     return this.service.createType(dto);
   }
 
   @Patch('types/:id')
-  @Permissions(EMAIL_SETTINGS_PERMISSIONS.UPDATE)
+  @Permissions(EMAIL_SETTINGS_PERMISSIONS.MANAGE)
   @ApiOperation({ summary: 'Đổi tên loại email; mã loại email giữ cố định' })
   updateType(
     @Param('id', ParseIntPipe) id: number,
@@ -65,17 +65,14 @@ export class EmailSettingsController {
   }
 
   @Get('defaults')
-  @Permissions(
-    EMAIL_SETTINGS_PERMISSIONS.READ,
-    EMAIL_SETTINGS_PERMISSIONS.UPDATE,
-  )
+  @Permissions(EMAIL_SETTINGS_PERMISSIONS.MANAGE)
   @ApiOperation({ summary: 'Danh sách loại email và người nhận mặc định' })
   findDefaults() {
     return this.service.findDefaults();
   }
 
   @Put('types/:id/default')
-  @Permissions(EMAIL_SETTINGS_PERMISSIONS.UPDATE)
+  @Permissions(EMAIL_SETTINGS_PERMISSIONS.MANAGE)
   @ApiOperation({ summary: 'Lưu người nhận mặc định' })
   saveDefault(
     @Param('id', ParseIntPipe) id: number,
@@ -85,7 +82,7 @@ export class EmailSettingsController {
   }
 
   @Delete('types/:id/default')
-  @Permissions(EMAIL_SETTINGS_PERMISSIONS.UPDATE)
+  @Permissions(EMAIL_SETTINGS_PERMISSIONS.MANAGE)
   @ApiOperation({ summary: 'Xóa người nhận mặc định' })
   deleteDefault(@Param('id', ParseIntPipe) id: number) {
     return this.service.deleteDefault(id);

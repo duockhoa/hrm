@@ -3,6 +3,5 @@ export const EMAIL_TYPE_CODES = {
 } as const;
 
 export const EMAIL_SETTINGS_PERMISSIONS = {
-  READ: 'email-settings.read',
-  UPDATE: 'email-settings.update',
+  MANAGE: 'email-settings.manage',
 } as const;

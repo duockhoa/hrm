@@ -1,4 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
+import type { ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -26,17 +28,63 @@ describe('EmailSettingsController', () => {
       'deleteDefault',
       'createType',
       'updateType',
+      'findDefaults',
     ]) {
       expect(
         Reflect.getMetadata(
           PERMISSIONS_KEY,
           EmailSettingsController.prototype[method],
         ),
-      ).toEqual(['email-settings.update']);
+      ).toEqual(['email-settings.manage']);
     }
+  });
+
+  it('does not require management permission for personal configuration', () => {
+    for (const method of [
+      'findTypes',
+      'findPersonal',
+      'savePersonal',
+      'deletePersonal',
+    ]) {
+      expect(
+        Reflect.getMetadata(
+          PERMISSIONS_KEY,
+          EmailSettingsController.prototype[method],
+        ),
+      ).toBeUndefined();
+    }
+  });
+
+  it('allows management only with the single manage permission while personal settings remain accessible', () => {
+    const guard = new PermissionsGuard(new Reflector());
+    const context = (handler: Function, permissions: string[]) =>
+      ({
+        getHandler: () => handler,
+        getClass: () => EmailSettingsController,
+        switchToHttp: () => ({
+          getRequest: () => ({ user: { id: 7, permissions } }),
+        }),
+      }) as unknown as ExecutionContext;
+
     expect(
-      Reflect.getMetadata(PERMISSIONS_KEY, controller.findDefaults),
-    ).toEqual(['email-settings.read', 'email-settings.update']);
+      guard.canActivate(
+        context(controller.findDefaults, ['email-settings.manage']),
+      ),
+    ).toBe(true);
+    expect(
+      guard.canActivate(
+        context(controller.saveDefault, ['email-settings.manage']),
+      ),
+    ).toBe(true);
+    expect(
+      guard.canActivate(
+        context(controller.findDefaults, [
+          'email-settings.read',
+          'email-settings.update',
+        ]),
+      ),
+    ).toBe(false);
+    expect(guard.canActivate(context(controller.savePersonal, []))).toBe(true);
   });
 
   it('uses the authenticated user for every personal operation', () => {

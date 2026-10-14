@@ -39,6 +39,19 @@ const deleteDefault = async (
   return response.data;
 };
 
-const emailSettingsService = { fetchDefaults, saveDefault, deleteDefault };
+const createType = async (data: {
+  code: string;
+  name: string;
+}): Promise<EmailTypeWithDefaults> => {
+  const response = await axiosClient.post(API_ROUTES.emailSettings.types, data);
+  return { ...response.data, defaultRecipients: null };
+};
+
+const emailSettingsService = {
+  fetchDefaults,
+  saveDefault,
+  deleteDefault,
+  createType,
+};
 
 export default emailSettingsService;
