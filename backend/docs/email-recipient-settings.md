@@ -16,6 +16,8 @@ thêm loại `sampling_request` (Phiếu yêu cầu lấy mẫu). Không tạo s
 Migration `20261014030000_consolidate_email_management_permission` gộp quyền quản trị
 thành `email-settings.manage` (Quản lý email), chuyển các vai trò đã có quyền cũ
 sang quyền mới rồi xóa hai quyền cũ.
+Migration `20261014040000_add_deviation_created_email_type` thêm loại **Phiếu sai lệch**
+(`production_order_deviation_created`), để trống người nhận mặc định.
 
 Trong thư mục `backend`:
 
@@ -86,6 +88,11 @@ trả 404; địa chỉ không hợp lệ trả 400 và không thay đổi cấu
 
 Thứ tự áp dụng theo loại email và người thao tác:
 
+Riêng **Phiếu sai lệch** chỉ dùng cấu hình mặc định; không áp dụng cấu hình cá nhân
+hay email người thao tác. Loại này không xuất hiện trong màn hình Cá nhân hoá email;
+API lưu cá nhân trả 400. Khi chưa có người nhận mặc định, tạo phiếu vẫn thành công
+và không gửi email. Quy tắc ưu tiên bên dưới áp dụng cho các loại còn lại.
+
 1. Danh sách cá nhân có địa chỉ → dùng toàn bộ danh sách cá nhân.
 2. Nếu cá nhân rỗng/chưa có, mặc định có địa chỉ → dùng toàn bộ danh sách mặc định.
 3. Nếu cả hai rỗng/chưa có → lấy email người thao tác từ bảng `users`.
@@ -114,3 +121,49 @@ OTP đặt lại mật khẩu vẫn gửi trực tiếp đến tài khoản đan
 Nghiệp vụ mới có thể import `EmailSettingsModule` rồi gọi
 `EmailSettingsService.resolveRecipients(code, actorId)` để lấy `string[]`; hoặc
 import `EmailModule` và gọi `EmailService.sendConfiguredEmail(code, actorId, dto)`.
+
+## Thông báo tạo phiếu sai lệch
+
+Chỉ `POST /production-order-deviations` gửi thông báo, sau khi transaction lưu phiếu
+và ảnh thành công. Sửa/xóa phiếu hoặc tạo thất bại không gửi email. Email gồm các
+trường như màn hình chi tiết, ngày giờ Việt Nam, ảnh nhúng trong nội dung và file
+`sai-lech-<id>.html` đính kèm. File HTML chứa ảnh base64 nên xem độc lập được.
+Ảnh được đọc từ thư mục upload, thu nhỏ tối đa 1200 × 1200 và chuyển JPEG; không
+đưa URL yêu cầu đăng nhập hoặc token vào email. Nếu ảnh bị mất/lỗi, email hiển thị
+thông báo tại vị trí ảnh và ghi log. Lỗi nhà cung cấp được ghi log; phiếu và ảnh đã
+lưu không bị xóa, không tự thử gửi lại hoặc gửi bù khi thêm cấu hình sau đó.
+
+Để kích hoạt:
+
+1. Chạy `npx prisma migrate deploy` trong `backend` để thêm loại email.
+2. Cập nhật **dự án Google Apps Script gửi email** bằng `apps-script/email.gs`,
+   triển khai phiên bản Web App mới. Đây là dự án riêng với các script xuất dữ liệu.
+   Nếu cập nhật deployment hiện hành, giữ URL `APPS_SCRIPT_EMAIL_API_URL`;
+   nếu tạo deployment mới, cập nhật biến này. Script phải chạy bằng tài khoản có
+   quyền gửi email và cho phép backend gọi Web App như deployment đang dùng.
+3. HRM → **Email mặc định** → **Phiếu sai lệch** → nhập địa chỉ người nhận và lưu.
+
+Backend tiếp tục gửi payload cũ cho email OTP. Khi có ảnh/file, payload bổ sung:
+
+```json
+{
+  "inlineImages": {
+    "deviation_image_1": {
+      "filename": "deviation_image_1.jpg",
+      "contentType": "image/jpeg",
+      "contentBase64": "..."
+    }
+  },
+  "attachments": [{
+    "filename": "sai-lech-123.html",
+    "contentType": "text/html",
+    "contentBase64": "..."
+  }]
+}
+```
+
+`html` dùng `<img src="cid:deviation_image_1">`. Script giải mã base64 thành Blob
+và truyền `inlineImages`/`attachments` cho
+[MailApp.sendEmail](https://developers.google.com/apps-script/reference/mail/mail-app).
+Tổng dung lượng ảnh và file đã giải mã tối đa 16 MB. Deployment cũ chỉ xử lý `html`
+phải được cập nhật để hiển thị ảnh nhúng và gửi file HTML.

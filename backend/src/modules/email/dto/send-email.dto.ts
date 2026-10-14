@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class EmailFileDto {
+  @ApiProperty({ example: 'sai-lech-123.html' })
+  filename!: string;
+
+  @ApiProperty({ example: 'text/html' })
+  contentType!: string;
+
+  @ApiProperty({ description: 'Nội dung tệp được mã hóa base64.' })
+  contentBase64!: string;
+}
+
 export class SendEmailDto {
   @ApiPropertyOptional({
     example: 'qc@example.com,qa@example.com',
@@ -22,4 +33,14 @@ export class SendEmailDto {
 
   @ApiPropertyOptional()
   html?: string;
+
+  @ApiPropertyOptional({
+    description: 'Ảnh nhúng, khóa tương ứng với src="cid:khóa" trong HTML.',
+    type: 'object',
+    additionalProperties: { type: 'object' },
+  })
+  inlineImages?: Record<string, EmailFileDto>;
+
+  @ApiPropertyOptional({ type: [EmailFileDto] })
+  attachments?: EmailFileDto[];
 }

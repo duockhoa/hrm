@@ -6,8 +6,12 @@ import type {
 } from "@/features/personal-email-settings/types";
 
 const fetchTypes = async (): Promise<EmailType[]> => {
-  const response = await axiosClient.get(API_ROUTES.emailSettings.types);
-  return response.data;
+  const response = await axiosClient.get<EmailType[]>(
+    API_ROUTES.emailSettings.types,
+  );
+  return response.data.filter(
+    (type) => type.code !== "production_order_deviation_created",
+  );
 };
 
 const fetchPersonal = async (): Promise<PersonalEmailRecipients[]> => {

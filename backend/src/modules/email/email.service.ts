@@ -3,7 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import axios, { AxiosError } from 'axios';
 import { EventNames } from 'src/event.interface';
 import { DEFAULT_EMAIL_TEXT_BODY } from './constants/email.constants';
-import { SendEmailDto } from './dto/send-email.dto';
+import { EmailFileDto, SendEmailDto } from './dto/send-email.dto';
 import { EmailSettingsService } from '../email-settings/email-settings.service';
 import {
   AppsScriptEmailResponse,
@@ -16,6 +16,8 @@ interface EmailPayload {
   message: string;
   html: string;
   senderName: string;
+  inlineImages?: Record<string, EmailFileDto>;
+  attachments?: EmailFileDto[];
 }
 
 @Injectable()
@@ -109,13 +111,85 @@ export class EmailService {
       );
     }
 
+    const files = this.buildFiles(sendEmailDto);
+
     return {
       recipients,
       subject,
       message: message || DEFAULT_EMAIL_TEXT_BODY,
       html: html || '',
       senderName: this.emailSenderName,
+      ...files,
     };
+  }
+
+  private buildFiles(dto: SendEmailDto) {
+    const files: Pick<EmailPayload, 'inlineImages' | 'attachments'> = {};
+    let totalBytes = 0;
+    const normalizeFile = (file: EmailFileDto): EmailFileDto => {
+      if (
+        !file ||
+        typeof file.filename !== 'string' ||
+        !file.filename.trim() ||
+        /[/\\\r\n]/.test(file.filename) ||
+        file.filename.includes('\0') ||
+        typeof file.contentType !== 'string' ||
+        !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(file.contentType) ||
+        typeof file.contentBase64 !== 'string' ||
+        !file.contentBase64 ||
+        file.contentBase64.length % 4 !== 0 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(file.contentBase64)
+      ) {
+        throw new HttpException('Invalid email file', HttpStatus.BAD_REQUEST);
+      }
+      totalBytes += Buffer.byteLength(file.contentBase64, 'base64');
+      if (totalBytes > 16 * 1024 * 1024) {
+        throw new HttpException(
+          'Email files exceed 16 MB',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return {
+        filename: file.filename.trim(),
+        contentType: file.contentType,
+        contentBase64: file.contentBase64,
+      };
+    };
+
+    if (dto.inlineImages !== undefined) {
+      if (
+        !dto.inlineImages ||
+        typeof dto.inlineImages !== 'object' ||
+        Array.isArray(dto.inlineImages)
+      ) {
+        throw new HttpException(
+          'Invalid inline images',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      files.inlineImages = Object.fromEntries(
+        Object.entries(dto.inlineImages).map(([key, file]) => {
+          if (
+            !/^[a-z][a-z0-9_]*$/i.test(key) ||
+            typeof file?.contentType !== 'string' ||
+            !file.contentType.startsWith('image/')
+          ) {
+            throw new HttpException(
+              'Invalid inline image',
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+          return [key, normalizeFile(file)];
+        }),
+      );
+    }
+    if (dto.attachments !== undefined) {
+      if (!Array.isArray(dto.attachments)) {
+        throw new HttpException('Invalid attachments', HttpStatus.BAD_REQUEST);
+      }
+      files.attachments = dto.attachments.map(normalizeFile);
+    }
+    return files;
   }
 
   private normalizeRecipients(recipients?: string | string[]): string[] {

@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderDeviationDto } from './dto/create-production-order-deviation.dto';
 import { UpdateProductionOrderDeviationDto } from './dto/update-production-order-deviation.dto';
+import { ProductionOrderDeviationNotificationService } from './production-order-deviation-notification.service';
 import {
   getAuthenticatedDeviationImagePaths,
   getDeviationImageLookupPaths,
@@ -52,7 +53,10 @@ const DEVIATION_QUANTITY_INTEGER_DIGITS = 9;
 
 @Injectable()
 export class ProductionOrderDeviationsService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly notificationService: ProductionOrderDeviationNotificationService,
+  ) {}
 
   async findAll(productionOrderId?: string) {
     const normalizedProductionOrderId = this.normalizeOptionalInt(
@@ -166,6 +170,8 @@ export class ProductionOrderDeviationsService {
     if (!deviation) {
       throw new NotFoundException('Production order deviation not found');
     }
+
+    await this.notificationService.notifyCreated(deviation);
 
     return this.withAuthenticatedImagePaths(deviation);
   }
@@ -518,7 +524,10 @@ export class ProductionOrderDeviationsService {
     return normalizedValue === '' ? null : normalizedValue;
   }
 
-  private normalizeOptionalDeviationQuantity(value: unknown, fieldName: string) {
+  private normalizeOptionalDeviationQuantity(
+    value: unknown,
+    fieldName: string,
+  ) {
     if (
       value === null ||
       value === undefined ||

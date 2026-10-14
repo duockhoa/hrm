@@ -8473,6 +8473,13 @@ Ghi chú upload:
 - `handling_plan`, `handling_result`, `cause`, `cause_classification`, `affected_quantity`, `affected_quantity_unit`, `handled_quantity`, `handled_quantity_unit`, `destroyed_quantity`, `destroyed_quantity_unit` không bắt buộc.
 - `affected_quantity`, `handled_quantity`, `destroyed_quantity` nhận số hoặc chuỗi số, hỗ trợ dấu phẩy thập phân, tối đa 3 chữ số sau dấu thập phân.
 
+Thông báo email khi tạo mới:
+
+- Sau khi lưu phiếu và ảnh thành công, gửi email HTML kèm ảnh nhúng và file `sai-lech-<id>.html`, nội dung tương tự màn hình chi tiết.
+- Chỉ dùng người nhận mặc định của loại `production_order_deviation_created` (Phiếu sai lệch); không áp dụng cấu hình cá nhân hay email người thao tác.
+- Để trống cấu hình thì không gửi email; tạo phiếu vẫn thành công. Lỗi gửi email được ghi log, không làm mất phiếu/ảnh đã lưu và không tự gửi lại.
+- `PUT` và `DELETE` không gửi email. Xem `docs/email-recipient-settings.md` để cập nhật Google Apps Script hỗ trợ ảnh và file đính kèm.
+
 ### Cập nhật sai lệch
 
 ```http
@@ -9145,6 +9152,7 @@ Quy tắc:
 - `subject` bắt buộc.
 - Cần có ít nhất một trong hai field: `message` hoặc `html`.
 - Tên người gửi được cấu hình bằng biến môi trường `EMAIL_SENDER_NAME`.
+- Có thể gửi `inlineImages` (map khóa CID → `{ filename, contentType, contentBase64 }`) và `attachments` (mảng cùng cấu trúc); tổng dung lượng file giải mã tối đa 16 MB. Google Apps Script cần hỗ trợ các trường này; mã tham chiếu: `apps-script/email.gs`.
 
 ## Filter Catalogs
 

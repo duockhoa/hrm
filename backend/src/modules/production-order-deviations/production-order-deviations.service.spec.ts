@@ -3,9 +3,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ProductionOrderDeviationsService } from './production-order-deviations.service';
+import { ProductionOrderDeviationNotificationService } from './production-order-deviation-notification.service';
 
 describe('ProductionOrderDeviationsService', () => {
   let service: ProductionOrderDeviationsService;
+  const notificationService = { notifyCreated: jest.fn() };
   let prismaService: {
     $transaction: jest.Mock;
     productionOrderDeviations: {
@@ -28,6 +30,7 @@ describe('ProductionOrderDeviationsService', () => {
   };
 
   beforeEach(async () => {
+    notificationService.notifyCreated.mockReset().mockResolvedValue(undefined);
     prismaService = {
       $transaction: jest.fn((callback) => callback(prismaService)),
       productionOrderDeviations: {
@@ -52,6 +55,10 @@ describe('ProductionOrderDeviationsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProductionOrderDeviationsService,
+        {
+          provide: ProductionOrderDeviationNotificationService,
+          useValue: notificationService,
+        },
         {
           provide: PrismaService,
           useValue: prismaService,
@@ -164,6 +171,10 @@ describe('ProductionOrderDeviationsService', () => {
         },
       ],
     });
+    expect(notificationService.notifyCreated).toHaveBeenCalledTimes(1);
+    expect(notificationService.notifyCreated).toHaveBeenCalledWith(
+      createdDeviation,
+    );
   });
 
   it('creates a production order deviation without handling plan', async () => {
@@ -217,5 +228,61 @@ describe('ProductionOrderDeviationsService', () => {
       BadRequestException,
     );
     expect(prismaService.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('notifies only after the creation transaction commits', async () => {
+    let committed = false;
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.users.findFirst.mockResolvedValue({ id: 7 });
+    prismaService.productionOrderDeviations.create.mockResolvedValue({ id: 1 });
+    prismaService.productionOrderDeviations.findFirst.mockResolvedValue({
+      id: 1,
+      images: [],
+    });
+    prismaService.$transaction.mockImplementation(async (callback) => {
+      const result = await callback(prismaService);
+      committed = true;
+      return result;
+    });
+    notificationService.notifyCreated.mockImplementation(async () => {
+      expect(committed).toBe(true);
+    });
+
+    await service.create({
+      production_order_id: 2031,
+      deviation_content: 'Sai lệch',
+      reporter_id: 7,
+    });
+    expect(notificationService.notifyCreated).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not notify when the creation transaction fails', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.users.findFirst.mockResolvedValue({ id: 7 });
+    prismaService.$transaction.mockRejectedValue(
+      new Error('Transaction failed'),
+    );
+
+    await expect(
+      service.create({
+        production_order_id: 2031,
+        deviation_content: 'Sai lệch',
+        reporter_id: 7,
+      }),
+    ).rejects.toThrow('Transaction failed');
+    expect(notificationService.notifyCreated).not.toHaveBeenCalled();
+  });
+
+  it('does not send emails when a deviation is updated or deleted', async () => {
+    const deviation = { id: 1, images: [] };
+    prismaService.productionOrderDeviations.findFirst.mockResolvedValue(
+      deviation,
+    );
+    prismaService.productionOrderDeviations.update.mockResolvedValue(deviation);
+
+    await service.update(1, { deviation_content: 'Nội dung đã sửa' });
+    await service.delete(1);
+
+    expect(notificationService.notifyCreated).not.toHaveBeenCalled();
   });
 });

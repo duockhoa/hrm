@@ -104,6 +104,56 @@ describe('EmailService', () => {
     );
   });
 
+  it('passes embedded images and a UTF-8 HTML attachment to Apps Script', async () => {
+    mockedAxios.post.mockResolvedValue({ data: { status: 'success' } });
+    const inlineImages = {
+      deviation_image_1: {
+        filename: 'image.jpg',
+        contentType: 'image/jpeg',
+        contentBase64: Buffer.from('image bytes').toString('base64'),
+      },
+    };
+    const attachments = [
+      {
+        filename: 'sai-lech-1.html',
+        contentType: 'text/html',
+        contentBase64: Buffer.from('<p>Sai lệch</p>', 'utf8').toString(
+          'base64',
+        ),
+      },
+    ];
+    await service.sendEmail({
+      recipients: ['default@example.com'],
+      subject: 'Sai lệch',
+      html: '<img src="cid:deviation_image_1">',
+      inlineImages,
+      attachments,
+    });
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ inlineImages, attachments }),
+      expect.any(Object),
+    );
+  });
+
+  it('rejects malformed file contents before calling the provider', async () => {
+    await expect(
+      service.sendEmail({
+        recipients: ['default@example.com'],
+        subject: 'Sai lệch',
+        html: '<p>Chi tiết</p>',
+        attachments: [
+          {
+            filename: '../file.html',
+            contentType: 'text/html',
+            contentBase64: 'not base64',
+          },
+        ],
+      }),
+    ).rejects.toThrow('Invalid email file');
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+  });
+
   it('does not call the provider when recipients cannot be resolved', async () => {
     emailSettingsService.resolveRecipients.mockRejectedValue(
       new Error('Missing email'),

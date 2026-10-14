@@ -124,7 +124,7 @@ const getDeviationImageFilePath = (filename: string) => {
 const getDeviationImageContentType = (filename: string) =>
   IMAGE_MIME_TYPES_BY_EXTENSION.get(extname(filename).toLowerCase()) ?? null;
 
-const getStoredDeviationImageFilename = (imagePath?: string | null) => {
+export const getStoredDeviationImageFilename = (imagePath?: string | null) => {
   if (!imagePath) {
     return null;
   }
@@ -137,7 +137,7 @@ const getStoredDeviationImageFilename = (imagePath?: string | null) => {
     return null;
   }
 
-  return getSafeDeviationImageFilename(basename(imagePath));
+  return getSafeDeviationImageFilename(imagePath.slice(route.length + 1));
 };
 
 export const getDeviationImageLookupPaths = (filename: string) => {

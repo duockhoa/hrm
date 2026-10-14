@@ -12,6 +12,7 @@ import {
   CreateEmailTypeDto,
   UpdateEmailTypeDto,
 } from './dto/email-settings.dto';
+import { EMAIL_TYPE_CODES } from './constants/email-settings.constants';
 
 @Injectable()
 export class EmailSettingsService {
@@ -91,7 +92,14 @@ export class EmailSettingsService {
 
   async savePersonal(userId: number, emailTypeId: number, value: string) {
     this.ensureUserId(userId);
-    await this.ensureTypeExists(emailTypeId);
+    const emailType = await this.ensureTypeExists(emailTypeId);
+    if (
+      emailType.code === EMAIL_TYPE_CODES.PRODUCTION_ORDER_DEVIATION_CREATED
+    ) {
+      throw new BadRequestException(
+        'Phiếu sai lệch chỉ dùng người nhận email mặc định.',
+      );
+    }
     const email = this.normalizeEmails(value).join(',');
     if (!email) return this.deletePersonal(userId, emailTypeId);
     return this.prismaService.emailUserRecipients.upsert({
@@ -112,6 +120,18 @@ export class EmailSettingsService {
     return { user_id: userId, email_type_id: emailTypeId, email: '' };
   }
 
+  async resolveDefaultRecipients(code: string): Promise<string[]> {
+    if (typeof code !== 'string' || !code.trim()) {
+      throw new BadRequestException('Cần cung cấp mã loại email.');
+    }
+    const emailType = await this.prismaService.emailTypes.findUnique({
+      where: { code: code.trim() },
+      include: { defaultRecipients: true },
+    });
+    if (!emailType) throw new NotFoundException('Không tìm thấy loại email.');
+    return this.normalizeEmails(emailType.defaultRecipients?.email ?? '');
+  }
+
   async resolveRecipients(
     code: string,
     userId: number | null | undefined,
@@ -119,6 +139,15 @@ export class EmailSettingsService {
     this.ensureUserId(userId);
     if (typeof code !== 'string' || !code.trim()) {
       throw new BadRequestException('Cần cung cấp mã loại email.');
+    }
+    if (code.trim() === EMAIL_TYPE_CODES.PRODUCTION_ORDER_DEVIATION_CREATED) {
+      const recipients = await this.resolveDefaultRecipients(code);
+      if (!recipients.length) {
+        throw new BadRequestException(
+          'Chưa cấu hình người nhận email mặc định cho phiếu sai lệch.',
+        );
+      }
+      return recipients;
     }
     const emailType = await this.prismaService.emailTypes.findUnique({
       where: { code: code.trim() },

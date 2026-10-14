@@ -47,6 +47,48 @@ describe('EmailSettingsService', () => {
     );
   });
 
+  it('resolves only defaults for deviation notifications even when personal recipients exist', async () => {
+    prisma.emailTypes.findUnique.mockResolvedValue({
+      defaultRecipients: { email: 'default@example.com,DEFAULT@example.com' },
+      userRecipients: [{ email: 'personal@example.com' }],
+    });
+    await expect(
+      service.resolveDefaultRecipients('production_order_deviation_created'),
+    ).resolves.toEqual(['default@example.com']);
+    expect(prisma.emailTypes.findUnique).toHaveBeenCalledWith({
+      where: { code: 'production_order_deviation_created' },
+      include: { defaultRecipients: true },
+    });
+    expect(prisma.users.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('does not fall back to the actor when defaults are empty', async () => {
+    await expect(
+      service.resolveDefaultRecipients('production_order_deviation_created'),
+    ).resolves.toEqual([]);
+    expect(prisma.users.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('keeps deviation emails on default recipients through the generic email endpoint', async () => {
+    prisma.emailTypes.findUnique.mockResolvedValue({
+      code: 'production_order_deviation_created',
+      defaultRecipients: { email: 'default@example.com' },
+      userRecipients: [{ email: 'personal@example.com' }],
+    });
+    await expect(
+      service.resolveRecipients('production_order_deviation_created', 7),
+    ).resolves.toEqual(['default@example.com']);
+    await expect(
+      service.savePersonal(7, 1, 'personal@example.com'),
+    ).rejects.toThrow('Phiếu sai lệch chỉ dùng người nhận email mặc định.');
+    expect(prisma.emailUserRecipients.upsert).not.toHaveBeenCalled();
+    prisma.emailTypes.findUnique.mockResolvedValue({ defaultRecipients: null });
+    await expect(
+      service.resolveRecipients('production_order_deviation_created', 7),
+    ).rejects.toThrow('Chưa cấu hình người nhận email mặc định');
+    expect(prisma.users.findUnique).not.toHaveBeenCalled();
+  });
+
   it('uses defaults instead of the actor', async () => {
     prisma.emailTypes.findUnique.mockResolvedValue({
       defaultRecipients: {
