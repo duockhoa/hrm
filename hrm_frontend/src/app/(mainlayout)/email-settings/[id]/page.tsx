@@ -2,60 +2,24 @@
 
 import useEmailSettings from "@/components/email-settings/use-email-settings";
 import DefaultEmailRecipientsSection from "@/components/email-settings/default-email-recipients-section";
-import {
-  emailSettingsError,
-  splitEmails,
-} from "@/components/email-settings/email-settings-utils";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { splitEmails } from "@/components/email-settings/email-settings-utils";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Textarea } from "@/components/ui/textarea";
 import useMobile from "@/hooks/use-mobile";
-import emailSettingsService, {
-  type EmailTypeWithDefaults,
-} from "@/services/email-settings.service";
-import { ChevronRight, Pencil, Trash2, X } from "lucide-react";
+import { type EmailTypeWithDefaults } from "@/services/email-settings.service";
+import { ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { toast } from "sonner";
 import EmailSettingsPage from "../page";
 
 function EmailDetail({ emailType }: { emailType: EmailTypeWithDefaults }) {
-  const [editing, setEditing] = useState(false);
-  const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const { updateRecipients } = useEmailSettings();
   const recipients = splitEmails(emailType.defaultRecipients?.email ?? "");
-  const save = async (remove = false) => {
-    if (saving) return;
-    setSaving(true);
-    try {
-      const result = remove
-        ? await emailSettingsService.deleteDefault(emailType.id)
-        : await emailSettingsService.saveDefault(emailType.id, email);
-      await updateRecipients(result);
-      setEditing(false);
-      toast.success(
-        result.email
-          ? "Đã lưu người nhận mặc định."
-          : "Đã xóa cấu hình mặc định.",
-      );
-    } catch (error) {
-      toast.error(emailSettingsError(error));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <>
@@ -66,24 +30,6 @@ function EmailDetail({ emailType }: { emailType: EmailTypeWithDefaults }) {
           <span className="truncate">{emailType.id}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            disabled={saving}
-            onClick={() => {
-              setEmail(recipients.join(" "));
-              setEditing(true);
-            }}
-          >
-            <Pencil className="size-4" />
-            Chỉnh sửa
-          </Button>
-          <Button
-            variant="destructive"
-            disabled={saving || recipients.length === 0}
-            onClick={() => void save(true)}
-          >
-            <Trash2 className="size-4" />
-            Xóa mặc định
-          </Button>
           <Link
             href="/email-settings"
             aria-label="Đóng chi tiết"
@@ -117,61 +63,6 @@ function EmailDetail({ emailType }: { emailType: EmailTypeWithDefaults }) {
           onChange={updateRecipients}
         />
       </div>
-      <Dialog
-        open={editing}
-        onOpenChange={(next) => {
-          if (!saving) setEditing(next);
-        }}
-      >
-        <DialogContent>
-          <DialogTitle>Chỉnh sửa người nhận mặc định</DialogTitle>
-          <DialogDescription>{emailType.name}</DialogDescription>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void save();
-            }}
-          >
-            <div>
-              <label
-                htmlFor="default-email"
-                className="mb-2 block text-sm font-medium"
-              >
-                Email người nhận
-              </label>
-              <Textarea
-                id="default-email"
-                rows={5}
-                value={email}
-                disabled={saving}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="qc@example.com qa@example.com"
-              />
-              <p className="mt-2 text-xs leading-5 text-gray-500">
-                Ngăn cách các địa chỉ bằng dấu cách. Để trống để xóa cấu hình
-                mặc định.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving}
-                onClick={() => setEditing(false)}
-              >
-                Hủy
-              </Button>
-              <Button
-                type="submit"
-                disabled={saving || email === recipients.join(" ")}
-              >
-                {saving ? "Đang lưu..." : "Lưu thay đổi"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
