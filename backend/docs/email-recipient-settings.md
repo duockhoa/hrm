@@ -128,8 +128,16 @@ Chỉ `POST /production-order-deviations` gửi thông báo, sau khi transaction
 và ảnh thành công. Sửa/xóa phiếu hoặc tạo thất bại không gửi email. Email gồm các
 trường như màn hình chi tiết, ngày giờ Việt Nam, ảnh nhúng trong nội dung và file
 `sai-lech-<id>.html` đính kèm. File HTML chứa ảnh base64 nên xem độc lập được.
-Ảnh được đọc từ thư mục upload, thu nhỏ tối đa 1200 × 1200 và chuyển JPEG; không
-đưa URL yêu cầu đăng nhập hoặc token vào email. Nếu ảnh bị mất/lỗi, email hiển thị
+Đầu thông báo hiển thị logo DKPHARMA rộng 200 px, tự thu nhỏ theo màn hình. Logo
+được đọc từ `templates/batch-report/logo-removebg.png`, gửi base64 trong
+`inlineImages.dkpharma_logo`; HTML tham chiếu `cid:dkpharma_logo`. Nếu thiếu file
+logo, dùng chữ DKPHARMA. Ảnh sai lệch được đọc từ thư mục upload, thu nhỏ tối đa
+1200 × 1200 và chuyển JPEG, gửi qua `inlineImages` với khóa `deviation_image_<n>`.
+Không tải ảnh/logo email lên Cloudinary và không dùng URL ảnh yêu cầu đăng nhập.
+File HTML đính kèm nhúng cả logo và ảnh dưới dạng data URI để xem ngoại tuyến.
+Thông báo sai lệch không dùng `DEVIATION_EMAIL_LOGO_URL` hoặc cấu hình logo OTP;
+chức năng OTP và Cloudinary cho ảnh đại diện giữ nguyên.
+Nếu ảnh bị mất/lỗi, email hiển thị
 thông báo tại vị trí ảnh và ghi log. Lỗi nhà cung cấp được ghi log; phiếu và ảnh đã
 lưu không bị xóa, không tự thử gửi lại hoặc gửi bù khi thêm cấu hình sau đó.
 
@@ -148,6 +156,11 @@ Backend tiếp tục gửi payload cũ cho email OTP. Khi có ảnh/file, payloa
 ```json
 {
   "inlineImages": {
+    "dkpharma_logo": {
+      "filename": "dkpharma-logo.png",
+      "contentType": "image/png",
+      "contentBase64": "..."
+    },
     "deviation_image_1": {
       "filename": "deviation_image_1.jpg",
       "contentType": "image/jpeg",
@@ -162,8 +175,9 @@ Backend tiếp tục gửi payload cũ cho email OTP. Khi có ảnh/file, payloa
 }
 ```
 
-`html` dùng `<img src="cid:deviation_image_1">`. Script giải mã base64 thành Blob
+HTML thông báo dùng `<img src="cid:dkpharma_logo">` và
+`<img src="cid:deviation_image_1">`; script giải mã base64 thành Blob
 và truyền `inlineImages`/`attachments` cho
 [MailApp.sendEmail](https://developers.google.com/apps-script/reference/mail/mail-app).
 Tổng dung lượng ảnh và file đã giải mã tối đa 16 MB. Deployment cũ chỉ xử lý `html`
-phải được cập nhật để hiển thị ảnh nhúng và gửi file HTML.
+phải được cập nhật và triển khai phiên bản mới để xử lý ảnh CID và file HTML đính kèm.

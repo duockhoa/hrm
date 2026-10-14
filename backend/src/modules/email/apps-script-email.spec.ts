@@ -1,6 +1,10 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { createContext, runInContext } from 'vm';
+import {
+  buildProductionOrderDeviationEmail,
+  type DeviationForEmail,
+} from '../production-order-deviations/production-order-deviation-email';
 
 describe('Apps Script email adapter', () => {
   const script = readFileSync(
@@ -102,5 +106,62 @@ describe('Apps Script email adapter', () => {
         message: 'Chi tiết',
       }),
     ).toMatchObject({ status: 'error', message: 'Quota exceeded' });
+  });
+
+  it('delivers every CID in the generated deviation email, including the DKPHARMA logo', () => {
+    const deviation = {
+      id: 42,
+      production_order_id: 12,
+      deviation_content: 'Sai lệch mới',
+      productionOrder: {
+        id: 12,
+        item_code: 'SP01',
+        description: 'Sản phẩm',
+        lot_no: 'L001',
+      },
+      created_at: new Date('2026-10-14T03:00:00Z'),
+      updated_at: new Date('2026-10-14T03:00:00Z'),
+    } as DeviationForEmail;
+    const image = {
+      filename: 'image.jpg',
+      contentType: 'image/jpeg',
+      contentBase64: Buffer.from('JPEG bytes').toString('base64'),
+    };
+    const logo = {
+      file: {
+        filename: 'dkpharma-logo.png',
+        contentType: 'image/png',
+        contentBase64: readFileSync(
+          resolve(
+            __dirname,
+            '../../../templates/batch-report/logo-removebg.png',
+          ),
+        ).toString('base64'),
+      },
+    };
+    const payload = buildProductionOrderDeviationEmail(
+      deviation,
+      [{ key: 'deviation_image_1', label: 'Ảnh 1', file: image }],
+      logo,
+    );
+    expect(
+      post({ ...payload, recipients: ['default@example.com'] }),
+    ).toMatchObject({ status: 'success' });
+    const options = sendEmail.mock.calls[0][0];
+    const cids = Array.from(
+      payload.html!.matchAll(/src="cid:([^"]+)"/g),
+      (match) => match[1],
+    );
+    expect(cids.sort()).toEqual(['deviation_image_1', 'dkpharma_logo']);
+    for (const cid of cids) {
+      expect(
+        Buffer.from(options.inlineImages[cid].bytes).toString('base64'),
+      ).toBe(payload.inlineImages![cid].contentBase64);
+    }
+    const archive = Buffer.from(options.attachments[0].bytes).toString('utf8');
+    expect(archive).toContain('src="data:image/png;base64,');
+    expect(archive).toContain('src="data:image/jpeg;base64,');
+    expect(archive).not.toContain('cid:');
+    expect(options.htmlBody).not.toContain('https://');
   });
 });

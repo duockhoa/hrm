@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { realpath } from 'fs/promises';
-import { resolve, sep } from 'path';
+import { readFile, realpath } from 'fs/promises';
+import { join, resolve, sep } from 'path';
 import sharp from 'sharp';
 import { EMAIL_TYPE_CODES } from '../email-settings/constants/email-settings.constants';
 import { EmailSettingsService } from '../email-settings/email-settings.service';
@@ -8,6 +8,7 @@ import { EmailService } from '../email/email.service';
 import {
   buildProductionOrderDeviationEmail,
   type DeviationEmailImage,
+  type DeviationEmailLogo,
   type DeviationForEmail,
 } from './production-order-deviation-email';
 import {
@@ -46,8 +47,9 @@ export class ProductionOrderDeviationNotificationService {
         .entries()) {
         images.push(await this.buildImage(image.image_path, index));
       }
+      const logo = await this.buildLogo();
       await this.emailService.sendEmail({
-        ...buildProductionOrderDeviationEmail(deviation, images),
+        ...buildProductionOrderDeviationEmail(deviation, images, logo),
         recipients,
       });
     } catch (error) {
@@ -58,6 +60,25 @@ export class ProductionOrderDeviationNotificationService {
         error instanceof Error ? error.stack : String(error),
       );
     }
+  }
+
+  private async buildLogo(): Promise<DeviationEmailLogo> {
+    const logo: DeviationEmailLogo = {};
+    try {
+      const buffer = await readFile(
+        join(process.cwd(), 'templates', 'batch-report', 'logo-removebg.png'),
+      );
+      logo.file = {
+        filename: 'dkpharma-logo.png',
+        contentType: 'image/png',
+        contentBase64: buffer.toString('base64'),
+      };
+    } catch (error) {
+      this.logger.warn(
+        `Cannot prepare DKPHARMA email logo: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    return logo;
   }
 
   private async buildImage(

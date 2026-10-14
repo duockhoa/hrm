@@ -29,6 +29,8 @@ export type DeviationEmailImage = {
   file?: EmailFileDto;
 };
 
+export type DeviationEmailLogo = Pick<DeviationEmailImage, 'file'>;
+
 type DisplayValue = string | number | null | undefined;
 
 const text = (value: DisplayValue): string =>
@@ -62,6 +64,7 @@ const quantity = (value: Prisma.Decimal | null, unit: string | null) =>
 export function buildProductionOrderDeviationEmail(
   deviation: DeviationForEmail,
   images: DeviationEmailImage[],
+  logo?: DeviationEmailLogo,
 ): Omit<SendEmailDto, 'recipients' | 'emailTypeCode'> {
   const order = deviation.productionOrder;
   const product = order.item?.item_name || order.description || order.item_code;
@@ -101,6 +104,14 @@ export function buildProductionOrderDeviationEmail(
     .join('');
 
   const render = (standalone: boolean) => {
+    const logoSource = logo?.file
+      ? standalone
+        ? `data:${logo.file.contentType};base64,${logo.file.contentBase64}`
+        : 'cid:dkpharma_logo'
+      : '';
+    const branding = logoSource
+      ? `<img src="${logoSource}" alt="DKPHARMA" width="200" style="display:block;width:200px;max-width:100%;height:auto;margin:0 0 20px;border:0;outline:none;text-decoration:none">`
+      : '<p style="margin:0 0 20px;color:#00796b;font-size:24px;font-weight:700;letter-spacing:1px">DKPHARMA</p>';
     const imageRows: string[] = [];
     for (let index = 0; index < images.length; index += 2) {
       imageRows.push(
@@ -110,7 +121,7 @@ export function buildProductionOrderDeviationEmail(
             const source = image.file
               ? standalone
                 ? `data:${image.file.contentType};base64,${image.file.contentBase64}`
-                : `cid:${image.key}`
+                : `cid:${text(image.key)}`
               : '';
             return `<td style="width:50%;padding:8px;vertical-align:top;text-align:center">
           ${
@@ -132,7 +143,8 @@ export function buildProductionOrderDeviationEmail(
 <body style="margin:0;padding:24px 12px;background:#f3f4f6;color:#111827;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5">
   <table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:760px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px">
     <tr><td style="padding:24px;border-bottom:1px solid #e5e7eb">
-      <p style="margin:0 0 8px;color:#2563eb;font-size:12px;font-weight:700;text-transform:uppercase">Thông báo phiếu sai lệch mới</p>
+      ${branding}
+      <p style="margin:0 0 8px;color:#00796b;font-size:12px;font-weight:700;text-transform:uppercase">Thông báo phiếu sai lệch mới</p>
       <h1 style="margin:0;font-size:24px;line-height:1.3">Sai lệch #${deviation.id}</h1>
       <p style="margin:8px 0 0;color:#6b7280">${text(timestamp(deviation.created_at))}</p>
     </td></tr>
@@ -150,11 +162,12 @@ export function buildProductionOrderDeviationEmail(
       ...fields.map(([label, value]) => `${label}: ${value ?? '—'}`),
     ].join('\n'),
     html: render(false),
-    inlineImages: Object.fromEntries(
-      images
+    inlineImages: Object.fromEntries([
+      ...images
         .filter((image) => image.file)
         .map((image) => [image.key, image.file!]),
-    ),
+      ...(logo?.file ? [['dkpharma_logo', logo.file]] : []),
+    ]),
     attachments: [
       {
         filename: `sai-lech-${deviation.id}.html`,

@@ -16,10 +16,7 @@ import { PRODUCTION_ORDER_DEVIATION_UPLOAD_DIR } from './production-order-deviat
 describe('ProductionOrderDeviationNotificationService', () => {
   const settings = { resolveDefaultRecipients: jest.fn() };
   const email = { sendEmail: jest.fn() };
-  const service = new ProductionOrderDeviationNotificationService(
-    settings as unknown as EmailSettingsService,
-    email as unknown as EmailService,
-  );
+  let service: ProductionOrderDeviationNotificationService;
   const deviation: DeviationForEmail = {
     id: 1,
     production_order_id: 2031,
@@ -55,6 +52,10 @@ describe('ProductionOrderDeviationNotificationService', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    service = new ProductionOrderDeviationNotificationService(
+      settings as unknown as EmailSettingsService,
+      email as unknown as EmailService,
+    );
     settings.resolveDefaultRecipients.mockResolvedValue([
       'default@example.com',
     ]);
@@ -94,14 +95,27 @@ describe('ProductionOrderDeviationNotificationService', () => {
     expect(payload.html).toContain('10:00');
     expect(payload.html).toContain('14/10/2026');
     expect(payload.html).toContain('Không có hình ảnh đính kèm.');
+    expect(payload.html).toContain('alt="DKPHARMA"');
+    expect(payload.html).toContain('src="cid:dkpharma_logo"');
     const attachment = payload.attachments[0];
     expect(attachment.filename).toBe('sai-lech-1.html');
+    const archive = Buffer.from(attachment.contentBase64, 'base64').toString(
+      'utf8',
+    );
+    expect(archive).toContain('Người báo cáo');
+    const logo = archive.match(
+      /src="data:image\/png;base64,([A-Za-z0-9+/=]+)" alt="DKPHARMA"/,
+    );
+    expect(logo).not.toBeNull();
     expect(
-      Buffer.from(attachment.contentBase64, 'base64').toString('utf8'),
-    ).toContain('Người báo cáo');
+      (await sharp(Buffer.from(logo![1], 'base64')).metadata()).format,
+    ).toBe('png');
+    expect(payload.inlineImages.dkpharma_logo.contentType).toBe('image/png');
+    expect(payload.inlineImages.dkpharma_logo.contentBase64).toBe(logo![1]);
+    expect(payload.html).not.toContain('https://');
   });
 
-  it('embeds a protected uploaded image and includes it in the standalone HTML file', async () => {
+  it('sends the uploaded image and logo directly as CID blobs and keeps the HTML file self contained', async () => {
     const filename = `email-test-${randomUUID()}.png`;
     const filePath = join(PRODUCTION_ORDER_DEVIATION_UPLOAD_DIR, filename);
     await mkdir(PRODUCTION_ORDER_DEVIATION_UPLOAD_DIR, { recursive: true });
@@ -125,18 +139,21 @@ describe('ProductionOrderDeviationNotificationService', () => {
       expect(payload.html).not.toContain(
         '/production-order-deviations/images/',
       );
-      const embedded = payload.inlineImages.deviation_image_1;
-      expect(embedded.contentType).toBe('image/jpeg');
-      expect(
-        (await sharp(Buffer.from(embedded.contentBase64, 'base64')).metadata())
-          .format,
-      ).toBe('jpeg');
+      expect(Object.keys(payload.inlineImages).sort()).toEqual([
+        'deviation_image_1',
+        'dkpharma_logo',
+      ]);
+      const buffer = Buffer.from(
+        payload.inlineImages.deviation_image_1.contentBase64,
+        'base64',
+      );
+      expect((await sharp(buffer).metadata()).format).toBe('jpeg');
       const htmlFile = Buffer.from(
         payload.attachments[0].contentBase64,
         'base64',
       ).toString('utf8');
       expect(htmlFile).toContain(
-        `src="data:image/jpeg;base64,${embedded.contentBase64}"`,
+        `src="data:image/jpeg;base64,${buffer.toString('base64')}"`,
       );
       expect(htmlFile).not.toContain('cid:');
     } finally {
@@ -157,7 +174,7 @@ describe('ProductionOrderDeviationNotificationService', () => {
       ],
     });
     const payload = email.sendEmail.mock.calls[0][0];
-    expect(payload.inlineImages).toEqual({});
+    expect(Object.keys(payload.inlineImages)).toEqual(['dkpharma_logo']);
     expect(payload.html).toContain('Không thể tải ảnh đính kèm.');
     expect(payload.html).not.toContain('Hình ảnh sai lệch 3');
     expect(warn).toHaveBeenCalledTimes(2);
@@ -178,7 +195,7 @@ describe('ProductionOrderDeviationNotificationService', () => {
     expect(email.sendEmail).not.toHaveBeenCalled();
   });
 
-  it('lays out multiple images in pairs without leaking CID references to the attachment', () => {
+  it('maps every image CID to its bytes and keeps the attachment self contained', () => {
     const file = {
       filename: 'image.jpg',
       contentType: 'image/jpeg',
@@ -193,11 +210,31 @@ describe('ProductionOrderDeviationNotificationService', () => {
       })),
     );
     expect(Object.keys(payload.inlineImages!)).toHaveLength(3);
-    expect(payload.html).toContain('cid:image_3');
+    expect(payload.html).toContain('src="cid:image_3"');
+    expect(payload.html).not.toContain('https://');
+    expect(payload.html).not.toContain('data:image');
     const archive = Buffer.from(
       payload.attachments![0].contentBase64,
       'base64',
     ).toString('utf8');
     expect(archive.match(/src="data:image\/jpeg;base64,/g)).toHaveLength(3);
+    expect(archive).not.toContain('https://res.cloudinary.com/');
+  });
+
+  it('shows a placeholder instead of an unresolved CID when an image file is missing', () => {
+    const payload = buildProductionOrderDeviationEmail(deviation, [
+      {
+        key: 'image_1',
+        label: 'Ảnh 1',
+      },
+    ]);
+    expect(payload.html).toContain('Không thể tải ảnh đính kèm.');
+    expect(payload.html).not.toContain('<img');
+    const archive = Buffer.from(
+      payload.attachments![0].contentBase64,
+      'base64',
+    ).toString('utf8');
+    expect(archive).toContain('Không thể tải ảnh đính kèm.');
+    expect(payload.inlineImages).toEqual({});
   });
 });
