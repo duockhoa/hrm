@@ -3,6 +3,10 @@ export { default as ItemProductOrder } from "./components/item-product-order";
 export { default as ListProductOrderHeader } from "./components/header-list-product-order";
 export { default as ProductOrderDetail } from "./components/detail-product-order";
 export {
+  default as ProductionOrderCompletenessChecklist,
+  getProductionOrderSectionId,
+} from "./components/production-order-completeness-checklist";
+export {
   DETAIL_COMPONENTS,
   PRODUCTION_ORDER_DETAIL_TYPES,
   type ProductionOrderDetailSelection,

@@ -4,5 +4,6 @@ export class CreateItemFeatureDto {
   feature_key?: string | null;
   featureKey?: string | null;
   enabled?: boolean | number | string | null;
+  required?: boolean | number | string | null;
   order?: number | string | null;
 }

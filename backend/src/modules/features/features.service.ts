@@ -11,6 +11,11 @@ import { CreateItemFeatureDto } from './dto/create-item-feature.dto';
 import { CopyItemFeatureConfigDto } from './dto/copy-item-feature-config.dto';
 import { UpdateFeatureDto } from './dto/update-feature.dto';
 import { UpdateItemFeatureDto } from './dto/update-item-feature.dto';
+import {
+  assertRequiredSection,
+  buildItemFeatureConfig,
+} from './item-feature-config';
+import { supportsRequiredSection } from '../production-orders/production-order-section-rules';
 
 const ITEM_FEATURE_INCLUDE = {
   feature: true,
@@ -22,9 +27,14 @@ export class FeaturesService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async findAll() {
-    return this.prismaService.features.findMany({
+    const features = await this.prismaService.features.findMany({
       orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
     });
+    return features.map((feature) => ({
+      ...feature,
+      supports_required:
+        feature.kind === 'section' && supportsRequiredSection(feature.key),
+    }));
   }
 
   async findById(id: number) {
@@ -75,8 +85,20 @@ export class FeaturesService {
   }
 
   async update(id: number, updateDto: UpdateFeatureDto) {
-    await this.findById(id);
+    const existing = await this.findById(id);
     const data = await this.buildUpdateFeatureData(id, updateDto);
+    if (existing.itemFeatures.some((setting) => setting.required)) {
+      const nextFeature = {
+        key: typeof data.key === 'string' ? data.key : existing.key,
+        kind: typeof data.kind === 'string' ? data.kind : existing.kind,
+      };
+      assertRequiredSection(
+        nextFeature,
+        true,
+        true,
+        supportsRequiredSection(nextFeature.key),
+      );
+    }
 
     return this.prismaService.features.update({
       where: { id },
@@ -92,18 +114,22 @@ export class FeaturesService {
     });
   }
 
-  async findByItemCode(item_code: string, includeDisabled?: string) {
+  async findByItemCode(
+    item_code: string,
+    includeDisabled?: string,
+    client: Prisma.TransactionClient = this.prismaService,
+  ) {
     const normalizedItemCode = this.normalizeRequiredString(
       item_code,
       'item_code',
     );
-    await this.ensureItemExists(normalizedItemCode);
+    await this.ensureItemExists(normalizedItemCode, client);
 
     const shouldIncludeDisabled =
       this.normalizeOptionalBoolean(includeDisabled, 'includeDisabled') ??
       false;
 
-    return this.prismaService.itemFeatures.findMany({
+    return client.itemFeatures.findMany({
       where: {
         item_code: normalizedItemCode,
         ...(shouldIncludeDisabled ? {} : { enabled: true }),
@@ -113,8 +139,16 @@ export class FeaturesService {
     });
   }
 
-  async findConfigByItemCode(item_code: string, includeDisabled?: string) {
-    const itemFeatures = await this.findByItemCode(item_code, includeDisabled);
+  async findConfigByItemCode(
+    item_code: string,
+    includeDisabled?: string,
+    client: Prisma.TransactionClient = this.prismaService,
+  ) {
+    const itemFeatures = await this.findByItemCode(
+      item_code,
+      includeDisabled,
+      client,
+    );
     const normalizedItemCode = this.normalizeRequiredString(
       item_code,
       'item_code',
@@ -127,9 +161,10 @@ export class FeaturesService {
       group_name: itemFeature.feature.group_name,
       order: itemFeature.order ?? itemFeature.feature.default_order,
       enabled: itemFeature.enabled,
+      required: itemFeature.required ?? false,
     }));
 
-    return this.buildItemFeatureConfig(normalizedItemCode, features);
+    return buildItemFeatureConfig(normalizedItemCode, features);
   }
 
   async upsertItemFeature(item_code: string, createDto: CreateItemFeatureDto) {
@@ -141,6 +176,28 @@ export class FeaturesService {
     const feature = await this.findFeatureFromDto(createDto);
     const updateData = this.buildItemFeatureUpdateData(createDto, true);
     const createData = this.buildItemFeatureCreateData(createDto);
+    if (updateData.required === true) {
+      const existing = await this.prismaService.itemFeatures.findUnique({
+        where: {
+          item_code_feature_id: {
+            item_code: normalizedItemCode,
+            feature_id: feature.id,
+          },
+        },
+      });
+      const enabled = (updateData.enabled ??
+        existing?.enabled ??
+        true) as boolean;
+      assertRequiredSection(
+        feature,
+        enabled,
+        true,
+        supportsRequiredSection(feature.key),
+      );
+      // Write enabled together with required to preserve the invariant even
+      // when another request toggles the section concurrently.
+      updateData.enabled = enabled;
+    }
 
     return this.prismaService.itemFeatures.upsert({
       where: {
@@ -175,8 +232,7 @@ export class FeaturesService {
     );
 
     if (
-      sourceItemCode.toLocaleLowerCase() ===
-      targetItemCode.toLocaleLowerCase()
+      sourceItemCode.toLocaleLowerCase() === targetItemCode.toLocaleLowerCase()
     ) {
       throw new BadRequestException(
         'source_item_code must be different from item_code',
@@ -225,6 +281,12 @@ export class FeaturesService {
           group_name: feature.group_name,
           order: sourceFeature?.order ?? feature.default_order,
           enabled: sourceFeature?.enabled ?? false,
+          required: Boolean(
+            sourceFeature?.required &&
+            sourceFeature.enabled &&
+            feature.kind === 'section' &&
+            supportsRequiredSection(feature.key),
+          ),
         };
       });
 
@@ -234,16 +296,19 @@ export class FeaturesService {
 
       if (copiedFeatures.length > 0) {
         await tx.itemFeatures.createMany({
-          data: copiedFeatures.map(({ feature_id, enabled, order }) => ({
-            item_code: targetItemCode,
-            feature_id,
-            enabled,
-            order,
-          })),
+          data: copiedFeatures.map(
+            ({ feature_id, enabled, required, order }) => ({
+              item_code: targetItemCode,
+              feature_id,
+              enabled,
+              required,
+              order,
+            }),
+          ),
         });
       }
 
-      return this.buildItemFeatureConfig(targetItemCode, copiedFeatures);
+      return buildItemFeatureConfig(targetItemCode, copiedFeatures);
     });
   }
 
@@ -256,8 +321,22 @@ export class FeaturesService {
       item_code,
       'item_code',
     );
-    await this.ensureItemFeatureExists(normalizedItemCode, feature_id);
+    const existing = await this.ensureItemFeatureExists(
+      normalizedItemCode,
+      feature_id,
+    );
     const data = this.buildItemFeatureUpdateData(updateDto, false);
+    if (data.required === true) {
+      const enabled = (data.enabled ?? existing.enabled) as boolean;
+      const feature = await this.findById(feature_id);
+      assertRequiredSection(
+        feature,
+        enabled,
+        true,
+        supportsRequiredSection(feature.key),
+      );
+      data.enabled = enabled;
+    }
 
     return this.prismaService.itemFeatures.update({
       where: {
@@ -287,20 +366,6 @@ export class FeaturesService {
       },
       include: ITEM_FEATURE_INCLUDE,
     });
-  }
-
-  private buildItemFeatureConfig<
-    T extends {
-      kind: string;
-      enabled: boolean;
-    },
-  >(item_code: string, features: T[]) {
-    return {
-      item_code,
-      actions: features.filter((feature) => feature.kind === 'action'),
-      sections: features.filter((feature) => feature.kind === 'section'),
-      features,
-    };
   }
 
   private buildCreateFeatureData(
@@ -364,7 +429,10 @@ export class FeaturesService {
 
   private buildItemFeatureCreateData(
     dto: CreateItemFeatureDto,
-  ): Pick<Prisma.ItemFeaturesUncheckedCreateInput, 'enabled' | 'order'> {
+  ): Pick<
+    Prisma.ItemFeaturesUncheckedCreateInput,
+    'enabled' | 'required' | 'order'
+  > {
     return {
       enabled:
         dto.enabled === undefined
@@ -374,6 +442,10 @@ export class FeaturesService {
         dto.order === undefined
           ? null
           : this.normalizeOptionalInt(dto.order, 'order'),
+      required:
+        dto.required === undefined
+          ? false
+          : this.normalizeRequiredBoolean(dto.required, 'required'),
     };
   }
 
@@ -385,6 +457,19 @@ export class FeaturesService {
 
     if (dto.enabled !== undefined) {
       data.enabled = this.normalizeRequiredBoolean(dto.enabled, 'enabled');
+    }
+
+    if (dto.required !== undefined) {
+      data.required = this.normalizeRequiredBoolean(dto.required, 'required');
+    }
+
+    if (data.enabled === false) {
+      if (data.required === true) {
+        throw new BadRequestException(
+          'Phải bật section trước khi đặt bắt buộc có dữ liệu.',
+        );
+      }
+      data.required = false;
     }
 
     if (dto.order !== undefined) {
@@ -434,8 +519,11 @@ export class FeaturesService {
     throw new BadRequestException('feature_id or feature_key is required');
   }
 
-  private async ensureItemExists(item_code: string) {
-    const item = await this.prismaService.items.findFirst({
+  private async ensureItemExists(
+    item_code: string,
+    client: Prisma.TransactionClient = this.prismaService,
+  ) {
+    const item = await client.items.findFirst({
       where: {
         item_code,
         deleted_at: null,
@@ -469,6 +557,7 @@ export class FeaturesService {
     if (!itemFeature) {
       throw new NotFoundException('Item feature not found');
     }
+    return itemFeature;
   }
 
   private normalizeRequiredString(value: unknown, fieldName: string) {
@@ -511,6 +600,10 @@ export class FeaturesService {
   private normalizeOptionalInt(value: unknown, fieldName: string) {
     if (value === null || value === undefined || value === '') {
       return null;
+    }
+
+    if (typeof value !== 'number' && typeof value !== 'string') {
+      throw new BadRequestException(`${fieldName} must be an integer`);
     }
 
     const normalizedValue =

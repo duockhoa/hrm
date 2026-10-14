@@ -77,10 +77,12 @@ describe('FeaturesService', () => {
   });
 
   it('gets all features ordered for display', async () => {
-    const features = [{ id: 1, key: 'environment_checks' }];
+    const features = [{ id: 1, key: 'environment_checks', kind: 'section' }];
     prismaService.features.findMany.mockResolvedValue(features);
 
-    await expect(service.findAll()).resolves.toBe(features);
+    await expect(service.findAll()).resolves.toEqual([
+      { ...features[0], supports_required: true },
+    ]);
     expect(prismaService.features.findMany).toHaveBeenCalledWith({
       orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
     });
@@ -141,6 +143,7 @@ describe('FeaturesService', () => {
       {
         feature_id: 1,
         enabled: true,
+        required: false,
         order: null,
         feature: {
           key: 'create_environment_check',
@@ -153,6 +156,7 @@ describe('FeaturesService', () => {
       {
         feature_id: 2,
         enabled: true,
+        required: false,
         order: 20,
         feature: {
           key: 'environment_checks',
@@ -175,6 +179,7 @@ describe('FeaturesService', () => {
           group_name: null,
           order: 10,
           enabled: true,
+          required: false,
         },
       ],
       sections: [
@@ -186,6 +191,7 @@ describe('FeaturesService', () => {
           group_name: null,
           order: 20,
           enabled: true,
+          required: false,
         },
       ],
       features: [
@@ -197,6 +203,7 @@ describe('FeaturesService', () => {
           group_name: null,
           order: 10,
           enabled: true,
+          required: false,
         },
         {
           feature_id: 2,
@@ -206,6 +213,7 @@ describe('FeaturesService', () => {
           group_name: null,
           order: 20,
           enabled: true,
+          required: false,
         },
       ],
     });
@@ -225,6 +233,7 @@ describe('FeaturesService', () => {
       item_code: 'TP00001',
       feature_id: 2,
       enabled: false,
+      required: false,
       order: 10,
     };
 
@@ -254,12 +263,14 @@ describe('FeaturesService', () => {
         },
         update: {
           enabled: false,
+          required: false,
           order: 10,
         },
         create: {
           item_code: 'TP00001',
           feature_id: 2,
           enabled: false,
+          required: false,
           order: 10,
         },
       }),
@@ -310,6 +321,7 @@ describe('FeaturesService', () => {
           group_name: 'Biểu mẫu chung',
           order: 10,
           enabled: true,
+          required: false,
         },
       ],
       sections: [
@@ -321,6 +333,7 @@ describe('FeaturesService', () => {
           group_name: 'Biểu mẫu chung',
           order: 30,
           enabled: false,
+          required: false,
         },
       ],
       features: expect.any(Array),
@@ -335,12 +348,14 @@ describe('FeaturesService', () => {
           item_code: 'TP00002',
           feature_id: 1,
           enabled: true,
+          required: false,
           order: 10,
         },
         {
           item_code: 'TP00002',
           feature_id: 2,
           enabled: false,
+          required: false,
           order: 30,
         },
       ],
@@ -372,5 +387,134 @@ describe('FeaturesService', () => {
       NotFoundException,
     );
     expect(prismaService.itemFeatures.findMany).not.toHaveBeenCalled();
+  });
+
+  it('keeps newly linked sections optional unless required is explicitly requested', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
+    prismaService.features.findUnique.mockResolvedValue({
+      id: 2,
+      key: 'environment_checks',
+      kind: 'section',
+    });
+    await service.upsertItemFeature('TP00001', {
+      feature_id: 2,
+      enabled: true,
+    });
+    expect(prismaService.itemFeatures.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ enabled: true, required: false }),
+        update: { enabled: true },
+      }),
+    );
+  });
+
+  it.each([
+    ['action', 'create_environment_check'],
+    ['section', 'unregistered_section'],
+  ])('rejects required on unsupported %s %s', async (kind, key) => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
+    prismaService.features.findUnique.mockResolvedValue({ id: 2, key, kind });
+    await expect(
+      service.upsertItemFeature('TP00001', {
+        feature_id: 2,
+        enabled: true,
+        required: true,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prismaService.itemFeatures.upsert).not.toHaveBeenCalled();
+  });
+
+  it('requires a disabled section to be enabled before setting required', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
+    prismaService.features.findUnique.mockResolvedValue({
+      id: 2,
+      key: 'environment_checks',
+      kind: 'section',
+    });
+    prismaService.itemFeatures.findUnique.mockResolvedValue({
+      enabled: false,
+      required: false,
+    });
+    await expect(
+      service.upsertItemFeature('TP00001', {
+        feature_id: 2,
+        required: true,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('clears required when the section is disabled', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
+    prismaService.features.findUnique.mockResolvedValue({ id: 2 });
+    prismaService.itemFeatures.findUnique.mockResolvedValue({
+      enabled: true,
+      required: true,
+    });
+    await service.updateItemFeature('TP00001', 2, { enabled: false });
+    expect(prismaService.itemFeatures.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { enabled: false, required: false },
+      }),
+    );
+  });
+
+  it('writes enabled together with a required-only update', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
+    prismaService.features.findUnique.mockResolvedValue({
+      id: 2,
+      key: 'environment_checks',
+      kind: 'section',
+    });
+    prismaService.itemFeatures.findUnique.mockResolvedValue({
+      enabled: true,
+      required: false,
+    });
+    await service.updateItemFeature('TP00001', 2, { required: true });
+    expect(prismaService.itemFeatures.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { enabled: true, required: true },
+      }),
+    );
+  });
+
+  it('copies required sections and defaults unlinked features to optional', async () => {
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
+    prismaService.features.findMany.mockResolvedValue([
+      {
+        id: 1,
+        key: 'environment_checks',
+        kind: 'section',
+        label: 'Nhiệt độ/độ ẩm',
+        group_name: null,
+        default_order: 10,
+      },
+      {
+        id: 2,
+        key: 'date_checks',
+        kind: 'section',
+        label: 'Kiểm tra date',
+        group_name: null,
+        default_order: 20,
+      },
+    ]);
+    prismaService.itemFeatures.findMany.mockResolvedValue([
+      { feature_id: 1, enabled: true, required: true },
+    ]);
+    const config = await service.copyItemFeatureConfig('TP00002', {
+      source_item_code: 'TP00001',
+    });
+    expect(
+      config.sections.map(({ enabled, required }) => ({ enabled, required })),
+    ).toEqual([
+      { enabled: true, required: true },
+      { enabled: false, required: false },
+    ]);
+    expect(prismaService.itemFeatures.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({ feature_id: 1, required: true }),
+        ]),
+      }),
+    );
   });
 });

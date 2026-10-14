@@ -4,6 +4,7 @@ import { ProductionOrderMixingRecordsGateway } from './production-order-mixing-r
 import { ProductionOrderMixingRecordsEventsInterceptor } from './production-order-mixing-records-events.interceptor';
 import { Module } from '@nestjs/common';
 import { ProductionOrdersService } from './production-orders.service';
+import { ProductionOrderCompletenessService } from './production-order-completeness.service';
 import { ProductionOrdersController } from './production-orders.controller';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
@@ -71,6 +72,7 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
   ],
   providers: [
     ProductionOrdersService,
+    ProductionOrderCompletenessService,
     ProductionOrderSamplingRequestsService,
     ProductionOrderSamplingRecordsService,
     ProductionOrderDisinfectantPreparationsService,

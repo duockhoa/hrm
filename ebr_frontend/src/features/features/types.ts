@@ -7,6 +7,7 @@ export type Feature = {
   label: string;
   group_name: string | null;
   default_order: number;
+  supports_required?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -29,6 +30,7 @@ export type ItemFeatureConfigEntry = {
   group_name: string | null;
   order: number;
   enabled: boolean;
+  required: boolean;
 };
 
 export type ItemFeatureConfig = {
@@ -42,10 +44,12 @@ export type UpsertItemFeaturePayload = {
   feature_id?: number;
   feature_key?: string;
   enabled: boolean;
+  required?: boolean;
   order: number;
 };
 
 export type UpdateItemFeaturePayload = {
   enabled: boolean;
+  required?: boolean;
   order: number;
 };

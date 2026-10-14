@@ -10,6 +10,10 @@ import { ProductionOrderExportService } from './exports/production-order-export.
 import PizZip from 'pizzip';
 import { ProductionOrderPdfRendererService } from './exports/production-order-pdf-renderer.service';
 import { FeaturesService } from '../features/features.service';
+import {
+  buildItemFeatureConfig,
+  createFeatureConfigSnapshot,
+} from '../features/item-feature-config';
 import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
 import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 
@@ -70,6 +74,7 @@ describe('ProductionOrdersService', () => {
   let warehouseReleaseExportService: WarehouseReleaseExportService;
   let weighingTicketExportService: WeighingTicketExportService;
   let postWeighingMaterialCheckExportService: PostWeighingMaterialCheckExportService;
+  let productionOrderExportService: ProductionOrderExportService;
   let featuresService: {
     findConfigByItemCode: jest.Mock;
   };
@@ -140,6 +145,7 @@ describe('ProductionOrdersService', () => {
         PostWeighingMaterialCheckExportService,
       );
     prismaService = module.get(PrismaService);
+    productionOrderExportService = module.get(ProductionOrderExportService);
   });
 
   it('should be defined', () => {
@@ -414,6 +420,68 @@ describe('ProductionOrdersService', () => {
         change_content: 'Điều chỉnh quy cách đóng gói theo QA.',
       },
     });
+  });
+
+  it('returns the stored dossier configuration instead of changed item settings', async () => {
+    const config = buildItemFeatureConfig('TP00001', [
+      {
+        feature_id: 1,
+        key: 'environment_checks',
+        kind: 'section',
+        label: 'Nhiệt độ/độ ẩm',
+        group_name: null,
+        order: 10,
+        enabled: true,
+        required: false,
+      },
+    ]);
+    prismaService.productionOrders.findUnique.mockResolvedValue({
+      id: 2031,
+      item_code: 'TP00001',
+      samplingRequests: [],
+      documentControl: {
+        feature_config_snapshot: createFeatureConfigSnapshot(
+          config,
+          new Date(),
+        ),
+      },
+    });
+    const result = await service.findProductionOrderById(2031);
+    expect(result?.featureConfig).toMatchObject(config);
+    expect(featuresService.findConfigByItemCode).not.toHaveBeenCalled();
+  });
+
+  it('passes the same stored configuration to the batch report exporter', async () => {
+    const config = buildItemFeatureConfig('TP00001', []);
+    prismaService.productionOrders.findUnique.mockResolvedValue({
+      id: 2031,
+      item_code: 'TP00001',
+      item: {},
+      samplingRequests: [],
+      documentControl: {
+        feature_config_snapshot: createFeatureConfigSnapshot(
+          config,
+          new Date(),
+        ),
+      },
+    });
+    sapB1Client.getProductionOrderById.mockRejectedValue(new Error('offline'));
+    const exporter = jest
+      .spyOn(productionOrderExportService, 'exportBatchReport')
+      .mockResolvedValue({
+        buffer: Buffer.from('pdf'),
+        contentType: 'application/pdf',
+        filename: 'report.pdf',
+      });
+    await service.exportBatchReport(2031);
+    expect(exporter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        featureConfig: expect.objectContaining(config),
+      }),
+      undefined,
+      undefined,
+    );
+    expect(featuresService.findConfigByItemCode).not.toHaveBeenCalled();
   });
 
   it('allows change content to be cleared', async () => {

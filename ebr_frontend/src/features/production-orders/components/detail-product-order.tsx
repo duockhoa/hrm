@@ -7,6 +7,7 @@ import {
   isProductionOrderFeatureEnabled,
   type ProductionOrderFeatureConfig,
 } from "@/features/features";
+import { getProductionOrderSectionId } from "./production-order-completeness-checklist";
 import { FormProductionOrderFinishedProductSummary } from "@/features/finished-product-summary";
 import { FormProductionOrderExtractionSummary } from "@/features/production-order-material-process-summaries";
 import {
@@ -1859,14 +1860,18 @@ export default function ProductOrderDetail({
         />
         <FieldDisplay
           lable="Mã sản phẩm"
-          value={productOrderItemCode ? (
-            <Link
-              href={`/${String(productOrderItemCode).startsWith("BTP") ? "semi-finished-products" : String(productOrderItemCode).startsWith("TP") ? "finished-products" : "raw-materials"}/${encodeURIComponent(String(productOrderItemCode))}`}
-              className="text-blue-600 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              {productOrderItemCode}
-            </Link>
-          ) : ""}
+          value={
+            productOrderItemCode ? (
+              <Link
+                href={`/${String(productOrderItemCode).startsWith("BTP") ? "semi-finished-products" : String(productOrderItemCode).startsWith("TP") ? "finished-products" : "raw-materials"}/${encodeURIComponent(String(productOrderItemCode))}`}
+                className="text-blue-600 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                {productOrderItemCode}
+              </Link>
+            ) : (
+              ""
+            )
+          }
         />
         <FieldDisplay
           lable="Trạng thái"
@@ -1922,11 +1927,17 @@ export default function ProductOrderDetail({
       ) &&
         productionOrderId !== null &&
         productionOrderId !== undefined && (
-          <SteamSterilizationChecksView
-            id={productionOrderId}
-            embedded
-            onSelectCheck={onOpenSteamSterilizationCheckDetail}
-          />
+          <div
+            id={getProductionOrderSectionId("steam_sterilization_checks")}
+            tabIndex={-1}
+            className="scroll-mt-4"
+          >
+            <SteamSterilizationChecksView
+              id={productionOrderId}
+              embedded
+              onSelectCheck={onOpenSteamSterilizationCheckDetail}
+            />
+          </div>
         )}
       {isProductionOrderFeatureEnabled(
         featureConfig,
@@ -1935,11 +1946,19 @@ export default function ProductOrderDetail({
       ) &&
         productionOrderId !== null &&
         productionOrderId !== undefined && (
-          <PostSecondaryPackagingSummariesView
-            id={productionOrderId}
-            embedded
-            onSelectSummary={onOpenPostSecondaryPackagingSummaryDetail}
-          />
+          <div
+            id={getProductionOrderSectionId(
+              "post_secondary_packaging_summaries",
+            )}
+            tabIndex={-1}
+            className="scroll-mt-4"
+          >
+            <PostSecondaryPackagingSummariesView
+              id={productionOrderId}
+              embedded
+              onSelectSummary={onOpenPostSecondaryPackagingSummaryDetail}
+            />
+          </div>
         )}
       {isProductionOrderFeatureEnabled(
         featureConfig,
@@ -1948,11 +1967,17 @@ export default function ProductOrderDetail({
       ) &&
         productionOrderId !== null &&
         productionOrderId !== undefined && (
-          <FiltrationChecksView
-            id={productionOrderId}
-            embedded
-            onSelectCheck={onOpenFiltrationCheckDetail}
-          />
+          <div
+            id={getProductionOrderSectionId("filtration_checks")}
+            tabIndex={-1}
+            className="scroll-mt-4"
+          >
+            <FiltrationChecksView
+              id={productionOrderId}
+              embedded
+              onSelectCheck={onOpenFiltrationCheckDetail}
+            />
+          </div>
         )}
     </div>
   );

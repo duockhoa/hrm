@@ -45,6 +45,8 @@ type ItemFeatureRow = {
   group_name: string | null;
   order: number;
   enabled: boolean;
+  required: boolean;
+  supports_required: boolean;
   linked: boolean;
 };
 
@@ -76,6 +78,8 @@ const buildRows = (
         group_name: feature.group_name,
         order: config?.order ?? feature.default_order ?? 0,
         enabled: config?.enabled ?? false,
+        required: config?.required ?? false,
+        supports_required: feature.supports_required ?? false,
         linked: Boolean(config),
       };
     })
@@ -144,6 +148,7 @@ type FeatureSettingsGroupProps = {
   savingFeatureId: number | null;
   disabled?: boolean;
   onToggleEnabled: (row: ItemFeatureRow, enabled: boolean) => void;
+  onToggleRequired: (row: ItemFeatureRow, required: boolean) => void;
   onUpdateOrder: (row: ItemFeatureRow, order: number) => void;
   onSaveRow: (row: ItemFeatureRow) => void;
 };
@@ -154,6 +159,7 @@ function FeatureSettingsGroup({
   savingFeatureId,
   disabled = false,
   onToggleEnabled,
+  onToggleRequired,
   onUpdateOrder,
   onSaveRow,
 }: FeatureSettingsGroupProps) {
@@ -168,6 +174,9 @@ function FeatureSettingsGroup({
             <TableHead>Tính năng</TableHead>
             <TableHead className="w-28">Loại</TableHead>
             <TableHead className="w-28 text-center">Trạng thái</TableHead>
+            <TableHead className="w-36 text-center">
+              Bắt buộc có dữ liệu
+            </TableHead>
             <TableHead className="w-32 text-right">Thứ tự</TableHead>
           </TableRow>
         </TableHeader>
@@ -201,6 +210,33 @@ function FeatureSettingsGroup({
                     }
                     aria-label={`Bật tắt ${row.label}`}
                   />
+                </TableCell>
+                <TableCell className="text-center">
+                  {row.kind === "section" ? (
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border-gray-300 accent-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      checked={draftRow.required}
+                      disabled={
+                        isDisabled ||
+                        !draftRow.enabled ||
+                        !row.supports_required
+                      }
+                      onChange={(event) =>
+                        onToggleRequired(row, event.target.checked)
+                      }
+                      aria-label={`Bắt buộc có dữ liệu cho ${row.label}`}
+                      title={
+                        !row.supports_required
+                          ? "Section này chưa có quy tắc kiểm tra dữ liệu"
+                          : !draftRow.enabled
+                            ? "Bật section trước khi đặt bắt buộc"
+                            : undefined
+                      }
+                    />
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Input
@@ -332,7 +368,12 @@ export default function InlineItemFeatureSettings({
 
     const draftRow = getDraftRow(row);
 
-    if (row.linked && draftRow.order === row.order) {
+    if (
+      row.linked &&
+      draftRow.order === row.order &&
+      draftRow.enabled === row.enabled &&
+      draftRow.required === row.required
+    ) {
       return;
     }
 
@@ -342,22 +383,24 @@ export default function InlineItemFeatureSettings({
       if (row.linked) {
         await featuresService.updateItemFeature(itemCode, row.feature_id, {
           enabled: draftRow.enabled,
+          required: draftRow.required,
           order: draftRow.order,
         });
       } else {
         await featuresService.upsertItemFeature(itemCode, {
           feature_id: row.feature_id,
           enabled: draftRow.enabled,
+          required: draftRow.required,
           order: draftRow.order,
         });
       }
 
+      await mutate();
       setDraftRows((current) => {
         const next = { ...current };
         delete next[row.feature_id];
         return next;
       });
-      await mutate();
       toast.success("Đã lưu cấu hình tính năng.");
     } catch (error) {
       toast.error(getErrorMessage(error, "Không thể lưu cấu hình tính năng."));
@@ -366,56 +409,61 @@ export default function InlineItemFeatureSettings({
     }
   };
 
-  const handleToggleEnabled = async (row: ItemFeatureRow, enabled: boolean) => {
+  const handleToggleSetting = async (
+    row: ItemFeatureRow,
+    patch: Partial<Pick<ItemFeatureRow, "enabled" | "required">>,
+  ) => {
     if (!itemCode) {
       return;
     }
 
     const draftRow = getDraftRow(row);
+    const nextRow = { ...draftRow, ...patch };
+    if (!nextRow.enabled) nextRow.required = false;
     setSavingFeatureId(row.feature_id);
     setDraftRows((current) => ({
       ...current,
       [row.feature_id]: {
-        ...draftRow,
-        enabled,
+        ...nextRow,
       },
     }));
 
     try {
       if (row.linked) {
         await featuresService.updateItemFeature(itemCode, row.feature_id, {
-          enabled,
+          enabled: nextRow.enabled,
+          required: nextRow.required,
           order: draftRow.order,
         });
       } else {
         await featuresService.upsertItemFeature(itemCode, {
           feature_id: row.feature_id,
-          enabled,
+          enabled: nextRow.enabled,
+          required: nextRow.required,
           order: draftRow.order,
         });
       }
 
+      await mutate();
       setDraftRows((current) => {
         const next = { ...current };
         if (draftRow.order === row.order) {
           delete next[row.feature_id];
         } else {
           next[row.feature_id] = {
-            ...draftRow,
-            enabled,
+            ...nextRow,
           };
         }
         return next;
       });
-      await mutate();
-      toast.success("Đã cập nhật trạng thái biểu mẫu.");
+      toast.success("Đã cập nhật cấu hình biểu mẫu.");
     } catch (error) {
       setDraftRows((current) => ({
         ...current,
         [row.feature_id]: draftRow,
       }));
       toast.error(
-        getErrorMessage(error, "Không thể cập nhật trạng thái biểu mẫu."),
+        getErrorMessage(error, "Không thể cập nhật cấu hình biểu mẫu."),
       );
     } finally {
       setSavingFeatureId(null);
@@ -493,8 +541,13 @@ export default function InlineItemFeatureSettings({
               group={group}
               getDraftRow={getDraftRow}
               savingFeatureId={savingFeatureId}
-              disabled={isCopying}
-              onToggleEnabled={handleToggleEnabled}
+              disabled={isCopying || savingFeatureId !== null}
+              onToggleEnabled={(row, enabled) =>
+                handleToggleSetting(row, { enabled })
+              }
+              onToggleRequired={(row, required) =>
+                handleToggleSetting(row, { required })
+              }
               onUpdateOrder={(row, order) => updateDraftRow(row, { order })}
               onSaveRow={handleSaveRow}
             />
@@ -524,8 +577,8 @@ export default function InlineItemFeatureSettings({
           <DialogHeader>
             <DialogTitle>Sao chép tính năng từ mã hàng khác</DialogTitle>
             <DialogDescription>
-              Toàn bộ trạng thái và thứ tự tính năng của mã nguồn sẽ ghi đè cấu
-              hình hiện tại của {itemCode}.
+              Toàn bộ trạng thái, yêu cầu bắt buộc và thứ tự tính năng của mã
+              nguồn sẽ ghi đè cấu hình hiện tại của {itemCode}.
             </DialogDescription>
           </DialogHeader>
 

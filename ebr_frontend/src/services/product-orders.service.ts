@@ -15,6 +15,7 @@ import type {
   UpdateProductionOrderAttachmentPayload,
 } from "@/features/production-order-attachments/types";
 import { API_ROUTES } from "@/lib/api-routes";
+import type { ProductionOrderCompleteness } from "@/features/production-orders/types";
 
 const fetchProductionOrders = async () => {
   const response = await axiosClient.get(API_ROUTES.productionOrders.base);
@@ -38,6 +39,15 @@ const fetchSemiFinishedProducts = async () => {
 const fetchProductionOrderById = async (id: string | number) => {
   const response = await axiosClient.get(
     `${API_ROUTES.productionOrders.base}/${id}`,
+  );
+  return response.data;
+};
+
+const fetchProductionOrderCompleteness = async (
+  id: string | number,
+): Promise<ProductionOrderCompleteness> => {
+  const response = await axiosClient.get(
+    API_ROUTES.productionOrders.completeness(id),
   );
   return response.data;
 };
@@ -997,7 +1007,9 @@ const deleteDisintegrationCheck = async (checkId: string | number) => {
 };
 
 const fetchAllVialInspectionChecks = async () => {
-  const response = await axiosClient.get(API_ROUTES.productionOrders.allVialInspectionChecks);
+  const response = await axiosClient.get(
+    API_ROUTES.productionOrders.allVialInspectionChecks,
+  );
   return response.data;
 };
 
@@ -2034,8 +2046,12 @@ const fetchPostSecondaryPackagingSummaries = async (id: string | number) => {
   return response.data;
 };
 
-const fetchPostSecondaryPackagingReport = async (): Promise<PostSecondaryPackagingSummary[]> => {
-  const response = await axiosClient.get(API_ROUTES.productionOrders.postSecondaryPackagingReport);
+const fetchPostSecondaryPackagingReport = async (): Promise<
+  PostSecondaryPackagingSummary[]
+> => {
+  const response = await axiosClient.get(
+    API_ROUTES.productionOrders.postSecondaryPackagingReport,
+  );
   return response.data;
 };
 
@@ -2497,7 +2513,13 @@ const fetchDatePrintExportTemplates = async (id: string | number) => {
   return response.data;
 };
 
-const exportDatePrint = (id: string | number, templateId: number, format: 'word' | 'pdf' = 'word', note = '', overrides?: { print_position: string; print_content: string }) =>
+const exportDatePrint = (
+  id: string | number,
+  templateId: number,
+  format: "word" | "pdf" = "word",
+  note = "",
+  overrides?: { print_position: string; print_content: string },
+) =>
   axiosClient.post(
     `${API_ROUTES.productionOrders.base}/${id}/date-print/export/${templateId}`,
     { format, note, ...overrides },
@@ -2521,6 +2543,7 @@ const exportProductionOrderBatchReportPDF = async (id: string | number) => {
 };
 
 const productOrdersService = {
+  fetchProductionOrderCompleteness,
   fetchProductionOrders,
   fetchFinishedProducts,
   fetchSemiFinishedProducts,

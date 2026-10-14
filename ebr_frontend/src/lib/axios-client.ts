@@ -1,5 +1,6 @@
 // lib/axios-proxy.ts (Server-side)
 import axios, { AxiosError } from "axios";
+import { notifyProductionOrderDataChanged } from "./production-order-data-events";
 import {
   clearTokenCache,
   getTokenCache,
@@ -80,7 +81,13 @@ axiosClient.interceptors.request.use((config) => {
 });
 
 axiosClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = response.config.method?.toLowerCase();
+    if (method && ["post", "put", "patch", "delete"].includes(method)) {
+      notifyProductionOrderDataChanged(response.config.url ?? "");
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as typeof error.config & {
       _retry?: boolean;

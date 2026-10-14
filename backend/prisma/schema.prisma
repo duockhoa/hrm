@@ -655,6 +655,7 @@ model ItemFeatures {
   item_code  String
   feature_id Int
   enabled    Boolean  @default(true)
+  required   Boolean  @default(false)
   order      Int?
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
@@ -1138,6 +1139,7 @@ model ProductionOrderDocumentControls {
   batch_record_issued_by_id        Int?
   batchRecordIssuedBy              Users?           @relation("ProductionOrderBatchRecordIssuer", fields: [batch_record_issued_by_id], references: [id], map: "po_document_controls_batch_record_issued_by_fkey")
   batch_record_issued_at           DateTime?
+  feature_config_snapshot          Json?
   batch_record_received_by_id      Int?
   batchRecordReceivedBy            Users?           @relation("ProductionOrderBatchRecordReceiver", fields: [batch_record_received_by_id], references: [id], map: "po_document_controls_batch_record_received_by_fkey")
   batch_record_received_at         DateTime?

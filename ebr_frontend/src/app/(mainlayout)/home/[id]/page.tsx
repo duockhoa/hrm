@@ -3,6 +3,8 @@
 import {
   DETAIL_COMPONENTS,
   ProductOrderDetail,
+  ProductionOrderCompletenessChecklist,
+  getProductionOrderSectionId,
   PRODUCTION_ORDER_DETAIL_TYPES,
   type ProductionOrderDetailSelection,
 } from "@/features/production-orders";
@@ -441,8 +443,17 @@ export default function DetailLotPage() {
                   }
                 />
               </div>
+              <div className="mt-2 flex flex-col items-center md:mt-4">
+                <ProductionOrderCompletenessChecklist
+                  productionOrderId={params.id}
+                />
+              </div>
               {shouldRenderDateChecks ? (
-                <div className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4">
+                <div
+                  id={getProductionOrderSectionId("date_checks")}
+                  tabIndex={-1}
+                  className="mt-2 scroll-mt-4 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
+                >
                   <InlineProductionOrderDateChecks
                     data={productionOrderDateChecks}
                     selectedCheckId={null}
@@ -460,6 +471,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderMixingRecord
@@ -475,6 +488,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderAttachments
@@ -495,6 +510,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderDeviations
@@ -515,6 +532,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderEnvironmentChecks
@@ -535,6 +554,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderHygieneChecks
@@ -555,6 +576,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderLineClearanceChecks
@@ -575,6 +598,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderDensityChecks
@@ -595,6 +620,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderSecondaryPackagingChecks
@@ -615,6 +642,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderPostHomogenizationGranuleChecks
@@ -635,6 +664,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlinePreSecondaryPackagingChecks
@@ -655,6 +686,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderPostPreparationSolutionChecks
@@ -675,6 +708,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderFriabilityChecks
@@ -695,6 +730,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderCylinderCalibration
@@ -714,6 +751,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderDisintegrationChecks
@@ -734,6 +773,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderVialInspectionChecks
@@ -762,6 +803,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderHardCapsuleLeakageChecks
@@ -782,6 +825,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineLeakTightnessChecks
@@ -802,6 +847,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderVolumeChecks
@@ -822,6 +869,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderSensoryChecks
@@ -842,6 +891,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderProductSensoryChecks
@@ -862,6 +913,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderSprayDoseChecks
@@ -882,6 +935,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderHardnessChecks
@@ -902,6 +957,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderTabletThicknessChecks
@@ -922,6 +979,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderSemiFinishedGrossWeightChecks
@@ -942,6 +1001,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderSemiFinishedNetWeightChecks
@@ -962,6 +1023,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderShellWeightChecks
@@ -982,6 +1045,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderTenShellWeightCheck
@@ -1002,6 +1067,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderFinishedProductSummary
@@ -1022,6 +1089,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderSemiFinishedProductSummaries
@@ -1042,6 +1111,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderMaterialProcessSummaries
@@ -1062,6 +1133,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderFactoryReleaseReviews
@@ -1082,6 +1155,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlinePrimaryPackagingConfirmations
@@ -1102,6 +1177,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderSamplingRecords
@@ -1121,6 +1198,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderDisinfectantPreparations
@@ -1140,6 +1219,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineMaterialSummarySection
@@ -1153,6 +1234,8 @@ export default function DetailLotPage() {
                   return (
                     <div
                       key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
                       className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
                     >
                       <InlineProductionOrderLines

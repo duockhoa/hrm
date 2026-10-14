@@ -16,6 +16,7 @@ import type {
   ProductionOrderStageIdFilter,
 } from './dto/export-production-order-lines.dto';
 import { FeaturesService } from '../features/features.service';
+import { readFeatureConfigSnapshot } from '../features/item-feature-config';
 import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
 import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 import { UpdateProductionOrderChangeContentDto } from './dto/update-production-order-change-content.dto';
@@ -280,9 +281,14 @@ export class ProductionOrdersService {
       return productionOrder;
     }
 
-    const featureConfig = await this.featuresService.findConfigByItemCode(
-      productionOrder.item_code,
-    );
+    const featureConfig =
+      readFeatureConfigSnapshot(
+        productionOrder.documentControl?.feature_config_snapshot,
+        productionOrder.item_code,
+      ) ??
+      (await this.featuresService.findConfigByItemCode(
+        productionOrder.item_code,
+      ));
 
     return {
       ...this.addPyclmInfo(productionOrder),
@@ -419,11 +425,25 @@ export class ProductionOrdersService {
     });
   }
 
-  async exportDatePrint(id: number, templateId: number, format = 'word', note = '', overrides: { print_position?: string; print_content?: string } = {}) {
-    for (const [key, limit] of [['print_position', 2000], ['print_content', 20000]] as const) {
+  async exportDatePrint(
+    id: number,
+    templateId: number,
+    format = 'word',
+    note = '',
+    overrides: { print_position?: string; print_content?: string } = {},
+  ) {
+    for (const [key, limit] of [
+      ['print_position', 2000],
+      ['print_content', 20000],
+    ] as const) {
       const value = overrides[key];
-      if (value !== undefined && (typeof value !== 'string' || value.length > limit)) {
-        throw new BadRequestException(`${key} phải là chuỗi tối đa ${limit} ký tự.`);
+      if (
+        value !== undefined &&
+        (typeof value !== 'string' || value.length > limit)
+      ) {
+        throw new BadRequestException(
+          `${key} phải là chuỗi tối đa ${limit} ký tự.`,
+        );
       }
     }
     if (typeof note !== 'string' || note.length > 2000) {
@@ -447,7 +467,11 @@ export class ProductionOrdersService {
       print_content: overrides.print_content ?? template.print_content,
     };
     return format === 'pdf'
-      ? this.productionOrderExportService.exportDatePrintPdf(order, exportTemplate, note.trim())
+      ? this.productionOrderExportService.exportDatePrintPdf(
+          order,
+          exportTemplate,
+          note.trim(),
+        )
       : exportDatePrint(order, exportTemplate, note.trim());
   }
 
@@ -742,9 +766,14 @@ export class ProductionOrdersService {
       }
     }
 
-    const featureConfig = await this.featuresService.findConfigByItemCode(
-      productionOrder.item_code,
-    );
+    const featureConfig =
+      readFeatureConfigSnapshot(
+        productionOrder.documentControl?.feature_config_snapshot,
+        productionOrder.item_code,
+      ) ??
+      (await this.featuresService.findConfigByItemCode(
+        productionOrder.item_code,
+      ));
 
     return {
       ...this.addPyclmInfo(productionOrder),

@@ -29,6 +29,7 @@ import type { Response } from 'express';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { ProductionOrdersService } from './production-orders.service';
+import { ProductionOrderCompletenessService } from './production-order-completeness.service';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import type { ExportProductionOrderLinesDto } from './dto/export-production-order-lines.dto';
 import { CreateProductionOrderSamplingRequestDto } from './dto/create-production-order-sampling-request.dto';
@@ -400,6 +401,7 @@ const encodeContentDispositionFilename = (filename: string) =>
 export class ProductionOrdersController {
   constructor(
     private readonly productionOrdersService: ProductionOrdersService,
+    private readonly productionOrderCompletenessService: ProductionOrderCompletenessService,
     private readonly productionOrderSamplingRequestsService: ProductionOrderSamplingRequestsService,
     private readonly productionOrderSamplingRecordsService: ProductionOrderSamplingRecordsService,
     private readonly productionOrderDisinfectantPreparationsService: ProductionOrderDisinfectantPreparationsService,
@@ -466,7 +468,9 @@ export class ProductionOrdersController {
     return this.productionOrderFinishedProductSummariesService.findAll();
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ)
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+  )
   @Get('post-secondary-packaging-summaries')
   async findAllPostSecondaryPackagingSummaries() {
     return this.productionOrderPostSecondaryPackagingSummariesService.findAllForReport();
@@ -2234,7 +2238,12 @@ export class ProductionOrdersController {
     @Query('format') format = 'word',
     @Query('note') note = '',
   ) {
-    const file = await this.productionOrdersService.exportDatePrint(id, templateId, format, note);
+    const file = await this.productionOrdersService.exportDatePrint(
+      id,
+      templateId,
+      format,
+      note,
+    );
     response.set({
       'Content-Disposition': `attachment; filename="${file.filename}"`,
       'Content-Length': file.buffer.length,
@@ -2249,11 +2258,23 @@ export class ProductionOrdersController {
     @Param('id', ParseIntPipe) id: number,
     @Param('templateId', ParseIntPipe) templateId: number,
     @Res({ passthrough: true }) response: Response,
-    @Body() body: { format?: string; note?: string; print_position?: string; print_content?: string },
+    @Body()
+    body: {
+      format?: string;
+      note?: string;
+      print_position?: string;
+      print_content?: string;
+    },
   ) {
     const file = await this.productionOrdersService.exportDatePrint(
-      id, templateId, body.format, body.note,
-      { print_position: body.print_position, print_content: body.print_content },
+      id,
+      templateId,
+      body.format,
+      body.note,
+      {
+        print_position: body.print_position,
+        print_content: body.print_content,
+      },
     );
     response.set({
       'Content-Disposition': `attachment; filename="${file.filename}"`,
@@ -2286,8 +2307,10 @@ export class ProductionOrdersController {
     @Res({ passthrough: true }) response: Response,
     @Request() req: any,
   ) {
-    const exportedFile =
-      await this.productionOrdersService.exportBatchReport(id, req?.user);
+    const exportedFile = await this.productionOrdersService.exportBatchReport(
+      id,
+      req?.user,
+    );
     const filenameFallback = getAsciiFilenameFallback(exportedFile.filename);
     const encodedFilename = encodeContentDispositionFilename(
       exportedFile.filename,
@@ -2305,6 +2328,12 @@ export class ProductionOrdersController {
   @Get(':id')
   async findProductionOrderById(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderById(id);
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Get(':id/completeness')
+  async findCompleteness(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrderCompletenessService.findByProductionOrder(id);
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)

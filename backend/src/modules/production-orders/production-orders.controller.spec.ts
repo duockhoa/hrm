@@ -4,6 +4,7 @@ import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { ProductionOrdersController } from './production-orders.controller';
 import { ProductionOrdersService } from './production-orders.service';
+import { ProductionOrderCompletenessService } from './production-order-completeness.service';
 import type { Response } from 'express';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderSamplingRecordsService } from './production-order-sampling-records.service';
@@ -709,6 +710,10 @@ describe('ProductionOrdersController', () => {
       controllers: [ProductionOrdersController],
       providers: [
         {
+          provide: ProductionOrderCompletenessService,
+          useValue: { findByProductionOrder: jest.fn() },
+        },
+        {
           provide: ProductionOrdersService,
           useValue: productionOrdersService,
         },
@@ -903,6 +908,10 @@ describe('ProductionOrdersController', () => {
     const readPostRoutes = new Set(['exportPostWeighingMaterialCheck']);
     const dedicatedPermissionRoutes = new Map([
       [
+        'findAllPostSecondaryPackagingSummaries',
+        PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
+      ],
+      [
         'findPostSecondaryPackagingSummaryById',
         PRODUCTION_ORDER_PERMISSIONS.POST_SECONDARY_PACKAGING_SUMMARY_READ,
       ],
@@ -1016,8 +1025,14 @@ describe('ProductionOrdersController', () => {
       ],
       ['exportProductionOrder', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
       ['exportDatePrint', PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT],
-      ['exportDatePrintWithOverrides', PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT],
-      ['findDatePrintExportTemplates', PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT],
+      [
+        'exportDatePrintWithOverrides',
+        PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT,
+      ],
+      [
+        'findDatePrintExportTemplates',
+        PRODUCTION_ORDER_PERMISSIONS.EXPORT_DATE_PRINT,
+      ],
       ['exportBatchReport', PRODUCTION_ORDER_PERMISSIONS.EXPORT],
       [
         'exportProductionOrderLines',
@@ -1175,7 +1190,7 @@ describe('ProductionOrdersController', () => {
       filename: 'Bao cao lo san xuat Dược Khoa 001.pdf',
     });
     const response = { set: jest.fn() } as unknown as Response;
-    const result = await controller.exportBatchReport(1, response);
+    const result = await controller.exportBatchReport(1, response, {});
     expect(productionOrdersService.exportBatchReport).toHaveBeenCalledWith(
       1,
       undefined,
@@ -2664,14 +2679,23 @@ describe('ProductionOrdersController', () => {
 
   it('exposes the cross-order vial inspection list as a protected static GET route', async () => {
     const checks = [{ id: 1, production_order_id: 2031 }];
-    productionOrderVialInspectionChecksService.findAll.mockResolvedValue(checks);
-    await expect(controller.findAllVialInspectionChecks()).resolves.toBe(checks);
-    expect(productionOrderVialInspectionChecksService.findAll).toHaveBeenCalledWith();
-    const handler = ProductionOrdersController.prototype.findAllVialInspectionChecks;
+    productionOrderVialInspectionChecksService.findAll.mockResolvedValue(
+      checks,
+    );
+    await expect(controller.findAllVialInspectionChecks()).resolves.toBe(
+      checks,
+    );
+    expect(
+      productionOrderVialInspectionChecksService.findAll,
+    ).toHaveBeenCalledWith();
+    const handler =
+      ProductionOrdersController.prototype.findAllVialInspectionChecks;
     expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(
       'vial-inspection-checks',
     );
-    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(RequestMethod.GET);
+    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+      RequestMethod.GET,
+    );
     expect(Reflect.getMetadata(PERMISSIONS_KEY, handler)).toEqual([
       PRODUCTION_ORDER_PERMISSIONS.READ,
     ]);

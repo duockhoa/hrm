@@ -3,6 +3,7 @@ type ProductionOrderFeatureEntry = {
   kind: string;
   order?: number | null;
   enabled?: boolean;
+  required?: boolean;
 };
 
 type ProductionOrderFeatureConfig = {
@@ -44,6 +45,7 @@ const FRONTEND_ALWAYS_ENABLED_KEYS: Record<
 };
 
 const FEATURE_KEY_ALIASES: Record<string, string> = {
+  cylinder_calibratio: "cylinder_calibration",
   "vial-inspection-summary": "vial_inspection_checks",
   vial_inspection_summary: "vial_inspection_checks",
   vial_inspection_summaries: "vial_inspection_checks",
