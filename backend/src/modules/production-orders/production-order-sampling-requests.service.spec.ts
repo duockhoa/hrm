@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import axios from 'axios';
 import { PrismaService } from 'src/prisma.service';
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
+import { EmailSettingsService } from '../email-settings/email-settings.service';
 
 jest.mock('axios');
 
@@ -9,6 +10,7 @@ const mockedAxiosPost = axios.post as jest.MockedFunction<typeof axios.post>;
 
 describe('ProductionOrderSamplingRequestsService', () => {
   let service: ProductionOrderSamplingRequestsService;
+  const emailSettingsService = { resolveRecipients: jest.fn() };
   let prismaService: {
     productionOrders: {
       findUnique: jest.Mock;
@@ -28,6 +30,9 @@ describe('ProductionOrderSamplingRequestsService', () => {
       'https://script.google.com/macros/s/test/exec';
     delete process.env.APPS_SCRIPT_PYCLM_TIMEOUT_MS;
     mockedAxiosPost.mockReset();
+    emailSettingsService.resolveRecipients
+      .mockReset()
+      .mockResolvedValue(['binh@example.com']);
 
     prismaService = {
       productionOrders: {
@@ -46,6 +51,7 @@ describe('ProductionOrderSamplingRequestsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProductionOrderSamplingRequestsService,
+        { provide: EmailSettingsService, useValue: emailSettingsService },
         {
           provide: PrismaService,
           useValue: prismaService,
@@ -110,6 +116,11 @@ describe('ProductionOrderSamplingRequestsService', () => {
       { id: 7, name: 'Binh', email: 'binh@example.com' },
     );
 
+    expect(emailSettingsService.resolveRecipients).toHaveBeenCalledWith(
+      'sampling_request',
+      7,
+    );
+
     expect(mockedAxiosPost).toHaveBeenCalledWith(
       'https://script.google.com/macros/s/test/exec',
       {
@@ -167,6 +178,54 @@ describe('ProductionOrderSamplingRequestsService', () => {
     });
   });
 
+  it('passes configured recipient lists to the sampling provider', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({
+      id: 2031,
+      item_code: 'TP00063',
+      item: { item_name: 'Test', registration: null },
+      planned_quatity: 1000,
+      unit: 'kg',
+      lot_no: '010126',
+      expire_date: '2028-05-03',
+      warehouse: 'Kho',
+    });
+    emailSettingsService.resolveRecipients.mockResolvedValue([
+      'qc@example.com',
+      'qa@example.com',
+    ]);
+    mockedAxiosPost.mockResolvedValue({
+      data: {
+        status: 'success',
+        url: 'https://docs.google.com/document/d/test',
+      },
+    });
+    prismaService.productionOrderSamplingRequests.create.mockResolvedValue({});
+
+    await service.create(2031, {}, { id: 7, email: 'binh@example.com' });
+
+    expect(mockedAxiosPost).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        emailRecipients: 'qc@example.com,qa@example.com',
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('does not send or save a sampling request when recipients cannot be resolved', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    emailSettingsService.resolveRecipients.mockRejectedValue(
+      new Error('Missing email'),
+    );
+    await expect(service.create(2031, {}, { id: 7 })).rejects.toThrow(
+      'Missing email',
+    );
+    expect(mockedAxiosPost).not.toHaveBeenCalled();
+    expect(
+      prismaService.productionOrderSamplingRequests.create,
+    ).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['BTP00063', 'PYCLM BÁN THÀNH PHẨM'],
     [' nl00063 ', 'PYCLM NGUYÊN LIỆU'],
@@ -194,7 +253,9 @@ describe('ProductionOrderSamplingRequestsService', () => {
           url: 'https://docs.google.com/document/d/test',
         },
       });
-      prismaService.productionOrderSamplingRequests.create.mockResolvedValue({});
+      prismaService.productionOrderSamplingRequests.create.mockResolvedValue(
+        {},
+      );
 
       await service.create(2031, {}, { id: 7, name: 'Binh' });
 

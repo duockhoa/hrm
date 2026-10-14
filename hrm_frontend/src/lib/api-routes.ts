@@ -47,6 +47,11 @@ const APPLICATIONS = {
   base: "/applications",
 };
 
+const EMAIL_SETTINGS = {
+  defaults: "/email-settings/defaults",
+  types: "/email-settings/types",
+};
+
 export const API_ROUTES = {
   auth: AUTH,
   users: USERS,
@@ -58,4 +63,5 @@ export const API_ROUTES = {
   userLoginSessions: USER_LOGIN_SESSIONS,
   auditLogs: AUDIT_LOGS,
   applications: APPLICATIONS,
+  emailSettings: EMAIL_SETTINGS,
 };

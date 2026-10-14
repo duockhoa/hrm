@@ -139,9 +139,48 @@ model Users {
   loginSessions                                         UserLoginSessions[]
   receivedNotifications                                 Notifications[]                                                 @relation("NotificationRecipient")
   createdNotifications                                  Notifications[]                                                 @relation("NotificationActor")
+  emailRecipientSettings                                EmailUserRecipients[]
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
+}
+
+model EmailTypes {
+  id                Int                     @id @default(autoincrement())
+  code              String                  @unique @db.VarChar(100)
+  name              String                  @db.VarChar(255)
+  created_at        DateTime                @default(now()) @db.DateTime(3)
+  updated_at        DateTime                @default(now()) @updatedAt @db.DateTime(3)
+  defaultRecipients EmailDefaultRecipients?
+  userRecipients    EmailUserRecipients[]
+
+  @@map("email_types")
+}
+
+model EmailDefaultRecipients {
+  id            Int        @id @default(autoincrement())
+  email_type_id Int        @unique
+  email         String     @db.Text
+  created_at    DateTime   @default(now()) @db.DateTime(3)
+  updated_at    DateTime   @default(now()) @updatedAt @db.DateTime(3)
+  emailType     EmailTypes @relation(fields: [email_type_id], references: [id], onDelete: Cascade)
+
+  @@map("email_default_recipients")
+}
+
+model EmailUserRecipients {
+  id            Int        @id @default(autoincrement())
+  user_id       Int
+  email_type_id Int
+  email         String     @db.Text
+  created_at    DateTime   @default(now()) @db.DateTime(3)
+  updated_at    DateTime   @default(now()) @updatedAt @db.DateTime(3)
+  user          Users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  emailType     EmailTypes @relation(fields: [email_type_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, email_type_id])
+  @@index([email_type_id])
+  @@map("email_user_recipients")
 }
 
 model UserProfiles {

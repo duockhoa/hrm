@@ -8,6 +8,8 @@ import {
 import { Prisma } from '@prisma/client';
 import axios, { AxiosError } from 'axios';
 import { PrismaService } from 'src/prisma.service';
+import { EmailSettingsService } from '../email-settings/email-settings.service';
+import { EMAIL_TYPE_CODES } from '../email-settings/constants/email-settings.constants';
 import { CreateProductionOrderSamplingRequestDto } from './dto/create-production-order-sampling-request.dto';
 
 type AppsScriptPyclmResponse = {
@@ -27,9 +29,7 @@ type AuthenticatedUser = {
 const DEFAULT_PYCLM_API_TIMEOUT_MS = 30000;
 
 type PyclmSubjectPrefix =
-  | 'PYCLM THÀNH PHẨM'
-  | 'PYCLM BÁN THÀNH PHẨM'
-  | 'PYCLM NGUYÊN LIỆU';
+  'PYCLM THÀNH PHẨM' | 'PYCLM BÁN THÀNH PHẨM' | 'PYCLM NGUYÊN LIỆU';
 
 const padTwoDigits = (value: number) => String(value).padStart(2, '0');
 
@@ -144,7 +144,10 @@ const samplingRequestInclude = {
 
 @Injectable()
 export class ProductionOrderSamplingRequestsService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly emailSettingsService: EmailSettingsService,
+  ) {}
 
   async findAllByProductionOrder(productionOrderId: number) {
     await this.ensureProductionOrderExists(productionOrderId);
@@ -202,7 +205,16 @@ export class ProductionOrderSamplingRequestsService {
     //   };
     // }
 
-    const payload = this.buildPyclmPayload(productionOrder, dto, user);
+    const recipients = await this.emailSettingsService.resolveRecipients(
+      EMAIL_TYPE_CODES.SAMPLING_REQUEST,
+      this.normalizeUserId(user),
+    );
+    const payload = this.buildPyclmPayload(
+      productionOrder,
+      dto,
+      user,
+      recipients,
+    );
     const providerResponse = await this.sendPyclmRequest(payload);
 
     await this.saveProductionOrderRegistrationNumber(
@@ -251,6 +263,7 @@ export class ProductionOrderSamplingRequestsService {
     }>,
     dto: CreateProductionOrderSamplingRequestDto,
     user?: AuthenticatedUser,
+    recipients: string[] = [],
   ) {
     const registrationNumber =
       this.getProductionOrderRegistrationNumber(productionOrder);
@@ -270,7 +283,7 @@ export class ProductionOrderSamplingRequestsService {
         this.normalizeOptionalString(dto.location) ??
         productionOrder.warehouse ??
         '',
-      emailRecipients: this.getEmailRecipients(user),
+      emailRecipients: recipients.join(','),
       subjectPrefix: this.getPyclmSubjectPrefix(productionOrder.item_code),
     };
   }
@@ -398,13 +411,6 @@ export class ProductionOrderSamplingRequestsService {
     );
   }
 
-  private getEmailRecipients(user?: AuthenticatedUser) {
-    const recipients = this.normalizeEmailRecipients(user?.email);
-    const uniqueRecipients = [...new Set(recipients)];
-
-    return uniqueRecipients.join(',');
-  }
-
   private getPyclmSubjectPrefix(
     itemCode?: string | null,
   ): PyclmSubjectPrefix | undefined {
@@ -423,17 +429,6 @@ export class ProductionOrderSamplingRequestsService {
     }
 
     return undefined;
-  }
-
-  private normalizeEmailRecipients(value?: string | null) {
-    if (!value) {
-      return [];
-    }
-
-    return value
-      .split(',')
-      .map((recipient) => recipient.trim())
-      .filter(Boolean);
   }
 
   private shouldResend(value?: boolean | string | null) {

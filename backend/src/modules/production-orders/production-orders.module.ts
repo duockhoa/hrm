@@ -58,9 +58,11 @@ import { ProductionOrderAttachmentsService } from './production-order-attachment
 import { ProductionOrderMixingRecordsService } from './production-order-mixing-records.service';
 import { ProductionOrderMixingRecordsController } from './production-order-mixing-records.controller';
 import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.module';
+import { EmailSettingsModule } from '../email-settings/email-settings.module';
 
 @Module({
   imports: [
+    EmailSettingsModule,
     FeaturesModule,
     SapB1ConnectorModule,
     UsersModule,

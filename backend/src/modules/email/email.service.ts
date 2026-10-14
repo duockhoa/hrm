@@ -4,6 +4,7 @@ import axios, { AxiosError } from 'axios';
 import { EventNames } from 'src/event.interface';
 import { DEFAULT_EMAIL_TEXT_BODY } from './constants/email.constants';
 import { SendEmailDto } from './dto/send-email.dto';
+import { EmailSettingsService } from '../email-settings/email-settings.service';
 import {
   AppsScriptEmailResponse,
   SendEmailResponse,
@@ -19,6 +20,20 @@ interface EmailPayload {
 
 @Injectable()
 export class EmailService {
+  constructor(private readonly emailSettingsService: EmailSettingsService) {}
+
+  async sendConfiguredEmail(
+    emailTypeCode: string,
+    userId: number,
+    dto: Omit<SendEmailDto, 'recipients' | 'emailTypeCode'>,
+  ): Promise<SendEmailResponse> {
+    const recipients = await this.emailSettingsService.resolveRecipients(
+      emailTypeCode,
+      userId,
+    );
+    return this.sendEmail({ ...dto, recipients });
+  }
+
   async sendEmail(sendEmailDto: SendEmailDto): Promise<SendEmailResponse> {
     const payload = this.buildPayload(sendEmailDto);
 

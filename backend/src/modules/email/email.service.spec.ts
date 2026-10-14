@@ -3,20 +3,26 @@ import { HttpStatus } from '@nestjs/common';
 import axios from 'axios';
 import { EmailService } from './email.service';
 import { DEFAULT_EMAIL_TEXT_BODY } from './constants/email.constants';
+import { EmailSettingsService } from '../email-settings/email-settings.service';
 
 jest.mock('axios');
 
 describe('EmailService', () => {
   let service: EmailService;
   const mockedAxios = axios as jest.Mocked<typeof axios>;
+  const emailSettingsService = { resolveRecipients: jest.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [EmailService],
+      providers: [
+        EmailService,
+        { provide: EmailSettingsService, useValue: emailSettingsService },
+      ],
     }).compile();
 
     service = module.get<EmailService>(EmailService);
     mockedAxios.post.mockReset();
+    emailSettingsService.resolveRecipients.mockReset();
     process.env.APPS_SCRIPT_EMAIL_API_URL =
       'https://example.com/apps-script-email';
     process.env.EMAIL_SENDER_NAME = 'DKPHARMA APP';
@@ -71,6 +77,44 @@ describe('EmailService', () => {
         message: 'Email sent',
       },
     });
+  });
+
+  it('uses configured recipients when sending an email by type', async () => {
+    emailSettingsService.resolveRecipients.mockResolvedValue([
+      'qc@example.com',
+      'qa@example.com',
+    ]);
+    mockedAxios.post.mockResolvedValue({ data: { status: 'success' } });
+
+    await service.sendConfiguredEmail('sampling_request', 7, {
+      subject: 'Phiếu lấy mẫu',
+      message: 'Nội dung',
+    });
+
+    expect(emailSettingsService.resolveRecipients).toHaveBeenCalledWith(
+      'sampling_request',
+      7,
+    );
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        recipients: ['qc@example.com', 'qa@example.com'],
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('does not call the provider when recipients cannot be resolved', async () => {
+    emailSettingsService.resolveRecipients.mockRejectedValue(
+      new Error('Missing email'),
+    );
+    await expect(
+      service.sendConfiguredEmail('sampling_request', 7, {
+        subject: 'Test',
+        message: 'Hello',
+      }),
+    ).rejects.toThrow('Missing email');
+    expect(mockedAxios.post).not.toHaveBeenCalled();
   });
 
   it('throws a clear error when the Apps Script email URL is missing', async () => {

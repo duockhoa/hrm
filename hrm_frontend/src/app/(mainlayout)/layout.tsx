@@ -10,6 +10,7 @@ import {
   MdBusiness,
   MdHistory,
   MdKey,
+  MdMailOutline,
   MdPerson,
 } from "react-icons/md";
 import useUsersStore from "@/store/users.store";
@@ -73,6 +74,13 @@ const data = [
     url: "/audit-logs",
     permission: "permissions.list",
   },
+  {
+    id: "9",
+    name: "Email mặc định",
+    icon: <MdMailOutline />,
+    url: "/email-settings",
+    permissions: ["email-settings.read", "email-settings.update"],
+  },
 ];
 
 export default function MainLayout({
@@ -133,9 +141,13 @@ function MainLayoutContent({
   );
   const visibleMenu = data.filter(
     (item) =>
-      !("permission" in item) ||
-      (item.permission !== undefined &&
-        myPermissions?.permissionKeys.includes(item.permission)),
+      (!("permissions" in item) ||
+        item.permissions?.some((permission) =>
+          myPermissions?.permissionKeys.includes(permission),
+        )) &&
+      (!("permission" in item) ||
+        (item.permission !== undefined &&
+          myPermissions?.permissionKeys.includes(item.permission))),
   );
   useEffect(() => {
     setCompaniesLoading(isCompaniesLoading);
