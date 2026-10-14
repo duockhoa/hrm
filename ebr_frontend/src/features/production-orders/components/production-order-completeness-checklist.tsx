@@ -7,10 +7,8 @@ import {
   ArrowDown,
   CheckCircle2,
   LoaderCircle,
-  RefreshCw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { API_ROUTES } from "@/lib/api-routes";
 import { PRODUCTION_ORDER_DATA_CHANGED } from "@/lib/production-order-data-events";
 import { productOrdersService } from "@/services/index.service";
@@ -24,7 +22,7 @@ export default function ProductionOrderCompletenessChecklist({
   productionOrderId: string | number;
 }) {
   const { mutate: mutateCache } = useSWRConfig();
-  const { data, error, isLoading, isValidating, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     API_ROUTES.productionOrders.completeness(productionOrderId),
     () =>
       productOrdersService.fetchProductionOrderCompleteness(productionOrderId),
@@ -51,20 +49,7 @@ export default function ProductionOrderCompletenessChecklist({
       aria-label="Dữ liệu bắt buộc của hồ sơ lô"
       className="w-full max-w-4xl rounded-md border bg-white p-4 shadow-sm"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold">Dữ liệu bắt buộc của hồ sơ lô</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={isValidating}
-          onClick={() => void mutate()}
-        >
-          <RefreshCw
-            className={`size-4 ${isValidating ? "animate-spin" : ""}`}
-          />
-          Kiểm tra lại
-        </Button>
-      </div>
+      <h2 className="font-semibold">Dữ liệu bắt buộc của hồ sơ lô</h2>
       {error ? (
         <p role="alert" className="mt-2 text-sm text-destructive">
           Không thể kiểm tra dữ liệu bắt buộc. Vui lòng thử lại.
@@ -76,11 +61,6 @@ export default function ProductionOrderCompletenessChecklist({
         </p>
       ) : (
         <>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {data.configuration_source === "snapshot"
-              ? "Yêu cầu đã được lưu riêng cho hồ sơ lô này."
-              : "Yêu cầu theo cấu hình mã hàng hiện tại, sẽ được lưu khi phát hồ sơ lô."}
-          </p>
           {data.required_count === 0 ? (
             <p className="mt-3 text-sm">
               Lô này chưa có section bắt buộc có dữ liệu.
@@ -142,10 +122,6 @@ export default function ProductionOrderCompletenessChecklist({
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Kiểm tra sự hiện diện của dữ liệu. Các yêu cầu về nội dung, tần
-                suất và chữ ký được kiểm tra riêng.
-              </p>
             </>
           )}
         </>

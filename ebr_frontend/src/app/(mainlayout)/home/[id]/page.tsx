@@ -3,7 +3,6 @@
 import {
   DETAIL_COMPONENTS,
   ProductOrderDetail,
-  ProductionOrderCompletenessChecklist,
   getProductionOrderSectionId,
   PRODUCTION_ORDER_DETAIL_TYPES,
   type ProductionOrderDetailSelection,
@@ -441,11 +440,6 @@ export default function DetailLotPage() {
                       id: summaryId,
                     })
                   }
-                />
-              </div>
-              <div className="mt-2 flex flex-col items-center md:mt-4">
-                <ProductionOrderCompletenessChecklist
-                  productionOrderId={params.id}
                 />
               </div>
               {shouldRenderDateChecks ? (

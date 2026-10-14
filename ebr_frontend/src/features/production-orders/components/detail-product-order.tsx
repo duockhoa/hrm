@@ -7,7 +7,9 @@ import {
   isProductionOrderFeatureEnabled,
   type ProductionOrderFeatureConfig,
 } from "@/features/features";
-import { getProductionOrderSectionId } from "./production-order-completeness-checklist";
+import ProductionOrderCompletenessChecklist, {
+  getProductionOrderSectionId,
+} from "./production-order-completeness-checklist";
 import { FormProductionOrderFinishedProductSummary } from "@/features/finished-product-summary";
 import { FormProductionOrderExtractionSummary } from "@/features/production-order-material-process-summaries";
 import {
@@ -1920,6 +1922,13 @@ export default function ProductOrderDetail({
           documentControl={productOrder.documentControl}
         />
       </div>
+      {productionOrderId !== null && productionOrderId !== undefined && (
+        <div className="mt-4">
+          <ProductionOrderCompletenessChecklist
+            productionOrderId={productionOrderId}
+          />
+        </div>
+      )}
       {isProductionOrderFeatureEnabled(
         featureConfig,
         "section",

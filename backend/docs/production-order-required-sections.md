@@ -30,7 +30,7 @@ Migration lưu cấu hình hiện tại cho các hồ sơ đã phát trước kh
 
 Kết quả gồm `configuration_source` (`item` hoặc `snapshot`), `rule_version`, `required_count`, `completed_count`, `is_complete`, `required_sections`, `missing_sections` và `unavailable_sections`. Mỗi section có key, tên, thứ tự, quy tắc, số bản ghi và trạng thái `has_data`, `missing` hoặc `unavailable`.
 
-Checklist xuất hiện trên cả ba trang chi tiết lô. Liên kết tên mục đưa người dùng đến section tương ứng. Kết quả được kiểm tra lại sau thao tác lưu/xóa/cấu hình, khi quay lại trang và định kỳ 30 giây; có nút kiểm tra lại thủ công. Giao diện không thêm bước xác nhận hoàn tất và không chặn nhập liệu hay xuất biểu mẫu.
+Checklist xuất hiện trên cả ba trang chi tiết lô, trước section kiểm tra tiệt trùng. Liên kết tên mục đưa người dùng đến section tương ứng. Kết quả tự động được kiểm tra lại sau thao tác lưu/xóa/cấu hình, khi quay lại trang và định kỳ 30 giây. Giao diện không thêm bước xác nhận hoàn tất và không chặn nhập liệu hay xuất biểu mẫu.
 
 ## Nâng cấp
 
