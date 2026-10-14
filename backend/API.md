@@ -9148,7 +9148,7 @@ Body:
 
 Quy tắc:
 
-- `recipients` có thể là chuỗi, chuỗi phân tách bằng dấu phẩy, hoặc mảng chuỗi.
+- `recipients` có thể là chuỗi, chuỗi phân tách bằng dấu cách/dấu phẩy, hoặc mảng chuỗi.
 - `subject` bắt buộc.
 - Cần có ít nhất một trong hai field: `message` hoặc `html`.
 - Tên người gửi được cấu hình bằng biến môi trường `EMAIL_SENDER_NAME`.

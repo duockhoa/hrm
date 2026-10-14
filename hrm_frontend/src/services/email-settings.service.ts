@@ -52,6 +52,37 @@ const emailSettingsService = {
   saveDefault,
   deleteDefault,
   createType,
+  addDefaultEmail: async (
+    emailTypeId: number,
+    email: string,
+  ): Promise<EmailRecipientConfiguration> => {
+    const response = await axiosClient.post(
+      `${API_ROUTES.emailSettings.types}/${emailTypeId}/default/recipients`,
+      { email },
+    );
+    return response.data;
+  },
+  updateDefaultEmail: async (
+    emailTypeId: number,
+    email: string,
+    newEmail: string,
+  ): Promise<EmailRecipientConfiguration> => {
+    const response = await axiosClient.patch(
+      `${API_ROUTES.emailSettings.types}/${emailTypeId}/default/recipients`,
+      { email, newEmail },
+    );
+    return response.data;
+  },
+  deleteDefaultEmail: async (
+    emailTypeId: number,
+    email: string,
+  ): Promise<EmailRecipientConfiguration> => {
+    const response = await axiosClient.delete(
+      `${API_ROUTES.emailSettings.types}/${emailTypeId}/default/recipients`,
+      { data: { email } },
+    );
+    return response.data;
+  },
 };
 
 export default emailSettingsService;

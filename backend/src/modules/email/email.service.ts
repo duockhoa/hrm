@@ -201,7 +201,7 @@ export class EmailService {
 
     return recipientList
       .flatMap((recipient) =>
-        typeof recipient === 'string' ? recipient.split(',') : [],
+        typeof recipient === 'string' ? recipient.split(/[,\s]+/) : [],
       )
       .map((recipient) => recipient.trim())
       .filter(Boolean);

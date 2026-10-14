@@ -14,6 +14,9 @@ describe('EmailSettingsController', () => {
     findPersonal: jest.fn(),
     savePersonal: jest.fn(),
     deletePersonal: jest.fn(),
+    addDefaultEmail: jest.fn(),
+    updateDefaultEmail: jest.fn(),
+    deleteDefaultEmail: jest.fn(),
   };
   const controller = new EmailSettingsController(
     service as unknown as EmailSettingsService,
@@ -29,6 +32,9 @@ describe('EmailSettingsController', () => {
       'createType',
       'updateType',
       'findDefaults',
+      'addDefaultEmail',
+      'updateDefaultEmail',
+      'deleteDefaultEmail',
     ]) {
       expect(
         Reflect.getMetadata(
@@ -119,5 +125,24 @@ describe('EmailSettingsController', () => {
         { type: 'body', metatype: SaveEmailRecipientsDto },
       ),
     ).resolves.toMatchObject({ email: '' });
+  });
+
+  it('routes single-recipient operations to their own service methods', () => {
+    controller.addDefaultEmail(1, { email: 'qc@example.com' });
+    controller.updateDefaultEmail(1, {
+      email: 'qc@example.com',
+      newEmail: 'qa@example.com',
+    });
+    controller.deleteDefaultEmail(1, { email: 'qa@example.com' });
+    expect(service.addDefaultEmail).toHaveBeenCalledWith(1, 'qc@example.com');
+    expect(service.updateDefaultEmail).toHaveBeenCalledWith(
+      1,
+      'qc@example.com',
+      'qa@example.com',
+    );
+    expect(service.deleteDefaultEmail).toHaveBeenCalledWith(
+      1,
+      'qa@example.com',
+    );
   });
 });

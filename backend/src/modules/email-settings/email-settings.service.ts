@@ -64,7 +64,7 @@ export class EmailSettingsService {
 
   async saveDefault(emailTypeId: number, value: string) {
     await this.ensureTypeExists(emailTypeId);
-    const email = this.normalizeEmails(value).join(',');
+    const email = this.normalizeEmails(value).join(' ');
     if (!email) return this.deleteDefault(emailTypeId);
     return this.prismaService.emailDefaultRecipients.upsert({
       where: { email_type_id: emailTypeId },
@@ -79,6 +79,116 @@ export class EmailSettingsService {
       where: { email_type_id: emailTypeId },
     });
     return { email_type_id: emailTypeId, email: '' };
+  }
+
+  async addDefaultEmail(emailTypeId: number, value: string) {
+    const email = this.normalizeSingleEmail(value);
+    return this.changeDefaultEmails(emailTypeId, (emails) => {
+      if (
+        emails.some(
+          (existing) => existing.toLowerCase() === email.toLowerCase(),
+        )
+      ) {
+        throw new ConflictException('Địa chỉ email này đã có trong danh sách.');
+      }
+      return [...emails, email];
+    });
+  }
+
+  async updateDefaultEmail(
+    emailTypeId: number,
+    value: string,
+    newValue: string,
+  ) {
+    const email = this.normalizeSingleEmail(value);
+    const newEmail = this.normalizeSingleEmail(newValue);
+    return this.changeDefaultEmails(emailTypeId, (emails) => {
+      const index = emails.findIndex(
+        (existing) => existing.toLowerCase() === email.toLowerCase(),
+      );
+      if (index === -1)
+        throw new NotFoundException(
+          'Không tìm thấy email trong danh sách người nhận.',
+        );
+      if (
+        emails.some(
+          (existing, position) =>
+            position !== index &&
+            existing.toLowerCase() === newEmail.toLowerCase(),
+        )
+      ) {
+        throw new ConflictException('Địa chỉ email này đã có trong danh sách.');
+      }
+      return emails.map((existing, position) =>
+        position === index ? newEmail : existing,
+      );
+    });
+  }
+
+  async deleteDefaultEmail(emailTypeId: number, value: string) {
+    const email = this.normalizeSingleEmail(value);
+    return this.changeDefaultEmails(emailTypeId, (emails) =>
+      emails.filter(
+        (existing) => existing.toLowerCase() !== email.toLowerCase(),
+      ),
+    );
+  }
+
+  private normalizeSingleEmail(value: string): string {
+    if (typeof value !== 'string' || !isEmail(value.trim())) {
+      throw new BadRequestException('Địa chỉ email không hợp lệ.');
+    }
+    return value.trim();
+  }
+
+  private async changeDefaultEmails(
+    emailTypeId: number,
+    change: (emails: string[]) => string[],
+  ) {
+    await this.ensureTypeExists(emailTypeId);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const current =
+        await this.prismaService.emailDefaultRecipients.findUnique({
+          where: { email_type_id: emailTypeId },
+        });
+      const email = this.normalizeEmails(
+        change(this.normalizeEmails(current?.email ?? '')).join(' '),
+      ).join(' ');
+      const empty = { email_type_id: emailTypeId, email: '' };
+      if (!current) {
+        if (!email) return empty;
+        try {
+          return await this.prismaService.emailDefaultRecipients.create({
+            data: { email_type_id: emailTypeId, email },
+          });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === 'P2002'
+          )
+            continue;
+          throw error;
+        }
+      }
+      // Compare the original string so concurrent edits never overwrite other recipients.
+      const where = { id: current.id, email: current.email };
+      if (!email) {
+        const result =
+          await this.prismaService.emailDefaultRecipients.deleteMany({ where });
+        if (result.count) return empty;
+      } else {
+        const result =
+          await this.prismaService.emailDefaultRecipients.updateMany({
+            where,
+            data: { email },
+          });
+        if (result.count)
+          return { id: current.id, email_type_id: emailTypeId, email };
+      }
+    }
+    throw new ConflictException(
+      'Cấu hình email đã thay đổi. Vui lòng thử lại.',
+    );
   }
 
   findPersonal(userId: number) {
@@ -187,7 +297,7 @@ export class EmailSettingsService {
     }
     const seen = new Set<string>();
     const emails = value
-      .split(',')
+      .split(/[,\s]+/)
       .map((email) => email.trim())
       .filter(Boolean);
     const unique = emails.filter((email) => {

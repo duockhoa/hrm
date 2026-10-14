@@ -91,7 +91,7 @@ export default function EmailSettingsPage() {
                   <span className="block font-semibold">{type.name}</span>
                   <span className="mt-1 block truncate text-sm text-gray-500">
                     {recipients.length
-                      ? recipients.join(", ")
+                      ? recipients.join(" ")
                       : "Chưa có người nhận mặc định"}
                   </span>
                 </span>

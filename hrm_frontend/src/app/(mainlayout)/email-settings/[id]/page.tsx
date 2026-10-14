@@ -1,6 +1,7 @@
 "use client";
 
 import useEmailSettings from "@/components/email-settings/use-email-settings";
+import DefaultEmailRecipientsSection from "@/components/email-settings/default-email-recipients-section";
 import {
   emailSettingsError,
   splitEmails,
@@ -68,7 +69,7 @@ function EmailDetail({ emailType }: { emailType: EmailTypeWithDefaults }) {
           <Button
             disabled={saving}
             onClick={() => {
-              setEmail(emailType.defaultRecipients?.email ?? "");
+              setEmail(recipients.join(" "));
               setEditing(true);
             }}
           >
@@ -104,18 +105,17 @@ function EmailDetail({ emailType }: { emailType: EmailTypeWithDefaults }) {
             <dd>{recipients.length ? "Đã cấu hình" : "Chưa cấu hình"}</dd>
           </div>
           <div className="grid gap-2 p-4 sm:grid-cols-[180px_minmax(0,1fr)]">
-            <dt className="text-gray-500">Người nhận mặc định</dt>
-            <dd className="space-y-2 break-all">
-              {recipients.length ? (
-                recipients.map((value) => <p key={value}>{value}</p>)
-              ) : (
-                <span className="text-gray-500">
-                  Chưa có người nhận mặc định.
-                </span>
-              )}
-            </dd>
+            <dt className="text-gray-500">Số người nhận</dt>
+            <dd>{recipients.length} email</dd>
           </div>
         </dl>
+        <DefaultEmailRecipientsSection
+          emailTypeId={emailType.id}
+          emails={recipients}
+          busy={saving}
+          onBusyChange={setSaving}
+          onChange={updateRecipients}
+        />
       </div>
       <Dialog
         open={editing}
@@ -146,10 +146,10 @@ function EmailDetail({ emailType }: { emailType: EmailTypeWithDefaults }) {
                 value={email}
                 disabled={saving}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="qc@example.com,qa@example.com"
+                placeholder="qc@example.com qa@example.com"
               />
               <p className="mt-2 text-xs leading-5 text-gray-500">
-                Ngăn cách các địa chỉ bằng dấu phẩy. Để trống để xóa cấu hình
+                Ngăn cách các địa chỉ bằng dấu cách. Để trống để xóa cấu hình
                 mặc định.
               </p>
             </div>
@@ -164,9 +164,7 @@ function EmailDetail({ emailType }: { emailType: EmailTypeWithDefaults }) {
               </Button>
               <Button
                 type="submit"
-                disabled={
-                  saving || email === (emailType.defaultRecipients?.email ?? "")
-                }
+                disabled={saving || email === recipients.join(" ")}
               >
                 {saving ? "Đang lưu..." : "Lưu thay đổi"}
               </Button>

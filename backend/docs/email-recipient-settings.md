@@ -2,7 +2,8 @@
 
 Ba bảng `email_types`, `email_default_recipients`, `email_user_recipients` lưu
 loại email, cấu hình mặc định và cấu hình cá nhân. Mỗi cấu hình chứa một trường
-`email TEXT`, ngăn cách các địa chỉ bằng dấu phẩy; không có `display_name`.
+`email TEXT`; cấu hình mặc định lưu các địa chỉ ngăn cách bằng một dấu cách,
+cấu hình cá nhân vẫn lưu bằng dấu phẩy. Không có `display_name` hoặc bảng con cho từng email.
 
 Mỗi loại có tối đa một cấu hình mặc định (`UNIQUE(email_type_id)`). Mỗi người dùng
 có tối đa một cấu hình cá nhân cho một loại (`UNIQUE(user_id, email_type_id)`).
@@ -18,6 +19,8 @@ thành `email-settings.manage` (Quản lý email), chuyển các vai trò đã c
 sang quyền mới rồi xóa hai quyền cũ.
 Migration `20261014040000_add_deviation_created_email_type` thêm loại **Phiếu sai lệch**
 (`production_order_deviation_created`), để trống người nhận mặc định.
+Migration `20261014050000_space_separated_default_email_recipients` chuyển dấu phẩy
+trong dữ liệu mặc định cũ sang dấu cách, giữ nguyên bảng và trường dữ liệu.
 
 Trong thư mục `backend`:
 
@@ -38,7 +41,12 @@ thể dùng API cá nhân để sửa cấu hình người khác.
 Giao diện dùng mẫu list/detail của danh sách nhân sự: `/email-settings` hiển thị
 danh sách loại email, `/email-settings/:id` mở chi tiết. Dùng thanh tìm kiếm chung
 của HRM để tìm theo tên, mã hoặc email người nhận. Có thể thêm loại email mới;
-trong chi tiết, nút Chỉnh sửa mở form nhập danh sách email ngăn cách bằng dấu phẩy.
+trong chi tiết, nút Chỉnh sửa mở form nhập danh sách email ngăn cách bằng dấu cách.
+Bên dưới phần thông tin chung là bảng **Người nhận email mặc định**: mỗi địa chỉ
+một dòng với thao tác thêm, sửa, xóa độc lập. Xóa dòng cuối sẽ xóa cấu hình mặc định.
+Backend cập nhật từng dòng vào cùng trường `email TEXT`; thao tác đồng thời được kiểm tra
+để không ghi đè thay đổi của người nhận khác. Các địa chỉ trùng không phân biệt hoa/thường
+trả 409; sửa địa chỉ không còn tồn tại trả 404.
 Trên máy tính, danh sách và chi tiết hiển thị cạnh nhau; trên điện thoại, chỉ mở
 chi tiết và có nút quay lại danh sách.
 
@@ -61,6 +69,9 @@ Tất cả API yêu cầu Bearer token. Cấu hình cá nhân luôn lấy `user_
 | GET    | `/email-settings/defaults`          | `email-settings.manage`; tất cả loại cùng `defaultRecipients`, có thể là `null` |
 | PUT    | `/email-settings/types/:id/default` | `email-settings.manage`; tạo/cập nhật mặc định                                  |
 | DELETE | `/email-settings/types/:id/default` | `email-settings.manage`; xóa mặc định                                           |
+| POST | `/email-settings/types/:id/default/recipients` | `email-settings.manage`; thêm một địa chỉ |
+| PATCH | `/email-settings/types/:id/default/recipients` | `email-settings.manage`; sửa một địa chỉ |
+| DELETE | `/email-settings/types/:id/default/recipients` | `email-settings.manage`; xóa một địa chỉ |
 | GET    | `/email-settings/me`                | Đăng nhập; danh sách cấu hình cá nhân kèm `emailType`                           |
 | PUT    | `/email-settings/types/:id/me`      | Đăng nhập; tạo/cập nhật cấu hình cá nhân                                        |
 | DELETE | `/email-settings/types/:id/me`      | Đăng nhập; xóa cấu hình cá nhân                                                 |
@@ -78,11 +89,17 @@ cần gọi bộ chọn người nhận hoặc `sendConfiguredEmail`.
 Body PUT cấu hình mặc định/cá nhân:
 
 ```json
-{ "email": "qc@example.com,qa@example.com" }
+{ "email": "qc@example.com qa@example.com" }
 ```
 
 `{ "email": "" }` tương đương DELETE. Xóa là idempotent. Loại email không tồn tại
 trả 404; địa chỉ không hợp lệ trả 400 và không thay đổi cấu hình.
+API vẫn đọc/nhận danh sách dấu phẩy cũ và các khoảng trắng (dấu cách, xuống dòng, tab).
+
+Body POST/DELETE cho một người nhận: `{ "email": "qc@example.com" }`.
+Body PATCH: `{ "email": "qc@example.com", "newEmail": "qa@example.com" }`.
+Các API trả cấu hình mới `{ id?, email_type_id, email }`; frontend cập nhật cả bảng
+và trạng thái chi tiết từ cấu hình này. Mỗi body chỉ nhận một địa chỉ hợp lệ.
 
 ## Chọn người nhận và gửi email
 

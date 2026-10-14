@@ -20,7 +20,9 @@ import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { EMAIL_SETTINGS_PERMISSIONS } from './constants/email-settings.constants';
 import {
   CreateEmailTypeDto,
+  DefaultEmailAddressDto,
   SaveEmailRecipientsDto,
+  UpdateDefaultEmailAddressDto,
   UpdateEmailTypeDto,
 } from './dto/email-settings.dto';
 import { EmailSettingsService } from './email-settings.service';
@@ -86,6 +88,36 @@ export class EmailSettingsController {
   @ApiOperation({ summary: 'Xóa người nhận mặc định' })
   deleteDefault(@Param('id', ParseIntPipe) id: number) {
     return this.service.deleteDefault(id);
+  }
+
+  @Post('types/:id/default/recipients')
+  @Permissions(EMAIL_SETTINGS_PERMISSIONS.MANAGE)
+  @ApiOperation({ summary: 'Thêm một email người nhận mặc định' })
+  addDefaultEmail(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: DefaultEmailAddressDto,
+  ) {
+    return this.service.addDefaultEmail(id, dto.email);
+  }
+
+  @Patch('types/:id/default/recipients')
+  @Permissions(EMAIL_SETTINGS_PERMISSIONS.MANAGE)
+  @ApiOperation({ summary: 'Sửa riêng một email người nhận mặc định' })
+  updateDefaultEmail(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateDefaultEmailAddressDto,
+  ) {
+    return this.service.updateDefaultEmail(id, dto.email, dto.newEmail);
+  }
+
+  @Delete('types/:id/default/recipients')
+  @Permissions(EMAIL_SETTINGS_PERMISSIONS.MANAGE)
+  @ApiOperation({ summary: 'Xóa riêng một email người nhận mặc định' })
+  deleteDefaultEmail(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: DefaultEmailAddressDto,
+  ) {
+    return this.service.deleteDefaultEmail(id, dto.email);
   }
 
   @Get('me')

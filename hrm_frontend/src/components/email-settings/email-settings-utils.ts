@@ -3,7 +3,7 @@ import { isAxiosError } from "axios";
 export function splitEmails(value: string): string[] {
   const seen = new Set<string>();
   return value
-    .split(",")
+    .split(/[,\s]+/)
     .map((email) => email.trim())
     .filter((email) => {
       if (!email || seen.has(email.toLowerCase())) return false;

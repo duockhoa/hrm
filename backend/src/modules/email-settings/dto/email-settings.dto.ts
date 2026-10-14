@@ -25,11 +25,27 @@ export class UpdateEmailTypeDto {
 
 export class SaveEmailRecipientsDto {
   @ApiProperty({
-    example: 'qc@example.com,qa@example.com',
+    example: 'qc@example.com qa@example.com',
     description:
-      'Địa chỉ email ngăn cách bằng dấu phẩy. Chuỗi rỗng để dùng mức ưu tiên tiếp theo.',
+      'Địa chỉ email ngăn cách bằng dấu cách; vẫn nhận dấu phẩy cho dữ liệu cũ. Chuỗi rỗng để xóa cấu hình.',
   })
   @IsString()
   @MaxLength(65535)
   email!: string;
+}
+
+export class DefaultEmailAddressDto {
+  @ApiProperty({ example: 'qc@example.com' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(254)
+  email!: string;
+}
+
+export class UpdateDefaultEmailAddressDto extends DefaultEmailAddressDto {
+  @ApiProperty({ example: 'qa@example.com' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(254)
+  newEmail!: string;
 }
