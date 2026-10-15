@@ -32,18 +32,53 @@ vào client MCP. Không cần API key của nhà cung cấp AI để chạy modu
 
 ## Tool hiện có
 
-| Tool                       | Tham số                                                         | Kết quả                                               |
-| -------------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
-| `get_server_info`          | `{}`                                                            | Kiểm tra kết nối, thông tin server; không truy vấn DB |
-| `search_production_orders` | `query?`, `item_code?`, `lot_no?`, `status?`, `page?`, `limit?` | Thông tin chính của lệnh và phân trang                |
-| `get_production_order`     | `id`                                                            | Thông tin chính của một lệnh                          |
+| Tool                                  | Tham số                                                         | Kết quả                                                                         |
+| ------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `get_server_info`                     | `{}`                                                            | Kiểm tra kết nối, thông tin server; không truy vấn DB                           |
+| `search_production_orders`            | `query?`, `item_code?`, `lot_no?`, `status?`, `page?`, `limit?` | Thông tin chính của lệnh và phân trang                                          |
+| `get_production_order`                | `id`                                                            | Thông tin chính của một lệnh                                                    |
+| `get_production_order_mixing_records` | `production_order_id`, `page?`, `limit?`                        | Phiếu pha chế đã lưu, giai đoạn, bước, thông số/kết quả và người ghi nhận/duyệt |
 
 `query` tìm trong mã lệnh, mã/tên sản phẩm và số lô. Các bộ lọc còn lại so khớp
 chính xác. `page` mặc định 1; `limit` mặc định 20, tối đa 100. Ngày được trả
 về dạng ISO 8601. Trường `planned_quatity` giữ tên hiện tại trong schema EBR.
 Module chỉ đọc dữ liệu local qua Prisma, không gọi đồng bộ SAP, không tải toàn
-bộ hồ sơ hoặc thông tin người dùng. Lỗi nghiệp vụ trả về `isError: true` trong
+bộ hồ sơ. Phiếu pha chế chỉ trả tên/username của người ghi nhận và duyệt.
+Lỗi nghiệp vụ trả về `isError: true` trong
 kết quả tool; lỗi database được ghi ở backend và trả thông báo chung cho client.
+
+### Lấy phiếu pha chế
+
+Tìm ID lệnh bằng `search_production_orders`, rồi gọi
+`get_production_order_mixing_records`. Tham số `production_order_id` là ID lệnh
+sản xuất, không phải ID phiếu. `page` mặc định 1; `limit` mặc định 5, tối đa 20.
+Tool chỉ lấy `record_type = mixing`, không lấy phiếu gia công đóng gói sơ cấp
+hoặc loại khác. Dữ liệu được đọc từ phiếu đã lưu, không dựng lại từ mẫu pha chế.
+
+Kết quả gồm `production_order`, `data` (danh sách phiếu) và `pagination`.
+Mỗi phiếu có mô tả, phiên bản mẫu, ngày tạo/cập nhật, người tạo, thông tin duyệt
+QA/IPC và cấu trúc `stages → steps → parameters`. Các thông số gồm yêu cầu,
+kết quả, đơn vị, ghi chú, người/thời gian ghi nhận và đường dẫn ảnh nếu có;
+tool không tải nội dung ảnh. Giai đoạn, bước và thông số theo thứ tự của phiếu.
+
+Nếu lệnh chưa có phiếu, tool trả `data: []` và thông báo tương ứng. Nếu lệnh
+không tồn tại, tool trả `isError: true`.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+    "name": "get_production_order_mixing_records",
+    "arguments": { "production_order_id": 123, "page": 1, "limit": 5 }
+  }
+}
+```
+
+Ví dụ hỏi client: “Lấy phiếu pha chế của lệnh sản xuất ID 123 và trình bày
+các bước, yêu cầu và kết quả đã ghi nhận.” Sau khi triển khai backend, đồng bộ
+lại hoặc kết nối lại custom app để client nhận tool mới.
 
 Ví dụ body POST để liệt kê tool sau khi client initialize:
 

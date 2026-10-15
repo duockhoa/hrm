@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
+import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
 
 const orderSelect = {
   id: true,
@@ -23,6 +24,12 @@ export interface SearchProductionOrdersInput {
   item_code?: string;
   lot_no?: string;
   status?: string;
+  page: number;
+  limit: number;
+}
+
+export interface GetProductionOrderMixingRecordsInput {
+  production_order_id: number;
   page: number;
   limit: number;
 }
@@ -80,5 +87,45 @@ export class McpToolsService {
       throw new NotFoundException(`Không tìm thấy lệnh sản xuất ID ${id}.`);
     }
     return { data: order };
+  }
+
+  async getProductionOrderMixingRecords(
+    input: GetProductionOrderMixingRecordsInput,
+  ) {
+    const { data: order } = await this.getProductionOrder(
+      input.production_order_id,
+    );
+    const where: Prisma.ProductionOrderMixingRecordsWhereInput = {
+      production_order_id: input.production_order_id,
+      record_type: 'mixing',
+    };
+    const skip = (input.page - 1) * input.limit;
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.productionOrderMixingRecords.count({ where }),
+      this.prisma.productionOrderMixingRecords.findMany({
+        where,
+        // Use the same saved structure and ordering as the batch report.
+        // Only names/usernames are selected for authors and approvers.
+        include: mixingRecordsReportInclude,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        skip,
+        take: input.limit,
+      }),
+    ]);
+
+    return {
+      production_order: order,
+      data,
+      ...(total === 0
+        ? { message: 'Lệnh sản xuất chưa có phiếu pha chế.' }
+        : {}),
+      pagination: {
+        page: input.page,
+        limit: input.limit,
+        total,
+        total_pages: Math.ceil(total / input.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
   }
 }

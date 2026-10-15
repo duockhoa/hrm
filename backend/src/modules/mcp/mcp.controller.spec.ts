@@ -5,6 +5,7 @@ import request from 'supertest';
 import type { Server } from 'node:http';
 import { PrismaService } from '../../prisma.service';
 import { McpModule } from './mcp.module';
+import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
 
 interface RpcEnvelope {
   id: number;
@@ -43,6 +44,10 @@ describe('MCP Streamable HTTP endpoint', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
     },
+    productionOrderMixingRecords: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -60,6 +65,8 @@ describe('MCP Streamable HTTP endpoint', () => {
     prisma.productionOrders.count.mockResolvedValue(0);
     prisma.productionOrders.findMany.mockResolvedValue([]);
     prisma.productionOrders.findUnique.mockResolvedValue(null);
+    prisma.productionOrderMixingRecords.count.mockResolvedValue(0);
+    prisma.productionOrderMixingRecords.findMany.mockResolvedValue([]);
     prisma.$transaction.mockImplementation((queries: Promise<unknown>[]) =>
       Promise.all(queries),
     );
@@ -100,12 +107,13 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(response.headers['mcp-session-id']).toBeUndefined();
   });
 
-  it('lists the three read-only tools', async () => {
+  it('lists the four read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
       'search_production_orders',
       'get_production_order',
+      'get_production_order_mixing_records',
     ]);
     expect(
       body(response).result.tools.every(
@@ -243,4 +251,104 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(responses.map((response) => body(response).id)).toEqual([11, 12]);
     expect(responses.every((response) => response.status === 200)).toBe(true);
   });
+
+  it('returns saved mixing record details and applies order/type filters and pagination', async () => {
+    const order = { id: 7, lot_no: 'LOT007' };
+    const record = {
+      id: 12,
+      record_type: 'mixing',
+      qa_staff_approved_at: new Date('2026-10-15T00:00:00Z'),
+      qaStaffApprovedBy: { name: 'QA', username: 'qa' },
+      stages: [
+        {
+          stage_order: 1,
+          stage_name: 'Pha chế',
+          steps: [
+            {
+              step_order: 1,
+              step_name: 'Khuấy',
+              parameters: [
+                {
+                  parameter_order: 1,
+                  parameter_name: 'Thời gian',
+                  requirement: '10 phút',
+                  result_value: '10',
+                  unit: 'phút',
+                  recordedBy: { name: 'Người ghi', username: 'operator' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    prisma.productionOrders.findUnique.mockResolvedValue(order);
+    prisma.productionOrderMixingRecords.count.mockResolvedValue(3);
+    prisma.productionOrderMixingRecords.findMany.mockResolvedValue([record]);
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_mixing_records',
+      arguments: { production_order_id: 7, page: 2, limit: 1 },
+    }).expect(200);
+    expect(prisma.productionOrderMixingRecords.findMany).toHaveBeenCalledWith({
+      where: { production_order_id: 7, record_type: 'mixing' },
+      include: mixingRecordsReportInclude,
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      skip: 1,
+      take: 1,
+    });
+    expect(body(response).result.structuredContent).toEqual({
+      production_order: order,
+      data: [{ ...record, qa_staff_approved_at: '2026-10-15T00:00:00.000Z' }],
+      pagination: {
+        page: 2,
+        limit: 1,
+        total: 3,
+        total_pages: 3,
+        has_next_page: true,
+      },
+    });
+  });
+
+  it('reports an existing order without mixing records as an empty result', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_mixing_records',
+      arguments: { production_order_id: 7 },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent).toMatchObject({
+      data: [],
+      message: 'Lệnh sản xuất chưa có phiếu pha chế.',
+      pagination: { page: 1, limit: 5, total: 0, has_next_page: false },
+    });
+  });
+
+  it('does not query mixing records when the production order does not exist', async () => {
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_mixing_records',
+      arguments: { production_order_id: 999 },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(prisma.productionOrderMixingRecords.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {},
+    { production_order_id: -1 },
+    { production_order_id: 7, limit: 21 },
+    { production_order_id: 7, page: 0 },
+  ])(
+    'validates mixing record arguments before querying the database: %j',
+    async (arguments_) => {
+      const response = await rpc('tools/call', {
+        name: 'get_production_order_mixing_records',
+        arguments: arguments_,
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+      expect(
+        prisma.productionOrderMixingRecords.findMany,
+      ).not.toHaveBeenCalled();
+    },
+  );
 });
