@@ -9,7 +9,11 @@ import { McpModule } from './mcp.module';
 interface RpcEnvelope {
   id: number;
   result: {
-    serverInfo: { name: string };
+    serverInfo: {
+      name: string;
+      title: string;
+      icons: { src: string; mimeType: string }[];
+    };
     capabilities: { tools: unknown };
     tools: { name: string; annotations: { readOnlyHint: boolean } }[];
     structuredContent: Record<string, unknown>;
@@ -78,7 +82,20 @@ describe('MCP Streamable HTTP endpoint', () => {
       capabilities: {},
       clientInfo: { name: 'test-client', version: '1.0.0' },
     }).expect(200);
-    expect(body(response).result.serverInfo.name).toBe('hrm-ebr-mcp');
+    const serverInfo = body(response).result.serverInfo;
+    expect(serverInfo.name).toBe('DKPHARMA APP');
+    expect(serverInfo.title).toBe('DKPHARMA APP');
+    expect(serverInfo.icons).toEqual([
+      {
+        src: expect.stringMatching(/^data:image\/png;base64,/),
+        mimeType: 'image/png',
+      },
+    ]);
+    const iconBytes = Buffer.from(
+      serverInfo.icons[0].src.split(',')[1],
+      'base64',
+    );
+    expect(iconBytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
     expect(body(response).result.capabilities.tools).toBeDefined();
     expect(response.headers['mcp-session-id']).toBeUndefined();
   });
@@ -104,6 +121,7 @@ describe('MCP Streamable HTTP endpoint', () => {
       arguments: {},
     }).expect(200);
     expect(body(response).result.structuredContent).toMatchObject({
+      name: 'DKPHARMA APP',
       authentication: 'none',
       read_only: true,
     });

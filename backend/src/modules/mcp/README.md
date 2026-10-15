@@ -1,6 +1,13 @@
 # MCP module
 
 Module NestJS cung cấp MCP qua Streamable HTTP tại `/mcp` trên cùng cổng backend.
+Tên server trong MCP metadata và tool `get_server_info` là `DKPHARMA APP`.
+Metadata có `title` và `icons` dùng logo DKPharma tại `templates/mcp/logo.png`.
+Icon PNG được nhúng dạng data URI, không cần URL ảnh hoặc request xác thực riêng.
+Dockerfile hiện có đóng gói thư mục `templates`, bao gồm logo này.
+Client quyết định có hiển thị icon hay không; chưa xác nhận Gemini hỗ trợ trường
+`icons`. Sau khi triển khai lại backend, kết nối lại custom app để lấy metadata
+mới. Tên connector đã lưu phía client có thể cần đổi riêng hoặc tạo lại.
 Module được đăng ký trong `AppModule`; không cần chạy thêm tiến trình hay migration.
 SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/node`.
 

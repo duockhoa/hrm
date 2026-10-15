@@ -8,6 +8,8 @@ import { createMcpHandler, McpServer } from '@modelcontextprotocol/server';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import type { Request, Response } from 'express';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import * as z from 'zod/v4';
 import { McpToolsService } from './mcp-tools.service';
 
@@ -21,6 +23,19 @@ const readOnlyAnnotations = {
 @Injectable()
 export class McpService implements OnModuleDestroy {
   private readonly logger = new Logger(McpService.name);
+  private readonly serverInfo = {
+    name: 'DKPHARMA APP',
+    title: 'DKPHARMA APP',
+    version: '1.0.0',
+    icons: [
+      {
+        src: `data:image/png;base64,${readFileSync(
+          join(__dirname, '../../../templates/mcp/logo.png'),
+        ).toString('base64')}`,
+        mimeType: 'image/png',
+      },
+    ],
+  };
   private readonly handler = createMcpHandler(() => this.createServer());
   private readonly nodeHandler = toNodeHandler(this.handler);
 
@@ -36,13 +51,10 @@ export class McpService implements OnModuleDestroy {
   }
 
   private createServer() {
-    const server = new McpServer(
-      { name: 'hrm-ebr-mcp', version: '1.0.0' },
-      {
-        instructions:
-          'Tra cứu dữ liệu EBR. Dùng search_production_orders để tìm ID trước khi gọi get_production_order. Kết quả tìm kiếm có phân trang. Các tool hiện chỉ đọc dữ liệu.',
-      },
-    );
+    const server = new McpServer(this.serverInfo, {
+      instructions:
+        'Tra cứu dữ liệu EBR. Dùng search_production_orders để tìm ID trước khi gọi get_production_order. Kết quả tìm kiếm có phân trang. Các tool hiện chỉ đọc dữ liệu.',
+    });
 
     server.registerTool(
       'get_server_info',
@@ -54,8 +66,8 @@ export class McpService implements OnModuleDestroy {
       },
       () =>
         this.result({
-          name: 'hrm-ebr-mcp',
-          version: '1.0.0',
+          name: this.serverInfo.name,
+          version: this.serverInfo.version,
           authentication: 'none',
           read_only: true,
         }),
