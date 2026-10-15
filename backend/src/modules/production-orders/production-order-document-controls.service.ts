@@ -5,8 +5,6 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
-import { FeaturesService } from '../features/features.service';
-import { createFeatureConfigSnapshot } from '../features/item-feature-config';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -52,10 +50,7 @@ export const productionOrderDocumentControlInclude = {
 
 @Injectable()
 export class ProductionOrderDocumentControlsService {
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly featuresService: FeaturesService,
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
   async findByProductionOrder(productionOrderId: number) {
     await this.ensureProductionOrderExists(productionOrderId);
@@ -69,48 +64,9 @@ export class ProductionOrderDocumentControlsService {
   }
 
   async issueBatchRecord(productionOrderId: number, user?: AuthenticatedUser) {
-    const issuedBy = this.normalizeUserId(user);
-    const issuedAt = new Date();
-    return this.prismaService.$transaction(async (tx) => {
-      const order = await tx.productionOrders.findUnique({
-        where: { id: productionOrderId },
-        select: { item_code: true },
-      });
-      if (!order) throw new NotFoundException('Production order not found');
-
-      // The upsert locks this dossier row before checking its snapshot. Repeat
-      // issuance and concurrent requests must never replace the first snapshot.
-      const documentControl = await tx.productionOrderDocumentControls.upsert({
-        where: { production_order_id: productionOrderId },
-        create: {
-          production_order_id: productionOrderId,
-          batch_record_issued_by_id: issuedBy,
-          batch_record_issued_at: issuedAt,
-        },
-        update: {
-          batch_record_issued_by_id: issuedBy,
-          batch_record_issued_at: issuedAt,
-        },
-        include: productionOrderDocumentControlInclude,
-      });
-      if (documentControl.feature_config_snapshot != null)
-        return documentControl;
-
-      const config = await this.featuresService.findConfigByItemCode(
-        order.item_code,
-        undefined,
-        tx,
-      );
-      return tx.productionOrderDocumentControls.update({
-        where: { production_order_id: productionOrderId },
-        data: {
-          feature_config_snapshot: createFeatureConfigSnapshot(
-            config,
-            issuedAt,
-          ),
-        },
-        include: productionOrderDocumentControlInclude,
-      });
+    return this.upsertDocumentControl(productionOrderId, {
+      batch_record_issued_by_id: this.normalizeUserId(user),
+      batch_record_issued_at: new Date(),
     });
   }
 

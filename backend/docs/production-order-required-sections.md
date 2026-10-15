@@ -8,11 +8,11 @@ Cột **Bắt buộc có dữ liệu** nằm trước cột **Thứ tự**. Sao 
 
 ## Chốt cấu hình của lô
 
-Trước khi phát hồ sơ, lô dùng cấu hình mã hàng hiện tại. Khi phát hồ sơ lần đầu, hệ thống lưu `feature_config_snapshot` phiên bản 1 vào `ProductionOrderDocumentControls` trong cùng transaction với thông tin phát hồ sơ. Bản chụp bao gồm key, loại, tên, nhóm, thứ tự, trạng thái và yêu cầu bắt buộc của các tính năng đang áp dụng.
+Khi chưa có bản chụp, lô dùng cấu hình mã hàng hiện tại. Sau khi dịch vụ PYCLM trả về thành công, nếu lô chưa có bản chụp, hệ thống lưu `feature_config_snapshot` phiên bản 1, nguồn `pyclm`, vào `ProductionOrderDocumentControls`. Bản chụp được lưu trong cùng transaction với số đăng ký của lô và lịch sử gửi PYCLM. Bản chụp bao gồm key, loại, tên, nhóm, thứ tự, trạng thái và yêu cầu bắt buộc của các tính năng đang áp dụng. Gửi PYCLM thất bại không tạo bản chụp.
 
-Phát lại hồ sơ không ghi đè bản chụp. Nhận hồ sơ, nhận phiếu kho và nhận phiếu kiểm nghiệm không chốt lại cấu hình. Đồng bộ SAP không sửa bản chụp. Trang chi tiết và báo cáo sử dụng cùng cấu hình đã lưu.
+Gửi lại PYCLM không ghi đè bản chụp đã có. Cấp hồ sơ lô giấy, nhận hồ sơ, nhận phiếu kho và nhận phiếu kiểm nghiệm không chốt cấu hình. Đồng bộ SAP không sửa bản chụp. Trang chi tiết và báo cáo sử dụng cùng cấu hình đã lưu.
 
-Migration lưu cấu hình hiện tại cho các hồ sơ đã phát trước khi nâng cấp, với mọi yêu cầu bắt buộc bằng `false`. Không thể khôi phục cấu hình tại ngày phát trước đây nếu hệ thống chưa lưu lịch sử đó. Các hồ sơ chưa phát tiếp tục theo cấu hình mã hàng.
+Migration `20261014010000_add_required_production_order_sections` trước đây lưu cấu hình cho các hồ sơ đã cấp, với mọi yêu cầu bắt buộc bằng `false`. Các bản chụp cũ (`legacy` hoặc `issued`) được giữ nguyên khi đổi thời điểm chốt sang gửi PYCLM. Lô đã gửi PYCLM nhưng chưa có bản chụp sẽ tiếp tục dùng cấu hình mã hàng cho đến lần gửi PYCLM thành công tiếp theo; không tự tạo bản chụp từ lịch sử gửi cũ.
 
 ## Quy tắc phiên bản 1
 
@@ -36,4 +36,4 @@ Checklist xuất hiện trên cả ba trang chi tiết lô, trước section ki�
 
 Áp dụng migration `20261014010000_add_required_production_order_sections`, generate Prisma Client và khởi động lại backend. Không dùng `migrate reset` với dữ liệu hiện hữu.
 
-Kiểm thử bao gồm mặc định không bắt buộc, cấu hình không hợp lệ, sao chép yêu cầu, giữ bản chụp khi cấu hình mã hàng thay đổi hoặc phát lại hồ sơ, template pha chế rỗng, kết quả `0`/`false`, ảnh, tệp bị xóa, singleton và SAP không truy cập được.
+Kiểm thử bao gồm mặc định không bắt buộc, cấu hình không hợp lệ, sao chép yêu cầu, chốt bản chụp sau khi gửi PYCLM thành công, không chốt khi gửi lỗi hoặc cấp hồ sơ giấy, giữ bản chụp khi cấu hình mã hàng thay đổi hoặc gửi lại PYCLM, template pha chế rỗng, kết quả `0`/`false`, ảnh, tệp bị xóa, singleton và SAP không truy cập được.

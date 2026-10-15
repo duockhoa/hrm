@@ -115,7 +115,7 @@ describe('ProductionOrderCompletenessService', () => {
     });
   });
 
-  it('uses the issued snapshot even after the item rules change', async () => {
+  it('uses the stored snapshot even after the item rules change', async () => {
     const config = buildItemFeatureConfig(itemCode, [
       section('environment_checks', { required: false }),
     ]);

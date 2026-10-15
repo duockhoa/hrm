@@ -32,7 +32,7 @@ export const createFeatureConfigSnapshot = (
   capturedAt: Date,
 ): Prisma.InputJsonObject => ({
   version: 1,
-  source: 'issued',
+  source: 'pyclm',
   captured_at: capturedAt.toISOString(),
   item_code: config.item_code,
   features: config.features,
