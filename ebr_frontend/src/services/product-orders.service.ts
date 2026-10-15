@@ -384,12 +384,14 @@ type PostSecondaryPackagingSummaryPayload = {
 
 type PostSecondaryPackagingPendingProcessItemPayload = {
   pending_quantity: string | number;
+  unit?: string | null;
   pending_reason: string;
   processing_plan?: string | null;
 };
 
 type PostSecondaryPackagingPendingCancellationItemPayload = {
   cancellation_quantity: string | number;
+  unit?: string | null;
   cancellation_reason: string;
   cancellation_plan?: string | null;
 };

@@ -21,6 +21,7 @@ type PendingProcessItem = {
   id?: string | number;
   summary_id?: string | number | null;
   pending_quantity?: string | number | null;
+  unit?: string | null;
   pending_reason?: string | null;
   processing_plan?: string | null;
   created_at?: string | null;
@@ -30,6 +31,7 @@ type PendingCancellationItem = {
   id?: string | number;
   summary_id?: string | number | null;
   cancellation_quantity?: string | number | null;
+  unit?: string | null;
   cancellation_reason?: string | null;
   cancellation_plan?: string | null;
   created_at?: string | null;
@@ -66,12 +68,14 @@ type PostSecondaryPackagingSummaryPayload = {
 
 type PendingProcessItemPayload = {
   pending_quantity: string | number;
+  unit?: string | null;
   pending_reason: string;
   processing_plan?: string | null;
 };
 
 type PendingCancellationItemPayload = {
   cancellation_quantity: string | number;
+  unit?: string | null;
   cancellation_reason: string;
   cancellation_plan?: string | null;
 };

@@ -433,8 +433,15 @@ describe('DataExportService', () => {
         include: expect.objectContaining({
           productionOrder: expect.anything(),
           semiFinishedProductOrder: expect.anything(),
-          pendingProcessItems: expect.anything(),
-          pendingCancellationItems: expect.anything(),
+          pendingProcessItems: expect.objectContaining({
+            select: expect.objectContaining({ pending_quantity: true, unit: true }),
+          }),
+          pendingCancellationItems: expect.objectContaining({
+            select: expect.objectContaining({
+              cancellation_quantity: true,
+              unit: true,
+            }),
+          }),
         }),
       }),
     );

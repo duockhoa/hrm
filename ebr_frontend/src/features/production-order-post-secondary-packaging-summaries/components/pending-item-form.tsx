@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useId } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { mutate } from "swr";
@@ -19,14 +20,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { API_ROUTES } from "@/lib/api-routes";
 import productionOrdersService from "@/services/product-orders.service";
 import type { PendingCancellationItem, PendingProcessItem } from "../types";
-import { getErrorMessage } from "../utils";
+import { COMMON_UNIT_OPTIONS, getErrorMessage } from "../utils";
 
 const formSchema = z.object({
   quantity: z
     .string()
     .trim()
     .min(1, "Số lượng là bắt buộc")
-    .regex(/^\d+$/, "Số lượng phải là số nguyên không âm"),
+    .regex(
+      /^\d{1,9}(?:[.,]\d{1,3})?$/,
+      "Số lượng phải là số không âm, tối đa 9 chữ số phần nguyên và 3 chữ số thập phân",
+    ),
+  unit: z.string().trim().max(20, "Đơn vị tính tối đa 20 ký tự"),
   reason: z.string().trim().min(1, "Lý do là bắt buộc"),
   plan: z.string().trim().optional(),
 });
@@ -47,6 +52,7 @@ export default function PendingItemForm({
   onSaved?: () => void;
   onCancel?: () => void;
 }) {
+  const unitOptionsId = useId();
   const isProcess = kind === "process";
   const isEditing = data?.id !== null && data?.id !== undefined;
   const processData = data as PendingProcessItem | undefined;
@@ -59,6 +65,7 @@ export default function PendingItemForm({
           ? (processData?.pending_quantity ?? "")
           : (cancellationData?.cancellation_quantity ?? ""),
       ),
+      unit: data?.unit ?? "",
       reason: isProcess
         ? (processData?.pending_reason ?? "")
         : (cancellationData?.cancellation_reason ?? ""),
@@ -71,12 +78,13 @@ export default function PendingItemForm({
     API_ROUTES.productionOrders.postSecondaryPackagingSummaryDetail(summaryId);
 
   const submit = async (values: FormValues) => {
-    const quantity = Number(values.quantity);
+    const quantity = values.quantity.replace(",", ".");
 
     try {
       if (isProcess) {
         const payload = {
           pending_quantity: quantity,
+          unit: values.unit.trim() || null,
           pending_reason: values.reason.trim(),
           processing_plan: values.plan?.trim() || null,
         };
@@ -94,6 +102,7 @@ export default function PendingItemForm({
       } else {
         const payload = {
           cancellation_quantity: quantity,
+          unit: values.unit.trim() || null,
           cancellation_reason: values.reason.trim(),
           cancellation_plan: values.plan?.trim() || null,
         };
@@ -134,7 +143,7 @@ export default function PendingItemForm({
             {isProcess ? "chờ xử lý" : "chờ hủy"}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Ghi rõ số lượng, nguyên nhân và hướng giải quyết.
+            Ghi rõ số lượng, đơn vị tính, nguyên nhân và hướng giải quyết.
           </p>
         </div>
 
@@ -145,14 +154,31 @@ export default function PendingItemForm({
             <FormItem>
               <FormLabel>Số lượng *</FormLabel>
               <FormControl>
+                <Input type="text" inputMode="decimal" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="unit"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Đơn vị tính</FormLabel>
+              <FormControl>
                 <Input
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
+                  list={unitOptionsId}
+                  maxLength={20}
+                  placeholder="Ví dụ: kg, hộp, viên"
                   {...field}
                 />
               </FormControl>
+              <datalist id={unitOptionsId}>
+                {COMMON_UNIT_OPTIONS.map((unit) => (
+                  <option key={unit} value={unit} />
+                ))}
+              </datalist>
               <FormMessage />
             </FormItem>
           )}

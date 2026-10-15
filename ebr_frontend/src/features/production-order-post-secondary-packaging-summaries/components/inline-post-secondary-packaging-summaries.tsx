@@ -26,6 +26,7 @@ import type { PostSecondaryPackagingSummary } from "../types";
 import {
   formatDateTime,
   formatNumber,
+  formatQuantitiesByUnit,
   getPendingCancellationItems,
   getPendingProcessItems,
   getSummaryOrder,
@@ -40,11 +41,6 @@ const getSemiFinishedLotLabel = (summary: PostSecondaryPackagingSummary) => {
   const productName = order?.item?.item_name ?? order?.description ?? "—";
   const lotNo = order?.lot_no ?? "—";
   return `${productName} - ${lotNo}`;
-};
-
-const toQuantity = (value: string | number | null | undefined) => {
-  const quantity = Number(String(value ?? 0).replace(",", "."));
-  return Number.isFinite(quantity) ? quantity : 0;
 };
 
 export default function InlinePostSecondaryPackagingSummaries({
@@ -201,18 +197,13 @@ export default function InlinePostSecondaryPackagingSummaries({
               {summaries.map((summary, index) => {
                 const id = summary.id;
                 const canSelect = id !== null && id !== undefined;
-                const pendingProcessQuantity = getPendingProcessItems(
-                  summary,
-                ).reduce(
-                  (total, item) => total + toQuantity(item.pending_quantity),
-                  0,
+                const pendingProcessQuantity = formatQuantitiesByUnit(
+                  getPendingProcessItems(summary),
+                  (item) => item.pending_quantity,
                 );
-                const cancellationQuantity = getPendingCancellationItems(
-                  summary,
-                ).reduce(
-                  (total, item) =>
-                    total + toQuantity(item.cancellation_quantity),
-                  0,
+                const cancellationQuantity = formatQuantitiesByUnit(
+                  getPendingCancellationItems(summary),
+                  (item) => item.cancellation_quantity,
                 );
                 return (
                   <TableRow
@@ -253,10 +244,10 @@ export default function InlinePostSecondaryPackagingSummaries({
                       {summary.unit || "—"}
                     </TableCell>
                     <TableCell className="border-r text-right tabular-nums">
-                      {formatNumber(pendingProcessQuantity)}
+                      {pendingProcessQuantity}
                     </TableCell>
                     <TableCell className="border-r text-right tabular-nums">
-                      {formatNumber(cancellationQuantity)}
+                      {cancellationQuantity}
                     </TableCell>
                     <TableCell>
                       {getUserLabel(getSummaryUser(summary))}

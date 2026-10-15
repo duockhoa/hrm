@@ -32,6 +32,7 @@ import type {
 import {
   formatDateTime,
   formatNumber,
+  formatQuantitiesByUnit,
   getErrorMessage,
   getPendingCancellationItems,
   getPendingProcessItems,
@@ -44,11 +45,6 @@ import PostSecondaryPackagingSummaryForm from "./post-secondary-packaging-summar
 
 type PendingKind = "process" | "cancellation";
 type PendingRecord = PendingProcessItem | PendingCancellationItem;
-
-const toQuantity = (value: string | number | null | undefined) => {
-  const quantity = Number(String(value ?? 0).replace(",", "."));
-  return Number.isFinite(quantity) ? quantity : 0;
-};
 
 function RowActions({
   item,
@@ -116,6 +112,7 @@ function PendingItemsSection({
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-28 text-right">Số lượng</TableHead>
+              <TableHead>Đơn vị</TableHead>
               <TableHead>Lý do</TableHead>
               <TableHead>Phương án</TableHead>
               <TableHead className="w-24 text-right">Thao tác</TableHead>
@@ -125,7 +122,7 @@ function PendingItemsSection({
             {items.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className="h-20 text-center text-muted-foreground"
                 >
                   Chưa có dữ liệu.
@@ -143,6 +140,9 @@ function PendingItemsSection({
                           ? item.pending_quantity
                           : item.cancellation_quantity,
                       )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {item.unit || "—"}
                     </TableCell>
                     <TableCell className="min-w-52 whitespace-normal break-words">
                       {(isProcess
@@ -266,14 +266,6 @@ export default function PostSecondaryPackagingSummaryDetail({
 
   const processItems = getPendingProcessItems(data);
   const cancellationItems = getPendingCancellationItems(data);
-  const totalProcessQuantity = processItems.reduce(
-    (total, item) => total + toQuantity(item.pending_quantity),
-    0,
-  );
-  const totalCancellationQuantity = cancellationItems.reduce(
-    (total, item) => total + toQuantity(item.cancellation_quantity),
-    0,
-  );
   const semiFinishedOrder = getSummaryOrder(data);
   const semiFinishedProductName =
     semiFinishedOrder?.item?.item_name ?? semiFinishedOrder?.description ?? "—";
@@ -372,11 +364,17 @@ export default function PostSecondaryPackagingSummaryDetail({
         <FieldDisplay lable="Đơn vị tính" value={data.unit || "—"} />
         <FieldDisplay
           lable="Số lượng xử lý"
-          value={formatNumber(totalProcessQuantity)}
+          value={formatQuantitiesByUnit(
+            processItems,
+            (item) => item.pending_quantity,
+          )}
         />
         <FieldDisplay
           lable="Số lượng hủy"
-          value={formatNumber(totalCancellationQuantity)}
+          value={formatQuantitiesByUnit(
+            cancellationItems,
+            (item) => item.cancellation_quantity,
+          )}
         />
         <FieldDisplay lable="Lý do tồn" value={data.remaining_reason || "—"} />
         <FieldDisplay

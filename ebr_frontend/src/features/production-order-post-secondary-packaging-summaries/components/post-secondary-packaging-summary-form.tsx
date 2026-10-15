@@ -31,19 +31,7 @@ import type {
   PostSecondaryPackagingSummary,
   SummaryProductionOrder,
 } from "../types";
-import { getErrorMessage, getSummaryOrder } from "../utils";
-
-const COMMON_UNIT_OPTIONS = [
-  "kg",
-  "g",
-  "hộp",
-  "vỉ",
-  "lọ",
-  "viên",
-  "gói",
-  "chai",
-  "ống",
-] as const;
+import { COMMON_UNIT_OPTIONS, getErrorMessage, getSummaryOrder } from "../utils";
 
 const nonNegativeDecimalText = z
   .string()

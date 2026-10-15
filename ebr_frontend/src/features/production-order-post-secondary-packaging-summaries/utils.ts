@@ -4,6 +4,18 @@ import type {
   SummaryUser,
 } from "./types";
 
+const COMMON_UNIT_OPTIONS = [
+  "kg",
+  "g",
+  "hộp",
+  "vỉ",
+  "lọ",
+  "viên",
+  "gói",
+  "chai",
+  "ống",
+] as const;
+
 const formatNumber = (value: string | number | null | undefined) => {
   if (value === null || value === undefined || value === "") return "—";
   const parsed = Number(value);
@@ -24,6 +36,25 @@ const formatDateTime = (value: string | null | undefined) => {
         hour: "2-digit",
         minute: "2-digit",
       });
+};
+
+const formatQuantitiesByUnit = <T extends { unit?: string | null }>(
+  items: T[],
+  getQuantity: (item: T) => string | number | null | undefined,
+) => {
+  const totals = new Map<string, number>();
+  for (const item of items) {
+    const quantity = Number(String(getQuantity(item) ?? 0).replace(",", "."));
+    if (!Number.isFinite(quantity)) continue;
+    const unit = item.unit?.trim() || "chưa rõ đơn vị";
+    totals.set(unit, (totals.get(unit) ?? 0) + quantity);
+  }
+  return (
+    Array.from(
+      totals,
+      ([unit, quantity]) => `${formatNumber(quantity)} ${unit}`,
+    ).join("; ") || "0"
+  );
 };
 
 const getUserLabel = (user: SummaryUser | null | undefined) =>
@@ -61,8 +92,10 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 export {
+  COMMON_UNIT_OPTIONS,
   formatDateTime,
   formatNumber,
+  formatQuantitiesByUnit,
   getErrorMessage,
   getOrderLabel,
   getPendingCancellationItems,

@@ -55,13 +55,18 @@ function xuatTongKetBtpHoanThien() {
     return "'" + String(value);
   };
 
-  const sumQuantity = (records, fieldName) => {
-    if (!Array.isArray(records) || records.length === 0) return "";
-
-    return records.reduce(
-      (total, record) => total + (Number(record[fieldName]) || 0),
-      0,
-    );
+  const quantitiesByUnit = (records, fieldName) => {
+    const totals = new Map();
+    for (const record of records) {
+      const unit = String(record.unit || "").trim() || "chưa rõ đơn vị";
+      const quantity = Number(String(record[fieldName] ?? 0).replace(",", "."));
+      totals.set(unit, (totals.get(unit) || 0) + (Number.isFinite(quantity) ? quantity : 0));
+    }
+    const quantities = Array.from(totals.values());
+    return {
+      quantity: quantities.length === 1 ? quantities[0] : quantities.join("\n"),
+      unit: Array.from(totals.keys()).join("\n"),
+    };
   };
 
   const joinField = (records, fieldName) => {
@@ -82,6 +87,8 @@ function xuatTongKetBtpHoanThien() {
 
     const pendingProcessItems = item.pendingProcessItems || [];
     const pendingCancellationItems = item.pendingCancellationItems || [];
+    const pendingProcess = quantitiesByUnit(pendingProcessItems, "pending_quantity");
+    const pendingCancellation = quantitiesByUnit(pendingCancellationItems, "cancellation_quantity");
 
     const maThanhPham = thanhPham.item_code || productionOrder.item_code || "";
     const lotNoThanhPham = productionOrder.lot_no || "";
@@ -104,12 +111,12 @@ function xuatTongKetBtpHoanThien() {
       item.remaining_quantity ?? "", // K: Số lượng tồn
       item.unit || "", // L: Đơn vị số lượng tồn
       item.remaining_reason || "", // M: Lý do tồn
-      sumQuantity(pendingProcessItems, "pending_quantity"), // N: Số lượng xử lý
-      "", // O: Đơn vị số lượng xử lý
+      pendingProcess.quantity, // N: Số lượng xử lý (mỗi đơn vị một dòng)
+      pendingProcess.unit, // O: Đơn vị số lượng xử lý
       joinField(pendingProcessItems, "pending_reason"), // P: Lý do chờ xử lý
       joinField(pendingProcessItems, "processing_plan"), // Q: Phương án xử lý
-      sumQuantity(pendingCancellationItems, "cancellation_quantity"), // R: Số lượng hủy
-      "", // S: Đơn vị số lượng hủy
+      pendingCancellation.quantity, // R: Số lượng hủy (mỗi đơn vị một dòng)
+      pendingCancellation.unit, // S: Đơn vị số lượng hủy
       joinField(pendingCancellationItems, "cancellation_reason"), // T: Lý do hủy
       item.createdBy?.name || item.createdBy?.username || "", // U: Người tổng kết
     ];

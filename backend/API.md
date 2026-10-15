@@ -6622,6 +6622,7 @@ Body tạo mới hoặc cập nhật:
 ```json
 {
   "pending_quantity": "2.5",
+  "unit": "kg",
   "pending_reason": "Chờ QA đánh giá",
   "processing_plan": "Kiểm nghiệm lại"
 }
@@ -6642,12 +6643,15 @@ Body tạo mới hoặc cập nhật:
 ```json
 {
   "cancellation_quantity": "1",
+  "unit": "hộp",
   "cancellation_reason": "Không đạt chỉ tiêu cảm quan",
   "cancellation_plan": "Lập biên bản hủy"
 }
 ```
 
 `pending_reason` và `cancellation_reason` là bắt buộc. `processing_plan` và `cancellation_plan` không bắt buộc; gửi `null` hoặc chuỗi rỗng để xóa khi cập nhật. Xóa bản tổng kết sẽ xóa dây chuyền các dòng chờ xử lý và chờ hủy.
+
+Mỗi dòng chờ xử lý/chờ hủy có `unit` riêng, không phụ thuộc đơn vị số lượng tồn của tổng kết. `unit` không bắt buộc, được bỏ khoảng trắng đầu/cuối và tối đa 20 ký tự; gửi `null` hoặc chuỗi rỗng để xóa khi cập nhật. Nếu PATCH không gửi `unit`, đơn vị đã lưu được giữ nguyên. Các API danh sách, chi tiết, báo cáo và xuất dữ liệu đều trả về `unit` của từng dòng. Dữ liệu cũ chưa có đơn vị được giữ `null`; tổng kết và báo cáo cộng riêng số lượng theo từng đơn vị, các dòng chưa có đơn vị thuộc nhóm “chưa rõ đơn vị”.
 
 ## Production Order Material Summaries
 

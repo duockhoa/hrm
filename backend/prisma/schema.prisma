@@ -1964,6 +1964,7 @@ model ProductionOrderPostSecondaryPackagingPendingProcessItems {
   summary_id       Int
   summary          ProductionOrderPostSecondaryPackagingSummaries @relation(fields: [summary_id], references: [id], onDelete: Cascade, map: "po_post_secondary_pending_process_summary_id_fkey")
   pending_quantity Decimal                                        @db.Decimal(12, 3)
+  unit             String?                                        @db.VarChar(20)
   pending_reason   String                                         @db.Text
   processing_plan  String?                                        @db.Text
   created_by_id    Int
@@ -1981,6 +1982,7 @@ model ProductionOrderPostSecondaryPackagingPendingCancellationItems {
   summary_id            Int
   summary               ProductionOrderPostSecondaryPackagingSummaries @relation(fields: [summary_id], references: [id], onDelete: Cascade, map: "po_post_secondary_pending_cancellation_summary_id_fkey")
   cancellation_quantity Decimal                                        @db.Decimal(12, 3)
+  unit                  String?                                        @db.VarChar(20)
   cancellation_reason   String                                         @db.Text
   cancellation_plan     String?                                        @db.Text
   created_by_id         Int

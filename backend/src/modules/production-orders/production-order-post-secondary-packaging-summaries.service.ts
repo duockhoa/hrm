@@ -58,15 +58,21 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async findAllForReport() {
-    return this.prismaService.productionOrderPostSecondaryPackagingSummaries.findMany({
-      select: {
-        id: true,
-        production_order_id: true,
-        unit: true,
-        pendingProcessItems: { select: { id: true, pending_quantity: true } },
-        pendingCancellationItems: { select: { id: true, cancellation_quantity: true } },
+    return this.prismaService.productionOrderPostSecondaryPackagingSummaries.findMany(
+      {
+        select: {
+          id: true,
+          production_order_id: true,
+          unit: true,
+          pendingProcessItems: {
+            select: { id: true, pending_quantity: true, unit: true },
+          },
+          pendingCancellationItems: {
+            select: { id: true, cancellation_quantity: true, unit: true },
+          },
+        },
       },
-    });
+    );
   }
 
   async findById(summaryId: number) {
@@ -229,6 +235,7 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
             dto?.pending_quantity,
             'pending_quantity',
           ),
+          unit: this.normalizeOptionalUnit(dto?.unit),
           pending_reason: this.normalizeRequiredText(
             dto?.pending_reason,
             'pending_reason',
@@ -298,6 +305,7 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
             dto?.cancellation_quantity,
             'cancellation_quantity',
           ),
+          unit: this.normalizeOptionalUnit(dto?.unit),
           cancellation_reason: this.normalizeRequiredText(
             dto?.cancellation_reason,
             'cancellation_reason',
@@ -360,6 +368,9 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
         'pending_reason',
       );
     }
+    if ('unit' in updateDto) {
+      data.unit = this.normalizeOptionalUnit(updateDto.unit);
+    }
     if ('processing_plan' in updateDto) {
       data.processing_plan = this.normalizeOptionalText(
         updateDto.processing_plan,
@@ -387,6 +398,9 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
         updateDto.cancellation_reason,
         'cancellation_reason',
       );
+    }
+    if ('unit' in updateDto) {
+      data.unit = this.normalizeOptionalUnit(updateDto.unit);
     }
     if ('cancellation_plan' in updateDto) {
       data.cancellation_plan = this.normalizeOptionalText(

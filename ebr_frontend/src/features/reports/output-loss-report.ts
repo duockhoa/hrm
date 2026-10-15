@@ -36,12 +36,13 @@ export function buildOutputLossRows(
       const pending: UnitQuantities = {};
       const cancellation: UnitQuantities = {};
       records.forEach((summary) => {
-        const unit = productionUnit(summary.unit) || "chưa rõ đơn vị";
         (summary.pendingProcessItems ?? summary.pending_process_items ?? []).forEach((item) => {
+          const unit = productionUnit(item.unit) || "chưa rõ đơn vị";
           const quantity = productionQuantity(item.pending_quantity);
           if (quantity !== null) pending[unit] = (pending[unit] ?? 0) + quantity;
         });
         (summary.pendingCancellationItems ?? summary.pending_cancellation_items ?? []).forEach((item) => {
+          const unit = productionUnit(item.unit) || "chưa rõ đơn vị";
           const quantity = productionQuantity(item.cancellation_quantity);
           if (quantity !== null) cancellation[unit] = (cancellation[unit] ?? 0) + quantity;
         });
