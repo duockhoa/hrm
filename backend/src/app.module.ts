@@ -41,6 +41,7 @@ import { DataExportModule } from './modules/data-export/data-export.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { WarehouseReceiptItemsModule } from './modules/warehouse-receipt-items/warehouse-receipt-items.module';
 import { WarehouseTemperatureHumidityChecksModule } from './modules/warehouse-temperature-humidity-checks/warehouse-temperature-humidity-checks.module';
+import { McpModule } from './modules/mcp/mcp.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { WarehouseTemperatureHumidityChecksModule } from './modules/warehouse-te
     AuditLogsModule,
     WarehouseReceiptItemsModule,
     WarehouseTemperatureHumidityChecksModule,
+    McpModule,
   ],
   controllers: [AppController],
   providers: [AppService],
