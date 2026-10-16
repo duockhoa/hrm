@@ -6,6 +6,27 @@ import type { Server } from 'node:http';
 import { PrismaService } from '../../prisma.service';
 import { McpModule } from './mcp.module';
 import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
+import { OAuthService } from '../mcp-oauth/oauth.service';
+
+const accessToken = `mcp_at_${'A'.repeat(43)}`;
+const authenticated = () => ({
+  auth: {
+    token: accessToken,
+    clientId: 'test-client',
+    scopes: ['mcp:read'],
+    expiresAt: Math.floor(Date.now() / 1000) + 900,
+    extra: {
+      userId: 1,
+      permissions: ['production-orders.list', 'production-orders.read'],
+    },
+  },
+  user: {
+    id: 1,
+    name: 'Test',
+    username: 'test',
+    permissions: ['production-orders.list', 'production-orders.read'],
+  },
+});
 
 interface RpcEnvelope {
   id: number;
@@ -38,6 +59,14 @@ function body(response: request.Response): RpcEnvelope {
 
 describe('MCP Streamable HTTP endpoint', () => {
   let app: INestApplication;
+  const oauth = {
+    config: {
+      metadataUrl:
+        'http://localhost:3012/.well-known/oauth-protected-resource/mcp',
+      allowedOrigins: ['http://localhost:3012', 'https://gemini.google.com'],
+    },
+    resolveMcpToken: jest.fn(),
+  };
   const prisma = {
     productionOrders: {
       count: jest.fn(),
@@ -55,13 +84,17 @@ describe('MCP Streamable HTTP endpoint', () => {
     const module = await Test.createTestingModule({ imports: [McpModule] })
       .overrideProvider(PrismaService)
       .useValue(prisma)
+      .overrideProvider(OAuthService)
+      .useValue(oauth)
       .compile();
     app = module.createNestApplication();
+    app.useLogger(false);
     await app.init();
   });
 
   beforeEach(() => {
     jest.clearAllMocks();
+    oauth.resolveMcpToken.mockResolvedValue(authenticated());
     prisma.productionOrders.count.mockResolvedValue(0);
     prisma.productionOrders.findMany.mockResolvedValue([]);
     prisma.productionOrders.findUnique.mockResolvedValue(null);
@@ -79,11 +112,12 @@ describe('MCP Streamable HTTP endpoint', () => {
   function rpc(method: string, params?: object, id = 1) {
     return request(app.getHttpServer() as Server)
       .post('/mcp')
+      .set('Authorization', `Bearer ${accessToken}`)
       .set('Accept', 'application/json, text/event-stream')
       .send({ jsonrpc: '2.0', id, method, ...(params ? { params } : {}) });
   }
 
-  it('initializes a legacy remote client without credentials or a session', async () => {
+  it('initializes a legacy remote client with OAuth and without a session', async () => {
     const response = await rpc('initialize', {
       protocolVersion: '2025-11-25',
       capabilities: {},
@@ -130,7 +164,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     }).expect(200);
     expect(body(response).result.structuredContent).toMatchObject({
       name: 'DKPHARMA APP',
-      authentication: 'none',
+      authentication: 'oauth2',
       read_only: true,
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -139,6 +173,7 @@ describe('MCP Streamable HTTP endpoint', () => {
   it('acknowledges the initialized notification', async () => {
     await request(app.getHttpServer() as Server)
       .post('/mcp')
+      .set('Authorization', `Bearer ${accessToken}`)
       .set('Accept', 'application/json, text/event-stream')
       .send({ jsonrpc: '2.0', method: 'notifications/initialized' })
       .expect(202);
@@ -147,10 +182,12 @@ describe('MCP Streamable HTTP endpoint', () => {
   it('rejects unsupported legacy session operations', async () => {
     await request(app.getHttpServer() as Server)
       .get('/mcp')
+      .set('Authorization', `Bearer ${accessToken}`)
       .set('Accept', 'text/event-stream')
       .expect(405);
     await request(app.getHttpServer() as Server)
       .delete('/mcp')
+      .set('Authorization', `Bearer ${accessToken}`)
       .expect(405);
   });
 
@@ -243,13 +280,45 @@ describe('MCP Streamable HTTP endpoint', () => {
     }
   });
 
-  it('handles independent concurrent requests without session initialization', async () => {
+  it('handles independent authenticated concurrent requests without session initialization', async () => {
     const responses = await Promise.all([
       rpc('ping', {}, 11),
       rpc('ping', {}, 12),
     ]);
     expect(responses.map((response) => body(response).id)).toEqual([11, 12]);
     expect(responses.every((response) => response.status === 200)).toBe(true);
+  });
+
+  it('requires an MCP token and advertises protected-resource metadata', async () => {
+    const response = await request(app.getHttpServer() as Server)
+      .post('/mcp')
+      .send({ jsonrpc: '2.0', id: 1, method: 'tools/list' })
+      .expect(401);
+    expect(response.headers['www-authenticate']).toContain(
+      'oauth-protected-resource/mcp',
+    );
+    expect(prisma.productionOrders.findMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid tokens and insufficient scopes before handling MCP', async () => {
+    oauth.resolveMcpToken.mockResolvedValueOnce(null);
+    await rpc('tools/list').expect(401);
+    const identity = authenticated();
+    identity.auth.scopes = ['offline_access'];
+    oauth.resolveMcpToken.mockResolvedValueOnce(identity);
+    await rpc('tools/list').expect(403);
+  });
+
+  it('checks business permissions before querying a tool', async () => {
+    const identity = authenticated();
+    identity.auth.extra.permissions = [];
+    oauth.resolveMcpToken.mockResolvedValueOnce(identity);
+    const response = await rpc('tools/call', {
+      name: 'search_production_orders',
+      arguments: {},
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(prisma.productionOrders.findMany).not.toHaveBeenCalled();
   });
 
   it('returns saved mixing record details and applies order/type filters and pagination', async () => {

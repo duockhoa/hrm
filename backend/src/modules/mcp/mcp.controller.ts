@@ -1,11 +1,12 @@
-import { All, Controller, Req, Res } from '@nestjs/common';
+import { All, Controller, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { McpService } from './mcp.service';
+import { McpOAuthGuard } from '../mcp-oauth/oauth.guards';
 
-// Authentication will be added independently of the existing REST guards.
 @ApiExcludeController()
 @Controller('mcp')
+@UseGuards(McpOAuthGuard)
 export class McpController {
   constructor(private readonly mcpService: McpService) {}
 

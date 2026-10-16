@@ -8,7 +8,8 @@ Dockerfile hiện có đóng gói thư mục `templates`, bao gồm logo này.
 Client quyết định có hiển thị icon hay không; chưa xác nhận Gemini hỗ trợ trường
 `icons`. Sau khi triển khai lại backend, kết nối lại custom app để lấy metadata
 mới. Tên connector đã lưu phía client có thể cần đổi riêng hoặc tạo lại.
-Module được đăng ký trong `AppModule`; không cần chạy thêm tiến trình hay migration.
+Module được đăng ký trong `AppModule`; không cần chạy thêm tiến trình.
+OAuth/DCR cần áp dụng migration theo hướng dẫn OAuth bên dưới.
 SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/node`.
 
 ## Kết nối
@@ -16,13 +17,17 @@ SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/nod
 - Local: `http://localhost:<PORT>/mcp` (PORT mặc định trong `main.ts` là 3000).
 - Docker Compose: `http://localhost:3012/mcp` với cấu hình mặc định của repo.
 - Remote: `https://<backend-domain>/mcp`; proxy chuyển tiếp endpoint về backend.
-- Chọn **No authentication / No sign in** trong client. Hiện module chưa xác thực
-  API key, JWT hay OAuth và chưa áp dụng phân quyền người dùng.
+- Chọn **OAuth** trong client rồi đăng nhập HRM để cấp quyền. Gemini hỗ trợ DCR
+  tự đăng ký client: chỉ nhập URL MCP, để trống Client ID/Secret. Client đăng ký
+  thủ công vẫn dùng ID/secret đã tạo. Xem [hướng dẫn OAuth](../mcp-oauth/README.md).
+  Endpoint luôn yêu cầu OAuth; không chấp nhận HRM JWT hoặc API key.
 - Transport là **Streamable HTTP**, không phải endpoint SSE `/sse` cũ.
 - Handler không lưu phiên. SDK hỗ trợ client MCP đời 2025 qua luồng initialize
   và các phiên bản mới qua cơ chế tương thích của SDK. Không cần session ID.
 - Request POST phải có `Content-Type: application/json` và
   `Accept: application/json, text/event-stream`.
+- Mỗi request MCP phải có `Authorization: Bearer <MCP-access-token>`. Client
+  OAuth tự quản lý việc lấy và refresh token.
 - Client đời 2025 nhận kết quả qua SSE trên chính request POST; proxy cần cho
   phép `text/event-stream` và tắt buffering cho `/mcp`. GET/DELETE quản lý phiên
   đời 2025 trả HTTP 405 vì handler không lưu phiên.
@@ -104,8 +109,8 @@ Ví dụ gọi tool:
 
 - Đăng ký tool trong factory `McpService.createServer()`.
 - Đặt phần truy vấn trong `McpToolsService`; giới hạn trường trả về bằng `select`.
-- Thêm xác thực tại `McpController`/trước handler; kiểm tra quyền từng tool khi
-  bổ sung tính năng bảo mật. REST controller hiện tại giữ cơ chế xác thực riêng.
+- Kiểm tra quyền từng tool mới bằng `executeTool`. Guard OAuth bảo vệ endpoint; scope và
+  permission HRM được kiểm tra trong callback. REST giữ cơ chế xác thực riêng.
 - Endpoint MCP không xuất hiện trong Swagger vì sử dụng JSON-RPC.
 
 ## Kiểm thử

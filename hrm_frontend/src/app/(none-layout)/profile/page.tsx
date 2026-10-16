@@ -3,6 +3,7 @@ import useUserStore from "@/store/user.store";
 import UpdateAvatar from "@/components/users/update-avatar";
 import FieldDisplay from "@/components/common/field-display";
 import ChangePassword from "@/components/users/form-change-password";
+import OAuthConnections from "@/components/users/oauth-connections";
 
 export default function Profile() {
   const { user } = useUserStore();
@@ -107,6 +108,7 @@ export default function Profile() {
               </div>
             </div>
           </div>
+          <OAuthConnections />
         </div>
       </div>
     </div>

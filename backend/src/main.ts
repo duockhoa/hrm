@@ -12,7 +12,11 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableCors({
-    exposedHeaders: ['Content-Disposition'],
+    exposedHeaders: [
+      'Content-Disposition',
+      'WWW-Authenticate',
+      'MCP-Protocol-Version',
+    ],
   });
 
   const swaggerDocumentConfig = new DocumentBuilder()

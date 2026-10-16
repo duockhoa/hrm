@@ -1,17 +1,19 @@
 import {
   Injectable,
+  ForbiddenException,
   Logger,
   NotFoundException,
   OnModuleDestroy,
 } from '@nestjs/common';
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server';
-import type { CallToolResult } from '@modelcontextprotocol/server';
+import type { AuthInfo, CallToolResult } from '@modelcontextprotocol/server';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import type { Request, Response } from 'express';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as z from 'zod/v4';
 import { McpToolsService } from './mcp-tools.service';
+import { stringArray } from '../mcp-oauth/oauth.config';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -36,7 +38,9 @@ export class McpService implements OnModuleDestroy {
       },
     ],
   };
-  private readonly handler = createMcpHandler(() => this.createServer());
+  private readonly handler = createMcpHandler(({ authInfo }) =>
+    this.createServer(authInfo),
+  );
   private readonly nodeHandler = toNodeHandler(this.handler);
 
   constructor(private readonly tools: McpToolsService) {}
@@ -50,7 +54,7 @@ export class McpService implements OnModuleDestroy {
     await this.handler.close();
   }
 
-  private createServer() {
+  private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
         'Tra cứu dữ liệu EBR. Dùng search_production_orders để tìm ID lệnh trước khi gọi get_production_order hoặc get_production_order_mixing_records. Khi người dùng hỏi phiếu pha chế, giai đoạn pha chế hoặc kết quả thông số pha chế, gọi get_production_order_mixing_records. Các danh sách có phân trang. Các tool hiện chỉ đọc dữ liệu.',
@@ -65,12 +69,14 @@ export class McpService implements OnModuleDestroy {
         annotations: readOnlyAnnotations,
       },
       () =>
-        this.result({
-          name: this.serverInfo.name,
-          version: this.serverInfo.version,
-          authentication: 'none',
-          read_only: true,
-        }),
+        this.executeTool('get_server_info', auth, undefined, () =>
+          Promise.resolve({
+            name: this.serverInfo.name,
+            version: this.serverInfo.version,
+            authentication: 'oauth2',
+            read_only: true,
+          }),
+        ),
     );
 
     server.registerTool(
@@ -90,7 +96,13 @@ export class McpService implements OnModuleDestroy {
           .strict(),
         annotations: readOnlyAnnotations,
       },
-      (input) => this.execute(() => this.tools.searchProductionOrders(input)),
+      (input) =>
+        this.executeTool(
+          'search_production_orders',
+          auth,
+          'production-orders.list',
+          () => this.tools.searchProductionOrders(input),
+        ),
     );
 
     server.registerTool(
@@ -103,7 +115,13 @@ export class McpService implements OnModuleDestroy {
           .strict(),
         annotations: readOnlyAnnotations,
       },
-      ({ id }) => this.execute(() => this.tools.getProductionOrder(id)),
+      ({ id }) =>
+        this.executeTool(
+          'get_production_order',
+          auth,
+          'production-orders.read',
+          () => this.tools.getProductionOrder(id),
+        ),
     );
 
     server.registerTool(
@@ -128,7 +146,12 @@ export class McpService implements OnModuleDestroy {
         annotations: readOnlyAnnotations,
       },
       (input) =>
-        this.execute(() => this.tools.getProductionOrderMixingRecords(input)),
+        this.executeTool(
+          'get_production_order_mixing_records',
+          auth,
+          'production-orders.read',
+          () => this.tools.getProductionOrderMixingRecords(input),
+        ),
     );
 
     return server;
@@ -142,13 +165,44 @@ export class McpService implements OnModuleDestroy {
     };
   }
 
+  private async executeTool(
+    name: string,
+    auth: AuthInfo | undefined,
+    permission: string | undefined,
+    operation: () => Promise<object>,
+  ) {
+    const result = await this.execute(async () => {
+      if (
+        !auth?.scopes.includes('mcp:read') ||
+        (permission &&
+          !stringArray(auth.extra?.permissions).includes(permission))
+      ) {
+        throw new ForbiddenException('Bạn không có quyền sử dụng tool này.');
+      }
+      return operation();
+    });
+    this.logger.log(
+      JSON.stringify({
+        event: 'mcp_tool',
+        tool: name,
+        user_id: auth?.extra?.userId,
+        client_id: auth?.clientId,
+        success: !result.isError,
+      }),
+    );
+    return result;
+  }
+
   private async execute(
     operation: () => Promise<object>,
   ): Promise<CallToolResult> {
     try {
       return this.result(await operation());
     } catch (error) {
-      if (!(error instanceof NotFoundException)) {
+      if (
+        !(error instanceof NotFoundException) &&
+        !(error instanceof ForbiddenException)
+      ) {
         this.logger.error(error instanceof Error ? error.stack : String(error));
       }
       return {
@@ -157,7 +211,8 @@ export class McpService implements OnModuleDestroy {
           {
             type: 'text',
             text:
-              error instanceof NotFoundException
+              error instanceof NotFoundException ||
+              error instanceof ForbiddenException
                 ? error.message
                 : 'Không thể truy vấn dữ liệu lúc này. Vui lòng thử lại sau.',
           },

@@ -29,6 +29,7 @@ model AuditLogs {
 }
 
 model Users {
+  oauthGrants OAuthGrants[]
   notedMixingRecordParameters ProductionOrderMixingRecordParameters[] @relation("MixingRecordParameterNoteRecorder")
   uploadedMixingRecordParameterImages ProductionOrderMixingRecordParameters[] @relation("MixingRecordParameterImageUploader")
   uploadedWarehouseReceiptAttachments WarehouseReceiptItemAttachments[] @relation("WarehouseReceiptAttachmentUploader")
@@ -2272,4 +2273,83 @@ model ProductionOrderDateCheckImages {
   @@index([date_check_id], map: "po_date_check_images_check_id_fkey")
   @@index([created_by_id], map: "po_date_check_images_created_by_id_fkey")
   @@map("production_order_date_check_images")
+}
+
+model OAuthClients {
+  id            String                       @id @db.VarChar(128)
+  name          String                       @db.VarChar(255)
+  secret_hash   String?                      @db.VarChar(255)
+  token_endpoint_auth_method String?         @db.VarChar(32)
+  grant_types   Json?
+  redirect_uris Json
+  scopes        Json
+  enabled       Boolean                      @default(true)
+  created_at    DateTime                     @default(now()) @db.DateTime(3)
+  grants        OAuthGrants[]
+  requests      OAuthAuthorizationRequests[]
+
+  @@map("oauth_clients")
+}
+
+model OAuthAuthorizationRequests {
+  request_hash String       @id @db.Char(64)
+  csrf_hash    String       @db.Char(64)
+  client_id    String       @db.VarChar(128)
+  params       Json
+  attempts     Int          @default(0)
+  expires_at   DateTime     @db.DateTime(3)
+  consumed_at  DateTime?    @db.DateTime(3)
+  created_at   DateTime     @default(now()) @db.DateTime(3)
+  client       OAuthClients @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  @@index([expires_at])
+  @@map("oauth_authorization_requests")
+}
+
+model OAuthGrants {
+  id         String                    @id @default(uuid()) @db.Char(36)
+  user_id    Int
+  client_id  String                    @db.VarChar(128)
+  resource   String                    @db.VarChar(512)
+  scopes     Json
+  revoked_at DateTime?                 @db.DateTime(3)
+  created_at DateTime                  @default(now()) @db.DateTime(3)
+  user       Users                     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  client     OAuthClients              @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  codes      OAuthAuthorizationCodes[]
+  tokens     OAuthTokens[]
+
+  @@index([user_id, revoked_at])
+  @@index([client_id])
+  @@map("oauth_grants")
+}
+
+model OAuthAuthorizationCodes {
+  code_hash      String      @id @db.Char(64)
+  grant_id       String      @db.Char(36)
+  redirect_uri   String      @db.VarChar(2048)
+  code_challenge String      @db.VarChar(128)
+  expires_at     DateTime    @db.DateTime(3)
+  consumed_at    DateTime?   @db.DateTime(3)
+  grant          OAuthGrants @relation(fields: [grant_id], references: [id], onDelete: Cascade)
+
+  @@index([grant_id])
+  @@index([expires_at])
+  @@map("oauth_authorization_codes")
+}
+
+model OAuthTokens {
+  access_hash         String      @id @db.Char(64)
+  refresh_hash        String?     @unique @db.Char(64)
+  grant_id            String      @db.Char(36)
+  scopes              Json
+  access_expires_at   DateTime    @db.DateTime(3)
+  refresh_expires_at  DateTime?   @db.DateTime(3)
+  refresh_consumed_at DateTime?   @db.DateTime(3)
+  created_at          DateTime    @default(now()) @db.DateTime(3)
+  grant               OAuthGrants @relation(fields: [grant_id], references: [id], onDelete: Cascade)
+
+  @@index([grant_id])
+  @@index([access_expires_at])
+  @@map("oauth_tokens")
 }
