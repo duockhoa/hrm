@@ -131,8 +131,11 @@ Trang consent dùng `Referrer-Policy: strict-origin` để không lộ query OAu
 qua Referer và vẫn giữ đúng Origin khi trình duyệt POST form. Không đổi sang
 `no-referrer`: policy đó khiến browser gửi `Origin: null`, bị CSRF check từ chối.
 CSP `form-action` cho phép backend và origin của callback đã đăng ký/kiểm tra
-chính xác cho client hiện tại. Chrome áp dụng policy này cả khi POST chuyển
-hướng sang callback; chỉ cho phép `'self'` sẽ chặn bước quay về Gemini.
+chính xác cho client hiện tại. Sau POST consent, trình duyệt nhận một trang
+HTML mới rồi tự điều hướng GET đến callback; có liên kết dự phòng nếu không
+tự chuyển. Cách này tách chuỗi redirect của Google/Gemini khỏi CSP form-action
+của form, không phải mở allowlist cho mọi domain mà provider có thể chuyển đến.
+Request không phải browser navigation vẫn nhận HTTP 302 như trước.
 
 ## Lưu trữ và quyền
 
@@ -183,8 +186,9 @@ npm test -- --runInBand src/modules/mcp-oauth/oauth.integration.spec.ts
 ```
 
 Test này mở form thực, nhập tài khoản test trong bộ nhớ, kiểm tra cookie,
-Origin/Referer và redirect có code/state. Callback test được chặn trong browser,
-không gửi code ra mạng. Bộ kiểm thử mặc định bỏ qua test browser nếu chưa bật cờ.
+Origin/Referer và chuỗi callback qua hai server loopback có origin khác nhau,
+rồi đổi code, gọi MCP và refresh token. Không gửi code ra ngoài máy.
+Bộ kiểm thử mặc định bỏ qua test browser nếu chưa bật cờ.
 
 Kiểm thử HTTP dùng OAuth library thật với adapter lưu trữ giả lập. Bao gồm PKCE,
 CSRF, code dùng một lần và race, refresh/thu hồi, ràng buộc client/resource,

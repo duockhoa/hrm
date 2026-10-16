@@ -3,7 +3,8 @@ import type { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { hashSync } from 'bcrypt';
 import { createHash, randomUUID } from 'node:crypto';
-import type { Server } from 'node:http';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import request from 'supertest';
 import { chromium } from 'playwright';
 import { PrismaService } from '../../prisma.service';
@@ -1041,6 +1042,38 @@ describe('MCP OAuth authorization code + PKCE', () => {
       .expect(400);
     await refresh(first.refresh_token).expect(200);
   });
+  it('serves a fresh document for browser consent and rejects replay', async () => {
+    const flow = await start();
+    const form = {
+      request_id: flow.requestId,
+      csrf: flow.csrf,
+      decision: 'deny',
+    };
+    const response = await flow.agent
+      .post('/oauth/authorize')
+      .set('Sec-Fetch-Mode', 'navigate')
+      .set('Accept', 'text/html')
+      .set('Origin', issuer)
+      .type('form')
+      .send(form)
+      .expect(200);
+    expect(response.type).toBe('text/html');
+    expect(response.text).toContain('http-equiv="refresh"');
+    expect(response.text).toContain(`${redirect}?error=access_denied`);
+    expect(response.text).toContain('Tiếp tục kết nối');
+    expect(response.headers['referrer-policy']).toBe('no-referrer');
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.headers['content-security-policy']).toContain(
+      "form-action 'self'",
+    );
+    await flow.agent
+      .post('/oauth/authorize')
+      .set('Origin', issuer)
+      .type('form')
+      .send(form)
+      .expect(400);
+  });
+
   (process.env.MCP_OAUTH_BROWSER_TEST === '1' ? it : it.skip)(
     'submits the browser form with a valid Origin and cookie through the OAuth callback',
     async () => {
@@ -1052,20 +1085,33 @@ describe('MCP OAuth authorization code + PKCE', () => {
       const config = app.get(OAuthConfig);
       const originalIssuer = config.issuer;
       Object.assign(config, { issuer: base });
+      const destination = createServer((_req, res) => {
+        res.setHeader('Content-Type', 'text/html');
+        res.end('<p>OAuth callback received</p>');
+      });
+      await new Promise<void>((resolve) =>
+        destination.listen(0, '127.0.0.1', resolve),
+      );
+      const finalCallback = `http://127.0.0.1:${(destination.address() as AddressInfo).port}/connected`;
+      const relay = createServer((req, res) => {
+        res.writeHead(302, {
+          location: finalCallback + new URL(req.url || '/', base).search,
+        });
+        res.end();
+      });
+      await new Promise<void>((resolve) =>
+        relay.listen(0, '127.0.0.1', resolve),
+      );
+      const browserRedirect = `http://127.0.0.1:${(relay.address() as AddressInfo).port}/callback`;
+      fixture.rows.oAuthClients[0].redirect_uris = [browserRedirect];
       const browser = await chromium.launch({
         ...(process.platform === 'win32' ? { channel: 'msedge' } : {}),
         headless: true,
       });
       try {
         const page = await browser.newPage();
-        await page.route(`${redirect}**`, (route) =>
-          route.fulfill({
-            contentType: 'text/html',
-            body: '<p>OAuth callback received</p>',
-          }),
-        );
         const initial = await page.goto(
-          `${base}/oauth/authorize?${new URLSearchParams(query())}`,
+          `${base}/oauth/authorize?${new URLSearchParams({ ...query(), redirect_uri: browserRedirect })}`,
         );
         expect(initial?.status()).toBe(200);
         expect(initial?.headers()['referrer-policy']).toBe('strict-origin');
@@ -1099,8 +1145,8 @@ describe('MCP OAuth authorization code + PKCE', () => {
         expect(headers.cookie).toContain('dkpharma_oauth_request=');
         expect(headers.origin).toBe(base);
         expect(headers.referer).toBe(`${base}/`);
-        expect(posted.status()).toBe(302);
-        await page.waitForURL(`${redirect}**`);
+        expect(posted.status()).toBe(200);
+        await page.waitForURL(`${finalCallback}**`, { timeout: 5000 });
         expect(await page.locator('body').innerText()).toBe(
           'OAuth callback received',
         );
@@ -1109,13 +1155,23 @@ describe('MCP OAuth authorization code + PKCE', () => {
         expect(callback.searchParams.get('code')).toBeTruthy();
         expect(callback.searchParams.get('error')).toBeNull();
         const issued = json<TokenResponse>(
-          await exchange(callback.searchParams.get('code')!).expect(200),
+          await exchange(callback.searchParams.get('code')!, {
+            redirect_uri: browserRedirect,
+          }).expect(200),
         );
         await mcp(issued.access_token).expect(200);
         await refresh(issued.refresh_token).expect(200);
       } finally {
         Object.assign(config, { issuer: originalIssuer });
         await browser.close();
+        await Promise.all(
+          [relay, destination].map(
+            (server) =>
+              new Promise<void>((resolve, reject) =>
+                server.close((error) => (error ? reject(error) : resolve())),
+              ),
+          ),
+        );
       }
     },
     30000,

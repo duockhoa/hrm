@@ -13,6 +13,27 @@ const logo = readFileSync(
   join(__dirname, '../../../templates/mcp/logo.png'),
 ).toString('base64');
 
+// Commit a new document before navigating to the callback: Chrome applies
+// form-action to every hop of a POST redirect, including a provider's own
+// redirects to origins we cannot and should not add to our form allowlist.
+export function authorizationRedirectPage(callbackUrl: string) {
+  const target = escape(callbackUrl);
+  return `<!doctype html><html lang="vi"><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="refresh" content="0; url=${target}">
+    <title>Tiếp tục kết nối | DKPharma</title>
+    <style>
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f3f4f6; color: #101828; font: 16px/1.5 system-ui, sans-serif; }
+      main { max-width: 400px; margin: 24px; padding: 24px; background: white; border-radius: 8px; text-align: center; box-shadow: 0 10px 15px -3px rgb(0 0 0 / .1); }
+      h1 { font-size: 24px; } a { color: #2563eb; }
+    </style>
+  </head><body><main><h1>Đang quay lại ứng dụng…</h1>
+    <p>Nếu trang không tự chuyển, chọn liên kết bên dưới.</p>
+    <a href="${target}" rel="noreferrer">Tiếp tục kết nối</a>
+  </main></body></html>`;
+}
+
 export function authorizationPage(
   client: string,
   requestId: string,

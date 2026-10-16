@@ -18,7 +18,7 @@ import {
   invalidTarget,
 } from './oauth.config';
 import { OAuthStore } from './oauth.store';
-import { authorizationPage } from './oauth.page';
+import { authorizationPage, authorizationRedirectPage } from './oauth.page';
 
 const permissionInclude = {
   userRoles: {
@@ -201,7 +201,7 @@ export class OAuthService {
       if (params.state) redirect.searchParams.set('state', params.state);
       redirect.searchParams.set('iss', this.config.issuer);
       res.clearCookie(AUTH_COOKIE, { path: '/oauth/authorize' });
-      res.redirect(302, redirect.href);
+      this.redirectAfterConsent(req, res, redirect.href);
       return;
     }
     const attempts = await this.prisma.oAuthAuthorizationRequests.updateMany({
@@ -265,7 +265,32 @@ export class OAuthService {
     const redirect = new URL(oauthResponse.headers!.location);
     redirect.searchParams.set('iss', this.config.issuer);
     res.clearCookie(AUTH_COOKIE, { path: '/oauth/authorize' });
-    res.redirect(302, redirect.href);
+    this.redirectAfterConsent(req, res, redirect.href);
+  }
+
+  private redirectAfterConsent(
+    req: Request,
+    res: Response,
+    callbackUrl: string,
+  ) {
+    const browserNavigation =
+      req.get('sec-fetch-mode') === 'navigate' ||
+      !!req.get('accept')?.includes('text/html');
+    if (!browserNavigation) {
+      res.redirect(302, callbackUrl);
+      return;
+    }
+    // A new document's GET navigation is independent of the login form's CSP.
+    // Keep the form restriction; don't allow every possible Google redirect host.
+    res.set({
+      'Cache-Control': 'no-store',
+      Pragma: 'no-cache',
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy':
+        "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    });
+    res.status(200).type('html').send(authorizationRedirectPage(callbackUrl));
   }
 
   private checkLoginLimit(key: string) {
