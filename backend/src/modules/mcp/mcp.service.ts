@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import * as z from 'zod/v4';
 import { McpToolsService } from './mcp-tools.service';
 import { stringArray } from '../mcp-oauth/oauth.config';
+import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -57,7 +58,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
-        'Tra cứu dữ liệu EBR. Dùng search_production_orders để tìm ID lệnh trước khi gọi get_production_order hoặc get_production_order_mixing_records. Khi người dùng hỏi phiếu pha chế, giai đoạn pha chế hoặc kết quả thông số pha chế, gọi get_production_order_mixing_records. Các danh sách có phân trang. Các tool hiện chỉ đọc dữ liệu.',
+        'Tra cứu dữ liệu EBR. Dùng search_production_orders để tìm ID lệnh trước khi gọi các tool lấy thông tin theo lệnh sản xuất. Khi người dùng hỏi phiếu pha chế, giai đoạn pha chế hoặc kết quả thông số pha chế, gọi get_production_order_mixing_records. Khi hỏi sai lệch, nguyên nhân hoặc phương án/kết quả xử lý sai lệch của một lô, gọi get_production_order_deviations. Các danh sách có phân trang. Các tool hiện chỉ đọc dữ liệu.',
     });
 
     server.registerTool(
@@ -151,6 +152,43 @@ export class McpService implements OnModuleDestroy {
           auth,
           'production-orders.read',
           () => this.tools.getProductionOrderMixingRecords(input),
+        ),
+    );
+
+    server.registerTool(
+      'get_production_order_deviations',
+      {
+        description:
+          'Lấy thông tin sai lệch đã lưu của một lệnh sản xuất: nội dung, nguyên nhân và phân loại, phương án/kết quả xử lý, số lượng ảnh hưởng/đã xử lý/tiêu hủy và đơn vị, người báo cáo/phê duyệt, thời gian và tham chiếu ảnh. Tìm production_order_id bằng search_production_orders theo mã lệnh hoặc số lô trước nếu chưa biết ID. deviation_id tùy chọn để lấy một phiếu cụ thể trong lệnh. Bỏ qua sai lệch và ảnh đã xóa. Kết quả có phân trang; ảnh không được tải về.',
+        inputSchema: z
+          .object({
+            production_order_id: z
+              .number()
+              .int()
+              .positive()
+              .max(2147483647)
+              .describe('ID lệnh sản xuất lấy từ search_production_orders.'),
+            deviation_id: z
+              .number()
+              .int()
+              .positive()
+              .max(2147483647)
+              .optional()
+              .describe(
+                'ID sai lệch thuộc lệnh sản xuất, bỏ trống để lấy danh sách.',
+              ),
+            page: z.number().int().min(1).max(1000000).default(1),
+            limit: z.number().int().min(1).max(20).default(10),
+          })
+          .strict(),
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'get_production_order_deviations',
+          auth,
+          PRODUCTION_ORDER_DEVIATION_PERMISSIONS.READ,
+          () => this.tools.getProductionOrderDeviations(input),
         ),
     );
 

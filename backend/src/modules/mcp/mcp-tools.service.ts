@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
+import { getAuthenticatedDeviationImagePath } from '../production-order-deviations/production-order-deviation-upload.config';
 
 const orderSelect = {
   id: true,
@@ -34,9 +35,96 @@ export interface GetProductionOrderMixingRecordsInput {
   limit: number;
 }
 
+export interface GetProductionOrderDeviationsInput {
+  production_order_id: number;
+  deviation_id?: number;
+  page: number;
+  limit: number;
+}
+
+const deviationSelect = {
+  id: true,
+  production_order_id: true,
+  deviation_content: true,
+  cause: true,
+  cause_classification: true,
+  handling_plan: true,
+  handling_result: true,
+  affected_quantity: true,
+  affected_quantity_unit: true,
+  handled_quantity: true,
+  handled_quantity_unit: true,
+  destroyed_quantity: true,
+  destroyed_quantity_unit: true,
+  reporter: { select: { id: true, name: true, username: true } },
+  approver: { select: { id: true, name: true, username: true } },
+  created_at: true,
+  updated_at: true,
+  images: {
+    where: { deleted_at: null },
+    select: { id: true, image_path: true, created_at: true },
+    orderBy: { id: 'asc' },
+  },
+} satisfies Prisma.ProductionOrderDeviationsSelect;
+
 @Injectable()
 export class McpToolsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getProductionOrderDeviations(input: GetProductionOrderDeviationsInput) {
+    const order = await this.prisma.productionOrders.findUnique({
+      where: { id: input.production_order_id },
+      select: {
+        id: true,
+        production_order_code: true,
+        item_code: true,
+        item: { select: { item_name: true } },
+        lot_no: true,
+      },
+    });
+    if (!order)
+      throw new NotFoundException(
+        `Không tìm thấy lệnh sản xuất ID ${input.production_order_id}.`,
+      );
+    const where: Prisma.ProductionOrderDeviationsWhereInput = {
+      production_order_id: input.production_order_id,
+      deleted_at: null,
+      ...(input.deviation_id ? { id: input.deviation_id } : {}),
+    };
+    const skip = (input.page - 1) * input.limit;
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.productionOrderDeviations.count({ where }),
+      this.prisma.productionOrderDeviations.findMany({
+        where,
+        select: deviationSelect,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        skip,
+        take: input.limit,
+      }),
+    ]);
+    if (input.deviation_id && total === 0)
+      throw new NotFoundException(
+        `Không tìm thấy sai lệch ID ${input.deviation_id} trong lệnh sản xuất này.`,
+      );
+    return {
+      production_order: order,
+      data: rows.map((row) => ({
+        ...row,
+        images: row.images.map((image) => ({
+          ...image,
+          image_path: getAuthenticatedDeviationImagePath(image.image_path),
+        })),
+      })),
+      ...(total === 0 ? { message: 'Lệnh sản xuất chưa có sai lệch.' } : {}),
+      pagination: {
+        page: input.page,
+        limit: input.limit,
+        total,
+        total_pages: Math.ceil(total / input.limit),
+        has_next_page: skip + rows.length < total,
+      },
+    };
+  }
 
   async searchProductionOrders(input: SearchProductionOrdersInput) {
     const where: Prisma.ProductionOrdersWhereInput = {

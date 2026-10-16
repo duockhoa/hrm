@@ -43,6 +43,7 @@ vào client MCP. Không cần API key của nhà cung cấp AI để chạy modu
 | `search_production_orders`            | `query?`, `item_code?`, `lot_no?`, `status?`, `page?`, `limit?` | Thông tin chính của lệnh và phân trang                                          |
 | `get_production_order`                | `id`                                                            | Thông tin chính của một lệnh                                                    |
 | `get_production_order_mixing_records` | `production_order_id`, `page?`, `limit?`                        | Phiếu pha chế đã lưu, giai đoạn, bước, thông số/kết quả và người ghi nhận/duyệt |
+| `get_production_order_deviations` | `production_order_id`, `deviation_id?`, `page?`, `limit?` | Sai lệch, nguyên nhân, xử lý, số lượng, người báo cáo/phê duyệt và tham chiếu ảnh |
 
 `query` tìm trong mã lệnh, mã/tên sản phẩm và số lô. Các bộ lọc còn lại so khớp
 chính xác. `page` mặc định 1; `limit` mặc định 20, tối đa 100. Ngày được trả
@@ -104,6 +105,28 @@ Ví dụ gọi tool:
   }
 }
 ```
+
+## Thông tin sai lệch
+
+`get_production_order_deviations` dùng quyền `production-order-deviations.read`.
+Tìm ID lệnh bằng `search_production_orders` theo mã lệnh, sản phẩm hoặc số lô,
+rồi gọi tool để lấy sai lệch. Mặc định `page=1`, `limit=10`, tối đa 20 phiếu/trang.
+Thêm `deviation_id` nếu chỉ cần một phiếu; ID phải thuộc lệnh đã chọn.
+
+```json
+{
+  "name": "get_production_order_deviations",
+  "arguments": { "production_order_id": 7, "page": 1, "limit": 10 }
+}
+```
+
+Kết quả gồm thông tin lệnh, danh sách sai lệch và phân trang. Mỗi phiếu có nội
+dung, nguyên nhân/phân loại, phương án/kết quả xử lý, số lượng ảnh hưởng/đã xử
+lý/tiêu hủy kèm đơn vị, người báo cáo/phê duyệt và thời gian. Số lượng Decimal
+giữ dạng chuỗi để không mất độ chính xác. Bản ghi và ảnh đã xóa không được trả
+về; thông tin người dùng chỉ có ID, tên và username. Tool không tải nội dung
+ảnh; tham chiếu ảnh sử dụng endpoint hiện có, yêu cầu đăng nhập HRM để mở.
+Lệnh tồn tại nhưng không có sai lệch trả danh sách rỗng và thông báo phù hợp.
 
 ## Mở rộng
 

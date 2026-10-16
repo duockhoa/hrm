@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { AppWindow, Loader2, X } from "lucide-react";
+import { FcGoogle, FcMicrosoft } from "react-icons/fc";
+import { SiClaude, SiGithub, SiGooglegemini, SiOpenai } from "react-icons/si";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +12,32 @@ import {
   fetchOAuthConnections,
   revokeOAuthConnection,
 } from "@/services/oauth-connections.service";
+
+function ApplicationIcon({ name }: { name: string }) {
+  const normalizedName = name.toLowerCase();
+  const className = "size-9";
+
+  if (normalizedName.includes("gemini")) {
+    return <SiGooglegemini className={`${className} text-blue-500`} />;
+  }
+  if (normalizedName.includes("google")) {
+    return <FcGoogle className={className} />;
+  }
+  if (normalizedName.includes("chatgpt") || normalizedName.includes("openai")) {
+    return <SiOpenai className={className} />;
+  }
+  if (normalizedName.includes("claude") || normalizedName.includes("anthropic")) {
+    return <SiClaude className={`${className} text-[#D97757]`} />;
+  }
+  if (normalizedName.includes("github")) {
+    return <SiGithub className={className} />;
+  }
+  if (normalizedName.includes("microsoft")) {
+    return <FcMicrosoft className={className} />;
+  }
+
+  return <AppWindow className={`${className} text-gray-500`} />;
+}
 
 export default function OAuthConnections() {
   const user = useUserStore((state) => state.user);
@@ -35,8 +64,8 @@ export default function OAuthConnections() {
     <section className="rounded-lg border border-gray-200 p-4 shadow-md">
       <h2 className="mb-2 text-lg font-semibold">Ứng dụng đã kết nối</h2>
       <p className="mb-4 text-sm text-gray-500">
-        Các ứng dụng đang được bạn cấp quyền sử dụng DKPHARMA APP. Thu hồi sẽ
-        ngừng quyền truy cập của kết nối đó ngay lập tức.
+        Các ứng dụng đang được bạn cấp quyền sử dụng DKPHARMA APP. Nhấn dấu × ở
+        góc biểu tượng để thu hồi quyền truy cập ngay lập tức.
       </p>
       {isLoading && (
         <p className="text-sm text-gray-500" aria-live="polite">
@@ -59,32 +88,47 @@ export default function OAuthConnections() {
           Bạn chưa cấp quyền cho ứng dụng nào.
         </p>
       )}
-      <ul className="divide-y divide-gray-100">
+      <ul className="flex flex-wrap gap-6 pt-2">
         {data?.map((connection) => (
           <li
             key={connection.id}
-            className="flex flex-wrap items-center justify-between gap-3 py-3"
+            className="flex w-24 flex-col items-center gap-2"
+            title={`Đọc dữ liệu MCP · Đã cấp quyền ${new Date(connection.created_at).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}`}
           >
-            <div>
-              <p className="font-medium text-gray-800">
-                {connection.client.name}
-              </p>
-              <p className="text-sm text-gray-500">
-                Đọc dữ liệu MCP · Đã cấp quyền{" "}
+            <div className="relative flex size-16 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-800 shadow-sm">
+              <span aria-hidden="true">
+                <ApplicationIcon name={connection.client.name} />
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="absolute -right-2 -top-2 size-6 rounded-full border-gray-200 bg-white text-gray-500 shadow-sm hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                disabled={revoking !== null}
+                onClick={() => void revoke(connection.id)}
+                aria-label={`Thu hồi kết nối ${connection.client.name}`}
+                aria-busy={revoking === connection.id}
+                title={`Thu hồi kết nối ${connection.client.name}`}
+              >
+                {revoking === connection.id ? (
+                  <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                ) : (
+                  <X aria-hidden="true" className="size-3.5" />
+                )}
+              </Button>
+            </div>
+            <p className="w-full break-words text-center text-sm font-medium text-gray-800">
+              {connection.client.name}
+            </p>
+            <p className="sr-only">
+              Đọc dữ liệu MCP · Đã cấp quyền{" "}
+              <time dateTime={connection.created_at}>
                 {new Date(connection.created_at).toLocaleString("vi-VN", {
                   timeZone: "Asia/Ho_Chi_Minh",
                 })}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={revoking !== null}
-              onClick={() => void revoke(connection.id)}
-              aria-label={`Thu hồi kết nối ${connection.client.name}`}
-            >
-              {revoking === connection.id ? "Đang thu hồi…" : "Thu hồi"}
-            </Button>
+              </time>
+              {revoking === connection.id && " · Đang thu hồi…"}
+            </p>
           </li>
         ))}
       </ul>

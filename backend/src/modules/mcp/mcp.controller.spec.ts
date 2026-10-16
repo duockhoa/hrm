@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma.service';
 import { McpModule } from './mcp.module';
 import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
 import { OAuthService } from '../mcp-oauth/oauth.service';
+import { Prisma } from '@prisma/client';
 
 const accessToken = `mcp_at_${'A'.repeat(43)}`;
 const authenticated = () => ({
@@ -17,7 +18,11 @@ const authenticated = () => ({
     expiresAt: Math.floor(Date.now() / 1000) + 900,
     extra: {
       userId: 1,
-      permissions: ['production-orders.list', 'production-orders.read'],
+      permissions: [
+        'production-orders.list',
+        'production-orders.read',
+        'production-order-deviations.read',
+      ],
     },
   },
   user: {
@@ -77,6 +82,7 @@ describe('MCP Streamable HTTP endpoint', () => {
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    productionOrderDeviations: { count: jest.fn(), findMany: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -100,6 +106,8 @@ describe('MCP Streamable HTTP endpoint', () => {
     prisma.productionOrders.findUnique.mockResolvedValue(null);
     prisma.productionOrderMixingRecords.count.mockResolvedValue(0);
     prisma.productionOrderMixingRecords.findMany.mockResolvedValue([]);
+    prisma.productionOrderDeviations.count.mockResolvedValue(0);
+    prisma.productionOrderDeviations.findMany.mockResolvedValue([]);
     prisma.$transaction.mockImplementation((queries: Promise<unknown>[]) =>
       Promise.all(queries),
     );
@@ -141,13 +149,14 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(response.headers['mcp-session-id']).toBeUndefined();
   });
 
-  it('lists the four read-only tools', async () => {
+  it('lists the five read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
       'search_production_orders',
       'get_production_order',
       'get_production_order_mixing_records',
+      'get_production_order_deviations',
     ]);
     expect(
       body(response).result.tools.every(
@@ -420,4 +429,130 @@ describe('MCP Streamable HTTP endpoint', () => {
       ).not.toHaveBeenCalled();
     },
   );
+  it('returns saved deviations with precise quantities, safe user fields and pagination', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      id: 7,
+      lot_no: 'LOT-7',
+    });
+    prisma.productionOrderDeviations.count.mockResolvedValue(21);
+    prisma.productionOrderDeviations.findMany.mockResolvedValue([
+      {
+        id: 12,
+        production_order_id: 7,
+        deviation_content: 'Nhiệt độ vượt giới hạn',
+        cause: 'Thiết bị',
+        handling_plan: 'Kiểm tra thiết bị',
+        handling_result: 'Đã xử lý',
+        affected_quantity: new Prisma.Decimal('1.234'),
+        affected_quantity_unit: 'kg',
+        reporter: { id: 1, name: 'Test', username: 'test' },
+        approver: null,
+        images: [
+          {
+            id: 1,
+            image_path: '/uploads/production-order-deviations/test.png',
+          },
+        ],
+      },
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_deviations',
+      arguments: { production_order_id: 7, page: 2 },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      production_order: { id: 7, lot_no: 'LOT-7' },
+      data: [
+        {
+          id: 12,
+          affected_quantity: '1.234',
+          handling_result: 'Đã xử lý',
+          images: [
+            {
+              id: 1,
+              image_path: '/production-order-deviations/images/test.png',
+            },
+          ],
+        },
+      ],
+      pagination: {
+        page: 2,
+        limit: 10,
+        total: 21,
+        total_pages: 3,
+        has_next_page: true,
+      },
+    });
+    expect(prisma.productionOrderDeviations.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { production_order_id: 7, deleted_at: null },
+        skip: 10,
+        take: 10,
+        select: expect.objectContaining({
+          reporter: { select: { id: true, name: true, username: true } },
+          images: expect.objectContaining({ where: { deleted_at: null } }),
+        }),
+      }),
+    );
+  });
+
+  it('rejects deviation access before any data query when the deviation read permission is missing', async () => {
+    const identity = authenticated();
+    identity.auth.extra.permissions = ['production-orders.read'];
+    oauth.resolveMcpToken.mockResolvedValue(identity);
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_deviations',
+      arguments: { production_order_id: 7 },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+    expect(prisma.productionOrderDeviations.findMany).not.toHaveBeenCalled();
+  });
+
+  it('reports an existing order with no deviations as an empty result', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_deviations',
+      arguments: { production_order_id: 7 },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      data: [],
+      message: 'Lệnh sản xuất chưa có sai lệch.',
+      pagination: { total: 0, has_next_page: false },
+    });
+  });
+
+  it('does not query deviations for a missing production order', async () => {
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_deviations',
+      arguments: { production_order_id: 999 },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(prisma.productionOrderDeviations.findMany).not.toHaveBeenCalled();
+  });
+
+  it('binds a specific deviation to its order and does not expose deleted or other-order records', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_deviations',
+      arguments: { production_order_id: 7, deviation_id: 99 },
+    }).expect(200);
+    expect(prisma.productionOrderDeviations.count).toHaveBeenCalledWith({
+      where: { production_order_id: 7, id: 99, deleted_at: null },
+    });
+    expect(body(response).result.isError).toBe(true);
+  });
+
+  it.each([
+    {},
+    { production_order_id: 0 },
+    { production_order_id: 7, deviation_id: -1 },
+    { production_order_id: 7, limit: 21 },
+  ])('validates deviation arguments: %j', async (arguments_) => {
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_deviations',
+      arguments: arguments_,
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(prisma.productionOrderDeviations.findMany).not.toHaveBeenCalled();
+  });
 });

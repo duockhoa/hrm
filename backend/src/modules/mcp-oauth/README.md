@@ -157,6 +157,7 @@ Scope: `mcp:read`, `offline_access`. Scope không thay thế permission HRM:
 | `search_production_orders`            | `production-orders.list`             |
 | `get_production_order`                | `production-orders.read`             |
 | `get_production_order_mixing_records` | `production-orders.read`             |
+| `get_production_order_deviations` | `production-order-deviations.read` |
 
 Mỗi request kiểm tra grant, client, token hết hạn, user active/không bị xóa,
 scope và permission hiện tại; role đã bị xóa không còn cấp quyền. Log gọi tool
