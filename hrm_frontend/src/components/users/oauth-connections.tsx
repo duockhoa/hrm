@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { AppWindow, Loader2, X } from "lucide-react";
-import { FcGoogle, FcMicrosoft } from "react-icons/fc";
-import { SiClaude, SiGithub, SiGooglegemini, SiOpenai } from "react-icons/si";
+import { FcGoogle } from "react-icons/fc";
+import { FaMicrosoft } from "react-icons/fa6";
+import { RiOpenaiFill } from "react-icons/ri";
+import { SiClaude, SiGithub, SiGooglegemini } from "react-icons/si";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -24,7 +26,7 @@ function ApplicationIcon({ name }: { name: string }) {
     return <FcGoogle className={className} />;
   }
   if (normalizedName.includes("chatgpt") || normalizedName.includes("openai")) {
-    return <SiOpenai className={className} />;
+    return <RiOpenaiFill className={className} />;
   }
   if (normalizedName.includes("claude") || normalizedName.includes("anthropic")) {
     return <SiClaude className={`${className} text-[#D97757]`} />;
@@ -33,7 +35,7 @@ function ApplicationIcon({ name }: { name: string }) {
     return <SiGithub className={className} />;
   }
   if (normalizedName.includes("microsoft")) {
-    return <FcMicrosoft className={className} />;
+    return <FaMicrosoft className={`${className} text-[#00A4EF]`} />;
   }
 
   return <AppWindow className={`${className} text-gray-500`} />;
