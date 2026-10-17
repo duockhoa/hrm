@@ -35,19 +35,82 @@ SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/nod
 Chạy backend bằng `npm run start:dev` trong thư mục `backend`, rồi nhập URL trên
 vào client MCP. Không cần API key của nhà cung cấp AI để chạy module này.
 
-## Năm tool hiện có
+## Sáu tool hiện có
 
-| Tool                       | Tham số                                                         | Kết quả                                                      |
-| -------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------ |
-| `get_server_info`          | `{}`                                                            | Thông tin server và kiểm tra kết nối                         |
-| `search_production_orders` | `query?`, `item_code?`, `lot_no?`, `status?`, `page?`, `limit?` | Danh sách lệnh/lô và phân trang                              |
-| `get_production_order`     | `id`                                                            | Toàn bộ hồ sơ lô từ dữ liệu cục bộ mà tài khoản có quyền đọc |
-| `search_items`             | `query?`, `item_code?`, `code_prefix?`, `page?`, `limit?`       | Tìm sản phẩm theo mã/tên/mã DK, có phân trang                |
-| `get_item`                 | `item_code`                                                     | Thông tin và cấu hình hiện tại của một sản phẩm              |
+| Tool                                 | Tham số                                                                                                                                       | Kết quả                                                      |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `get_server_info`                    | `{}`                                                                                                                                          | Thông tin server và kiểm tra kết nối                         |
+| `search_production_orders`           | `query?`, `item_code?`, `lot_no?`, `status?`, `page?`, `limit?`                                                                               | Danh sách lệnh/lô và phân trang                              |
+| `get_production_order`               | `id`                                                                                                                                          | Toàn bộ hồ sơ lô từ dữ liệu cục bộ mà tài khoản có quyền đọc |
+| `search_items`                       | `query?`, `item_code?`, `code_prefix?`, `page?`, `limit?`                                                                                     | Tìm sản phẩm theo mã/tên/mã DK, có phân trang                |
+| `get_item`                           | `item_code`                                                                                                                                   | Thông tin và cấu hình hiện tại của một sản phẩm              |
+| `search_production_order_deviations` | `mode?`, `today?`, `date_from?`, `date_to?`, `item_code?`, `lot_no?`, `production_order_id?`, `approval_status?`, `query?`, `page?`, `limit?` | Đếm hoặc tìm sai lệch trên nhiều lô                          |
 
-Có năm tên tool trên được đăng ký. Các tool riêng theo lô cho pha chế, sai lệch,
+Có sáu tên tool trên được đăng ký. Các tool riêng theo lô cho pha chế, sai lệch,
 checklist, kiểm tra, tổng kết, đóng gói, lấy mẫu và tài liệu đã được gom vào
 `get_production_order`. Client đã kết nối trước đó cần làm mới danh sách tool.
+
+### Đếm và tra cứu sai lệch trên nhiều lô
+
+`search_production_order_deviations` dùng trực tiếp bảng sai lệch, không tải hồ sơ
+của từng lô để đếm. Không truyền ngày nghĩa là tìm trong toàn bộ thời gian;
+"hiện có" là sai lệch chưa bị xóa, không phải sai lệch chưa xử lý xong.
+
+- `mode=count`: chỉ đếm trong database, trả `total` và `date_range`, không tải
+  bản ghi, ảnh hoặc quan hệ lệnh. Cần `production-order-deviations.list`.
+- `mode=list` (mặc định): trả nội dung/nguyên nhân/xử lý, số lượng/đơn vị,
+  người báo cáo/duyệt, tham chiếu ảnh và `production_order` gồm mã lệnh, mã/tên
+  hàng, số lô. Cần cả `production-order-deviations.list` và
+  `production-order-deviations.read`.
+- `today=true`: ngày hiện tại theo `Asia/Ho_Chi_Minh`, dựa trên giờ máy chủ,
+  độc lập múi giờ hệ điều hành. Không kết hợp với `date_from/date_to`.
+- `date_from`, `date_to`: ngày `YYYY-MM-DD`, lọc theo `created_at` của phiếu
+  sai lệch (không phải ngày sản xuất). Hai đầu ngày đều được bao gồm;
+  truy vấn từ 00:00 ngày đầu đến trước 00:00 sau ngày cuối theo UTC+07:00.
+  Có thể truyền một đầu để lọc khoảng mở. `date_range` trả ranh giới UTC thực tế.
+- `item_code`, `lot_no`, `production_order_id`: so khớp chính xác, kết hợp bằng AND.
+- `approval_status=approved|pending`: đã có/chưa có người phê duyệt;
+  không suy ra trạng thái đã xử lý xong. `query` tìm trong nội dung, nguyên nhân,
+  phương án và kết quả xử lý.
+- Danh sách có `pagination`, mặc định `page=1`, `limit=20`, tối đa 100;
+  sắp theo ngày tạo giảm dần rồi ID giảm dần. Count và list dùng cùng bộ lọc.
+
+Bản ghi và ảnh đã xóa bị loại bỏ. Không có kết quả trả số lượng 0 và danh sách
+rỗng ở chế độ list, không coi là lỗi. Decimal giữ dạng chuỗi, ảnh chỉ là tham chiếu.
+
+Đếm sai lệch hôm nay:
+
+```json
+{
+  "name": "search_production_order_deviations",
+  "arguments": { "mode": "count", "today": true }
+}
+```
+
+Đếm toàn bộ sai lệch của một mã hàng:
+
+```json
+{
+  "name": "search_production_order_deviations",
+  "arguments": { "mode": "count", "item_code": "TP001" }
+}
+```
+
+Xem các phiếu chưa có người duyệt trong khoảng ngày:
+
+```json
+{
+  "name": "search_production_order_deviations",
+  "arguments": {
+    "mode": "list",
+    "date_from": "2026-10-01",
+    "date_to": "2026-10-17",
+    "approval_status": "pending",
+    "page": 1,
+    "limit": 20
+  }
+}
+```
 
 ### Tra cứu sản phẩm
 
@@ -187,7 +250,7 @@ quyền đọc, thứ tự và danh sách trường `select`. Không cần thêm
 Các nhóm có cấu trúc riêng như pha chế/sai lệch được xử lý trong `McpToolsService`.
 
 ```sh
-npm test -- --runInBand mcp.controller.spec.ts mcp-record-sections.spec.ts production-order-completeness.service.spec.ts
+npm test -- --runInBand mcp.controller.spec.ts mcp-deviation-search.spec.ts mcp-record-sections.spec.ts production-order-completeness.service.spec.ts
 npx tsc -p tsconfig.build.json --noEmit --incremental false
 ```
 

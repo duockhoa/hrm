@@ -74,6 +74,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     resolveMcpToken: jest.fn(),
   };
   const prisma = {
+    productionOrderDeviations: { count: jest.fn(), findMany: jest.fn() },
     items: { count: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
     productionOrders: {
       count: jest.fn(),
@@ -100,6 +101,8 @@ describe('MCP Streamable HTTP endpoint', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.productionOrderDeviations.count.mockResolvedValue(0);
+    prisma.productionOrderDeviations.findMany.mockResolvedValue([]);
     prisma.items.count.mockResolvedValue(0);
     prisma.items.findMany.mockResolvedValue([]);
     prisma.items.findFirst.mockResolvedValue(null);
@@ -677,7 +680,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(response.text).not.toContain('private item database failure');
   });
 
-  it('exposes exactly five read-only tools', async () => {
+  it('exposes exactly six read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
@@ -685,12 +688,237 @@ describe('MCP Streamable HTTP endpoint', () => {
       'get_production_order',
       'search_items',
       'get_item',
+      'search_production_order_deviations',
     ]);
     expect(
       body(response).result.tools.every(
         (tool) => tool.annotations.readOnlyHint,
       ),
     ).toBe(true);
+  });
+
+  function allowDeviationSearch(...permissions: string[]) {
+    const identity = authenticated();
+    identity.auth.extra.permissions = permissions;
+    oauth.resolveMcpToken.mockResolvedValue(identity);
+  }
+
+  it('counts deviations directly without reading records or production-order details', async () => {
+    allowDeviationSearch('production-order-deviations.list');
+    prisma.productionOrderDeviations.count.mockResolvedValue(75);
+    const response = await rpc('tools/call', {
+      name: 'search_production_order_deviations',
+      arguments: {
+        mode: 'count',
+        item_code: ' TP001 ',
+        lot_no: ' LOT1 ',
+        production_order_id: 7,
+        approval_status: 'pending',
+        query: ' nhiệt độ ',
+        date_from: '2026-10-01',
+        date_to: '2026-10-17',
+      },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent).toMatchObject({
+      mode: 'count',
+      total: 75,
+      date_range: {
+        timezone: 'Asia/Ho_Chi_Minh',
+        field: 'created_at',
+        from_inclusive: '2026-09-30T17:00:00.000Z',
+        to_exclusive: '2026-10-17T17:00:00.000Z',
+      },
+    });
+    expect(prisma.productionOrderDeviations.count).toHaveBeenCalledWith({
+      where: {
+        deleted_at: null,
+        production_order_id: 7,
+        productionOrder: { is: { item_code: 'TP001', lot_no: 'LOT1' } },
+        created_at: {
+          gte: new Date('2026-09-30T17:00:00Z'),
+          lt: new Date('2026-10-17T17:00:00Z'),
+        },
+        approver_id: null,
+        OR: [
+          { deviation_content: { contains: 'nhiệt độ' } },
+          { cause: { contains: 'nhiệt độ' } },
+          { handling_plan: { contains: 'nhiệt độ' } },
+          { handling_result: { contains: 'nhiệt độ' } },
+        ],
+      },
+    });
+    expect(body(response).result.structuredContent).not.toHaveProperty('data');
+    expect(prisma.productionOrderDeviations.findMany).not.toHaveBeenCalled();
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('lists deviations across orders with precise quantities, safe images and stable database pagination', async () => {
+    allowDeviationSearch(
+      'production-order-deviations.list',
+      'production-order-deviations.read',
+    );
+    prisma.productionOrderDeviations.count.mockResolvedValue(45);
+    prisma.productionOrderDeviations.findMany.mockResolvedValue([
+      {
+        id: 99,
+        deviation_content: 'Nhiệt độ',
+        created_at: new Date('2026-10-17T01:00:00Z'),
+        affected_quantity: new Prisma.Decimal('1.234'),
+        affected_quantity_unit: 'kg',
+        reporter: { id: 1, name: 'QA', username: 'qa' },
+        productionOrder: {
+          id: 7,
+          production_order_code: 'LSX007',
+          item_code: 'TP001',
+          item: { item_name: 'Sản phẩm A' },
+          lot_no: 'LOT1',
+        },
+        images: [
+          {
+            id: 1,
+            image_path: '/uploads/production-order-deviations/test.png',
+          },
+        ],
+      },
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'search_production_order_deviations',
+      arguments: { page: 2, item_code: 'TP001', approval_status: 'approved' },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      mode: 'list',
+      total: 45,
+      data: [
+        {
+          id: 99,
+          affected_quantity: '1.234',
+          created_at: '2026-10-17T01:00:00.000Z',
+          production_order: {
+            production_order_code: 'LSX007',
+            item_code: 'TP001',
+            lot_no: 'LOT1',
+          },
+          images: [
+            { image_path: '/production-order-deviations/images/test.png' },
+          ],
+        },
+      ],
+      pagination: {
+        page: 2,
+        limit: 20,
+        total: 45,
+        total_pages: 3,
+        has_next_page: true,
+      },
+    });
+    const where = {
+      deleted_at: null,
+      productionOrder: { is: { item_code: 'TP001' } },
+      approver_id: { not: null },
+    };
+    expect(prisma.productionOrderDeviations.count).toHaveBeenCalledWith({
+      where,
+    });
+    expect(prisma.productionOrderDeviations.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where,
+        skip: 20,
+        take: 20,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        select: expect.objectContaining({
+          reporter: { select: { id: true, name: true, username: true } },
+          approver: { select: { id: true, name: true, username: true } },
+          images: expect.objectContaining({ where: { deleted_at: null } }),
+        }),
+      }),
+    );
+    const data = body(response).result.structuredContent.data as Record<
+      string,
+      unknown
+    >[];
+    expect(data[0]).not.toHaveProperty('productionOrder');
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('defaults to all dates and returns an empty list instead of treating an unmatched filter as an error', async () => {
+    allowDeviationSearch(
+      'production-order-deviations.list',
+      'production-order-deviations.read',
+    );
+    const response = await rpc('tools/call', {
+      name: 'search_production_order_deviations',
+      arguments: { production_order_id: 999 },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      mode: 'list',
+      total: 0,
+      data: [],
+      date_range: { date_from: null, date_to: null },
+      pagination: { page: 1, limit: 20, total_pages: 0, has_next_page: false },
+    });
+    expect(prisma.productionOrderDeviations.count).toHaveBeenCalledWith({
+      where: { deleted_at: null, production_order_id: 999 },
+    });
+  });
+
+  it.each([
+    ['count', ['production-order-deviations.read']],
+    ['list', ['production-order-deviations.list']],
+    ['list', ['production-orders.list', 'production-orders.read']],
+  ] as [string, string[]][])(
+    'requires deviation permissions before %s queries',
+    async (mode, permissions) => {
+      allowDeviationSearch(...permissions);
+      const response = await rpc('tools/call', {
+        name: 'search_production_order_deviations',
+        arguments: { mode },
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(prisma.productionOrderDeviations.count).not.toHaveBeenCalled();
+      expect(prisma.productionOrderDeviations.findMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { mode: 'other' },
+    { today: true, date_from: '2026-10-17' },
+    { date_from: '2026-10-18', date_to: '2026-10-17' },
+    { date_from: '2026-02-30' },
+    { date_to: '2026-10-17T00:00:00Z' },
+    { production_order_id: 0 },
+    { item_code: ' ' },
+    { query: ' ' },
+    { limit: 101 },
+    { page: 0 },
+    { approval_status: 'resolved' },
+    { unknown: true },
+  ])('validates cross-order deviation filters: %j', async (arguments_) => {
+    allowDeviationSearch(
+      'production-order-deviations.list',
+      'production-order-deviations.read',
+    );
+    const response = await rpc('tools/call', {
+      name: 'search_production_order_deviations',
+      arguments: arguments_,
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(prisma.productionOrderDeviations.count).not.toHaveBeenCalled();
+    expect(prisma.productionOrderDeviations.findMany).not.toHaveBeenCalled();
+  });
+
+  it('sanitizes failures in the deviation count query', async () => {
+    allowDeviationSearch('production-order-deviations.list');
+    prisma.productionOrderDeviations.count.mockRejectedValueOnce(
+      new Error('private database failure'),
+    );
+    const response = await rpc('tools/call', {
+      name: 'search_production_order_deviations',
+      arguments: { mode: 'count' },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(response.text).not.toContain('private database failure');
   });
 
   it.each([

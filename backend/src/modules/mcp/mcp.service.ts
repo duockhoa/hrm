@@ -15,6 +15,8 @@ import * as z from 'zod/v4';
 import { McpToolsService } from './mcp-tools.service';
 import { stringArray } from '../mcp-oauth/oauth.config';
 import { ITEM_PERMISSIONS } from '../items/items.permissions';
+import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
+import { deviationSearchSchema } from './mcp-deviation-search';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -58,7 +60,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
-        'Tra cứu dữ liệu EBR. Dùng search_production_orders để tìm ID lệnh theo mã lệnh, sản phẩm hoặc số lô, có phân trang. Sau đó gọi get_production_order với id để lấy toàn bộ hồ sơ lô từ dữ liệu cục bộ. Các nhóm nằm trong sections, không cắt bớt bản ghi. Dùng search_items tìm mã/tên sản phẩm, rồi get_item theo item_code để xem cấu hình sản phẩm hiện tại. Cấu hình hiện tại có thể khác cấu hình đã lưu theo lô; không tự áp dụng cho lô cũ. Nhóm thiếu quyền đọc có available=false, không được kết luận là không có dữ liệu. Mức độ có dữ liệu khác với đạt chất lượng và phê duyệt. Chỉ đọc dữ liệu; ảnh/tệp trả tham chiếu, không tải nội dung.',
+        'Tra cứu dữ liệu EBR. Dùng search_production_orders tìm ID lệnh rồi get_production_order lấy toàn bộ hồ sơ lô từ dữ liệu cục bộ; các nhóm nằm trong sections, không cắt bớt bản ghi. Hỏi số lượng/danh sách sai lệch trên nhiều lô hoặc theo mã hàng/ngày dùng search_production_order_deviations: chỉ hỏi số lượng thì mode=count, xem phiếu thì mode=list. Hôm nay dùng today=true theo ngày Việt Nam, không cần tải hồ sơ các lô để đếm. Dùng search_items và get_item để xem cấu hình sản phẩm hiện tại; không tự áp dụng cấu hình mới cho lô cũ. Nhóm thiếu quyền đọc có available=false, không được kết luận là không có dữ liệu. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Chỉ đọc dữ liệu; ảnh/tệp trả tham chiếu, không tải nội dung.',
     });
 
     server.registerTool(
@@ -170,6 +172,35 @@ export class McpService implements OnModuleDestroy {
       ({ item_code }) =>
         this.executeTool('get_item', auth, ITEM_PERMISSIONS.READ, () =>
           this.tools.getItem(item_code, stringArray(auth?.extra?.permissions)),
+        ),
+    );
+
+    server.registerTool(
+      'search_production_order_deviations',
+      {
+        description:
+          'Đếm hoặc tra cứu sai lệch trên nhiều lô. Khi chỉ hỏi có bao nhiêu, dùng mode=count để đếm trực tiếp trong database. mode=list trả đầy đủ nội dung/nguyên nhân/xử lý, số lượng/đơn vị, người báo cáo/duyệt, tham chiếu ảnh và mã lệnh/mã hàng/tên hàng/số lô, có phân trang. Hỏi hôm nay dùng today=true; hoặc date_from/date_to dạng YYYY-MM-DD, bao gồm cả ngày cuối theo múi giờ Việt Nam, lọc ngày tạo phiếu created_at. item_code, lot_no và production_order_id lọc chính xác; query tìm trong nội dung/nguyên nhân/phương án/kết quả xử lý. approval_status=approved/pending dựa trên có/chưa có người duyệt, không kết luận đã xử lý xong. Không truyền ngày nghĩa là toàn bộ thời gian. Loại phiếu/ảnh đã xóa. Count cần quyền production-order-deviations.list; list cần thêm production-order-deviations.read.',
+        inputSchema: deviationSearchSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'search_production_order_deviations',
+          auth,
+          PRODUCTION_ORDER_DEVIATION_PERMISSIONS.LIST,
+          () => {
+            if (
+              input.mode === 'list' &&
+              !stringArray(auth?.extra?.permissions).includes(
+                PRODUCTION_ORDER_DEVIATION_PERMISSIONS.READ,
+              )
+            ) {
+              throw new ForbiddenException(
+                'Bạn không có quyền đọc chi tiết sai lệch.',
+              );
+            }
+            return this.tools.searchProductionOrderDeviations(input);
+          },
         ),
     );
 

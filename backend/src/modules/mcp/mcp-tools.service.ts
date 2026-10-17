@@ -15,6 +15,10 @@ import {
   itemMixingTemplateSelect,
   itemDatePrintTemplateSelect,
 } from './mcp-item-selects';
+import {
+  buildDeviationSearch,
+  type SearchProductionOrderDeviationsInput,
+} from './mcp-deviation-search';
 
 const orderSelect = {
   id: true,
@@ -141,6 +145,63 @@ export class McpToolsService {
     private readonly prisma: PrismaService,
     private readonly completeness: ProductionOrderLocalCompletenessService,
   ) {}
+
+  async searchProductionOrderDeviations(
+    input: SearchProductionOrderDeviationsInput,
+  ) {
+    const { where, date_range } = buildDeviationSearch(input);
+    const note =
+      'Chỉ tính sai lệch chưa bị xóa; trạng thái phê duyệt dựa trên người duyệt, không phải trạng thái xử lý hoàn tất.';
+    if (input.mode === 'count') {
+      const total = await this.prisma.productionOrderDeviations.count({
+        where,
+      });
+      return { mode: input.mode, total, date_range, note };
+    }
+    const skip = (input.page - 1) * input.limit;
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.productionOrderDeviations.count({ where }),
+      this.prisma.productionOrderDeviations.findMany({
+        where,
+        select: {
+          ...deviationSelect,
+          productionOrder: {
+            select: {
+              id: true,
+              production_order_code: true,
+              item_code: true,
+              item: { select: { item_name: true } },
+              lot_no: true,
+            },
+          },
+        },
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        skip,
+        take: input.limit,
+      }),
+    ]);
+    return {
+      mode: input.mode,
+      total,
+      date_range,
+      note,
+      data: rows.map(({ productionOrder, images, ...row }) => ({
+        ...row,
+        production_order: productionOrder,
+        images: images.map((image) => ({
+          ...image,
+          image_path: getAuthenticatedDeviationImagePath(image.image_path),
+        })),
+      })),
+      pagination: {
+        page: input.page,
+        limit: input.limit,
+        total,
+        total_pages: Math.ceil(total / input.limit),
+        has_next_page: skip + rows.length < total,
+      },
+    };
+  }
 
   async searchItems(input: SearchItemsInput) {
     const where: Prisma.ItemsWhereInput = {
