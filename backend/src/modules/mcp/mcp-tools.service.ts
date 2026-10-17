@@ -6,6 +6,15 @@ import { getAuthenticatedDeviationImagePath } from '../production-order-deviatio
 import { ProductionOrderLocalCompletenessService } from '../production-orders/production-order-local-completeness.service';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
 import { recordSections } from './mcp-record-sections';
+import { buildItemFeatureConfig } from '../features/item-feature-config';
+import { MIXING_ACTIVITY_TEMPLATE_PERMISSIONS } from '../items/mixing-activity-templates.permissions';
+import { DATE_PRINT_TEMPLATE_PERMISSIONS } from '../items/date-print-templates.permissions';
+import {
+  itemSearchSelect,
+  itemDetailSelect,
+  itemMixingTemplateSelect,
+  itemDatePrintTemplateSelect,
+} from './mcp-item-selects';
 
 const orderSelect = {
   id: true,
@@ -91,6 +100,14 @@ export interface SearchProductionOrdersInput {
   limit: number;
 }
 
+export interface SearchItemsInput {
+  query?: string;
+  item_code?: string;
+  code_prefix?: string;
+  page: number;
+  limit: number;
+}
+
 const deviationSelect = {
   id: true,
   production_order_id: true,
@@ -124,6 +141,163 @@ export class McpToolsService {
     private readonly prisma: PrismaService,
     private readonly completeness: ProductionOrderLocalCompletenessService,
   ) {}
+
+  async searchItems(input: SearchItemsInput) {
+    const where: Prisma.ItemsWhereInput = {
+      deleted_at: null,
+      ...(input.item_code ? { item_code: input.item_code } : {}),
+      ...(input.code_prefix
+        ? {
+            AND: [
+              { item_code: { startsWith: input.code_prefix.toUpperCase() } },
+            ],
+          }
+        : {}),
+      ...(input.query
+        ? {
+            OR: [
+              { item_code: { contains: input.query } },
+              { item_name: { contains: input.query } },
+              { dk_code: { contains: input.query } },
+            ],
+          }
+        : {}),
+    };
+    const skip = (input.page - 1) * input.limit;
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.items.count({ where }),
+      this.prisma.items.findMany({
+        where,
+        select: itemSearchSelect,
+        orderBy: { item_code: 'asc' },
+        skip,
+        take: input.limit,
+      }),
+    ]);
+    return {
+      data: rows.map(({ registration, ...item }) => ({
+        ...item,
+        registration: this.activeItemRegistration(registration),
+      })),
+      pagination: {
+        page: input.page,
+        limit: input.limit,
+        total,
+        total_pages: Math.ceil(total / input.limit),
+        has_next_page: skip + rows.length < total,
+      },
+    };
+  }
+
+  async getItem(itemCode: string, permissions: string[] = []) {
+    const canReadMixingTemplates = permissions.includes(
+      MIXING_ACTIVITY_TEMPLATE_PERMISSIONS.READ,
+    );
+    const canReadDateTemplates = permissions.includes(
+      DATE_PRINT_TEMPLATE_PERMISSIONS.READ,
+    );
+    const item = await this.prisma.items.findFirst({
+      where: { item_code: itemCode, deleted_at: null },
+      select: {
+        ...itemDetailSelect,
+        ...(canReadMixingTemplates
+          ? {
+              mixingActivityTemplates: {
+                orderBy: [
+                  { version: 'desc' as const },
+                  { id: 'desc' as const },
+                ],
+                select: itemMixingTemplateSelect,
+              },
+            }
+          : {}),
+        ...(canReadDateTemplates
+          ? {
+              datePrintTemplates: {
+                orderBy: [
+                  { version: 'desc' as const },
+                  { id: 'desc' as const },
+                ],
+                select: itemDatePrintTemplateSelect,
+              },
+            }
+          : {}),
+      },
+    });
+    if (!item)
+      throw new NotFoundException(`Không tìm thấy sản phẩm mã ${itemCode}.`);
+    const {
+      registration,
+      productionSpecification,
+      itemFeatures,
+      itemEquipment,
+      mixingActivityTemplates,
+      datePrintTemplates,
+      ...fields
+    } = item;
+    const { deleted_at: _deletedAt, ...specification } =
+      productionSpecification ?? {};
+    const config = buildItemFeatureConfig(
+      itemCode,
+      (itemFeatures ?? [])
+        .map((row) => ({
+          feature_id: row.feature_id,
+          key: row.feature.key,
+          kind: row.feature.kind,
+          label: row.feature.label,
+          group_name: row.feature.group_name,
+          order: row.order ?? row.feature.default_order,
+          enabled: row.enabled,
+          required: row.required,
+        }))
+        .sort((a, b) => a.order - b.order || a.key.localeCompare(b.key)),
+    );
+    return {
+      data: {
+        ...fields,
+        configuration_source: 'current_item',
+        note: 'Cấu hình sản phẩm hiện tại, có thể khác phiên bản/cấu hình đã lưu trong hồ sơ lô sản xuất.',
+        registration: this.activeItemRegistration(registration),
+        production_specification:
+          productionSpecification && !productionSpecification.deleted_at
+            ? specification
+            : null,
+        feature_config: config,
+        equipment: {
+          available: true,
+          total: itemEquipment?.length ?? 0,
+          data: itemEquipment ?? [],
+        },
+        mixing_activity_templates: canReadMixingTemplates
+          ? {
+              available: true,
+              total: mixingActivityTemplates?.length ?? 0,
+              data: mixingActivityTemplates ?? [],
+            }
+          : { available: false, reason: 'permission_required' },
+        date_print_templates: canReadDateTemplates
+          ? {
+              available: true,
+              total: datePrintTemplates?.length ?? 0,
+              data: datePrintTemplates ?? [],
+            }
+          : { available: false, reason: 'permission_required' },
+      },
+    };
+  }
+
+  private activeItemRegistration(
+    registration: {
+      id: number;
+      registration_number: string;
+      product_name: string | null;
+      deleted_at: Date | null;
+    } | null,
+  ) {
+    if (!registration || registration.deleted_at) return null;
+    const { deleted_at: _deletedAt, ...fields } = registration;
+    return fields;
+  }
 
   async searchProductionOrders(input: SearchProductionOrdersInput) {
     const where: Prisma.ProductionOrdersWhereInput = {

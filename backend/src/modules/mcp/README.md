@@ -35,17 +35,69 @@ SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/nod
 Chạy backend bằng `npm run start:dev` trong thư mục `backend`, rồi nhập URL trên
 vào client MCP. Không cần API key của nhà cung cấp AI để chạy module này.
 
-## Ba tool hiện có
+## Năm tool hiện có
 
 | Tool                       | Tham số                                                         | Kết quả                                                      |
 | -------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------ |
 | `get_server_info`          | `{}`                                                            | Thông tin server và kiểm tra kết nối                         |
 | `search_production_orders` | `query?`, `item_code?`, `lot_no?`, `status?`, `page?`, `limit?` | Danh sách lệnh/lô và phân trang                              |
 | `get_production_order`     | `id`                                                            | Toàn bộ hồ sơ lô từ dữ liệu cục bộ mà tài khoản có quyền đọc |
+| `search_items`             | `query?`, `item_code?`, `code_prefix?`, `page?`, `limit?`       | Tìm sản phẩm theo mã/tên/mã DK, có phân trang                |
+| `get_item`                 | `item_code`                                                     | Thông tin và cấu hình hiện tại của một sản phẩm              |
 
-Chỉ có ba tên tool trên được đăng ký. Các tool riêng cho pha chế, sai lệch,
+Có năm tên tool trên được đăng ký. Các tool riêng theo lô cho pha chế, sai lệch,
 checklist, kiểm tra, tổng kết, đóng gói, lấy mẫu và tài liệu đã được gom vào
 `get_production_order`. Client đã kết nối trước đó cần làm mới danh sách tool.
+
+### Tra cứu sản phẩm
+
+`search_items` tìm `query` trong mã, tên và mã DK. `item_code` so khớp chính xác;
+`code_prefix` lọc tiền tố gồm chữ cái, tự chuẩn hóa chữ hoa (`TP`, `BTP`...).
+`page` mặc định 1, `limit` mặc định 20 và tối đa 100. Dữ liệu sắp theo mã tăng dần;
+count và danh sách dùng chung bộ lọc, bỏ qua sản phẩm đã xóa. Kết quả gồm mã, tên,
+đơn vị, mã DK và số đăng ký còn hiệu lực, cùng `pagination`.
+
+```json
+{
+  "name": "search_items",
+  "arguments": {
+    "query": "sản phẩm",
+    "code_prefix": "TP",
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+```json
+{
+  "name": "get_item",
+  "arguments": { "item_code": "TP001" }
+}
+```
+
+`get_item` trả `{ "data": { ... } }` với:
+
+- Các trường sản phẩm, thời gian tạo/cập nhật và `registration` còn hiệu lực.
+- `production_specification`: dòng sản phẩm, dạng bào chế, giới hạn kiểm soát/
+  cho phép, toán tử, đơn vị, người và thời gian cập nhật; null nếu chưa có/đã xóa.
+- `feature_config`: cấu hình actions/sections, enabled/required và thứ tự hiện tại.
+- `equipment`: các thiết bị gắn với sản phẩm, thông số thiết bị và người gắn.
+- `mixing_activity_templates`: toàn bộ phiên bản mẫu pha chế với status, cỡ mẻ,
+  đơn vị và cấu trúc giai đoạn → bước → thông số/yêu cầu.
+- `date_print_templates`: toàn bộ phiên bản mẫu in date với status, nội dung,
+  vị trí, định dạng ngày và tham chiếu ảnh.
+
+Thiết bị và hai nhóm mẫu có dạng `available`, `total`, `data`; chi tiết sản phẩm
+không cắt bớt bản ghi. Mẫu pha chế cần `mixing-activity-templates.read`, mẫu in date
+cần `date-print-templates.read`; thiếu quyền trả `available=false` và
+`reason=permission_required`, không truy vấn nội dung của nhóm đó.
+
+Kết quả ghi rõ `configuration_source=current_item`: đây là cấu hình sản phẩm
+hiện tại, có thể khác phiên bản/cấu hình đã lưu theo lô. Không dùng cấu hình này
+để tự thay thế snapshot hoặc kết quả của một lô cũ. Tool không truy vấn lịch sử
+lô, tồn kho hay nguồn bên ngoài. Ngày dạng ISO 8601, Decimal giữ dạng chuỗi và
+thông tin người dùng chỉ gồm ID, tên, username.
 
 ### Tìm lô
 
@@ -115,6 +167,10 @@ chi tiết cần `production-orders.read`. Các nhóm in date, tiệt trùng, l�
 kết sau đóng gói, thiết bị và sai lệch cần thêm quyền đọc tương ứng như REST API.
 Nhóm thiếu quyền không được truy vấn nội dung và trả
 `{ "available": false, "reason": "permission_required" }`, khác với nhóm rỗng.
+
+Đối với sản phẩm, `search_items` cần `items.list`, `get_item` cần `items.read`.
+Hai nhóm mẫu cần thêm quyền đọc tương ứng như mô tả ở trên. Sản phẩm không tồn
+tại hoặc đã xóa trả lỗi tool; đăng ký/thông số đã xóa không được trả nội dung.
 
 MCP chỉ đọc dữ liệu cục bộ; không có tool vật liệu hoặc kết nối SAP B1.
 Ảnh/tệp trả metadata và tham chiếu, không tải nội dung. Thông tin người dùng chỉ

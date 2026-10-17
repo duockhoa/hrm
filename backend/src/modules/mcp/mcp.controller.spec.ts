@@ -74,6 +74,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     resolveMcpToken: jest.fn(),
   };
   const prisma = {
+    items: { count: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
     productionOrders: {
       count: jest.fn(),
       findMany: jest.fn(),
@@ -99,6 +100,9 @@ describe('MCP Streamable HTTP endpoint', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.items.count.mockResolvedValue(0);
+    prisma.items.findMany.mockResolvedValue([]);
+    prisma.items.findFirst.mockResolvedValue(null);
     oauth.resolveMcpToken.mockResolvedValue(authenticated());
     prisma.productionOrders.count.mockResolvedValue(0);
     prisma.productionOrders.findMany.mockResolvedValue([]);
@@ -317,12 +321,370 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(prisma.productionOrders.findMany).not.toHaveBeenCalled();
   });
 
-  it('exposes exactly three read-only tools', async () => {
+  function allowItems(...permissions: string[]) {
+    const identity = authenticated();
+    identity.auth.extra.permissions = permissions;
+    oauth.resolveMcpToken.mockResolvedValue(identity);
+  }
+
+  it('searches active items with trimmed filters, normalized prefix and database pagination', async () => {
+    allowItems('items.list');
+    prisma.items.count.mockResolvedValue(5);
+    prisma.items.findMany.mockResolvedValue([
+      {
+        item_code: 'BTP001',
+        item_name: 'Sản phẩm A',
+        registration: {
+          id: 1,
+          registration_number: 'REG1',
+          product_name: 'A',
+          deleted_at: null,
+        },
+      },
+      {
+        item_code: 'BTP002',
+        item_name: 'Sản phẩm B',
+        registration: { deleted_at: new Date() },
+      },
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'search_items',
+      arguments: {
+        query: ' Sản phẩm ',
+        item_code: ' BTP001 ',
+        code_prefix: ' btp ',
+        page: 2,
+        limit: 2,
+      },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      data: [
+        { item_code: 'BTP001', registration: { registration_number: 'REG1' } },
+        { item_code: 'BTP002', registration: null },
+      ],
+      pagination: {
+        page: 2,
+        limit: 2,
+        total: 5,
+        total_pages: 3,
+        has_next_page: true,
+      },
+    });
+    const where = {
+      deleted_at: null,
+      item_code: 'BTP001',
+      AND: [{ item_code: { startsWith: 'BTP' } }],
+      OR: [
+        { item_code: { contains: 'Sản phẩm' } },
+        { item_name: { contains: 'Sản phẩm' } },
+        { dk_code: { contains: 'Sản phẩm' } },
+      ],
+    };
+    expect(prisma.items.count).toHaveBeenCalledWith({ where });
+    expect(prisma.items.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where,
+        orderBy: { item_code: 'asc' },
+        skip: 2,
+        take: 2,
+      }),
+    );
+    expect(response.text).not.toContain('deleted_at');
+  });
+
+  it('returns an empty item search with default pagination', async () => {
+    allowItems('items.list');
+    const response = await rpc('tools/call', {
+      name: 'search_items',
+      arguments: {},
+    }).expect(200);
+    expect(body(response).result.structuredContent).toEqual({
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        total_pages: 0,
+        has_next_page: false,
+      },
+    });
+  });
+
+  it('returns current item specifications, configuration, equipment and all authorized template versions', async () => {
+    allowItems(
+      'items.read',
+      'mixing-activity-templates.read',
+      'date-print-templates.read',
+    );
+    const date = new Date('2026-10-15T01:00:00Z');
+    const user = { id: 2, name: 'QA', username: 'qa' };
+    const templates = Array.from({ length: 24 }, (_, i) => ({
+      id: i + 1,
+      version: i + 1,
+      status: i ? 'active' : 'inactive',
+      batch_size: new Prisma.Decimal('123.456'),
+      stages: [
+        {
+          steps: [
+            {
+              parameters: [
+                { parameter_name: 'Thời gian', requirement: '10 phút' },
+              ],
+            },
+          ],
+        },
+      ],
+    }));
+    prisma.items.findFirst.mockResolvedValue({
+      item_code: 'TP001',
+      item_name: 'Sản phẩm A',
+      unit: 'hộp',
+      dk_code: 'DK001',
+      created_at: date,
+      update_at: date,
+      registration: {
+        id: 1,
+        registration_number: 'REG1',
+        product_name: 'A',
+        deleted_at: null,
+      },
+      productionSpecification: {
+        deleted_at: null,
+        lower_control_limit: new Prisma.Decimal('1.234567'),
+        productLine: { code: 'LINE1', name: 'Dây chuyền 1' },
+        dosageForm: { name: 'Viên nén' },
+        updatedBy: user,
+      },
+      itemFeatures: [
+        {
+          feature_id: 1,
+          enabled: true,
+          required: true,
+          order: null,
+          feature: {
+            key: 'mixing_records',
+            kind: 'section',
+            label: 'Pha chế',
+            group_name: null,
+            default_order: 10,
+          },
+        },
+        {
+          feature_id: 2,
+          enabled: false,
+          required: false,
+          order: 5,
+          feature: {
+            key: 'date_checks',
+            kind: 'section',
+            label: 'In date',
+            group_name: null,
+            default_order: 20,
+          },
+        },
+      ],
+      itemEquipment: [
+        {
+          id: 1,
+          equipment: {
+            code: 'TB001',
+            parameters: [{ name: 'Nhiệt độ', unit: '°C' }],
+          },
+          createdBy: user,
+        },
+      ],
+      mixingActivityTemplates: templates,
+      datePrintTemplates: [
+        {
+          id: 1,
+          version: 1,
+          print_content: 'Số lô',
+          manufacturing_date_format: 'dd/MM/yyyy',
+        },
+      ],
+    });
+    const response = await rpc('tools/call', {
+      name: 'get_item',
+      arguments: { item_code: ' TP001 ' },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent.data).toMatchObject({
+      item_code: 'TP001',
+      created_at: date.toISOString(),
+      configuration_source: 'current_item',
+      registration: { registration_number: 'REG1' },
+      production_specification: {
+        lower_control_limit: '1.234567',
+        dosageForm: { name: 'Viên nén' },
+        updatedBy: user,
+      },
+      feature_config: {
+        item_code: 'TP001',
+        sections: [
+          { key: 'date_checks', enabled: false, required: false, order: 5 },
+          { key: 'mixing_records', enabled: true, required: true, order: 10 },
+        ],
+      },
+      equipment: {
+        available: true,
+        total: 1,
+        data: [{ equipment: { code: 'TB001' } }],
+      },
+      mixing_activity_templates: { available: true, total: 24 },
+      date_print_templates: { available: true, total: 1 },
+    });
+    const data = body(response).result.structuredContent.data as {
+      mixing_activity_templates: { data: unknown[] };
+      production_specification: object;
+    };
+    expect(data.mixing_activity_templates.data).toHaveLength(24);
+    expect(data.production_specification).not.toHaveProperty('deleted_at');
+    expect(response.text).not.toContain('default_order');
+    const [query] = prisma.items.findFirst.mock.calls[0] as [
+      { where: object; select: Record<string, unknown> },
+    ];
+    expect(query.where).toEqual({ item_code: 'TP001', deleted_at: null });
+    expect(query.select.mixingActivityTemplates).not.toHaveProperty('take');
+    expect(query.select.mixingActivityTemplates).not.toHaveProperty('where');
+    expect(query.select).not.toHaveProperty('productionOrders');
+    expect(query.select).not.toHaveProperty('warehouseReceiptItems');
+    expect(prisma.productionOrders.findMany).not.toHaveBeenCalled();
+  });
+
+  it('omits unauthorized template queries and data while allowing the item to be read', async () => {
+    allowItems('items.read');
+    prisma.items.findFirst.mockResolvedValue({
+      item_code: 'TP001',
+      item_name: 'A',
+      mixingActivityTemplates: [{ description: 'private mixing template' }],
+      datePrintTemplates: [{ print_content: 'private date template' }],
+    });
+    const response = await rpc('tools/call', {
+      name: 'get_item',
+      arguments: { item_code: 'TP001' },
+    }).expect(200);
+    expect(body(response).result.structuredContent.data).toMatchObject({
+      mixing_activity_templates: {
+        available: false,
+        reason: 'permission_required',
+      },
+      date_print_templates: { available: false, reason: 'permission_required' },
+    });
+    expect(response.text).not.toContain('private mixing template');
+    expect(response.text).not.toContain('private date template');
+    const [query] = prisma.items.findFirst.mock.calls[0] as [
+      { select: Record<string, unknown> },
+    ];
+    expect(query.select).not.toHaveProperty('mixingActivityTemplates');
+    expect(query.select).not.toHaveProperty('datePrintTemplates');
+  });
+
+  it('hides deleted registration/specifications and returns empty configured groups', async () => {
+    allowItems(
+      'items.read',
+      'mixing-activity-templates.read',
+      'date-print-templates.read',
+    );
+    prisma.items.findFirst.mockResolvedValue({
+      item_code: 'TP001',
+      registration: { deleted_at: new Date(), registration_number: 'OLD' },
+      productionSpecification: { deleted_at: new Date(), hardness_unit: 'OLD' },
+    });
+    const response = await rpc('tools/call', {
+      name: 'get_item',
+      arguments: { item_code: 'TP001' },
+    }).expect(200);
+    expect(body(response).result.structuredContent.data).toMatchObject({
+      registration: null,
+      production_specification: null,
+      feature_config: { sections: [], actions: [] },
+      equipment: { total: 0, data: [] },
+      mixing_activity_templates: { available: true, total: 0, data: [] },
+    });
+    expect(response.text).not.toContain('OLD');
+  });
+
+  it('reports an absent or deleted item as a tool error', async () => {
+    allowItems('items.read');
+    const response = await rpc('tools/call', {
+      name: 'get_item',
+      arguments: { item_code: 'NO-ITEM' },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(body(response).result.content[0].text).toContain('NO-ITEM');
+    expect(prisma.items.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { item_code: 'NO-ITEM', deleted_at: null },
+      }),
+    );
+  });
+
+  it.each([
+    ['search_items', {}, ['items.read']],
+    [
+      'get_item',
+      { item_code: 'TP001' },
+      ['items.list', 'mixing-activity-templates.read'],
+    ],
+  ] as [string, object, string[]][])(
+    'requires the item permission for %s before querying',
+    async (name, arguments_, permissions) => {
+      allowItems(...permissions);
+      const response = await rpc('tools/call', {
+        name,
+        arguments: arguments_,
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(prisma.items.findFirst).not.toHaveBeenCalled();
+      expect(prisma.items.findMany).not.toHaveBeenCalled();
+      expect(prisma.items.count).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['get_item', {}],
+    ['get_item', { item_code: ' ' }],
+    ['get_item', { item_code: 123 }],
+    ['search_items', { limit: 101 }],
+    ['search_items', { page: 0 }],
+    ['search_items', { query: ' ' }],
+    ['search_items', { code_prefix: 'TP1' }],
+    ['search_items', { unexpected: true }],
+  ] as [string, object][])(
+    'validates %s arguments: %j',
+    async (name, arguments_) => {
+      allowItems('items.list', 'items.read');
+      const response = await rpc('tools/call', {
+        name,
+        arguments: arguments_,
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(prisma.items.findFirst).not.toHaveBeenCalled();
+      expect(prisma.items.findMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it('sanitizes item database failures', async () => {
+    allowItems('items.read');
+    prisma.items.findFirst.mockRejectedValueOnce(
+      new Error('private item database failure'),
+    );
+    const response = await rpc('tools/call', {
+      name: 'get_item',
+      arguments: { item_code: 'TP001' },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(response.text).not.toContain('private item database failure');
+  });
+
+  it('exposes exactly five read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
       'search_production_orders',
       'get_production_order',
+      'search_items',
+      'get_item',
     ]);
     expect(
       body(response).result.tools.every(

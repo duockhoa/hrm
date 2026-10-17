@@ -1,5 +1,11 @@
 import { Prisma } from '@prisma/client';
 import { recordSections } from './mcp-record-sections';
+import {
+  itemSearchSelect,
+  itemDetailSelect,
+  itemMixingTemplateSelect,
+  itemDatePrintTemplateSelect,
+} from './mcp-item-selects';
 
 describe('MCP record registry matches Prisma relations', () => {
   const models = Prisma.dmmf.datamodel.models;
@@ -36,5 +42,15 @@ describe('MCP record registry matches Prisma relations', () => {
       ).toBe('DateTime');
       validateSelect(relation.type, config.select);
     },
+  );
+
+  it.each([
+    ['Items', itemSearchSelect],
+    ['Items', itemDetailSelect],
+    ['MixingActivityTemplates', itemMixingTemplateSelect],
+    ['DatePrintTemplates', itemDatePrintTemplateSelect],
+  ] as [string, Record<string, unknown>][])(
+    'validates safe item selections for %s',
+    (name, select) => validateSelect(name, select),
   );
 });

@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import * as z from 'zod/v4';
 import { McpToolsService } from './mcp-tools.service';
 import { stringArray } from '../mcp-oauth/oauth.config';
+import { ITEM_PERMISSIONS } from '../items/items.permissions';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -57,7 +58,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
-        'Tra cứu dữ liệu EBR bằng 3 tool. Dùng search_production_orders để tìm ID lệnh theo mã lệnh, sản phẩm hoặc số lô, có phân trang. Sau đó gọi get_production_order với id để lấy toàn bộ hồ sơ lô từ dữ liệu cục bộ trong một lần gọi. Các nhóm chi tiết nằm trong sections và không phân trang/cắt bớt bản ghi. Nhóm thiếu quyền đọc có available=false, không được kết luận là không có dữ liệu. Mức độ có dữ liệu khác với đạt chất lượng và phê duyệt. Chỉ đọc dữ liệu; ảnh/tệp trả tham chiếu, không tải nội dung.',
+        'Tra cứu dữ liệu EBR. Dùng search_production_orders để tìm ID lệnh theo mã lệnh, sản phẩm hoặc số lô, có phân trang. Sau đó gọi get_production_order với id để lấy toàn bộ hồ sơ lô từ dữ liệu cục bộ. Các nhóm nằm trong sections, không cắt bớt bản ghi. Dùng search_items tìm mã/tên sản phẩm, rồi get_item theo item_code để xem cấu hình sản phẩm hiện tại. Cấu hình hiện tại có thể khác cấu hình đã lưu theo lô; không tự áp dụng cho lô cũ. Nhóm thiếu quyền đọc có available=false, không được kết luận là không có dữ liệu. Mức độ có dữ liệu khác với đạt chất lượng và phê duyệt. Chỉ đọc dữ liệu; ảnh/tệp trả tham chiếu, không tải nội dung.',
     });
 
     server.registerTool(
@@ -125,6 +126,50 @@ export class McpService implements OnModuleDestroy {
               id,
               stringArray(auth?.extra?.permissions),
             ),
+        ),
+    );
+
+    server.registerTool(
+      'search_items',
+      {
+        description:
+          'Tìm sản phẩm theo mã, tên hoặc mã DK; item_code lọc chính xác, code_prefix lọc tiền tố mã (TP, BTP...). Bỏ qua sản phẩm đã xóa. Danh sách có phân trang, gồm mã/tên, đơn vị, mã DK và số đăng ký hiện tại.',
+        inputSchema: z
+          .object({
+            query: z.string().trim().min(1).max(100).optional(),
+            item_code: z.string().trim().min(1).max(100).optional(),
+            code_prefix: z
+              .string()
+              .trim()
+              .min(1)
+              .max(50)
+              .regex(/^[a-zA-Z]+$/)
+              .optional(),
+            page: z.number().int().min(1).max(1000000).default(1),
+            limit: z.number().int().min(1).max(100).default(20),
+          })
+          .strict(),
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool('search_items', auth, ITEM_PERMISSIONS.LIST, () =>
+          this.tools.searchItems(input),
+        ),
+    );
+
+    server.registerTool(
+      'get_item',
+      {
+        description:
+          'Lấy đầy đủ thông tin sản phẩm theo item_code từ search_items: mã/tên/đơn vị/mã DK, số đăng ký, thông số sản xuất và giới hạn kiểm soát/cho phép, dòng sản phẩm, dạng bào chế, cấu hình mục hồ sơ bắt buộc/áp dụng, thiết bị và thông số thiết bị. Mẫu pha chế/in date chỉ trả khi có quyền đọc tương ứng; toàn bộ phiên bản có status riêng. Đây là cấu hình hiện tại, không phải dữ liệu hay phiên bản đã lưu của lô. Không tải nội dung ảnh/tệp và không lấy lịch sử lô.',
+        inputSchema: z
+          .object({ item_code: z.string().trim().min(1).max(100) })
+          .strict(),
+        annotations: readOnlyAnnotations,
+      },
+      ({ item_code }) =>
+        this.executeTool('get_item', auth, ITEM_PERMISSIONS.READ, () =>
+          this.tools.getItem(item_code, stringArray(auth?.extra?.permissions)),
         ),
     );
 
