@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { PRODUCTION_ORDER_PERMISSIONS as P } from '../production-orders/production-orders.permissions';
 import { PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS } from '../production-orders/production-order-date-checks.permissions';
+import { EQUIPMENT_PERMISSIONS } from '../equipment/equipment.permissions';
 
 export const mcpUserSelect = { id: true, name: true, username: true } as const;
 const fields = <T extends string>(...keys: T[]): Record<T, true> =>
@@ -925,6 +926,52 @@ export const recordSections = {
       createdBy: { select: mcpUserSelect },
     } satisfies Prisma.ProductionOrderSamplingRecordsSelect,
   },
+  equipment_monitoring_records: {
+    relation: 'equipmentMonitoringRecords',
+    permission: EQUIPMENT_PERMISSIONS.READ,
+    singleton: false,
+    dateField: 'recorded_at',
+    where: { deleted_at: null },
+    select: {
+      ...fields(
+        'id',
+        'production_order_id',
+        'equipment_id',
+        'recorded_at',
+        'note',
+        'created_at',
+        'updated_at',
+      ),
+      createdBy: { select: mcpUserSelect },
+      equipment: { select: { id: true, code: true, name: true } },
+      values: {
+        orderBy: { id: 'asc' },
+        select: {
+          ...fields(
+            'id',
+            'parameter_id',
+            'value',
+            'note',
+            'created_at',
+            'updated_at',
+          ),
+          parameter: {
+            select: {
+              id: true,
+              name: true,
+              data_type: true,
+              unit: true,
+              is_required: true,
+            },
+          },
+        },
+      },
+      images: {
+        orderBy: { id: 'asc' },
+        select: { id: true, image_path: true, created_at: true },
+      },
+    } satisfies Prisma.EquipmentMonitoringRecordsSelect,
+  },
   attachments: {
     relation: 'attachments',
     permission: P.READ,
@@ -968,82 +1015,3 @@ export const recordSections = {
 } as const;
 
 export type RecordSection = keyof typeof recordSections;
-
-export const recordTools = [
-  {
-    name: 'get_production_order_summaries',
-    description:
-      'Tổng kết thành phẩm, bán thành phẩm và công đoạn: sản lượng, lượng đầu vào, đã đóng gói, dư, phế phẩm, đơn vị và người ghi nhận. Chọn section, đọc từng bản ghi; không cộng số lượng khác công đoạn hoặc đơn vị.',
-    sections: [
-      'finished_product_summary',
-      'semi_finished_product_summaries',
-      'material_process_summaries',
-    ],
-  },
-  {
-    name: 'get_production_order_factory_release_reviews',
-    description:
-      'Các bản xét duyệt xuất xưởng: kết quả kiểm nghiệm, môi trường, bao bì, tiệt trùng, sản lượng, sai lệch và người duyệt. Có bản ghi/người duyệt không tự chứng minh lô đã được phép xuất xưởng.',
-    sections: ['factory_release_reviews'],
-  },
-  {
-    name: 'get_production_order_checks',
-    description:
-      'Các phiếu kiểm tra trong quá trình sản xuất theo section: môi trường, vệ sinh, dọn quang, cảm quan, tỷ trọng, khối lượng, thể tích, độ cứng, độ dày, độ rã, độ mài mòn, độ kín, soi lọ, in date, tiệt trùng và lọc. Có yêu cầu, kết quả đã lưu, thời gian, người ghi nhận/duyệt và tham chiếu ảnh khi có. Một số loại cần quyền đọc riêng. Không tự suy ra đạt nếu chưa có căn cứ.',
-    sections: [
-      'environment_checks',
-      'hygiene_checks',
-      'line_clearance_checks',
-      'density_checks',
-      'post_homogenization_granule_checks',
-      'post_preparation_solution_checks',
-      'friability_checks',
-      'disintegration_checks',
-      'vial_inspection_checks',
-      'sensory_checks',
-      'product_sensory_checks',
-      'hard_capsule_leakage_checks',
-      'leak_tightness_checks',
-      'volume_checks',
-      'shell_weight_checks',
-      'ten_shell_weight_check',
-      'spray_dose_checks',
-      'hardness_checks',
-      'tablet_thickness_checks',
-      'semi_finished_gross_weight_checks',
-      'semi_finished_net_weight_checks',
-      'date_checks',
-      'cylinder_calibration',
-      'disinfectant_preparations',
-      'steam_sterilization_checks',
-      'filtration_checks',
-    ],
-  },
-  {
-    name: 'get_production_order_packaging',
-    description:
-      'Xác nhận đóng gói sơ cấp, kiểm tra trước/trong đóng gói thứ cấp, tổng kết sau đóng gói gồm lượng dư và các mục chờ xử lý/hủy. Tổng kết sau đóng gói cần quyền post-secondary-packaging-summaries.read.',
-    sections: [
-      'primary_packaging_confirmations',
-      'pre_secondary_packaging_checks',
-      'secondary_packaging_checks',
-      'post_secondary_packaging_summaries',
-    ],
-  },
-  {
-    name: 'get_production_order_sampling',
-    description:
-      'Lịch sử gửi phiếu yêu cầu lấy mẫu (sampling_requests: trạng thái, người gửi, thời gian, vị trí, link phiếu) hoặc lấy mẫu thực tế (sampling_records: loại mẫu, số lượng, đơn vị, người ghi nhận). Hai loại bản ghi có ý nghĩa khác nhau.',
-    sections: ['sampling_requests', 'sampling_records'],
-  },
-  {
-    name: 'get_production_order_attachments',
-    description:
-      'Hồ sơ đính kèm của lô: loại hồ sơ, mô tả, người nhập, yêu cầu/trạng thái phê duyệt, người duyệt, ghi chú và metadata/tham chiếu tệp. Không tải hay đọc nội dung tệp.',
-    sections: ['attachments'],
-  },
-] as const satisfies readonly {
-  name: string;
-  description: string;
-  sections: readonly [RecordSection, ...RecordSection[]];
-}[];

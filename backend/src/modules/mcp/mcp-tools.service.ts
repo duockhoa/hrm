@@ -1,16 +1,11 @@
-import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
 import { getAuthenticatedDeviationImagePath } from '../production-order-deviations/production-order-deviation-upload.config';
 import { ProductionOrderLocalCompletenessService } from '../production-orders/production-order-local-completeness.service';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
-import { recordSections, type RecordSection } from './mcp-record-sections';
+import { recordSections } from './mcp-record-sections';
 
 const orderSelect = {
   id: true,
@@ -38,6 +33,7 @@ const orderDetailSelect = {
   description: true,
   packing_specification: true,
   remarks: true,
+  internal_notes: true,
   change_content: true,
   item: {
     select: {
@@ -48,6 +44,10 @@ const orderDetailSelect = {
   registrationNumber: { select: { registration_number: true } },
   documentControl: {
     select: {
+      id: true,
+      production_order_id: true,
+      created_at: true,
+      updated_at: true,
       deleted_at: true,
       batch_record_issued_at: true,
       batchRecordIssuedBy: { select: userSelect },
@@ -71,7 +71,6 @@ const orderDetailSelect = {
   },
   samplingRequests: {
     orderBy: [{ sent_at: 'desc' }, { id: 'desc' }],
-    take: 1,
     select: {
       id: true,
       status: true,
@@ -88,31 +87,6 @@ export interface SearchProductionOrdersInput {
   item_code?: string;
   lot_no?: string;
   status?: string;
-  page: number;
-  limit: number;
-}
-
-export interface GetProductionOrderMixingRecordsInput {
-  production_order_id: number;
-  page: number;
-  limit: number;
-}
-
-export interface GetProductionOrderDeviationsInput {
-  production_order_id: number;
-  deviation_id?: number;
-  page: number;
-  limit: number;
-  approval_status?: 'approved' | 'pending';
-  query?: string;
-}
-
-export interface GetProductionOrderRecordsInput {
-  production_order_id: number;
-  section: RecordSection;
-  record_id?: number;
-  from?: string;
-  to?: string;
   page: number;
   limit: number;
 }
@@ -150,75 +124,6 @@ export class McpToolsService {
     private readonly prisma: PrismaService,
     private readonly completeness: ProductionOrderLocalCompletenessService,
   ) {}
-
-  async getProductionOrderDeviations(input: GetProductionOrderDeviationsInput) {
-    const order = await this.prisma.productionOrders.findUnique({
-      where: { id: input.production_order_id },
-      select: {
-        id: true,
-        production_order_code: true,
-        item_code: true,
-        item: { select: { item_name: true } },
-        lot_no: true,
-      },
-    });
-    if (!order)
-      throw new NotFoundException(
-        `Không tìm thấy lệnh sản xuất ID ${input.production_order_id}.`,
-      );
-    const where: Prisma.ProductionOrderDeviationsWhereInput = {
-      production_order_id: input.production_order_id,
-      deleted_at: null,
-      ...(input.deviation_id ? { id: input.deviation_id } : {}),
-      ...(input.approval_status === 'approved'
-        ? { approver_id: { not: null } }
-        : {}),
-      ...(input.approval_status === 'pending' ? { approver_id: null } : {}),
-      ...(input.query
-        ? {
-            OR: [
-              { deviation_content: { contains: input.query } },
-              { cause: { contains: input.query } },
-              { handling_plan: { contains: input.query } },
-              { handling_result: { contains: input.query } },
-            ],
-          }
-        : {}),
-    };
-    const skip = (input.page - 1) * input.limit;
-    const [total, rows] = await this.prisma.$transaction([
-      this.prisma.productionOrderDeviations.count({ where }),
-      this.prisma.productionOrderDeviations.findMany({
-        where,
-        select: deviationSelect,
-        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-        skip,
-        take: input.limit,
-      }),
-    ]);
-    if (input.deviation_id && total === 0)
-      throw new NotFoundException(
-        `Không tìm thấy sai lệch ID ${input.deviation_id} trong lệnh sản xuất này.`,
-      );
-    return {
-      production_order: order,
-      data: rows.map((row) => ({
-        ...row,
-        images: row.images.map((image) => ({
-          ...image,
-          image_path: getAuthenticatedDeviationImagePath(image.image_path),
-        })),
-      })),
-      ...(total === 0 ? { message: 'Lệnh sản xuất chưa có sai lệch.' } : {}),
-      pagination: {
-        page: input.page,
-        limit: input.limit,
-        total,
-        total_pages: Math.ceil(total / input.limit),
-        has_next_page: skip + rows.length < total,
-      },
-    };
-  }
 
   async searchProductionOrders(input: SearchProductionOrdersInput) {
     const where: Prisma.ProductionOrdersWhereInput = {
@@ -261,114 +166,111 @@ export class McpToolsService {
   }
 
   async getProductionOrder(id: number, permissions: string[] = []) {
+    const relations: Record<string, unknown> = {};
+    for (const config of Object.values(recordSections)) {
+      if (!permissions.includes(config.permission)) continue;
+      relations[config.relation] = config.singleton
+        ? { select: config.select }
+        : {
+            select: config.select,
+            ...('where' in config ? { where: config.where } : {}),
+            orderBy: [{ [config.dateField]: 'desc' }, { id: 'desc' }],
+          };
+    }
+    const select: Prisma.ProductionOrdersSelect = {
+      ...orderDetailSelect,
+      ...relations,
+    };
     const canReadDeviations = permissions.includes(
       PRODUCTION_ORDER_DEVIATION_PERMISSIONS.READ,
     );
-    const order = await this.prisma.productionOrders.findUnique({
+    if (canReadDeviations) {
+      select.deviations = {
+        where: { deleted_at: null },
+        select: deviationSelect,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      };
+    }
+    // All saved record types, including primary-packaging records, belong to the lot.
+    select.mixingRecords = {
+      include: mixingRecordsReportInclude,
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    };
+    const result = await this.prisma.productionOrders.findUnique({
       where: { id },
-      select: {
-        ...orderDetailSelect,
-        finishedProductSummaries: {
-          take: 1,
-          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-          select: recordSections.finished_product_summary.select,
-        },
-        semiFinishedProductSummaries: {
-          take: 1,
-          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-          select: recordSections.semi_finished_product_summaries.select,
-        },
-        materialProcessSummaries: {
-          take: 1,
-          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-          select: recordSections.material_process_summaries.select,
-        },
-        factoryReleaseReviews: {
-          take: 1,
-          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-          select: recordSections.factory_release_reviews.select,
-        },
-        ...(canReadDeviations
-          ? {
-              deviations: {
-                where: { deleted_at: null },
-                take: 3,
-                orderBy: [
-                  { created_at: 'desc' as const },
-                  { id: 'desc' as const },
-                ],
-                select: {
-                  id: true,
-                  deviation_content: true,
-                  cause: true,
-                  cause_classification: true,
-                  handling_plan: true,
-                  handling_result: true,
-                  affected_quantity: true,
-                  affected_quantity_unit: true,
-                  handled_quantity: true,
-                  handled_quantity_unit: true,
-                  destroyed_quantity: true,
-                  destroyed_quantity_unit: true,
-                  reporter: { select: userSelect },
-                  approver: { select: userSelect },
-                  created_at: true,
-                  updated_at: true,
-                },
-              },
-            }
-          : {}),
-        _count: {
-          select: {
-            finishedProductSummaries: true,
-            semiFinishedProductSummaries: true,
-            materialProcessSummaries: true,
-            factoryReleaseReviews: true,
-            samplingRecords: true,
-            attachments: true,
-            ...(canReadDeviations
-              ? { deviations: { where: { deleted_at: null } } }
-              : {}),
-          },
-        },
-      },
+      select,
     });
-    if (!order) {
+    if (!result)
       throw new NotFoundException(`Không tìm thấy lệnh sản xuất ID ${id}.`);
+    const order = result as unknown as Prisma.ProductionOrdersGetPayload<{
+      select: typeof orderDetailSelect;
+    }>;
+    const raw = result as unknown as Record<string, unknown>;
+    type SectionData =
+      | { available: true; total: number; data: unknown[] }
+      | { available: false; reason: 'permission_required' };
+    const sections: Record<string, SectionData> = {};
+    for (const [key, config] of Object.entries(recordSections)) {
+      if (!permissions.includes(config.permission)) {
+        sections[key] = { available: false, reason: 'permission_required' };
+        continue;
+      }
+      const records = raw[config.relation];
+      const data = config.singleton
+        ? records
+          ? [records]
+          : []
+        : ((records as unknown[]) ?? []);
+      sections[key] = { available: true, total: data.length, data };
     }
-    const {
-      item,
-      registrationNumber,
-      samplingRequests,
-      documentControl,
-      productionGuide,
-      finishedProductSummaries,
-      semiFinishedProductSummaries,
-      materialProcessSummaries,
-      factoryReleaseReviews,
-      deviations,
-      _count,
-      ...fields
-    } = order;
-    const latestRequest = samplingRequests?.[0] ?? null;
-    // Match the frontend: after sending PYCLM, use the lot's saved registration.
-    const registrationNumberValue =
-      latestRequest?.status === 'sent'
-        ? (registrationNumber?.registration_number ?? null)
-        : (item?.registration?.registration_number ?? null);
-    let activeDocumentControl: Omit<
-      NonNullable<typeof documentControl>,
-      'deleted_at'
-    > | null = null;
-    if (documentControl && !documentControl.deleted_at) {
-      const { deleted_at: _deletedAt, ...control } = documentControl;
-      activeDocumentControl = control;
-    }
+    // Only normalize image references in the authorized deviation payload.
+    const deviations = canReadDeviations
+      ? (
+          (raw.deviations ?? []) as Prisma.ProductionOrderDeviationsGetPayload<{
+            select: typeof deviationSelect;
+          }>[]
+        ).map((row) => ({
+          ...row,
+          images: row.images.map((image) => ({
+            ...image,
+            image_path: getAuthenticatedDeviationImagePath(image.image_path),
+          })),
+        }))
+      : [];
+    sections.deviations = canReadDeviations
+      ? { available: true, total: deviations.length, data: deviations }
+      : { available: false, reason: 'permission_required' };
+    const mixingRecords = (raw.mixingRecords ?? []) as unknown[];
+    sections.mixing_records = {
+      available: true,
+      total: mixingRecords.length,
+      data: mixingRecords,
+    };
+
+    const latestRequest = order.samplingRequests?.[0] ?? null;
+    const { deleted_at: _deletedAt, ...documentControl } =
+      order.documentControl ?? {};
+    // Whitelist the top-level fields so related data is returned once, under sections.
+    const fields = Object.fromEntries(
+      Object.keys(orderSelect)
+        .filter((key) => key !== 'item')
+        .map((key) => [key, raw[key]]),
+    );
     return {
       data: {
         ...fields,
-        item: item ? { item_name: item.item_name } : null,
-        registration_number: registrationNumberValue,
+        origin: order.origin,
+        warehouse: order.warehouse,
+        description: order.description,
+        packing_specification: order.packing_specification,
+        remarks: order.remarks,
+        internal_notes: order.internal_notes,
+        change_content: order.change_content,
+        item: order.item ? { item_name: order.item.item_name } : null,
+        registration_number:
+          latestRequest?.status === 'sent'
+            ? (order.registrationNumber?.registration_number ?? null)
+            : (order.item?.registration?.registration_number ?? null),
         pyclm: {
           isSent: latestRequest?.status === 'sent',
           status: latestRequest?.status ?? null,
@@ -376,48 +278,24 @@ export class McpToolsService {
           sentAt: latestRequest?.sent_at ?? null,
           location: latestRequest?.location ?? null,
           sender: latestRequest?.sender ?? null,
-          latestSamplingRequest: latestRequest,
         },
-        documentControl: activeDocumentControl,
-        productionGuide: productionGuide ?? null,
-        completeness: await this.getProductionOrderCompleteness(id),
-        summaries: {
-          finished_product: {
-            total: _count?.finishedProductSummaries ?? 0,
-            latest: finishedProductSummaries?.[0] ?? null,
-          },
-          semi_finished_product: {
-            total: _count?.semiFinishedProductSummaries ?? 0,
-            latest: semiFinishedProductSummaries?.[0] ?? null,
-          },
-          material_process: {
-            total: _count?.materialProcessSummaries ?? 0,
-            latest: materialProcessSummaries?.[0] ?? null,
-          },
-        },
-        factory_release: {
-          total: _count?.factoryReleaseReviews ?? 0,
-          latest: factoryReleaseReviews?.[0] ?? null,
-          note: 'Bản xét duyệt đã lưu và thông tin người duyệt; không tự kết luận lô được phép xuất xưởng.',
-        },
-        deviations: canReadDeviations
+        documentControl:
+          order.documentControl && !order.documentControl.deleted_at
+            ? documentControl
+            : null,
+        productionGuide: order.productionGuide
           ? {
-              available: true,
-              total: _count?.deviations ?? 0,
-              latest: deviations ?? [],
-              has_more: (_count?.deviations ?? 0) > (deviations?.length ?? 0),
-              detail_tool: 'get_production_order_deviations',
+              ...order.productionGuide,
+              file_path: `/production-orders/${id}/production-guide/file`,
             }
-          : { available: false, reason: 'permission_required' },
-        record_counts: {
-          sampling_records: _count?.samplingRecords ?? 0,
-          attachments: _count?.attachments ?? 0,
-        },
+          : null,
+        completeness: await this.getProductionOrderCompleteness(id),
+        sections,
       },
     };
   }
 
-  async getProductionOrderCompleteness(id: number) {
+  private async getProductionOrderCompleteness(id: number) {
     try {
       return {
         available: true,
@@ -432,138 +310,5 @@ export class McpToolsService {
         reason: 'Không thể kiểm tra mức độ đầy đủ hồ sơ lúc này.',
       };
     }
-  }
-
-  async getProductionOrderRecords(
-    input: GetProductionOrderRecordsInput,
-    permissions: string[],
-  ) {
-    const config = recordSections[input.section];
-    if (!permissions.includes(config.permission))
-      throw new ForbiddenException('Bạn không có quyền sử dụng tool này.');
-    const where = {
-      ...(input.record_id ? { id: input.record_id } : {}),
-      ...(input.from || input.to
-        ? {
-            [config.dateField]: {
-              ...(input.from ? { gte: new Date(input.from) } : {}),
-              ...(input.to ? { lte: new Date(input.to) } : {}),
-            },
-          }
-        : {}),
-    };
-    const skip = (input.page - 1) * input.limit;
-    // The relation and select come exclusively from the server-side registry.
-    const select = {
-      ...orderSelect,
-      [config.relation]: config.singleton
-        ? { select: config.select }
-        : {
-            where,
-            select: config.select,
-            skip,
-            take: input.limit,
-            orderBy: [{ [config.dateField]: 'desc' }, { id: 'desc' }],
-          },
-      ...(!config.singleton
-        ? { _count: { select: { [config.relation]: { where } } } }
-        : {}),
-    } as Prisma.ProductionOrdersSelect;
-    const order = await this.prisma.productionOrders.findUnique({
-      where: { id: input.production_order_id },
-      select,
-    });
-    if (!order)
-      throw new NotFoundException(
-        `Không tìm thấy lệnh sản xuất ID ${input.production_order_id}.`,
-      );
-    const result = order as unknown as Record<string, unknown>;
-    const { [config.relation]: rows, _count: counts, ...summary } = result;
-    let data = rows as Record<string, unknown>[];
-    let total =
-      (counts as Record<string, number> | undefined)?.[config.relation] ?? 0;
-    if (config.singleton) {
-      const row = rows as Record<string, unknown> | null;
-      const date = row
-        ? new Date(row[config.dateField] as string).getTime()
-        : 0;
-      const matches =
-        row &&
-        (!input.record_id || row.id === input.record_id) &&
-        (!input.from || date >= new Date(input.from).getTime()) &&
-        (!input.to || date <= new Date(input.to).getTime());
-      total = matches ? 1 : 0;
-      data = matches && skip === 0 ? [row] : [];
-    }
-    if (input.record_id && total === 0)
-      throw new NotFoundException(
-        'Không tìm thấy bản ghi trong lệnh sản xuất và bộ lọc này.',
-      );
-    return {
-      production_order: summary,
-      section: input.section,
-      data,
-      pagination: this.pagination(input, total, data.length),
-    };
-  }
-
-  private pagination(
-    input: { page: number; limit: number },
-    total: number,
-    length: number,
-  ) {
-    return {
-      page: input.page,
-      limit: input.limit,
-      total,
-      total_pages: Math.ceil(total / input.limit),
-      has_next_page: (input.page - 1) * input.limit + length < total,
-    };
-  }
-
-  async getProductionOrderMixingRecords(
-    input: GetProductionOrderMixingRecordsInput,
-  ) {
-    const order = await this.prisma.productionOrders.findUnique({
-      where: { id: input.production_order_id },
-      select: orderSelect,
-    });
-    if (!order) {
-      throw new NotFoundException(
-        `Không tìm thấy lệnh sản xuất ID ${input.production_order_id}.`,
-      );
-    }
-    const where: Prisma.ProductionOrderMixingRecordsWhereInput = {
-      production_order_id: input.production_order_id,
-      record_type: 'mixing',
-    };
-    const skip = (input.page - 1) * input.limit;
-    const [total, data] = await this.prisma.$transaction([
-      this.prisma.productionOrderMixingRecords.count({ where }),
-      this.prisma.productionOrderMixingRecords.findMany({
-        where,
-        // Use the same saved structure and ordering as the batch report.
-        // Only names/usernames are selected for authors and approvers.
-        include: mixingRecordsReportInclude,
-        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-        skip,
-        take: input.limit,
-      }),
-    ]);
-
-    return {
-      production_order: order,
-      data,
-      ...(total === 0
-        ? { message: 'Lệnh sản xuất chưa có phiếu pha chế.' }
-        : {}),
-      pagination: {
-        page: input.page,
-        limit: input.limit,
-        total,
-        total_pages: Math.ceil(total / input.limit),
-        has_next_page: skip + data.length < total,
-      },
-    };
   }
 }
