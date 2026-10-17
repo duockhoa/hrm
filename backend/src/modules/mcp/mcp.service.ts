@@ -15,6 +15,7 @@ import * as z from 'zod/v4';
 import { McpToolsService } from './mcp-tools.service';
 import { stringArray } from '../mcp-oauth/oauth.config';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
+import { recordTools } from './mcp-record-sections';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -58,7 +59,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
-        'Tra cứu dữ liệu EBR. Dùng search_production_orders để tìm ID lệnh trước khi gọi các tool lấy thông tin theo lệnh sản xuất. Khi người dùng hỏi phiếu pha chế, giai đoạn pha chế hoặc kết quả thông số pha chế, gọi get_production_order_mixing_records. Khi hỏi sai lệch, nguyên nhân hoặc phương án/kết quả xử lý sai lệch của một lô, gọi get_production_order_deviations. Các danh sách có phân trang. Các tool hiện chỉ đọc dữ liệu.',
+        'Tra cứu dữ liệu EBR. Dùng search_production_orders để tìm ID lệnh trước khi gọi các tool theo lệnh sản xuất. Dùng get_production_order xem tổng quan hồ sơ, sản lượng, xét duyệt và sai lệch gần nhất. Khi hỏi pha chế, gọi get_production_order_mixing_records. Khi hỏi sai lệch, nguyên nhân hoặc xử lý, gọi get_production_order_deviations. Các bảng khác dùng tool summaries, checks, packaging, sampling, attachments hoặc factory_release_reviews tương ứng. Các danh sách có phân trang; cần gọi trang tiếp theo nếu chưa đủ dữ liệu, không kết luận toàn bộ lô từ một trang. Mức độ có dữ liệu khác với đạt chất lượng và phê duyệt. Các tool hiện chỉ đọc dữ liệu cục bộ.',
     });
 
     server.registerTool(
@@ -110,7 +111,7 @@ export class McpService implements OnModuleDestroy {
       'get_production_order',
       {
         description:
-          'Xem thông tin chính của một lệnh sản xuất bằng ID lấy từ search_production_orders.',
+          'Xem chi tiết lô/lệnh sản xuất bằng ID lấy từ search_production_orders: thông tin sản phẩm, số lô, trạng thái, số lượng kế hoạch, các ngày, nguồn gốc, kho, mô tả, quy cách đóng gói, ghi chú, nội dung thay đổi và số đăng ký. Kèm PYCLM mới nhất, các mốc cấp/nhận hồ sơ và người thực hiện, metadata hướng dẫn sản xuất, mức độ đầy đủ hồ sơ, số bản ghi và tổng kết sản lượng/xét duyệt mới nhất, tối đa 3 sai lệch gần nhất nếu có quyền đọc sai lệch. null là chưa có dữ liệu, không phải kết luận đạt hay đã duyệt. Các bản tổng kết mới nhất không đại diện toàn bộ công đoạn; cần dùng tool chi tiết và phân trang để xem đầy đủ.',
         inputSchema: z
           .object({ id: z.number().int().positive().max(2147483647) })
           .strict(),
@@ -121,7 +122,11 @@ export class McpService implements OnModuleDestroy {
           'get_production_order',
           auth,
           'production-orders.read',
-          () => this.tools.getProductionOrder(id),
+          () =>
+            this.tools.getProductionOrder(
+              id,
+              stringArray(auth?.extra?.permissions),
+            ),
         ),
     );
 
@@ -177,6 +182,21 @@ export class McpService implements OnModuleDestroy {
               .describe(
                 'ID sai lệch thuộc lệnh sản xuất, bỏ trống để lấy danh sách.',
               ),
+            approval_status: z
+              .enum(['approved', 'pending'])
+              .optional()
+              .describe(
+                'Lọc theo việc đã có người phê duyệt; không đồng nghĩa đã xử lý xong sai lệch.',
+              ),
+            query: z
+              .string()
+              .trim()
+              .min(1)
+              .max(100)
+              .optional()
+              .describe(
+                'Tìm trong nội dung, nguyên nhân, phương án hoặc kết quả xử lý.',
+              ),
             page: z.number().int().min(1).max(1000000).default(1),
             limit: z.number().int().min(1).max(20).default(10),
           })
@@ -191,6 +211,68 @@ export class McpService implements OnModuleDestroy {
           () => this.tools.getProductionOrderDeviations(input),
         ),
     );
+
+    server.registerTool(
+      'get_production_order_completeness',
+      {
+        description:
+          'Kiểm tra mức độ đầy đủ hồ sơ lô theo cấu hình áp dụng, chỉ dùng dữ liệu cục bộ: mục bắt buộc, đã có dữ liệu, còn thiếu và không kiểm tra được. has_data không có nghĩa đạt chất lượng hoặc đã phê duyệt. Mục phụ thuộc nguồn dữ liệu ngoài phạm vi được trả là unavailable, không phải missing.',
+        inputSchema: z
+          .object({
+            production_order_id: z.number().int().positive().max(2147483647),
+          })
+          .strict(),
+        annotations: readOnlyAnnotations,
+      },
+      ({ production_order_id }) =>
+        this.executeTool(
+          'get_production_order_completeness',
+          auth,
+          'production-orders.read',
+          () => this.tools.getProductionOrderCompleteness(production_order_id),
+        ),
+    );
+
+    for (const definition of recordTools) {
+      server.registerTool(
+        definition.name,
+        {
+          description: `${definition.description} Tìm production_order_id bằng search_production_orders. Kết quả có phân trang; record_id tùy chọn để lấy một bản ghi. from/to là thời gian ISO 8601 có múi giờ, lọc theo thời gian nghiệp vụ của phiếu nếu có, nếu không theo ngày tạo.`,
+          inputSchema: z
+            .object({
+              production_order_id: z.number().int().positive().max(2147483647),
+              section: z.enum(definition.sections),
+              record_id: z.number().int().positive().max(2147483647).optional(),
+              from: z.iso.datetime({ offset: true }).optional(),
+              to: z.iso.datetime({ offset: true }).optional(),
+              page: z.number().int().min(1).max(1000000).default(1),
+              limit: z.number().int().min(1).max(20).default(5),
+            })
+            .strict()
+            .refine(
+              (input) =>
+                !input.from ||
+                !input.to ||
+                Date.parse(input.from) <= Date.parse(input.to),
+              {
+                message: 'from phải nhỏ hơn hoặc bằng to.',
+              },
+            ),
+          annotations: readOnlyAnnotations,
+        },
+        (input) =>
+          this.executeTool(
+            definition.name,
+            auth,
+            'production-orders.read',
+            () =>
+              this.tools.getProductionOrderRecords(
+                input,
+                stringArray(auth?.extra?.permissions),
+              ),
+          ),
+      );
+    }
 
     return server;
   }

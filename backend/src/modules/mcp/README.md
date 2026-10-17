@@ -37,21 +37,97 @@ vào client MCP. Không cần API key của nhà cung cấp AI để chạy modu
 
 ## Tool hiện có
 
-| Tool                                  | Tham số                                                         | Kết quả                                                                         |
-| ------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `get_server_info`                     | `{}`                                                            | Kiểm tra kết nối, thông tin server; không truy vấn DB                           |
-| `search_production_orders`            | `query?`, `item_code?`, `lot_no?`, `status?`, `page?`, `limit?` | Thông tin chính của lệnh và phân trang                                          |
-| `get_production_order`                | `id`                                                            | Thông tin chính của một lệnh                                                    |
-| `get_production_order_mixing_records` | `production_order_id`, `page?`, `limit?`                        | Phiếu pha chế đã lưu, giai đoạn, bước, thông số/kết quả và người ghi nhận/duyệt |
-| `get_production_order_deviations` | `production_order_id`, `deviation_id?`, `page?`, `limit?` | Sai lệch, nguyên nhân, xử lý, số lượng, người báo cáo/phê duyệt và tham chiếu ảnh |
+| Tool                                           | Tham số                                                                                 | Kết quả                                                                                                          |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `get_server_info`                              | `{}`                                                                                    | Kiểm tra kết nối, thông tin server; không truy vấn DB                                                            |
+| `search_production_orders`                     | `query?`, `item_code?`, `lot_no?`, `status?`, `page?`, `limit?`                         | Thông tin chính của lệnh và phân trang                                                                           |
+| `get_production_order`                         | `id`                                                                                    | Tổng quan lô, PYCLM, số đăng ký, giao nhận hồ sơ, completeness, tổng kết/xét duyệt mới nhất và sai lệch gần nhất |
+| `get_production_order_mixing_records`          | `production_order_id`, `page?`, `limit?`                                                | Phiếu pha chế đã lưu, giai đoạn, bước, thông số/kết quả và người ghi nhận/duyệt                                  |
+| `get_production_order_deviations`              | `production_order_id`, `deviation_id?`, `approval_status?`, `query?`, `page?`, `limit?` | Sai lệch, nguyên nhân, xử lý, số lượng, người báo cáo/phê duyệt và tham chiếu ảnh                                |
+| `get_production_order_completeness`            | `production_order_id`                                                                   | Các mục bắt buộc, đã có dữ liệu, còn thiếu và chưa kiểm tra được                                                 |
+| `get_production_order_summaries`               | Tham số bảng chi tiết bên dưới                                                          | Tổng kết thành phẩm, bán thành phẩm, công đoạn và hao hụt                                                        |
+| `get_production_order_factory_release_reviews` | Tham số bảng chi tiết                                                                   | Các bản xét duyệt xuất xưởng và người duyệt                                                                      |
+| `get_production_order_checks`                  | Tham số bảng chi tiết                                                                   | Các phiếu kiểm tra trong quá trình theo loại                                                                     |
+| `get_production_order_packaging`               | Tham số bảng chi tiết                                                                   | Xác nhận, kiểm tra, tổng kết đóng gói                                                                            |
+| `get_production_order_sampling`                | Tham số bảng chi tiết                                                                   | Lịch sử PYCLM hoặc lấy mẫu thực tế                                                                               |
+| `get_production_order_attachments`             | Tham số bảng chi tiết                                                                   | Hồ sơ đính kèm, phê duyệt và metadata/tham chiếu tệp                                                             |
 
 `query` tìm trong mã lệnh, mã/tên sản phẩm và số lô. Các bộ lọc còn lại so khớp
 chính xác. `page` mặc định 1; `limit` mặc định 20, tối đa 100. Ngày được trả
 về dạng ISO 8601. Trường `planned_quatity` giữ tên hiện tại trong schema EBR.
-Module chỉ đọc dữ liệu local qua Prisma, không gọi đồng bộ SAP, không tải toàn
-bộ hồ sơ. Phiếu pha chế chỉ trả tên/username của người ghi nhận và duyệt.
+Module chỉ đọc dữ liệu cục bộ qua Prisma và không phụ thuộc module kết nối bên ngoài.
+Các quan hệ người dùng mới chỉ trả ID, tên và username.
 Lỗi nghiệp vụ trả về `isError: true` trong
 kết quả tool; lỗi database được ghi ở backend và trả thông báo chung cho client.
+
+### Chi tiết và tổng quan lô
+
+`get_production_order` giữ các trường cơ bản, bổ sung `origin`, `warehouse`,
+`description`, `packing_specification`, `remarks`, `change_content`,
+`registration_number`, `pyclm`, `documentControl` và `productionGuide` (metadata).
+Số đăng ký theo logic frontend: PYCLM mới nhất đã gửi thì dùng số đăng ký lưu
+theo lô; trước đó dùng số đăng ký của sản phẩm. Các mốc hồ sơ chưa thực hiện là null.
+
+`completeness` dùng chung logic kiểm tra dữ liệu cục bộ với frontend: `required_count`, `completed_count`,
+`required_sections`, `missing_sections`, `unavailable_sections` và `is_complete`.
+Mục bắt buộc phụ thuộc nguồn ngoài phạm vi dữ liệu cục bộ là `unavailable`,
+không được kết luận thiếu dữ liệu. MCP không gọi nguồn bên ngoài để kiểm tra.
+Nếu không kiểm tra được checklist, tổng quan vẫn trả thông tin lô với
+`completeness.available = false`.
+
+`summaries` chứa số bản ghi và bản mới nhất của tổng kết thành phẩm, bán thành phẩm,
+công đoạn. `factory_release` chứa số bản xét duyệt và bản mới nhất. Đây không phải
+tổng sản lượng của tất cả công đoạn; dùng tool chi tiết để đọc đủ các trang.
+Không cộng số lượng khác đơn vị hoặc cộng nhiều công đoạn của cùng sản phẩm.
+
+`deviations` chứa tổng số sai lệch còn hiệu lực, tối đa 3 phiếu gần nhất và
+`has_more`. Nhóm này yêu cầu `production-order-deviations.read`; thiếu quyền thì
+`available = false`, `reason = permission_required` và không truy vấn nội dung.
+Phiếu/ảnh sai lệch đã xóa không được trả về. `record_counts` có số bản ghi lấy mẫu
+thực tế và hồ sơ đính kèm.
+
+Có dữ liệu, kết quả đạt, có người duyệt và được phép xuất xưởng là các khái niệm
+riêng. MCP chỉ trả kết quả và thông tin phê duyệt đã lưu, không tự kết luận chất lượng.
+
+### Các bảng chi tiết
+
+Các tool nhóm nhận `production_order_id`, `section`, `page` (mặc định 1), `limit`
+(mặc định 5, tối đa 20), tùy chọn `record_id`, `from`, `to`. Khoảng thời gian bao
+gồm hai đầu mút, phải là ISO 8601 có múi giờ; `from <= to`. Lọc theo ngày kiểm tra
+ở phiếu môi trường/độ rã/rò nang/in date, thời gian gửi ở PYCLM, thời gian nhập ở
+hồ sơ đính kèm; các nhóm khác theo ngày tạo. Kết quả gồm `production_order`,
+`section`, `data`, `pagination`. Bản ghi có ID được ràng buộc với đúng lệnh và bộ lọc.
+
+| Tool                    | Giá trị `section`                                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| summaries               | `finished_product_summary`, `semi_finished_product_summaries`, `material_process_summaries`                                             |
+| factory_release_reviews | `factory_release_reviews`                                                                                                               |
+| packaging               | `primary_packaging_confirmations`, `pre_secondary_packaging_checks`, `secondary_packaging_checks`, `post_secondary_packaging_summaries` |
+| sampling                | `sampling_requests`, `sampling_records`                                                                                                 |
+| attachments             | `attachments`                                                                                                                           |
+
+Danh sách section kiểm tra được công bố trong input schema của
+`get_production_order_checks` và registry `mcp-record-sections.ts`. Có cả phiếu
+đơn như `cylinder_calibration`, `ten_shell_weight_check`; chúng vẫn trả dạng mảng
+với tối đa một bản ghi và phân trang nhất quán.
+
+Các tool nhóm cần `production-orders.read`, riêng `date_checks`,
+`steam_sterilization_checks`, `filtration_checks`,
+`post_secondary_packaging_summaries` còn cần quyền đọc tương ứng như REST API.
+
+File/ảnh chỉ trả metadata và tham chiếu, không tải nội dung.
+
+```json
+{
+  "name": "get_production_order_summaries",
+  "arguments": {
+    "production_order_id": 7,
+    "section": "semi_finished_product_summaries",
+    "page": 1,
+    "limit": 5
+  }
+}
+```
 
 ### Lấy phiếu pha chế
 
@@ -112,6 +188,9 @@ Ví dụ gọi tool:
 Tìm ID lệnh bằng `search_production_orders` theo mã lệnh, sản phẩm hoặc số lô,
 rồi gọi tool để lấy sai lệch. Mặc định `page=1`, `limit=10`, tối đa 20 phiếu/trang.
 Thêm `deviation_id` nếu chỉ cần một phiếu; ID phải thuộc lệnh đã chọn.
+`query` tìm trong nội dung/nguyên nhân/phương án/kết quả xử lý;
+`approval_status=approved|pending` lọc theo việc đã có/chưa có người duyệt.
+Có người duyệt không đồng nghĩa đã xử lý xong sai lệch.
 
 ```json
 {

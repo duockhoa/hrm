@@ -11,6 +11,7 @@ import {
 } from '../features/item-feature-config';
 import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 import { ProductionOrderCompletenessService } from './production-order-completeness.service';
+import { ProductionOrderLocalCompletenessService } from './production-order-local-completeness.service';
 
 const section = (
   key: string,
@@ -111,6 +112,28 @@ describe('ProductionOrderCompletenessService', () => {
         _count: {
           select: { environmentChecks: true, tenUnitSensoryChecks: true },
         },
+      },
+    });
+  });
+
+  it('does not treat deleted deviations as existing batch records', async () => {
+    features.findConfigByItemCode.mockResolvedValue(
+      buildItemFeatureConfig(itemCode, [
+        section('production_order_deviations'),
+      ]),
+    );
+    prisma.productionOrders.findUnique
+      .mockResolvedValueOnce({ item_code: itemCode })
+      .mockResolvedValueOnce({ _count: { deviations: 0 } });
+    const result = await service.findByProductionOrder(2031);
+    expect(result.missing_sections).toEqual([
+      expect.objectContaining({ key: 'production_order_deviations' }),
+    ]);
+    expect(prisma.productionOrders.findUnique).toHaveBeenLastCalledWith({
+      where: { id: 2031 },
+      select: {
+        id: true,
+        _count: { select: { deviations: { where: { deleted_at: null } } } },
       },
     });
   });
@@ -245,6 +268,36 @@ describe('ProductionOrderCompletenessService', () => {
     expect(
       (await service.findByProductionOrder(2031)).missing_sections,
     ).toHaveLength(1);
+  });
+
+  it('checks local requirements without an external connector and keeps external requirements unavailable', async () => {
+    const localService = new ProductionOrderLocalCompletenessService(
+      prisma as unknown as PrismaService,
+      features as unknown as FeaturesService,
+    );
+    features.findConfigByItemCode.mockResolvedValue(
+      buildItemFeatureConfig(itemCode, [
+        section('environment_checks'),
+        section('production_order_lines'),
+      ]),
+    );
+    prisma.productionOrders.findUnique
+      .mockResolvedValueOnce({ item_code: itemCode })
+      .mockResolvedValueOnce({ _count: { environmentChecks: 1 } });
+    const result = await localService.findByProductionOrder(2031);
+    expect(result).toMatchObject({
+      required_count: 2,
+      completed_count: 1,
+      is_complete: false,
+      missing_sections: [],
+      unavailable_sections: [
+        expect.objectContaining({
+          key: 'production_order_lines',
+          record_count: null,
+        }),
+      ],
+    });
+    expect(sap.getProductionOrderById).not.toHaveBeenCalled();
   });
 
   it('rejects an unknown lot before querying configuration', async () => {

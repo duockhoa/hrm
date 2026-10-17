@@ -8,6 +8,19 @@ import { McpModule } from './mcp.module';
 import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
 import { OAuthService } from '../mcp-oauth/oauth.service';
 import { Prisma } from '@prisma/client';
+import { ProductionOrderLocalCompletenessService } from '../production-orders/production-order-local-completeness.service';
+import {
+  recordSections,
+  recordTools,
+  type RecordSection,
+} from './mcp-record-sections';
+
+const sectionToolCases: [string, RecordSection][] = [];
+for (const tool of recordTools) {
+  for (const section of tool.sections) {
+    sectionToolCases.push([tool.name, section]);
+  }
+}
 
 const accessToken = `mcp_at_${'A'.repeat(43)}`;
 const authenticated = () => ({
@@ -85,6 +98,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     productionOrderDeviations: { count: jest.fn(), findMany: jest.fn() },
     $transaction: jest.fn(),
   };
+  const completeness = { findByProductionOrder: jest.fn() };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [McpModule] })
@@ -92,6 +106,8 @@ describe('MCP Streamable HTTP endpoint', () => {
       .useValue(prisma)
       .overrideProvider(OAuthService)
       .useValue(oauth)
+      .overrideProvider(ProductionOrderLocalCompletenessService)
+      .useValue(completeness)
       .compile();
     app = module.createNestApplication();
     app.useLogger(false);
@@ -108,6 +124,15 @@ describe('MCP Streamable HTTP endpoint', () => {
     prisma.productionOrderMixingRecords.findMany.mockResolvedValue([]);
     prisma.productionOrderDeviations.count.mockResolvedValue(0);
     prisma.productionOrderDeviations.findMany.mockResolvedValue([]);
+    completeness.findByProductionOrder.mockResolvedValue({
+      production_order_id: 7,
+      required_count: 0,
+      completed_count: 0,
+      is_complete: true,
+      required_sections: [],
+      missing_sections: [],
+      unavailable_sections: [],
+    });
     prisma.$transaction.mockImplementation((queries: Promise<unknown>[]) =>
       Promise.all(queries),
     );
@@ -149,14 +174,17 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(response.headers['mcp-session-id']).toBeUndefined();
   });
 
-  it('lists the five read-only tools', async () => {
+  it('lists the read-only tools including all production-order sections', async () => {
     const response = await rpc('tools/list').expect(200);
+    expect(body(response).result.tools).toHaveLength(12);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
       'search_production_orders',
       'get_production_order',
       'get_production_order_mixing_records',
       'get_production_order_deviations',
+      'get_production_order_completeness',
+      ...recordTools.map((tool) => tool.name),
     ]);
     expect(
       body(response).result.tools.every(
@@ -164,6 +192,16 @@ describe('MCP Streamable HTTP endpoint', () => {
           tool.annotations.readOnlyHint,
       ),
     ).toBe(true);
+  });
+
+  it('no longer exposes or executes the material tool', async () => {
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_materials',
+      arguments: { production_order_id: 7, section: 'production_order_lines' },
+    }).expect(200);
+    const envelope = body(response);
+    expect(envelope.result?.isError || 'error' in envelope).toBe(true);
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
   });
 
   it('calls the connectivity tool without using the database', async () => {
@@ -253,9 +291,151 @@ describe('MCP Streamable HTTP endpoint', () => {
       name: 'get_production_order',
       arguments: { id: 7 },
     }).expect(200);
-    expect(body(response).result.structuredContent.data).toEqual({
+    expect(body(response).result.structuredContent.data).toMatchObject({
       id: 7,
       creation_date: '2026-10-15T00:00:00.000Z',
+    });
+  });
+
+  it('returns frontend detail fields, document milestones and the latest sampling request', async () => {
+    const sentAt = new Date('2026-10-15T08:00:00Z');
+    const user = { id: 2, name: 'QA', username: 'qa' };
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      id: 7,
+      warehouse: 'KHO01',
+      description: 'Lô thành phẩm',
+      origin: 'manual',
+      packing_specification: 'Hộp 10 vỉ',
+      remarks: 'Ghi chú lô',
+      change_content: 'Cập nhật bao bì',
+      item: {
+        item_name: 'Sản phẩm A',
+        registration: { registration_number: 'CURRENT' },
+      },
+      registrationNumber: { registration_number: 'SAVED' },
+      samplingRequests: [
+        {
+          id: 12,
+          status: 'sent',
+          sent_at: sentAt,
+          google_doc_url: 'https://docs.google.com/document/d/example',
+          location: 'Xưởng 1',
+          sender: user,
+        },
+      ],
+      documentControl: {
+        deleted_at: null,
+        batch_record_issued_at: sentAt,
+        batchRecordIssuedBy: user,
+      },
+      productionGuide: { id: 3, original_filename: 'huong-dan.pdf' },
+    });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order',
+      arguments: { id: 7 },
+    }).expect(200);
+    const data = body(response).result.structuredContent.data as Record<
+      string,
+      unknown
+    >;
+    expect(data).toMatchObject({
+      warehouse: 'KHO01',
+      description: 'Lô thành phẩm',
+      origin: 'manual',
+      packing_specification: 'Hộp 10 vỉ',
+      remarks: 'Ghi chú lô',
+      change_content: 'Cập nhật bao bì',
+      registration_number: 'SAVED',
+      item: { item_name: 'Sản phẩm A' },
+      pyclm: {
+        isSent: true,
+        sentAt: sentAt.toISOString(),
+        sender: user,
+        latestSamplingRequest: { id: 12 },
+      },
+      documentControl: {
+        batch_record_issued_at: sentAt.toISOString(),
+        batchRecordIssuedBy: user,
+      },
+      productionGuide: { original_filename: 'huong-dan.pdf' },
+    });
+    expect(data).not.toHaveProperty('samplingRequests');
+    expect(data).not.toHaveProperty('registrationNumber');
+    expect(data.documentControl).not.toHaveProperty('deleted_at');
+    expect(prisma.productionOrders.findUnique).toHaveBeenCalledWith({
+      where: { id: 7 },
+      select: expect.objectContaining({
+        samplingRequests: expect.objectContaining({
+          take: 1,
+          orderBy: [{ sent_at: 'desc' }, { id: 'desc' }],
+          select: expect.objectContaining({
+            sender: { select: { id: true, name: true, username: true } },
+          }),
+        }),
+        productionGuide: {
+          select: {
+            id: true,
+            original_filename: true,
+            mime_type: true,
+            file_size: true,
+            created_at: true,
+            updated_at: true,
+          },
+        },
+      }),
+    });
+  });
+
+  it.each([[], [{ id: 12, status: 'draft' }]])(
+    'uses the product registration until the latest sampling request is sent (%j)',
+    async (...requests) => {
+      prisma.productionOrders.findUnique.mockResolvedValue({
+        id: 7,
+        item: {
+          item_name: 'A',
+          registration: { registration_number: 'CURRENT' },
+        },
+        registrationNumber: { registration_number: 'SAVED' },
+        samplingRequests: requests,
+        documentControl: {
+          deleted_at: new Date(),
+          batch_record_issued_at: new Date(),
+        },
+        productionGuide: null,
+      });
+      const response = await rpc('tools/call', {
+        name: 'get_production_order',
+        arguments: { id: 7 },
+      }).expect(200);
+      expect(body(response).result.structuredContent.data).toMatchObject({
+        registration_number: 'CURRENT',
+        pyclm: { isSent: false },
+        documentControl: null,
+        productionGuide: null,
+      });
+    },
+  );
+
+  it('returns explicit missing values without substituting current registration for a sent request', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      id: 7,
+      item: {
+        item_name: 'A',
+        registration: { registration_number: 'CURRENT' },
+      },
+      samplingRequests: [{ id: 12, status: 'sent' }],
+      registrationNumber: null,
+      documentControl: null,
+      productionGuide: null,
+    });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order',
+      arguments: { id: 7 },
+    }).expect(200);
+    expect(body(response).result.structuredContent.data).toMatchObject({
+      registration_number: null,
+      documentControl: null,
+      productionGuide: null,
     });
   });
 
@@ -266,6 +446,322 @@ describe('MCP Streamable HTTP endpoint', () => {
     }).expect(200);
     expect(body(response).result.isError).toBe(true);
     expect(body(response).result.content[0].text).toContain('999');
+  });
+
+  it('includes completeness, latest yields/review and permission-controlled deviations in the overview', async () => {
+    const deviation = {
+      id: 5,
+      deviation_content: 'Sai lệch nhiệt độ',
+      affected_quantity: new Prisma.Decimal('12.345'),
+      affected_quantity_unit: 'kg',
+    };
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      id: 7,
+      _count: {
+        deviations: 4,
+        finishedProductSummaries: 2,
+        factoryReleaseReviews: 1,
+      },
+      deviations: [deviation],
+      finishedProductSummaries: [{ id: 10, package_count: 200 }],
+      factoryReleaseReviews: [{ id: 11, approvedBy: null }],
+    });
+    completeness.findByProductionOrder.mockResolvedValue({
+      required_count: 3,
+      completed_count: 2,
+      is_complete: false,
+      missing_sections: [{ key: 'date_checks' }],
+    });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order',
+      arguments: { id: 7 },
+    }).expect(200);
+    expect(body(response).result.structuredContent.data).toMatchObject({
+      completeness: {
+        available: true,
+        required_count: 3,
+        completed_count: 2,
+        is_complete: false,
+        missing_sections: [{ key: 'date_checks' }],
+      },
+      summaries: {
+        finished_product: { total: 2, latest: { package_count: 200 } },
+      },
+      factory_release: { total: 1, latest: { approvedBy: null } },
+      deviations: {
+        available: true,
+        total: 4,
+        has_more: true,
+        latest: [{ affected_quantity: '12.345', affected_quantity_unit: 'kg' }],
+      },
+    });
+    expect(prisma.productionOrders.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          deviations: expect.objectContaining({
+            where: { deleted_at: null },
+            take: 3,
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('does not select or expose deviation overview without its read permission', async () => {
+    const identity = authenticated();
+    identity.auth.extra.permissions = ['production-orders.read'];
+    oauth.resolveMcpToken.mockResolvedValue(identity);
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order',
+      arguments: { id: 7 },
+    }).expect(200);
+    expect(body(response).result.structuredContent.data).toMatchObject({
+      deviations: { available: false, reason: 'permission_required' },
+    });
+    const [query] = prisma.productionOrders.findUnique.mock.calls[0] as [
+      {
+        select: Record<string, unknown> & {
+          _count: { select: Record<string, unknown> };
+        };
+      },
+    ];
+    expect(query.select).not.toHaveProperty('deviations');
+    expect(query.select._count.select).not.toHaveProperty('deviations');
+  });
+
+  it('keeps the overview readable when the completeness backend is unavailable', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    completeness.findByProductionOrder.mockRejectedValueOnce(
+      new Error('private service failure'),
+    );
+    const response = await rpc('tools/call', {
+      name: 'get_production_order',
+      arguments: { id: 7 },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent.data).toMatchObject({
+      completeness: { available: false },
+    });
+    expect(response.text).not.toContain('private service failure');
+  });
+
+  it('exposes unavailable checklist sections without converting them to missing', async () => {
+    completeness.findByProductionOrder.mockResolvedValueOnce({
+      is_complete: false,
+      missing_sections: [],
+      unavailable_sections: [
+        { key: 'production_order_lines', status: 'unavailable' },
+      ],
+    });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_completeness',
+      arguments: { production_order_id: 7 },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      available: true,
+      missing_sections: [],
+      unavailable_sections: [{ status: 'unavailable' }],
+    });
+  });
+
+  it.each(sectionToolCases)(
+    'reads the scoped section via %s / %s',
+    async (name, section) => {
+      const config = recordSections[section];
+      const identity = authenticated();
+      identity.auth.extra.permissions.push(config.permission);
+      oauth.resolveMcpToken.mockResolvedValue(identity);
+      const row = {
+        id: 9,
+        quantity: new Prisma.Decimal('1.25'),
+        created_at: new Date('2026-10-15T01:00:00Z'),
+      };
+      prisma.productionOrders.findUnique.mockResolvedValue({
+        id: 7,
+        lot_no: 'LOT-7',
+        [config.relation]: config.singleton ? row : [row],
+        ...(!config.singleton ? { _count: { [config.relation]: 3 } } : {}),
+      });
+      const response = await rpc('tools/call', {
+        name,
+        arguments: { production_order_id: 7, section, limit: 1 },
+      }).expect(200);
+      expect(body(response).result.isError).not.toBe(true);
+      expect(body(response).result.structuredContent).toMatchObject({
+        production_order: { id: 7, lot_no: 'LOT-7' },
+        section,
+        data: [
+          { id: 9, quantity: '1.25', created_at: '2026-10-15T01:00:00.000Z' },
+        ],
+        pagination: {
+          total: config.singleton ? 1 : 3,
+          has_next_page: !config.singleton,
+        },
+      });
+      expect(prisma.productionOrders.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 7 } }),
+      );
+      const payload = body(response).result.structuredContent.production_order;
+      expect(payload).not.toHaveProperty(config.relation);
+      expect(payload).not.toHaveProperty('_count');
+    },
+  );
+
+  it('applies record/time filters consistently to page data and count', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      id: 7,
+      environmentChecks: [{ id: 9 }],
+      _count: { environmentChecks: 1 },
+    });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order_checks',
+      arguments: {
+        production_order_id: 7,
+        section: 'environment_checks',
+        record_id: 9,
+        from: '2026-10-01T00:00:00+07:00',
+        to: '2026-11-01T00:00:00+07:00',
+        page: 2,
+        limit: 1,
+      },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    const where = {
+      id: 9,
+      checked_at: {
+        gte: new Date('2026-10-01T00:00:00+07:00'),
+        lte: new Date('2026-11-01T00:00:00+07:00'),
+      },
+    };
+    expect(prisma.productionOrders.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          environmentChecks: expect.objectContaining({
+            where,
+            skip: 1,
+            take: 1,
+            orderBy: [{ checked_at: 'desc' }, { id: 'desc' }],
+          }),
+          _count: { select: { environmentChecks: { where } } },
+        }),
+      }),
+    );
+  });
+
+  it.each([
+    'date_checks',
+    'filtration_checks',
+    'steam_sterilization_checks',
+    'post_secondary_packaging_summaries',
+  ] as const)(
+    'requires the specialized permission before querying %s',
+    async (section) => {
+      const tool = recordTools.find((tool) =>
+        (tool.sections as readonly string[]).includes(section),
+      )!;
+      const response = await rpc('tools/call', {
+        name: tool.name,
+        arguments: { production_order_id: 7, section },
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { section: 'passwords' },
+    { section: 'production_order_lines' },
+    { section: 'material_summaries' },
+    { section: 'environment_checks', limit: 21 },
+    { section: 'environment_checks', record_id: -1 },
+    {
+      section: 'environment_checks',
+      from: '2026-10-20T00:00:00Z',
+      to: '2026-10-01T00:00:00Z',
+    },
+    { section: 'environment_checks', from: '2026-10-01' },
+  ])(
+    'rejects invalid section arguments before any query: %j',
+    async (arguments_) => {
+      const response = await rpc('tools/call', {
+        name: 'get_production_order_checks',
+        arguments: { production_order_id: 7, ...arguments_ },
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reports empty sections and missing orders distinctly', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValueOnce({
+      id: 7,
+      samplingRecords: [],
+      _count: { samplingRecords: 0 },
+    });
+    const empty = await rpc('tools/call', {
+      name: 'get_production_order_sampling',
+      arguments: { production_order_id: 7, section: 'sampling_records' },
+    }).expect(200);
+    expect(body(empty).result.structuredContent).toMatchObject({
+      data: [],
+      pagination: { total: 0, has_next_page: false },
+    });
+    const missing = await rpc('tools/call', {
+      name: 'get_production_order_sampling',
+      arguments: { production_order_id: 999, section: 'sampling_records' },
+    }).expect(200);
+    expect(body(missing).result.isError).toBe(true);
+  });
+
+  it.each([{ record_id: 100 }, { from: '2026-11-01T00:00:00Z' }, { page: 2 }])(
+    'handles singleton filters and pagination: %j',
+    async (filter) => {
+      prisma.productionOrders.findUnique.mockResolvedValueOnce({
+        id: 7,
+        cylinderCalibration: {
+          id: 9,
+          created_at: new Date('2026-10-01T00:00:00Z'),
+        },
+      });
+      const response = await rpc('tools/call', {
+        name: 'get_production_order_checks',
+        arguments: {
+          production_order_id: 7,
+          section: 'cylinder_calibration',
+          ...filter,
+        },
+      }).expect(200);
+      if ('record_id' in filter)
+        expect(body(response).result.isError).toBe(true);
+      else
+        expect(body(response).result.structuredContent).toMatchObject({
+          data: [],
+          pagination: { total: 'page' in filter ? 1 : 0 },
+        });
+    },
+  );
+
+  it('filters deviation approval and searches content within the selected order', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    await rpc('tools/call', {
+      name: 'get_production_order_deviations',
+      arguments: {
+        production_order_id: 7,
+        approval_status: 'pending',
+        query: ' Nhiệt độ ',
+      },
+    }).expect(200);
+    expect(prisma.productionOrderDeviations.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        production_order_id: 7,
+        deleted_at: null,
+        approver_id: null,
+        OR: expect.arrayContaining([
+          { deviation_content: { contains: 'Nhiệt độ' } },
+        ]),
+      }),
+    });
   });
 
   it('returns a tool error without exposing database error details', async () => {
