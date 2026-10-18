@@ -106,10 +106,6 @@ export default function AddRoleForm({
             placeholder="Không giới hạn"
             disabled={isSubmitting}
           />
-          <p className="mt-1 text-sm text-gray-500">
-            Để trống để xem tất cả. Giới hạn áp dụng cả sai lệch và hồ sơ liên
-            quan, theo ngày tạo lô. Nếu có nhiều vai trò, lấy phạm vi rộng nhất.
-          </p>
         </div>
 
         <div className="mt-4 flex justify-end">
