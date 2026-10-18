@@ -66,12 +66,15 @@ export default function FormProductionOrderDateCheck({
       return;
     }
 
+    if (!requestFile) {
+      toast.error("Vui lòng đính kèm file yêu cầu in date.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("package_type", packageType);
 
-    if (requestFile) {
-      formData.append("request_file", requestFile);
-    }
+    formData.append("request_file", requestFile);
 
     try {
       setIsSubmitting(true);
@@ -129,7 +132,7 @@ export default function FormProductionOrderDateCheck({
 
           <div className="space-y-2">
             <Label htmlFor="date-check-request-file">
-              File yêu cầu in date
+              File yêu cầu in date (bắt buộc)
             </Label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
@@ -137,6 +140,7 @@ export default function FormProductionOrderDateCheck({
                 className="min-w-0 flex-1"
                 id="date-check-request-file"
                 type="file"
+                aria-required="true"
                 disabled={isSubmitting}
                 onChange={(event) =>
                   setRequestFile(event.target.files?.[0] ?? null)

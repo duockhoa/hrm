@@ -225,6 +225,10 @@ export class ProductionOrderDateChecksService {
       requestFilePath?: string;
     } = {},
   ) {
+    if (!files.requestFilePath?.trim()) {
+      throw new BadRequestException('Vui lòng đính kèm file yêu cầu in date.');
+    }
+
     await this.ensureProductionOrderExists(productionOrderId);
 
     const userId = this.normalizeUserId(user);
@@ -237,7 +241,7 @@ export class ProductionOrderDateChecksService {
             dto?.package_type,
             'package_type',
           ),
-          request_file_path: files.requestFilePath ?? null,
+          request_file_path: files.requestFilePath,
           approval_status: DATE_CHECK_APPROVAL_STATUS.pending,
           created_by_id: userId,
         },

@@ -1,6 +1,45 @@
 import { PrismaService } from 'src/prisma.service';
 import { ProductionOrderDateChecksService } from './production-order-date-checks.service';
 
+describe('ProductionOrderDateChecksService create', () => {
+  const create = jest.fn();
+  const findUnique = jest.fn();
+  let service: ProductionOrderDateChecksService;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    findUnique.mockResolvedValue({ id: 2001 });
+    service = new ProductionOrderDateChecksService({
+      productionOrders: { findUnique },
+      productionOrderDateChecks: { create },
+    } as unknown as PrismaService);
+  });
+
+  it('rejects creation without a request file before saving', async () => {
+    await expect(
+      service.create(2001, { package_type: 'goi' }, { id: 7 }),
+    ).rejects.toThrow('Vui lòng đính kèm file yêu cầu in date.');
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('creates a check with the attached request file', async () => {
+    const requestFilePath = '/production-orders/date-checks/request-files/date.pdf';
+    create.mockResolvedValue({ id: 1, request_file_path: requestFilePath });
+
+    await expect(
+      service.create(2001, { package_type: 'goi' }, { id: 7 }, { requestFilePath }),
+    ).resolves.toEqual({ id: 1, request_file_path: requestFilePath });
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          production_order_id: 2001,
+          request_file_path: requestFilePath,
+        }),
+      }),
+    );
+  });
+});
+
 describe('ProductionOrderDateChecksService global list', () => {
   const findMany = jest.fn();
   const groupBy = jest.fn();
