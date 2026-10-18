@@ -9,6 +9,11 @@ import { OAuthService } from '../mcp-oauth/oauth.service';
 import { Prisma } from '@prisma/client';
 import { ProductionOrderLocalCompletenessService } from '../production-orders/production-order-local-completeness.service';
 import { recordSections } from './mcp-record-sections';
+import {
+  buildOrderSearch,
+  orderSearchSchema,
+  orderSearchMetadataQuery,
+} from './mcp-order-search';
 
 const accessToken = `mcp_at_${'A'.repeat(43)}`;
 const authenticated = () => ({
@@ -74,6 +79,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     resolveMcpToken: jest.fn(),
   };
   const prisma = {
+    $queryRaw: jest.fn(),
     productionOrderMixingRecords: { count: jest.fn(), findMany: jest.fn() },
     productionOrderDeviations: { count: jest.fn(), findMany: jest.fn() },
     items: { count: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
@@ -102,6 +108,8 @@ describe('MCP Streamable HTTP endpoint', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.$queryRaw.mockReset();
+    prisma.$queryRaw.mockResolvedValue([]);
     prisma.productionOrderMixingRecords.count.mockResolvedValue(0);
     prisma.productionOrderMixingRecords.findMany.mockResolvedValue([]);
     prisma.productionOrderDeviations.count.mockResolvedValue(0);
@@ -230,7 +238,133 @@ describe('MCP Streamable HTTP endpoint', () => {
       total_pages: 3,
       has_next_page: true,
     });
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
+
+  it('filters document milestones before pagination and loads metadata/counts in one query for only page IDs', async () => {
+    const input = {
+      batch_record_received: true,
+      test_certificate_received: false,
+      presence: { date_checks: true },
+      counts: ['date_checks'],
+      page: 2,
+      limit: 20,
+    };
+    const identity = authenticated();
+    identity.auth.extra.permissions.push('production-orders.date-checks.read');
+    oauth.resolveMcpToken.mockResolvedValue(identity);
+    prisma.productionOrders.count.mockResolvedValue(22);
+    prisma.productionOrders.findMany.mockResolvedValue([
+      { id: 7, lot_no: 'LOT1' },
+    ]);
+    const plan = buildOrderSearch(
+      orderSearchSchema.parse(input),
+      identity.auth.extra.permissions,
+    );
+    const metadata = orderSearchMetadataQuery(plan, [7]);
+    const values: Record<string, unknown> = { id: 7 };
+    for (const column of metadata.columns)
+      values[column.alias] =
+        column.kind === 'boolean' ? 1 : column.kind === 'number' ? 3n : null;
+    prisma.$queryRaw.mockResolvedValueOnce([values]);
+    const response = await rpc('tools/call', {
+      name: 'search_production_orders',
+      arguments: input,
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent).toMatchObject({
+      data: [
+        {
+          id: 7,
+          search_info: {
+            document_control: { batch_record_received: true },
+            date_checks: { has_data: true },
+            counts: { date_checks: 3 },
+          },
+        },
+      ],
+      pagination: { total: 22, page: 2, total_pages: 2 },
+    });
+    expect(prisma.productionOrders.count).toHaveBeenCalledWith({
+      where: plan.where,
+    });
+    expect(prisma.productionOrders.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: plan.where, skip: 20, take: 20 }),
+    );
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    const [query] = prisma.$queryRaw.mock.calls[0] as [Prisma.Sql];
+    expect(query.values.slice(-1)).toEqual([7]);
+    expect(query.sql).not.toContain('result_value');
+    expect(completeness.findByProductionOrder).not.toHaveBeenCalled();
+  });
+
+  it('filters latest PYCLM in SQL before count/LIMIT and hydrates only the matching page', async () => {
+    const input = {
+      pyclm_sent: false,
+      item_code: 'TP001',
+      batch_record_received: false,
+      page: 2,
+      limit: 1,
+    };
+    const permissions = authenticated().auth.extra.permissions;
+    const metadata = orderSearchMetadataQuery(
+      buildOrderSearch(orderSearchSchema.parse(input), permissions),
+      [7],
+    );
+    const values: Record<string, unknown> = { id: 7 };
+    for (const column of metadata.columns)
+      values[column.alias] = column.kind === 'boolean' ? 0 : null;
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ total: 3n }])
+      .mockResolvedValueOnce([{ id: 7 }])
+      .mockResolvedValueOnce([values]);
+    prisma.productionOrders.findMany.mockResolvedValue([{ id: 7 }]);
+    const response = await rpc('tools/call', {
+      name: 'search_production_orders',
+      arguments: input,
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      data: [{ id: 7, search_info: { pyclm: { sent: false } } }],
+      pagination: { total: 3, page: 2, limit: 1 },
+    });
+    expect(prisma.productionOrders.count).not.toHaveBeenCalled();
+    expect(prisma.productionOrders.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: [7] } } }),
+    );
+    const [countQuery] = prisma.$queryRaw.mock.calls[0] as [Prisma.Sql];
+    const [pageQuery] = prisma.$queryRaw.mock.calls[1] as [Prisma.Sql];
+    expect(countQuery.sql).toContain('COUNT(*)');
+    expect(countQuery.sql).toContain("sr.status<>'sent'");
+    expect(pageQuery.sql).toContain('LIMIT ? OFFSET ?');
+    expect(pageQuery.values.slice(-2)).toEqual([1, 1]);
+  });
+
+  it('does not query metadata for an empty page', async () => {
+    const response = await rpc('tools/call', {
+      name: 'search_production_orders',
+      arguments: { include: ['pyclm'] },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({ data: [] });
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { presence: { date_checks: false } },
+    { counts: ['steam_sterilization_checks'] },
+    { include: ['equipment_monitoring_records'] },
+  ])(
+    'checks permission before any extended search query: %j',
+    async (arguments_) => {
+      const response = await rpc('tools/call', {
+        name: 'search_production_orders',
+        arguments: arguments_,
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(prisma.productionOrders.count).not.toHaveBeenCalled();
+      expect(prisma.productionOrders.findMany).not.toHaveBeenCalled();
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    },
+  );
 
   it('rejects an oversized page before querying the database', async () => {
     const response = await rpc('tools/call', {

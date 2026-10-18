@@ -14,6 +14,12 @@ import { getAuthenticatedDeviationImagePath } from '../production-order-deviatio
 import { ProductionOrderLocalCompletenessService } from '../production-orders/production-order-local-completeness.service';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
 import { recordSections } from './mcp-record-sections';
+import {
+  buildOrderSearch,
+  orderSearchMetadataQuery,
+  decodeOrderSearchMetadata,
+  type OrderSearchInput,
+} from './mcp-order-search';
 import { buildItemFeatureConfig } from '../features/item-feature-config';
 import { MIXING_ACTIVITY_TEMPLATE_PERMISSIONS } from '../items/mixing-activity-templates.permissions';
 import { DATE_PRINT_TEMPLATE_PERMISSIONS } from '../items/date-print-templates.permissions';
@@ -103,14 +109,7 @@ const orderDetailSelect = {
   },
 } satisfies Prisma.ProductionOrdersSelect;
 
-export interface SearchProductionOrdersInput {
-  query?: string;
-  item_code?: string;
-  lot_no?: string;
-  status?: string;
-  page: number;
-  limit: number;
-}
+export type SearchProductionOrdersInput = OrderSearchInput;
 
 export interface SearchItemsInput {
   query?: string;
@@ -451,36 +450,74 @@ export class McpToolsService {
     return fields;
   }
 
-  async searchProductionOrders(input: SearchProductionOrdersInput) {
-    const where: Prisma.ProductionOrdersWhereInput = {
-      ...(input.item_code ? { item_code: input.item_code } : {}),
-      ...(input.lot_no ? { lot_no: input.lot_no } : {}),
-      ...(input.status ? { status: input.status } : {}),
-      ...(input.query
-        ? {
-            OR: [
-              { production_order_code: { contains: input.query } },
-              { item_code: { contains: input.query } },
-              { lot_no: { contains: input.query } },
-              { item: { item_name: { contains: input.query } } },
-            ],
-          }
-        : {}),
-    };
+  async searchProductionOrders(
+    input: SearchProductionOrdersInput,
+    permissions: string[] = [],
+  ) {
+    const plan = buildOrderSearch(input, permissions);
     const skip = (input.page - 1) * input.limit;
-    const [total, data] = await this.prisma.$transaction([
-      this.prisma.productionOrders.count({ where }),
-      this.prisma.productionOrders.findMany({
-        where,
-        select: orderSelect,
-        orderBy: { id: 'desc' },
-        skip,
-        take: input.limit,
-      }),
-    ]);
-
+    let total: number;
+    let data: Prisma.ProductionOrdersGetPayload<{
+      select: typeof orderSelect;
+    }>[];
+    if (plan.requiresSql) {
+      // Latest-PYCLM and entered-result filters run before LIMIT and COUNT.
+      const [countRows, ids] = await this.prisma.$transaction([
+        this.prisma.$queryRaw<{ total: bigint | number }[]>(
+          Prisma.sql`SELECT COUNT(*) AS total ${plan.fromSql} WHERE ${plan.whereSql}`,
+        ),
+        this.prisma.$queryRaw<{ id: number }[]>(
+          Prisma.sql`SELECT p.id ${plan.fromSql} WHERE ${plan.whereSql} ORDER BY p.id DESC LIMIT ${input.limit} OFFSET ${skip}`,
+        ),
+      ]);
+      total = Number(countRows[0]?.total ?? 0);
+      data = ids.length
+        ? await this.prisma.productionOrders.findMany({
+            where: { id: { in: ids.map((row) => row.id) } },
+            select: orderSelect,
+            orderBy: { id: 'desc' },
+          })
+        : [];
+    } else {
+      [total, data] = await this.prisma.$transaction([
+        this.prisma.productionOrders.count({ where: plan.where }),
+        this.prisma.productionOrders.findMany({
+          where: plan.where,
+          select: orderSelect,
+          orderBy: { id: 'desc' },
+          skip,
+          take: input.limit,
+        }),
+      ]);
+    }
+    let rows: object[] = data;
+    if (data.length && (plan.includes.length || plan.counts.length)) {
+      const metadata = orderSearchMetadataQuery(
+        plan,
+        data.map((row) => row.id),
+      );
+      const values = await this.prisma.$queryRaw<Record<string, unknown>[]>(
+        metadata.query,
+      );
+      const byId = new Map(
+        values.map((row) => [
+          Number(row.id),
+          decodeOrderSearchMetadata(row, metadata.columns),
+        ]),
+      );
+      rows = data.map((row) => ({
+        ...row,
+        search_info: byId.get(row.id) ?? {
+          available: false,
+          reason: 'data_changed',
+        },
+      }));
+    }
     return {
-      data,
+      data: rows,
+      ...(input.today || input.date_from || input.date_to
+        ? { date_range: plan.date_range }
+        : {}),
       pagination: {
         page: input.page,
         limit: input.limit,

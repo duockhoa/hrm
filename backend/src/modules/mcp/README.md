@@ -40,7 +40,7 @@ vào client MCP. Không cần API key của nhà cung cấp AI để chạy modu
 | Tool                                 | Tham số                                                                                                                                       | Kết quả                                                      |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `get_server_info`                    | `{}`                                                                                                                                          | Thông tin server và kiểm tra kết nối                         |
-| `search_production_orders`           | `query?`, `item_code?`, `lot_no?`, `status?`, `page?`, `limit?`                                                                               | Danh sách lệnh/lô và phân trang                              |
+| `search_production_orders`           | Bộ lọc lệnh/ngày/giao nhận/PYCLM/nhóm phiếu/trạng thái, `include?`, `counts?`, `page?`, `limit?`                                              | Danh sách lệnh/lô và phân trang                              |
 | `get_production_order`               | `id`                                                                                                                                          | Toàn bộ hồ sơ lô từ dữ liệu cục bộ mà tài khoản có quyền đọc |
 | `search_items`                       | `query?`, `item_code?`, `code_prefix?`, `page?`, `limit?`                                                                                     | Tìm sản phẩm theo mã/tên/mã DK, có phân trang                |
 | `get_item`                           | `item_code`                                                                                                                                   | Thông tin và cấu hình hiện tại của một sản phẩm              |
@@ -228,6 +228,112 @@ ID giảm dần. Lấy `id` từ kết quả để gọi tool chi tiết.
   "arguments": { "lot_no": "LOT-001", "page": 1, "limit": 20 }
 }
 ```
+
+### Lọc lô theo hồ sơ, trạng thái và thời gian
+
+`search_production_orders` giữ kết quả mặc định gọn, không tính checklist hay
+đọc các bảng con nếu không được yêu cầu. Các lựa chọn bổ sung:
+
+| Nhóm                  | Tham số                                                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Lệnh                  | `production_order_code`, `code_prefix`, `type`, `warehouse`, cùng các bộ lọc cũ                                                   |
+| Ngày                  | `today`, `date_field`, `date_from`, `date_to`                                                                                     |
+| Giao nhận             | `batch_record_issued`, `batch_record_received`, `test_certificate_received`, `warehouse_release_received`                         |
+| Người giao nhận       | `batch_record_issued_by_id`, `batch_record_received_by_id`, `test_certificate_received_by_id`, `warehouse_release_received_by_id` |
+| PYCLM mới nhất        | `pyclm_sent`, `pyclm_sender_id`, `pyclm_location`                                                                                 |
+| Đăng ký               | `has_saved_registration`, `has_current_registration`, `registration_number` (số đã lưu theo lô)                                   |
+| Hướng dẫn/in date     | `has_production_guide`, `has_date_checks`                                                                                         |
+| Có/chưa có nhóm phiếu | `presence: { "date_checks": true, "steam_sterilization_checks": false, ... }`                                                     |
+| In date               | `date_check_status`: `pending`, `approved`, `rejected`                                                                            |
+| Hồ sơ đính kèm        | `attachment_status`, `attachment_requires_approval`, `attachment_type`                                                            |
+| Pha chế/gia công      | `mixing_record_type`, `mixing_qa_status`, `mixing_ipc_status`, `mixing_has_results`                                               |
+| Lấy mẫu/tổng kết      | `sampling_type`, `semi_finished_summary_stage`, `material_process_stage`                                                          |
+| Xét duyệt/sai lệch    | `has_factory_release_approver`, `deviation_approval_status`                                                                       |
+| Kết quả bổ sung       | `include` chọn trạng thái, `counts` chọn số bản ghi                                                                               |
+
+Các điều kiện kết hợp bằng AND và được áp dụng trước phân trang, cùng bộ lọc
+cho tổng số lô. Boolean true/false là có/chưa có; bỏ trống nghĩa là không lọc.
+Trạng thái approval ở phiếu pha chế và sai lệch là `approved`/`pending`, dựa trên
+có/chưa có người duyệt. Các bộ lọc QA và IPC áp dụng trên cùng một phiếu phù hợp.
+
+`date_field` mặc định `creation_date`, hỗ trợ `start_date`, bốn trường mốc giao
+nhận kết thúc bằng `_at` và `pyclm_sent_at` (thời gian của PYCLM mới nhất).
+Không dùng ngày sản xuất/hạn dùng dạng chuỗi để lọc khoảng ngày. `today=true`
+tính theo Việt Nam, không kết hợp `date_from/date_to`; ngày nhập dạng YYYY-MM-DD,
+bao gồm cả ngày cuối. Cần lọc `pyclm_sent=true` nếu chỉ muốn các lần đã gửi.
+
+`presence`, `include`, `counts` dùng danh mục nhóm từ `mcp-record-sections.ts`,
+bổ sung `mixing_records`, `deviations`, `production_guide`; không có vật liệu/SAP.
+`include` còn hỗ trợ `document_control`, `pyclm`, `registration`.
+Cho phép tối đa 10 nhóm presence, 12 mục include và 6 mục counts mỗi lần.
+Nhóm dùng để lọc tự được thêm vào kết quả trạng thái.
+
+Các thuộc tính bổ sung nằm trong `search_info` của từng lô:
+
+- `document_control`: bốn boolean giao nhận, các mốc `_at`, ID và tên người thực hiện.
+- `pyclm`: trạng thái bản mới nhất, boolean `sent`, thời gian, người gửi, địa điểm,
+  đường dẫn. Xét thứ tự `sent_at DESC, id DESC`, không lấy một lần gửi thành công cũ.
+- `registration`: `saved_number` theo lô và `current_item_number` hiện tại của sản phẩm.
+- Các nhóm phiếu: `has_data`, `latest_at`; in date/tài liệu có các cờ `has_pending`,
+  `has_approved`, `has_rejected`. Một lô có thể đồng thời có nhiều trạng thái.
+- Pha chế có cờ QA/IPC đã/chưa có người duyệt; `has_results` chỉ tính khi hỏi bằng
+  `mixing_has_results`, không tính phiếu trống hoặc chỉ có ghi chú, vẫn tính `0`/`false`.
+- Xét duyệt xuất xưởng có `has_approver`; sai lệch có `has_pending_approval`.
+- `counts`: số phiếu của những nhóm được yêu cầu cho các lô trong trang. Chỉ đếm
+  bản ghi nhóm, không tổng hợp kết quả chất lượng. Khi có bộ lọc loại phiếu pha chế,
+  loại hồ sơ, loại mẫu hoặc công đoạn, cờ hiện diện và số đếm tương ứng theo loại đó;
+  số đếm không thu hẹp theo các trạng thái duyệt.
+
+Bản ghi quản lý hồ sơ, sai lệch và theo dõi thiết bị đã xóa không được tính.
+Hồ sơ đính kèm phải có ít nhất một tệp. Hướng dẫn sản xuất kiểm tra bản ghi file,
+không kiểm tra file vật lý. Cờ false cho "có người duyệt" hoặc "có kết quả" cũng
+bao gồm lô chưa có phiếu, trừ khi kết hợp thêm điều kiện có phiếu.
+
+Không đồng nhất "có phiếu", "đã nhập kết quả", "đã có người duyệt", "đạt" hoặc
+"được phép xuất xưởng". Tìm lô chưa có một nhóm phiếu cũng không đồng nghĩa thiếu
+hồ sơ bắt buộc; việc đó cần xem cấu hình/snapshot qua tool chi tiết lô.
+
+Ví dụ: đã nhận hồ sơ giấy, chưa nhận phiếu kiểm nghiệm và đã có in date:
+
+```json
+{
+  "name": "search_production_orders",
+  "arguments": {
+    "batch_record_received": true,
+    "test_certificate_received": false,
+    "presence": { "date_checks": true },
+    "counts": ["date_checks"],
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+Ví dụ: các lệnh tạo hôm nay và chưa gửi PYCLM mới nhất:
+
+```json
+{
+  "name": "search_production_orders",
+  "arguments": {
+    "today": true,
+    "date_field": "creation_date",
+    "pyclm_sent": false
+  }
+}
+```
+
+Tất cả bộ lọc, include và counts của nhóm có quyền đọc riêng đều kiểm tra quyền
+trước truy vấn, kể cả điều kiện false. Giao nhận/PYCLM/đăng ký/hướng dẫn/pha chế cần
+thêm `production-orders.read` ngoài quyền tìm lệnh. Các nhóm còn lại theo quyền
+trong registry. Không trả dữ liệu ngầm qua điều kiện lọc cho tài khoản thiếu quyền.
+
+Truy vấn thường dùng Prisma; bộ lọc PYCLM mới nhất/kết quả pha chế dùng SQL có
+tham số để lọc đúng trước COUNT/LIMIT. Phần trạng thái/đếm thêm chỉ đọc trên ID
+của trang bằng một truy vấn, không tải nội dung phiếu, không gọi checklist từng lô.
+
+Migration `20261018010000_add_mcp_order_search_indexes` bổ sung index cho ngày,
+mã lệnh/số lô, PYCLM mới nhất và các quan hệ trạng thái thường dùng. Áp dụng bằng
+`npx prisma migrate deploy` khi triển khai; thay đổi source không tự tạo index.
 
 ### Lấy toàn bộ hồ sơ một lô
 

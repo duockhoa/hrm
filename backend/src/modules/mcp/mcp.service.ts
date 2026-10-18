@@ -18,6 +18,7 @@ import { ITEM_PERMISSIONS } from '../items/items.permissions';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
 import { deviationSearchSchema } from './mcp-deviation-search';
 import { mixingSearchSchema, mixingReadSchema } from './mcp-mixing-search';
+import { orderSearchSchema } from './mcp-order-search';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -61,7 +62,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
-        'Tra cứu EBR. Dùng search_production_orders tìm lệnh rồi get_production_order xem hồ sơ lô. Riêng phiếu pha chế/gia công chỉ có số lượng và ids trong sections.mixing_records; muốn đọc phiếu phải gọi get_mixing_records. Dùng search_mixing_records tìm phiếu theo mã hàng/mã lệnh/số lô/thông số/ngày/duyệt, sau đó get_mixing_records theo ids; view=results cho so sánh thông số gọn hơn, view=full để đọc cả phiếu. Mỗi lần đọc tối đa 10 phiếu. Hỏi đếm sai lệch dùng search_production_order_deviations mode=count, xem danh sách dùng mode=list; today=true theo ngày Việt Nam. Dùng search_items/get_item xem cấu hình sản phẩm hiện tại, không tự áp dụng cho lô cũ. Nhóm thiếu quyền có available=false, khác với dữ liệu rỗng. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Chỉ đọc dữ liệu cục bộ và tham chiếu ảnh/tệp.',
+        'Tra cứu EBR. Dùng search_production_orders tìm lệnh rồi get_production_order xem hồ sơ lô. Câu hỏi liệt kê lô theo giao nhận hồ sơ, PYCLM, có/chưa có phiếu hoặc trạng thái duyệt dùng bộ lọc search_production_orders; include lấy trạng thái và counts đếm nhóm phiếu cho từng lô trong trang. Riêng phiếu pha chế/gia công chỉ có số lượng và ids trong sections.mixing_records; muốn đọc phiếu phải gọi get_mixing_records. Dùng search_mixing_records tìm phiếu theo mã hàng/mã lệnh/số lô/thông số/ngày/duyệt, sau đó get_mixing_records theo ids; view=results cho so sánh thông số gọn hơn, view=full để đọc cả phiếu. Mỗi lần đọc tối đa 10 phiếu. Hỏi đếm sai lệch dùng search_production_order_deviations mode=count, xem danh sách dùng mode=list; today=true theo ngày Việt Nam. Dùng search_items/get_item xem cấu hình sản phẩm hiện tại, không tự áp dụng cho lô cũ. Nhóm thiếu quyền có available=false, khác với dữ liệu rỗng. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Chỉ đọc dữ liệu cục bộ và tham chiếu ảnh/tệp.',
     });
 
     server.registerTool(
@@ -87,17 +88,8 @@ export class McpService implements OnModuleDestroy {
       'search_production_orders',
       {
         description:
-          'Tìm lệnh sản xuất theo mã lệnh, mã/tên sản phẩm hoặc số lô. item_code, lot_no và status lọc chính xác. Dùng page để lấy trang tiếp theo.',
-        inputSchema: z
-          .object({
-            query: z.string().trim().min(1).max(100).optional(),
-            item_code: z.string().trim().min(1).max(100).optional(),
-            lot_no: z.string().trim().min(1).max(100).optional(),
-            status: z.string().trim().min(1).max(100).optional(),
-            page: z.number().int().min(1).max(1000000).default(1),
-            limit: z.number().int().min(1).max(100).default(20),
-          })
-          .strict(),
+          'Tìm lệnh/lô, có phân trang. Lọc mã lệnh chính xác, mã hàng/tiền tố, số lô, trạng thái, loại, kho; today hoặc date_from/date_to theo ngày Việt Nam trên date_field (ngày tạo/bắt đầu hoặc mốc giao nhận/PYCLM). Lọc các mốc cấp/nhận hồ sơ giấy, phiếu kho/kiểm nghiệm và người thực hiện; PYCLM phải xét phiếu mới nhất. presence lọc có/chưa có các nhóm phiếu; has_date_checks và has_production_guide là viết tắt. Hỗ trợ trạng thái duyệt in date/tài liệu, QA/IPC phiếu pha chế, phiếu có kết quả, loại mẫu, công đoạn tổng kết, người duyệt xuất xưởng và sai lệch. include chỉ đọc trạng thái/thời gian các nhóm được yêu cầu; counts chỉ đếm nhóm được yêu cầu cho các lô trong trang, không tải nội dung phiếu. Điều kiện lọc kết hợp AND; có dữ liệu/đã có người duyệt không đồng nghĩa đạt hoặc được xuất xưởng. Mặc định không tính trạng thái phụ. Nhóm có quyền riêng cần quyền đọc để lọc/đếm. Các thuộc tính thêm nằm trong search_info.',
+        inputSchema: orderSearchSchema,
         annotations: readOnlyAnnotations,
       },
       (input) =>
@@ -105,7 +97,11 @@ export class McpService implements OnModuleDestroy {
           'search_production_orders',
           auth,
           'production-orders.list',
-          () => this.tools.searchProductionOrders(input),
+          () =>
+            this.tools.searchProductionOrders(
+              input,
+              stringArray(auth?.extra?.permissions),
+            ),
         ),
     );
 

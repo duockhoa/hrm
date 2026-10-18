@@ -793,6 +793,7 @@ model EquipmentMonitoringRecords {
   deleted_at          DateTime?
 
   @@index([production_order_id], map: "equipment_monitoring_records_po_id_idx")
+  @@index([production_order_id, deleted_at], map: "equipment_monitoring_active_idx")
   @@index([equipment_id], map: "equipment_monitoring_records_equipment_id_idx")
   @@index([production_order_id, equipment_id, recorded_at], map: "equipment_monitoring_records_po_equipment_recorded_idx")
   @@index([created_by_id], map: "equipment_monitoring_records_created_by_id_idx")
@@ -1068,6 +1069,10 @@ model ProductionOrders {
   mixingRecords                                 ProductionOrderMixingRecords[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
+  @@index([creation_date, id], map: "po_search_creation_id_idx")
+  @@index([start_date, id], map: "po_search_start_id_idx")
+  @@index([production_order_code], map: "po_search_code_idx")
+  @@index([lot_no], map: "po_search_lot_idx")
   @@map("production_orders")
 }
 
@@ -1375,6 +1380,7 @@ model ProductionOrderDeviations {
   deleted_at              DateTime?
 
   @@index([production_order_id], map: "production_order_deviations_production_order_id_fkey")
+  @@index([production_order_id, deleted_at], map: "po_deviations_active_idx")
   @@index([approver_id], map: "production_order_deviations_approver_id_fkey")
   @@index([reporter_id], map: "production_order_deviations_reporter_id_fkey")
   @@map("production_order_deviations")
@@ -1407,6 +1413,7 @@ model ProductionOrderSamplingRequests {
   updated_at          DateTime         @default(now()) @updatedAt
 
   @@index([production_order_id], map: "production_order_sampling_requests_production_order_id_fkey")
+  @@index([production_order_id, sent_at, id], map: "po_sampling_latest_idx")
   @@index([sender_id], map: "production_order_sampling_requests_sender_id_fkey")
   @@map("production_order_sampling_requests")
 }
@@ -2255,6 +2262,7 @@ model ProductionOrderDateChecks {
   images              ProductionOrderDateCheckImages[]
 
   @@index([production_order_id], map: "po_date_checks_po_id_fkey")
+  @@index([production_order_id, approval_status], map: "po_date_checks_status_idx")
   @@index([created_by_id], map: "po_date_checks_created_by_id_fkey")
   @@index([approved_by_id], map: "po_date_checks_approved_by_id_fkey")
   @@map("production_order_date_checks")
