@@ -63,12 +63,8 @@ export default function OAuthConnections() {
   }
 
   return (
-    <section className="rounded-lg border border-gray-200 p-4 shadow-md">
-      <h2 className="mb-2 text-lg font-semibold">Ứng dụng đã kết nối</h2>
-      <p className="mb-4 text-sm text-gray-500">
-        Các ứng dụng đang được bạn cấp quyền sử dụng DKPHARMA APP. Nhấn dấu × ở
-        góc biểu tượng để thu hồi quyền truy cập ngay lập tức.
-      </p>
+    <section className="min-w-0 shrink-0 rounded-lg border border-gray-200 bg-white p-4 shadow-md">
+      <h2 className="mb-4 text-lg font-semibold">Ứng dụng đã kết nối</h2>
       {isLoading && (
         <p className="text-sm text-gray-500" aria-live="polite">
           Đang tải kết nối…
@@ -77,7 +73,7 @@ export default function OAuthConnections() {
       {error && (
         <div
           role="alert"
-          className="flex items-center gap-3 text-sm text-red-600"
+          className="flex flex-wrap items-center gap-3 text-sm text-red-600"
         >
           <span>Không tải được danh sách kết nối.</span>
           <Button variant="outline" size="sm" onClick={() => void mutate()}>
@@ -90,11 +86,11 @@ export default function OAuthConnections() {
           Bạn chưa cấp quyền cho ứng dụng nào.
         </p>
       )}
-      <ul className="flex flex-wrap gap-6 pt-2">
+      <ul className="flex flex-wrap gap-x-4 gap-y-6 pt-2 sm:gap-x-6">
         {data?.map((connection) => (
           <li
             key={connection.id}
-            className="flex w-24 flex-col items-center gap-2"
+            className="relative flex w-24 min-w-0 max-w-full flex-col items-center gap-2"
             title={`Đọc dữ liệu MCP · Đã cấp quyền ${new Date(connection.created_at).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}`}
           >
             <div className="relative flex size-16 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-800 shadow-sm">
@@ -119,7 +115,7 @@ export default function OAuthConnections() {
                 )}
               </Button>
             </div>
-            <p className="w-full break-words text-center text-sm font-medium text-gray-800">
+            <p className="w-full wrap-anywhere text-center text-sm font-medium text-gray-800">
               {connection.client.name}
             </p>
             <p className="sr-only">

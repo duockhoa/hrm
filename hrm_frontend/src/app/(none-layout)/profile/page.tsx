@@ -8,21 +8,21 @@ import OAuthConnections from "@/components/users/oauth-connections";
 export default function Profile() {
   const { user } = useUserStore();
   return (
-    <div className="w-full lg:h-full bg-white rounded-2xl shadow-md">
-      <div className=" grid p-2 grid-cols-1 lg:grid-cols-[1fr_2fr] lg:p-4 gap-4 h-full">
-        <div className="shadow-lg border border-gray-200 p-4 rounded-lg h-full flex flex-col items-center">
+    <div className="min-h-full min-w-0 w-full bg-white rounded-2xl shadow-md">
+      <div className="grid min-w-0 p-2 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:p-4 gap-4">
+        <div className="min-w-0 shadow-lg border border-gray-200 p-4 rounded-lg flex flex-col items-center">
           <UpdateAvatar />
-          <div className="text-gray-700 mt-4 text-xl font-semibold">
+          <div className="max-w-full wrap-anywhere text-center text-gray-700 mt-4 text-xl font-semibold">
             {user?.name || "No name available"}
           </div>
-          <div className=" text-gray-400  text-md">
+          <div className="max-w-full wrap-anywhere text-center text-gray-400 text-md">
             {user?.email || "No email available"}
           </div>
 
           <div className="border border-gray-200 w-full my-2"></div>
         </div>
-        <div className="flex flex-col gap-4 h-full  p-2 ">
-          <div className="border border-gray-200 shadow-md p-4 rounded-lg h-full ">
+        <div className="flex min-w-0 flex-col gap-4 p-2">
+          <div className="min-w-0 border border-gray-200 shadow-md p-4 rounded-lg">
             <h2 className="text-lg font-semibold mb-4"> Thông tin cá nhân:</h2>
             <div className="w-full border border-t-gray-200 my-2"></div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 ">
@@ -87,7 +87,7 @@ export default function Profile() {
               </div>
             </div>
           </div>
-          <div className="border border-gray-200 shadow-md p-4 rounded-lg h-full ">
+          <div className="min-w-0 border border-gray-200 shadow-md p-4 rounded-lg">
             <h2 className="text-lg font-semibold mb-4"> Thay đổi mật khẩu:</h2>
             <div className="w-full border border-t-gray-200 my-2"></div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 ">
