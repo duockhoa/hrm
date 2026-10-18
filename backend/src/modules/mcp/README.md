@@ -35,7 +35,7 @@ SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/nod
 Chạy backend bằng `npm run start:dev` trong thư mục `backend`, rồi nhập URL trên
 vào client MCP. Không cần API key của nhà cung cấp AI để chạy module này.
 
-## Tám tool hiện có
+## Mười tool hiện có
 
 | Tool                                 | Tham số                                                                                                                                       | Kết quả                                                      |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -47,11 +47,161 @@ vào client MCP. Không cần API key của nhà cung cấp AI để chạy modu
 | `search_production_order_deviations` | `mode?`, `today?`, `date_from?`, `date_to?`, `item_code?`, `lot_no?`, `production_order_id?`, `approval_status?`, `query?`, `page?`, `limit?` | Đếm hoặc tìm sai lệch trên nhiều lô                          |
 | `search_mixing_records`              | Bộ lọc mã hàng/lệnh/lô, ngày, loại phiếu, thông số, QA/IPC và phân trang                                                                      | Danh sách nhận diện phiếu pha chế/gia công                   |
 | `get_mixing_records`                 | `ids`, `view?`                                                                                                                                | Nội dung nhiều phiếu đã chọn, tối đa 10 ID mỗi lần           |
+| `analyze_production_parameters`      | `source`, `parameter`, bộ lọc lệnh/ngày/công đoạn/đơn vị, `group_by?`, `sort_by?`, `page?`, `limit?`                                          | Thống kê số học trên nhiều lô, phân biệt phép đo và lô       |
+| `get_production_statistics`          | `metrics?`, bộ lọc lệnh/ngày, `group_by?`, `category?`, `page?`, `limit?`                                                                     | Tổng hợp số lô, hồ sơ, PYCLM, sản lượng và các nhóm đã chọn  |
 
-Có tám tên tool trên được đăng ký. Phiếu pha chế/gia công được tìm và đọc riêng;
+Có mười tên tool trên được đăng ký. Phiếu pha chế/gia công được tìm và đọc riêng;
 `get_production_order` chỉ giữ số lượng/ID tham chiếu của nhóm này. Các nhóm sai
 lệch, checklist, kiểm tra, tổng kết, đóng gói, lấy mẫu và tài liệu tiếp tục nằm
 trong hồ sơ lô. Client đã kết nối trước đó cần làm mới danh sách tool.
+
+### Thống kê nhiều lô và thông số sản xuất
+
+Hai tool thống kê chỉ trả kết quả tổng hợp từ database, không tải hồ sơ/phiếu/ảnh
+của từng lô. Dùng chúng cho câu hỏi thống kê thay vì tải hàng loạt dữ liệu chi tiết.
+Các tham số chung:
+
+- `item_code`, `production_order_id`, `production_order_code`, `lot_no`, `status`,
+  `warehouse`: so khớp chính xác, kết hợp AND.
+- Không truyền ngày: **30 ngày gần nhất, gồm hôm nay** theo `Asia/Ho_Chi_Minh`.
+- `today=true` hoặc cặp `date_from`/`date_to` dạng `YYYY-MM-DD`, gồm cả ngày cuối;
+  khoảng tùy chọn tối đa 366 ngày. `all_time=true` cho toàn bộ thời gian.
+  Ba cách chọn ngày không kết hợp với nhau. `date_range` trả khoảng thực tế và múi giờ.
+- `date_field=start_date` mặc định, thống nhất ngày báo cáo lô của frontend;
+  có thể chọn `creation_date`. Ngày sản xuất dạng chuỗi không được dùng để lọc.
+- Mặc định loại lô hủy theo các trạng thái tương ứng frontend; muốn tính cả lô hủy
+  truyền `include_cancelled=true`. Lọc riêng trạng thái hủy cũng cần cờ này.
+- `page=1`, `limit=20`, tối đa 100: phân trang **nhóm kết quả**, không cắt bớt
+  các bản ghi đầu vào để tính trung bình/tổng. Trang vượt giới hạn vẫn giữ đúng
+  `total_groups` và `total_pages`. Không tự thêm nhóm thời gian có số lượng 0.
+- Cần `production-orders.list` và `production-orders.read`. Quyền riêng được
+  kiểm tra trước truy vấn; thiếu quyền trả lỗi, không âm thầm bỏ dữ liệu.
+
+`analyze_production_parameters` nhận `source` và `parameter`:
+
+| Source                               | Parameter hỗ trợ                                                                                         |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `mixing_records`                     | Tên thông số chính xác đã lưu, ví dụ `pH`                                                                |
+| `post_preparation_solution_checks`   | `ph` (ba lần đo `solution_ph_1/2/3`)                                                                     |
+| `density_checks`                     | `density`, `apparent_density`                                                                            |
+| `post_homogenization_granule_checks` | `bulk_density`, `tapped_density`, `carr_index`, `moisture_percent`                                       |
+| `hardness_checks`                    | `hardness` (tối đa 10 lần đo trên mỗi phiếu)                                                             |
+| `tablet_thickness_checks`            | `thickness` (tối đa 10 lần đo)                                                                           |
+| `volume_checks`                      | `volume` (tối đa 6 lần đo)                                                                               |
+| `environment_checks`                 | `temperature_c`, `humidity_percent`                                                                      |
+| `friability_checks`                  | `friability_percent`                                                                                     |
+| `steam_sterilization_checks`         | `setting_temperature`, `setting_time` (thông số cài đặt, không phải nhiệt độ/thời gian thực tế đạt được) |
+| `filtration_checks`                  | `rinse_water_volume_liters`, `tank_residual_volume_liters`                                               |
+| `spray_dose_checks`                  | `spray_dose_count` (tối đa 6 chai)                                                                       |
+| `semi_finished_gross_weight_checks`  | `gross_weight` (tối đa 10 lần đo)                                                                        |
+| `semi_finished_net_weight_checks`    | `net_weight` (tối đa 10 lần đo)                                                                          |
+
+- `group_by=none|day|month|item_code|production_order`; mặc định `none`.
+  Dù chọn `none`, kết quả vẫn tách mã hàng, đơn vị, công đoạn/phòng/vị trí,
+  loại phiếu, phiên bản và bước; không gộp các phép đo khác ngữ nghĩa.
+- `group_by=production_order` trả thêm ID, mã lệnh và số lô để gọi tool chi tiết.
+  `sort_by=group|average_asc|average_desc|min_asc|max_desc` giúp xem xu hướng hoặc
+  tìm nhóm/lô có giá trị cao/thấp. Chưa có số hợp lệ xếp sau nhóm có kết quả.
+- `unit` lọc đơn vị chính xác, phân biệt hoa/thường; `unit=null` lọc chưa ghi
+  đơn vị/không có đơn vị. Không tự quy đổi. `unit_basis` cho biết nguồn đơn vị;
+  `dimensionless_or_not_recorded` không tự khẳng định một đơn vị vật lý.
+- Nguồn kiểm tra có thể lọc `context` theo trường trả trong `context_field`.
+  Phiếu pha chế dùng `record_type`, `template_version`, `stage_name`, `step_name`,
+  `qa_status`, `ipc_status` (`approved`/`pending`, có/chưa có người duyệt).
+- Có thể chọn thêm `date_field=recorded_at`: với pha chế là ngày nhập kết quả,
+  thiếu thì ngày tạo phiếu; các nguồn còn lại dùng thời gian phiếu/kiểm tra của
+  nguồn, được nêu trong `date_range.recorded_at_definition`.
+- `summary` đếm trên toàn bộ tập đã lọc: số lô, phiếu, ô kết quả (`slot_count`),
+  phép đo hợp lệ (`measurement_count`), số lô có số hợp lệ (`valid_order_count`),
+  ô trống, sai định dạng và khác kiểu số. Lô không có phiếu/thông số phù hợp không
+  được tính vào coverage này. Một lô thuộc nhiều nhóm vẫn chỉ tính một lần trong summary.
+- Mỗi nhóm có min/max/trung bình/độ lệch chuẩn tổng thể. `aggregation=measurement_weighted`:
+  mỗi phép đo hợp lệ có cùng trọng số, không phải mỗi lô có cùng trọng số.
+  Không có phép đo hợp lệ thì các thống kê số học là null, không thay bằng 0.
+- Phiếu pha chế chỉ tính `data_type=number|decimal`. Chấp nhận số âm, 0, dấu chấm
+  hoặc dấu phẩy thập phân, tối đa 18 chữ số phần nguyên và 10 chữ số phần lẻ.
+  Không diễn giải dấu phân cách hàng nghìn, số mũ, khoảng giá trị hay biểu thức
+  như `<6`; trả các giá trị này vào số ô sai định dạng. Boolean/text không bị ép số.
+- Tiệt trùng/lọc cần quyền đọc riêng theo nhóm trong registry. Không tự suy ra
+  đạt, vượt giới hạn hay cho phép xuất xưởng từ các thống kê.
+
+Ví dụ thống kê pH kiểm tra dung dịch của toàn bộ lô BTP0001:
+
+```json
+{
+  "name": "analyze_production_parameters",
+  "arguments": {
+    "source": "post_preparation_solution_checks",
+    "parameter": "ph",
+    "item_code": "BTP0001",
+    "all_time": true
+  }
+}
+```
+
+Nếu pH nằm trong phiếu pha chế, dùng `source=mixing_records`, `parameter=pH`.
+Tên thông số, công đoạn, phiên bản và đơn vị pha chế được so khớp phân biệt hoa/thường.
+Muốn so sánh từng lô thêm `group_by=production_order`; nhiều nhóm hơn limit phải đọc tiếp trang.
+
+`get_production_statistics` chọn `metrics` (mặc định `["orders"]`, tối đa 4 nhóm
+khác nhau mỗi lần), `group_by=none|day|month|item_code|status|warehouse` và
+`category=all|finished|semi`. Mã bắt đầu `TP` là thành phẩm như frontend;
+`semi` là các mã còn lại. `group_by=status` dùng các nhóm trạng thái chuẩn frontend.
+
+| Metric                     | Nội dung                                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `orders`                   | Số lô và số lượng theo planned/released/closed/cancelled/other                                                                    |
+| `pyclm`                    | Số lô đã/chưa gửi, chưa có phiếu, tỷ lệ đã gửi dựa trên PYCLM **mới nhất** (`sent_at DESC, id DESC`)                              |
+| `document_control`         | Số lô đã cấp/nhận hồ sơ giấy, nhận phiếu kiểm nghiệm và phiếu kho; bỏ quản lý hồ sơ đã xóa                                        |
+| `deviations`               | Số sai lệch, số lô có sai lệch, đã/chưa có người duyệt; bỏ sai lệch đã xóa                                                        |
+| `finished_output`          | Sản lượng tổng kết thành phẩm `package_count * boxes_per_package + loose_box_count`, tách đơn vị kế hoạch và đơn vị sản lượng hộp |
+| `semi_finished_quantities` | Lượng input/load/packed/leftover/waste, tách công đoạn và đơn vị                                                                  |
+| `packaging_pending`        | Lượng chờ xử lý/chờ hủy sau đóng gói cấp II, tách loại lượng và đơn vị; chưa phải lượng đã xử lý/đã hủy                           |
+| `vial_defects`             | Số phiếu/lô soi lọ, số lỗi từng loại và tổng lỗi đã biết, số bản ghi có/chưa có lỗi hoặc dữ liệu không hợp lệ                     |
+
+`matched_orders` là số lô khớp bộ lọc chung. `reports[metric].data` và `pagination`
+riêng cho từng nhóm; các chiều đơn vị/công đoạn/loại lượng cũng tạo nhóm riêng.
+Số lô của report chỉ có dữ liệu con có thể nhỏ hơn `matched_orders`; không cộng
+số lô giữa các nhóm đơn vị/công đoạn để suy ra tổng lô duy nhất.
+
+Ngày lọc và nhóm thời gian của mọi metric là ngày của **lệnh** theo `date_field`,
+không phải ngày tạo phiếu sai lệch, ngày gửi PYCLM hay ngày tổng kết. Muốn đếm
+sai lệch tạo hôm nay dùng `search_production_order_deviations mode=count today=true`.
+
+Sản lượng có tổng kết sai số âm bị loại và báo `invalid_summary_count`; chưa có
+tổng kết hợp lệ giữ `actual_quantity=null`. Tỷ lệ hoàn thành dùng tổng sản lượng/
+tổng kế hoạch trên cùng các lô có sản lượng và kế hoạch dương theo đơn vị hộp;
+trả thêm `comparable_*_quantity`, không lấy trung bình các tỷ lệ từng lô.
+Các alias hộp/hop/box/boxes chuẩn hóa về `hộp` như frontend; đơn vị sản lượng khác
+không được cộng hay so tỷ lệ với nhau. Lượng bán thành phẩm/chờ xử lý âm bị loại,
+ô trống và không hợp lệ có số đếm riêng. Lỗi soi lọ là số lỗi/bản ghi, không tự
+coi là tỷ lệ lỗi trên tổng sản lượng; bản ghi có số âm không được kết luận không lỗi.
+Lượng bán thành phẩm/chờ xử lý chưa ghi đơn vị có `missing_unit_count` và không
+được cộng vào tổng lượng. Kế hoạch chưa ghi đơn vị giữ tổng kế hoạch null.
+
+Sai lệch cần thêm `production-order-deviations.read`; lượng chờ xử lý/hủy cần
+`production-orders.post-secondary-packaging-summaries.read`. Các metric khác dùng
+quyền đọc lệnh. Mỗi yêu cầu chỉ truy vấn các metric đã chọn: một count lô và một
+truy vấn tổng hợp/phân trang cho mỗi metric. Phân tích thông số dùng hai truy vấn
+tổng hợp, không gọi tool chi tiết hay chạy truy vấn riêng từng lô. Truy vấn có
+tham số và chỉ dùng bảng/cột từ danh mục server. Index ngày/quan hệ hiện có được
+dùng để khoanh vùng; all_time vẫn có chi phí đọc dữ liệu tương ứng tập cần thống kê.
+
+Ví dụ tổng hợp số lô, PYCLM và giao nhận hồ sơ theo mã hàng trong tháng:
+
+```json
+{
+  "name": "get_production_statistics",
+  "arguments": {
+    "metrics": ["orders", "pyclm", "document_control"],
+    "date_from": "2026-10-01",
+    "date_to": "2026-10-31",
+    "group_by": "item_code",
+    "page": 1,
+    "limit": 20
+  }
+}
+```
 
 ### Tìm và đọc phiếu pha chế/gia công
 

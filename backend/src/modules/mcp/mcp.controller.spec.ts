@@ -1072,7 +1072,138 @@ describe('MCP Streamable HTTP endpoint', () => {
     },
   );
 
-  it('exposes exactly eight read-only tools', async () => {
+  it('aggregates latest PYCLM through the statistics tool without loading orders', async () => {
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ matched_orders: 3n }])
+      .mockResolvedValueOnce([
+        {
+          has_group: 1,
+          total_groups: 1n,
+          group_key: 'all',
+          order_count: 3n,
+          sent_count: 2n,
+          not_sent_count: 1n,
+          without_request_count: 1n,
+          sent_percent: new Prisma.Decimal('66.6667'),
+        },
+      ]);
+    const response = await rpc('tools/call', {
+      name: 'get_production_statistics',
+      arguments: {
+        metrics: ['pyclm'],
+        date_from: '2026-10-01',
+        date_to: '2026-10-18',
+      },
+    }).expect(200);
+    const result = body(response).result;
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      matched_orders: 3,
+      reports: {
+        pyclm: {
+          data: [{ order_count: 3, sent_count: 2, not_sent_count: 1 }],
+          pagination: { total_groups: 1 },
+        },
+      },
+    });
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(prisma.productionOrders.findMany).not.toHaveBeenCalled();
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns numeric parameter analysis through MCP with a whole-dataset summary', async () => {
+    prisma.$queryRaw
+      .mockResolvedValueOnce([
+        {
+          order_count: 2n,
+          record_count: 2n,
+          slot_count: 6n,
+          measurement_count: 4n,
+          valid_order_count: 2n,
+          missing_count: 2n,
+          invalid_count: 0n,
+          non_numeric_type_count: 0n,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          has_group: 1,
+          total_groups: 1n,
+          item_code: 'BTP0001',
+          group_key: 'all',
+          unit: null,
+          min_value: new Prisma.Decimal('6'),
+          max_value: new Prisma.Decimal('7'),
+          average_value: new Prisma.Decimal('6.5'),
+          population_stddev: '0.5',
+          measurement_count: 4n,
+          production_order_id: null,
+        },
+      ]);
+    const response = await rpc('tools/call', {
+      name: 'analyze_production_parameters',
+      arguments: {
+        source: 'post_preparation_solution_checks',
+        parameter: 'ph',
+        item_code: 'BTP0001',
+        all_time: true,
+      },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      summary: { order_count: 2, measurement_count: 4, missing_count: 2 },
+      data: [{ average_value: 6.5, min_value: 6, max_value: 7 }],
+      date_range: { mode: 'all_time' },
+    });
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['get_production_statistics', { metrics: ['packaging_pending'] }],
+    [
+      'analyze_production_parameters',
+      {
+        source: 'steam_sterilization_checks',
+        parameter: 'setting_temperature',
+      },
+    ],
+  ])(
+    'enforces source permissions before database work for %s',
+    async (name, args) => {
+      const response = await rpc('tools/call', {
+        name,
+        arguments: args,
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['get_production_statistics', { metrics: ['orders', 'orders'] }],
+    [
+      'analyze_production_parameters',
+      { source: 'post_preparation_solution_checks', parameter: 'password' },
+    ],
+    [
+      'analyze_production_parameters',
+      {
+        source: 'mixing_records',
+        parameter: 'pH',
+        all_time: true,
+        today: true,
+      },
+    ],
+  ])('validates analytics arguments before SQL for %s', async (name, args) => {
+    const response = await rpc('tools/call', { name, arguments: args }).expect(
+      200,
+    );
+    expect(body(response).result.isError).toBe(true);
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+  });
+
+  it('exposes exactly ten read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
@@ -1083,6 +1214,8 @@ describe('MCP Streamable HTTP endpoint', () => {
       'search_production_order_deviations',
       'search_mixing_records',
       'get_mixing_records',
+      'analyze_production_parameters',
+      'get_production_statistics',
     ]);
     expect(
       body(response).result.tools.every(

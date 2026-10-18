@@ -19,6 +19,8 @@ import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-devi
 import { deviationSearchSchema } from './mcp-deviation-search';
 import { mixingSearchSchema, mixingReadSchema } from './mcp-mixing-search';
 import { orderSearchSchema } from './mcp-order-search';
+import { productionStatisticsSchema } from './mcp-production-statistics';
+import { parameterAnalysisSchema } from './mcp-parameter-analysis';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -62,7 +64,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
-        'Tra cứu EBR. Dùng search_production_orders tìm lệnh rồi get_production_order xem hồ sơ lô. Câu hỏi liệt kê lô theo giao nhận hồ sơ, PYCLM, có/chưa có phiếu hoặc trạng thái duyệt dùng bộ lọc search_production_orders; include lấy trạng thái và counts đếm nhóm phiếu cho từng lô trong trang. Riêng phiếu pha chế/gia công chỉ có số lượng và ids trong sections.mixing_records; muốn đọc phiếu phải gọi get_mixing_records. Dùng search_mixing_records tìm phiếu theo mã hàng/mã lệnh/số lô/thông số/ngày/duyệt, sau đó get_mixing_records theo ids; view=results cho so sánh thông số gọn hơn, view=full để đọc cả phiếu. Mỗi lần đọc tối đa 10 phiếu. Hỏi đếm sai lệch dùng search_production_order_deviations mode=count, xem danh sách dùng mode=list; today=true theo ngày Việt Nam. Dùng search_items/get_item xem cấu hình sản phẩm hiện tại, không tự áp dụng cho lô cũ. Nhóm thiếu quyền có available=false, khác với dữ liệu rỗng. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Chỉ đọc dữ liệu cục bộ và tham chiếu ảnh/tệp.',
+        'Tra cứu EBR. Dùng search_production_orders tìm lệnh rồi get_production_order xem hồ sơ lô. Câu hỏi liệt kê lô theo giao nhận hồ sơ, PYCLM, có/chưa có phiếu hoặc trạng thái duyệt dùng bộ lọc search_production_orders; include lấy trạng thái và counts đếm nhóm phiếu cho từng lô trong trang. Thống kê nhiều lô dùng get_production_statistics; thống kê pH/thông số dùng analyze_production_parameters, chọn đúng source và parameter, không tải hàng loạt hồ sơ chi tiết để tự tính. Hai tool thống kê mặc định 30 ngày gần nhất, ngày bắt đầu lệnh, loại lô hủy; muốn toàn bộ thời gian phải all_time=true. Kết quả phân trang theo nhóm; kiểm tra pagination trước khi kết luận đủ nhóm. Thông số tách mã hàng, đơn vị, công đoạn và phiên bản, trung bình theo phép đo, không suy ra đạt chất lượng. Riêng phiếu pha chế/gia công chỉ có số lượng và ids trong sections.mixing_records; muốn đọc phiếu phải gọi get_mixing_records. Dùng search_mixing_records tìm phiếu theo mã hàng/mã lệnh/số lô/thông số/ngày/duyệt, sau đó get_mixing_records theo ids; view=results cho so sánh thông số gọn hơn, view=full để đọc cả phiếu. Mỗi lần đọc tối đa 10 phiếu. Hỏi đếm sai lệch dùng search_production_order_deviations mode=count, xem danh sách dùng mode=list; today=true theo ngày Việt Nam. Dùng search_items/get_item xem cấu hình sản phẩm hiện tại, không tự áp dụng cho lô cũ. Nhóm thiếu quyền có available=false, khác với dữ liệu rỗng. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Chỉ đọc dữ liệu cục bộ và tham chiếu ảnh/tệp.',
     });
 
     server.registerTool(
@@ -232,6 +234,47 @@ export class McpService implements OnModuleDestroy {
           auth,
           'production-orders.read',
           () => this.tools.getMixingRecords(input),
+        ),
+    );
+
+    server.registerTool(
+      'analyze_production_parameters',
+      {
+        description:
+          'Thống kê thông số số học trên nhiều lô bằng database: pH, độ cứng, độ dày, thể tích, tỷ trọng, môi trường, tiệt trùng/lọc hoặc thông số phiếu pha chế. Chọn source; parameter là khóa chỉ tiêu nguồn cố định, hoặc tên thông số chính xác ở mixing_records. Trả số lô, phiếu, ô kết quả, số phép đo hợp lệ/trống/sai định dạng/khác kiểu số; min/max/trung bình/độ lệch chuẩn tổng thể. Luôn tách mã hàng, đơn vị (phân biệt hoa thường), công đoạn và phiên bản; không quy đổi đơn vị hay kết luận đạt. group_by=production_order kèm ID/mã lệnh/số lô; day/month dùng date_field theo giờ Việt Nam. date_field mặc định start_date, có creation_date/recorded_at; mixing recorded_at dùng ngày nhập kết quả, thiếu thì ngày tạo phiếu. Trung bình theo từng phép đo, không phải trung bình đều các lô. Mặc định 30 ngày gần nhất và bỏ lô hủy; today=true hoặc date_from/date_to tối đa 366 ngày; all_time=true cho toàn bộ. Chỉ đọc tổng hợp, không trả nội dung phiếu. Nhóm kết quả có phân trang, tối đa 100/trang; không cộng số lô giữa nhóm vì một lô có thể thuộc nhiều nhóm. Yêu cầu quyền list/read lệnh và quyền riêng của nguồn.',
+        inputSchema: parameterAnalysisSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'analyze_production_parameters',
+          auth,
+          'production-orders.read',
+          () =>
+            this.tools.analyzeProductionParameters(
+              input,
+              stringArray(auth?.extra?.permissions),
+            ),
+        ),
+    );
+    server.registerTool(
+      'get_production_statistics',
+      {
+        description:
+          'Tổng hợp nhiều lô trực tiếp tại database. metrics chọn tối đa 4 nhóm: orders (số lô/trạng thái), pyclm (tình trạng phiếu mới nhất/tỷ lệ gửi), document_control (cấp/nhận hồ sơ giấy, kiểm nghiệm, phiếu kho), deviations (số sai lệch/duyệt), finished_output (sản lượng hộp từ tổng kết thành phẩm), semi_finished_quantities (nhập/nạp/đóng/tồn/hao hụt theo công đoạn và đơn vị), packaging_pending (lượng chờ xử lý/chờ hủy, không phải đã hủy), vial_defects (số bản ghi và lỗi soi lọ, không phải tỷ lệ lỗi trên tổng sản lượng). group_by none/day/month/item_code/status/warehouse. Sản lượng luôn tách đơn vị; thành phẩm là mã TP; tỷ lệ hoàn thành chỉ so các lô có sản lượng và kế hoạch dương tính bằng hộp. Ngày mặc định start_date như báo cáo frontend, có thể chọn creation_date; mọi bản ghi con tính theo ngày của lệnh, không theo ngày tạo phiếu. Mặc định 30 ngày gần nhất và loại lô hủy; today hoặc khoảng date_from/date_to tối đa 366 ngày, all_time=true cho toàn bộ. matched_orders là số lô khớp bộ lọc; mỗi report có phân trang riêng theo cùng page/limit và các chiều đơn vị/công đoạn/loại lượng. Không tải nội dung phiếu; kiểm tra pagination khi cần hết các nhóm. Cần quyền list/read lệnh và quyền đọc riêng nhóm sai lệch/đóng gói.',
+        inputSchema: productionStatisticsSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'get_production_statistics',
+          auth,
+          'production-orders.read',
+          () =>
+            this.tools.getProductionStatistics(
+              input,
+              stringArray(auth?.extra?.permissions),
+            ),
         ),
     );
 

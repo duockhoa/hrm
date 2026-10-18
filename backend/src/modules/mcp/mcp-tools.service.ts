@@ -33,6 +33,16 @@ import {
   buildDeviationSearch,
   type SearchProductionOrderDeviationsInput,
 } from './mcp-deviation-search';
+import {
+  buildProductionStatistics,
+  decodeProductionStatistics,
+  type ProductionStatisticsInput,
+} from './mcp-production-statistics';
+import {
+  buildParameterAnalysis,
+  decodeParameterAnalysis,
+  type ParameterAnalysisInput,
+} from './mcp-parameter-analysis';
 
 const orderSelect = {
   id: true,
@@ -152,6 +162,32 @@ export class McpToolsService {
     private readonly prisma: PrismaService,
     private readonly completeness: ProductionOrderLocalCompletenessService,
   ) {}
+
+  async getProductionStatistics(
+    input: ProductionStatisticsInput,
+    permissions: string[],
+  ) {
+    const plan = buildProductionStatistics(input, permissions);
+    const results = await this.prisma.$transaction([
+      this.prisma.$queryRaw<Record<string, unknown>[]>(plan.countQuery),
+      ...plan.queries.map((report) =>
+        this.prisma.$queryRaw<Record<string, unknown>[]>(report.query),
+      ),
+    ]);
+    return decodeProductionStatistics(plan, results[0], results.slice(1));
+  }
+
+  async analyzeProductionParameters(
+    input: ParameterAnalysisInput,
+    permissions: string[],
+  ) {
+    const plan = buildParameterAnalysis(input, permissions);
+    const [summary, data] = await this.prisma.$transaction([
+      this.prisma.$queryRaw<Record<string, unknown>[]>(plan.summaryQuery),
+      this.prisma.$queryRaw<Record<string, unknown>[]>(plan.dataQuery),
+    ]);
+    return decodeParameterAnalysis(plan, summary, data);
+  }
 
   async searchMixingRecords(input: MixingSearchInput) {
     const { where, date_range } = buildMixingSearch(input);
