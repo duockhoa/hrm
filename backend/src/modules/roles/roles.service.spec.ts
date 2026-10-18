@@ -65,6 +65,35 @@ describe('RolesService', () => {
     expect(service).toBeDefined();
   });
 
+  it('updates a role limit and supports unlimited access explicitly', async () => {
+    prismaService.roles.findUnique.mockResolvedValue({ id: 1, name: 'qa' });
+    await service.update(1, { production_order_read_limit: 300 });
+    expect(prismaService.roles.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: { production_order_read_limit: 300 },
+      }),
+    );
+    await service.update(1, { production_order_read_limit: null });
+    expect(prismaService.roles.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: { production_order_read_limit: null },
+      }),
+    );
+  });
+
+  it.each([0, -1, 1.5, '300', 2147483648])(
+    'rejects an invalid role limit: %s',
+    async (value) => {
+      await expect(
+        service.create({
+          name: 'user',
+          production_order_read_limit: value as number,
+        }),
+      ).rejects.toThrow('production_order_read_limit');
+      expect(prismaService.roles.create).not.toHaveBeenCalled();
+    },
+  );
+
   it('creates a role with normalized data', async () => {
     const role = { id: 1, name: 'admin', description: 'Administrator' };
     prismaService.roles.findUnique.mockResolvedValue(null);

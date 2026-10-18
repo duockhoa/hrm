@@ -8,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import type { Namespace, Socket } from 'socket.io';
 import { PrismaService } from 'src/prisma.service';
+import { auditContext } from '../../audit/audit-context';
 import { UsersService } from '../users/users.service';
 import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 
@@ -88,10 +89,14 @@ export class ProductionOrderMixingRecordsGateway
       ),
     );
     if (!canRead) throw socketError('FORBIDDEN');
-    const record = await this.prisma.productionOrderMixingRecords.findUnique({
-      where: { id },
-      select: { id: true },
-    });
+    const record = await auditContext.run(
+      { request: { user: { id: userId } }, requestId: `socket:${socket.id}` },
+      async () =>
+        await this.prisma.productionOrderMixingRecords.findUnique({
+          where: { id },
+          select: { id: true },
+        }),
+    );
     if (!record) throw socketError('RECORD_NOT_FOUND');
     socket.data.recordId = id;
     socket.data.expiresAt = payload.exp * 1000;

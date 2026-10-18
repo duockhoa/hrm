@@ -43,6 +43,50 @@ const parameter = (input: object = {}) =>
     now,
   );
 
+describe('MCP analytics production order scope', () => {
+  it('scopes statistics and parameter results before all aggregation and pagination', () => {
+    const statistics = buildProductionStatistics(
+      productionStatisticsSchema.parse({
+        all_time: true,
+        metrics: ['orders', 'deviations'],
+      }),
+      permissions,
+      now,
+      [301, 300],
+    );
+    const parameters = buildParameterAnalysis(
+      parameterAnalysisSchema.parse({
+        source: 'mixing_records',
+        parameter: 'pH',
+        all_time: true,
+      }),
+      permissions,
+      now,
+      [301, 300],
+    );
+    const queries = [
+      statistics.countQuery,
+      ...statistics.queries.map((report) => report.query),
+      parameters.summaryQuery,
+      parameters.dataQuery,
+    ];
+    for (const query of queries) {
+      expect(query.sql).toContain('p.id IN (?,?)');
+      expect(query.values).toEqual(expect.arrayContaining([301, 300]));
+    }
+  });
+  it('returns no matches for a user without roles even with all_time enabled', () => {
+    const plan = buildProductionStatistics(
+      productionStatisticsSchema.parse({ all_time: true }),
+      permissions,
+      now,
+      [],
+    );
+    expect(plan.countQuery.sql).toContain('1=0');
+    expect(plan.queries[0].query.sql).toContain('1=0');
+  });
+});
+
 describe('MCP analytics validation and date semantics', () => {
   it('defaults to 30 Vietnamese calendar days including today', () => {
     const period = analyticsPeriod(z.object(analyticsFields).parse({}), now);
@@ -126,7 +170,6 @@ describe('MCP parameter analysis', () => {
     (input) => {
       expect(
         parameterAnalysisSchema.safeParse({
-          source: 'mixing_records',
           parameter: 'pH',
           ...input,
         }).success,

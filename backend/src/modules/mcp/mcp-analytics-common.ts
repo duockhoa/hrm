@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as z from 'zod/v4';
+import { productionOrderScopeSql } from '../../access/production-order-scope';
 
 export const analyticsText = (max = 100) => z.string().trim().min(1).max(max);
 export const analyticsFields = {
@@ -123,8 +124,10 @@ export function analyticsOrderConditions(
   input: AnalyticsInput,
   date: Prisma.Sql,
   period: ReturnType<typeof analyticsPeriod>,
+  orderIds?: number[] | null,
 ) {
   const conditions: Prisma.Sql[] = [];
+  if (orderIds != null) conditions.push(productionOrderScopeSql(orderIds));
   for (const field of [
     'item_code',
     'production_order_code',

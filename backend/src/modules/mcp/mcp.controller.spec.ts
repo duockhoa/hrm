@@ -9,6 +9,7 @@ import { OAuthService } from '../mcp-oauth/oauth.service';
 import { Prisma } from '@prisma/client';
 import { ProductionOrderLocalCompletenessService } from '../production-orders/production-order-local-completeness.service';
 import { recordSections } from './mcp-record-sections';
+import { AuthenticationMiddleware } from '../../middleware/authentication/authentication.middleware';
 import {
   buildOrderSearch,
   orderSearchSchema,
@@ -79,6 +80,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     resolveMcpToken: jest.fn(),
   };
   const prisma = {
+    userRoles: { findMany: jest.fn() },
     $queryRaw: jest.fn(),
     productionOrderMixingRecords: { count: jest.fn(), findMany: jest.fn() },
     productionOrderDeviations: { count: jest.fn(), findMany: jest.fn() },
@@ -102,12 +104,17 @@ describe('MCP Streamable HTTP endpoint', () => {
       .useValue(completeness)
       .compile();
     app = module.createNestApplication();
+    const middleware = new AuthenticationMiddleware();
+    app.use(middleware.use.bind(middleware));
     app.useLogger(false);
     await app.init();
   });
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.userRoles.findMany.mockResolvedValue([
+      { roles: { production_order_read_limit: null } },
+    ]);
     prisma.$queryRaw.mockReset();
     prisma.$queryRaw.mockResolvedValue([]);
     prisma.productionOrderMixingRecords.count.mockResolvedValue(0);
@@ -146,6 +153,59 @@ describe('MCP Streamable HTTP endpoint', () => {
       .set('Accept', 'application/json, text/event-stream')
       .send({ jsonrpc: '2.0', id, method, ...(params ? { params } : {}) });
   }
+
+  it('limits all-time statistics to the current role scope before aggregation', async () => {
+    prisma.userRoles.findMany.mockResolvedValue([
+      { roles: { production_order_read_limit: 300 } },
+    ]);
+    prisma.productionOrders.findMany.mockResolvedValue([
+      { id: 301 },
+      { id: 300 },
+    ]);
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ matched_orders: 2n }])
+      .mockResolvedValueOnce([]);
+    const response = await rpc('tools/call', {
+      name: 'get_production_statistics',
+      arguments: { all_time: true, metrics: ['orders'] },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent).toMatchObject({
+      data_scope: { production_order_read_limit: 300, visible_order_count: 2 },
+    });
+    for (const [query] of prisma.$queryRaw.mock.calls as [Prisma.Sql][]) {
+      expect(query.sql).toContain('p.id IN (?,?)');
+      expect(query.values).toEqual(expect.arrayContaining([301, 300]));
+    }
+    expect(prisma.userRoles.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.productionOrders.findMany).toHaveBeenCalledWith({
+      select: { id: true },
+      orderBy: [{ creation_date: 'desc' }, { id: 'desc' }],
+      take: 300,
+    });
+  });
+
+  it('limits SQL order search counts and pages to the same visible orders', async () => {
+    prisma.userRoles.findMany.mockResolvedValue([
+      { roles: { production_order_read_limit: 300 } },
+    ]);
+    prisma.productionOrders.findMany.mockResolvedValue([
+      { id: 301 },
+      { id: 300 },
+    ]);
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ total: 0n }])
+      .mockResolvedValueOnce([]);
+    await rpc('tools/call', {
+      name: 'search_production_orders',
+      arguments: { pyclm_sent: false },
+    }).expect(200);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    for (const [query] of prisma.$queryRaw.mock.calls as [Prisma.Sql][]) {
+      expect(query.sql).toContain('p.id IN (?,?)');
+      expect(query.values).toEqual(expect.arrayContaining([301, 300]));
+    }
+  });
 
   it('initializes a legacy remote client with OAuth and without a session', async () => {
     const response = await rpc('initialize', {

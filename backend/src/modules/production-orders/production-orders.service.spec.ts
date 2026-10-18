@@ -16,6 +16,7 @@ import {
 } from '../features/item-feature-config';
 import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
 import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
+import { auditContext } from '../../audit/audit-context';
 
 const expectedProductionOrderUserSelect = {
   id: true,
@@ -150,6 +151,26 @@ describe('ProductionOrdersService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('blocks SAP line reads outside the current production order scope', async () => {
+    await auditContext.run(
+      {
+        request: { user: { id: 1 } },
+        requestId: 'sap-scope',
+        productionOrderScope: Promise.resolve({
+          limit: 300,
+          orderIds: [301, 300],
+        }),
+      },
+      async () => {
+        await expect(
+          service.findProductionOrderLines(1),
+        ).rejects.toBeInstanceOf(NotFoundException);
+      },
+    );
+    expect(sapB1Client.getProductionOrderById).not.toHaveBeenCalled();
+    expect(sapB1Client.getUnitOfMeasurements).not.toHaveBeenCalled();
   });
 
   it('returns production orders with PYCLM sending info', async () => {

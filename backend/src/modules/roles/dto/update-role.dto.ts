@@ -1,6 +1,12 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class UpdateRoleDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  production_order_read_limit?: number | null;
+
   @IsOptional()
   @IsString()
   name?: string;

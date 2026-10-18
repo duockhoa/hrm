@@ -8,11 +8,13 @@ type AddRoleFormProps = {
   onSubmit: (data: {
     name: string;
     description: string;
+    production_order_read_limit: number | null;
   }) => Promise<boolean | void>;
   onClose?: () => void;
   initialData?: {
     name: string;
     description?: string | null;
+    production_order_read_limit?: number | null;
   };
   submitLabel?: string;
 };
@@ -28,17 +30,27 @@ export default function AddRoleForm({
     initialData?.description ?? "",
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const initialLimit = initialData?.production_order_read_limit;
+  const [readLimit, setReadLimit] = useState(
+    initialLimit === null ? "" : String(initialLimit ?? 300),
+  );
 
   const resetForm = () => {
     setName(initialData?.name ?? "");
     setDescription(initialData?.description ?? "");
+    setReadLimit(initialLimit === null ? "" : String(initialLimit ?? 300));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      const shouldClose = await onSubmit({ name, description });
+      const shouldClose = await onSubmit({
+        name,
+        description,
+        production_order_read_limit:
+          readLimit === "" ? null : Number(readLimit),
+      });
       if (shouldClose === false) {
         return;
       }
@@ -74,6 +86,30 @@ export default function AddRoleForm({
             placeholder="Nhập mô tả vai trò"
             disabled={isSubmitting}
           />
+        </div>
+
+        <div className="mb-4">
+          <label
+            htmlFor="production-order-read-limit"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
+            Số lô sản xuất gần nhất được xem
+          </label>
+          <Input
+            id="production-order-read-limit"
+            type="number"
+            min={1}
+            max={2147483647}
+            step={1}
+            value={readLimit}
+            onChange={(event) => setReadLimit(event.target.value)}
+            placeholder="Không giới hạn"
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Để trống để xem tất cả. Giới hạn áp dụng cả sai lệch và hồ sơ liên
+            quan, theo ngày tạo lô. Nếu có nhiều vai trò, lấy phạm vi rộng nhất.
+          </p>
         </div>
 
         <div className="mt-4 flex justify-end">

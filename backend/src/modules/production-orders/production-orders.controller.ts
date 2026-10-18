@@ -450,6 +450,17 @@ export class ProductionOrdersController {
     return this.productionOrdersService.findAll();
   }
 
+  @Get('access-scope')
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.LIST,
+    PRODUCTION_ORDER_PERMISSIONS.READ,
+    'production-order-deviations.list',
+    'production-order-deviations.read',
+  )
+  async getAccessScope() {
+    return this.productionOrdersService.getAccessScope();
+  }
+
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)
   @Get('finished-products')
   async findFinishedProducts() {
@@ -1081,7 +1092,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });
@@ -1581,7 +1592,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });
@@ -1606,7 +1617,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': file.size,
       'Content-Type': file.contentType,
     });
@@ -1628,7 +1639,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': requestFile.size,
       'Content-Type': requestFile.contentType,
     });
@@ -1654,7 +1665,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });
@@ -1680,7 +1691,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });
@@ -1708,7 +1719,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });
@@ -1734,7 +1745,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });
@@ -1762,7 +1773,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });
@@ -1790,7 +1801,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });
@@ -1816,7 +1827,7 @@ export class ProductionOrdersController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });
@@ -2369,7 +2380,7 @@ export class ProductionOrdersController {
     );
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Disposition': `attachment; filename="${filenameFallback}"; filename*=UTF-8''${encodedFilename}`,
       'Content-Length': file.size,
       'Content-Type': productionGuide.mime_type,

@@ -63,6 +63,7 @@ export function buildProductionStatistics(
   input: ProductionStatisticsInput,
   permissions: string[],
   now = new Date(),
+  orderIds?: number[] | null,
 ) {
   requireAnalyticsPermissions(permissions, [
     P.LIST,
@@ -74,7 +75,7 @@ export function buildProductionStatistics(
   ]);
   const period = analyticsPeriod(input, now);
   const date = analyticsColumn('p', input.date_field);
-  const conditions = analyticsOrderConditions(input, date, period);
+  const conditions = analyticsOrderConditions(input, date, period, orderIds);
   if (input.category !== 'all')
     conditions.push(
       input.category === 'finished'

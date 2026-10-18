@@ -1071,6 +1071,15 @@ describe('ProductionOrdersController', () => {
 
     routeNames.forEach((name) => {
       const handler = prototype[name as keyof ProductionOrdersController];
+      if (name === 'getAccessScope') {
+        expect(Reflect.getMetadata(PERMISSIONS_KEY, handler)).toEqual([
+          PRODUCTION_ORDER_PERMISSIONS.LIST,
+          PRODUCTION_ORDER_PERMISSIONS.READ,
+          'production-order-deviations.list',
+          'production-order-deviations.read',
+        ]);
+        return;
+      }
       const requestMethod = Reflect.getMetadata(METHOD_METADATA, handler);
       const expectedPermission =
         dedicatedPermissionRoutes.get(name) ??

@@ -45,6 +45,11 @@ export default function RoleDetail({ role }: { role?: Role }) {
       <div className="border-t border-gray-300" />
       <div className="space-y-2">
         <DetailRow label="ID">{role.id}</DetailRow>
+        <DetailRow label="Phạm vi lô sản xuất">
+          {role.production_order_read_limit === null
+            ? "Không giới hạn"
+            : `${role.production_order_read_limit} lô gần nhất`}
+        </DetailRow>
         <DetailRow label="Tên vai trò">{role.name}</DetailRow>
         <DetailRow label="Mô tả">
           {role.description || "Chưa có mô tả"}

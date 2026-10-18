@@ -20,7 +20,11 @@ export default function RoleDetailHeader({ role }: { role?: Role }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  const handleUpdate = async (data: { name: string; description: string }) => {
+  const handleUpdate = async (data: {
+    name: string;
+    description: string;
+    production_order_read_limit: number | null;
+  }) => {
     if (!role) {
       return false;
     }
@@ -34,6 +38,7 @@ export default function RoleDetailHeader({ role }: { role?: Role }) {
       await rolesService.updateRole(role.id, {
         name,
         description: data.description.trim(),
+        production_order_read_limit: data.production_order_read_limit,
       });
       await Promise.all([
         mutate(API_ROUTES.roles.base),

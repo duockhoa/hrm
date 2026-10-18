@@ -20,7 +20,11 @@ import { mutate } from "swr";
 export default function RoleListHeader() {
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const handleCreate = async (data: { name: string; description: string }) => {
+  const handleCreate = async (data: {
+    name: string;
+    description: string;
+    production_order_read_limit: number | null;
+  }) => {
     const name = data.name.trim();
     if (!name) {
       toast.error("Vui lòng nhập tên vai trò.");
@@ -31,6 +35,7 @@ export default function RoleListHeader() {
       await rolesService.createRole({
         name,
         description: data.description.trim(),
+        production_order_read_limit: data.production_order_read_limit,
       });
       await mutate(API_ROUTES.roles.base);
       toast.success("Đã thêm vai trò.");

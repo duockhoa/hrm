@@ -5,6 +5,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import {
+  assertProductionOrderInScope,
+  getProductionOrderScope,
+  productionOrderScopeMetadata,
+} from '../../access/production-order-scope';
 import { WarehouseReleaseExportService } from './exports/warehouse-release-export.service';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { exportDatePrint } from './exports/date-print-export';
@@ -223,6 +228,12 @@ export class ProductionOrdersService {
     return this.addPyclmInfoToList(productionOrders);
   }
 
+  async getAccessScope() {
+    return productionOrderScopeMetadata(
+      await getProductionOrderScope(this.prismaService),
+    );
+  }
+
   async findFinishedProducts() {
     const productionOrders = await this.prismaService.productionOrders.findMany(
       {
@@ -362,6 +373,7 @@ export class ProductionOrdersService {
   }
 
   private async findProductionOrderLineData(id: number) {
+    await assertProductionOrderInScope(this.prismaService, id);
     const [productionOrder, unitOfMeasurements] = await Promise.all([
       this.sapB1Client.getProductionOrderById<SapProductionOrderResponse>(id),
       this.sapB1Client.getUnitOfMeasurements<SapUnitOfMeasurement>(),

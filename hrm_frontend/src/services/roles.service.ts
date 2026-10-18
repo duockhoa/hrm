@@ -11,14 +11,22 @@ const fetcherRoleById = async (id: number) => {
   return response.data;
 };
 
-const createRole = async (data: { name: string; description?: string }) => {
+const createRole = async (data: {
+  name: string;
+  description?: string;
+  production_order_read_limit?: number | null;
+}) => {
   const response = await axiosClient.post(API_ROUTES.roles.base, data);
   return response.data;
 };
 
 const updateRole = async (
   id: number,
-  data: { name?: string; description?: string },
+  data: {
+    name?: string;
+    description?: string;
+    production_order_read_limit?: number | null;
+  },
 ) => {
   const response = await axiosClient.put(
     `${API_ROUTES.roles.base}/${id}`,

@@ -243,7 +243,7 @@ export class ProductionOrderMixingRecordsController {
     response.set({
       'Content-Type': image.contentType,
       'Content-Length': String(image.size),
-      'Cache-Control': 'private, max-age=3600',
+      'Cache-Control': 'private, no-store',
     });
     return new StreamableFile(createReadStream(image.filePath));
   }

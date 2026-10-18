@@ -234,6 +234,7 @@ export function buildParameterAnalysis(
   input: ParameterAnalysisInput,
   permissions: string[],
   now = new Date(),
+  orderIds?: number[] | null,
 ) {
   const mixing = input.source === 'mixing_records';
   const source = sourceCatalog[input.source];
@@ -336,7 +337,7 @@ export function buildParameterAnalysis(
       ? recordDate
       : col('p', input.date_field);
   const conditions = [
-    ...analyticsOrderConditions(input, date, period),
+    ...analyticsOrderConditions(input, date, period, orderIds),
     ...extras,
   ];
   const key =

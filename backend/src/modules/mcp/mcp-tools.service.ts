@@ -1,6 +1,11 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
+import {
+  getProductionOrderScope,
+  productionOrderScopeMetadata,
+  productionOrderScopeSql,
+} from '../../access/production-order-scope';
 import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
 import type { MixingRecordForReport } from '../production-orders/exports/mixing-records-report-html';
 import {
@@ -167,26 +172,44 @@ export class McpToolsService {
     input: ProductionStatisticsInput,
     permissions: string[],
   ) {
-    const plan = buildProductionStatistics(input, permissions);
+    const scope = await getProductionOrderScope(this.prisma);
+    const plan = buildProductionStatistics(
+      input,
+      permissions,
+      new Date(),
+      scope.orderIds,
+    );
     const results = await this.prisma.$transaction([
       this.prisma.$queryRaw<Record<string, unknown>[]>(plan.countQuery),
       ...plan.queries.map((report) =>
         this.prisma.$queryRaw<Record<string, unknown>[]>(report.query),
       ),
     ]);
-    return decodeProductionStatistics(plan, results[0], results.slice(1));
+    return {
+      ...decodeProductionStatistics(plan, results[0], results.slice(1)),
+      data_scope: productionOrderScopeMetadata(scope),
+    };
   }
 
   async analyzeProductionParameters(
     input: ParameterAnalysisInput,
     permissions: string[],
   ) {
-    const plan = buildParameterAnalysis(input, permissions);
+    const scope = await getProductionOrderScope(this.prisma);
+    const plan = buildParameterAnalysis(
+      input,
+      permissions,
+      new Date(),
+      scope.orderIds,
+    );
     const [summary, data] = await this.prisma.$transaction([
       this.prisma.$queryRaw<Record<string, unknown>[]>(plan.summaryQuery),
       this.prisma.$queryRaw<Record<string, unknown>[]>(plan.dataQuery),
     ]);
-    return decodeParameterAnalysis(plan, summary, data);
+    return {
+      ...decodeParameterAnalysis(plan, summary, data),
+      data_scope: productionOrderScopeMetadata(scope),
+    };
   }
 
   async searchMixingRecords(input: MixingSearchInput) {
@@ -491,6 +514,8 @@ export class McpToolsService {
     permissions: string[] = [],
   ) {
     const plan = buildOrderSearch(input, permissions);
+    const scope = await getProductionOrderScope(this.prisma);
+    const whereSql = Prisma.sql`(${plan.whereSql}) AND ${productionOrderScopeSql(scope.orderIds)}`;
     const skip = (input.page - 1) * input.limit;
     let total: number;
     let data: Prisma.ProductionOrdersGetPayload<{
@@ -500,10 +525,10 @@ export class McpToolsService {
       // Latest-PYCLM and entered-result filters run before LIMIT and COUNT.
       const [countRows, ids] = await this.prisma.$transaction([
         this.prisma.$queryRaw<{ total: bigint | number }[]>(
-          Prisma.sql`SELECT COUNT(*) AS total ${plan.fromSql} WHERE ${plan.whereSql}`,
+          Prisma.sql`SELECT COUNT(*) AS total ${plan.fromSql} WHERE ${whereSql}`,
         ),
         this.prisma.$queryRaw<{ id: number }[]>(
-          Prisma.sql`SELECT p.id ${plan.fromSql} WHERE ${plan.whereSql} ORDER BY p.id DESC LIMIT ${input.limit} OFFSET ${skip}`,
+          Prisma.sql`SELECT p.id ${plan.fromSql} WHERE ${whereSql} ORDER BY p.id DESC LIMIT ${input.limit} OFFSET ${skip}`,
         ),
       ]);
       total = Number(countRows[0]?.total ?? 0);

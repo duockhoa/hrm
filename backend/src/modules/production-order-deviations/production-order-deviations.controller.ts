@@ -76,7 +76,7 @@ export class ProductionOrderDeviationsController {
     }
 
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': imageFile.size,
       'Content-Type': imageFile.contentType,
     });

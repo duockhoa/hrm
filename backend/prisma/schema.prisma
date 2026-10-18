@@ -337,6 +337,7 @@ model Roles {
   id              Int               @id @default(autoincrement())
   name            String            @unique
   description     String?
+  production_order_read_limit Int? @default(300)
   created_at      DateTime          @default(now())
   updated_at      DateTime          @default(now()) @updatedAt
   deleted_at      DateTime?

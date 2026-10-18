@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import type { ProductionOrderScope } from '../access/production-order-scope';
 
 export interface AuditRequest {
   user?: { id?: number; name?: string; username?: string };
@@ -10,6 +11,7 @@ export interface AuditRequest {
 export interface AuditContext {
   request: AuditRequest;
   requestId: string;
+  productionOrderScope?: Promise<ProductionOrderScope>;
 }
 
 export const auditContext = new AsyncLocalStorage<AuditContext>();

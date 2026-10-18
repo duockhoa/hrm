@@ -168,6 +168,13 @@ export class RolesService {
     return {
       name: this.normalizeRoleName(dto),
       description: this.normalizeOptionalString(dto.description, 'description'),
+      ...(dto.production_order_read_limit !== undefined
+        ? {
+            production_order_read_limit: this.normalizeProductionOrderLimit(
+              dto.production_order_read_limit,
+            ),
+          }
+        : {}),
     };
   }
 
@@ -176,6 +183,12 @@ export class RolesService {
     dto: UpdateRoleDto,
   ): Promise<Prisma.RolesUncheckedUpdateInput> {
     const data: Prisma.RolesUncheckedUpdateInput = {};
+
+    if (dto.production_order_read_limit !== undefined) {
+      data.production_order_read_limit = this.normalizeProductionOrderLimit(
+        dto.production_order_read_limit,
+      );
+    }
 
     if (dto.name !== undefined || dto.roleName !== undefined) {
       const name = this.normalizeRoleName(dto);
@@ -200,6 +213,21 @@ export class RolesService {
   private normalizeRoleName(dto: CreateRoleDto | UpdateRoleDto) {
     const name = dto.name ?? dto.roleName;
     return this.normalizeRequiredString(name, 'name');
+  }
+
+  private normalizeProductionOrderLimit(value: unknown): number | null {
+    if (value === null) return null;
+    if (
+      typeof value !== 'number' ||
+      !Number.isInteger(value) ||
+      value < 1 ||
+      value > 2147483647
+    ) {
+      throw new BadRequestException(
+        'production_order_read_limit must be a positive integer or null',
+      );
+    }
+    return value;
   }
 
   private async ensureNameIsAvailable(name: string, currentId?: number) {
