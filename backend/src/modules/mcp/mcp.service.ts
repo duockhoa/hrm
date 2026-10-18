@@ -17,6 +17,7 @@ import { stringArray } from '../mcp-oauth/oauth.config';
 import { ITEM_PERMISSIONS } from '../items/items.permissions';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
 import { deviationSearchSchema } from './mcp-deviation-search';
+import { mixingSearchSchema, mixingReadSchema } from './mcp-mixing-search';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -60,7 +61,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
-        'Tra cứu dữ liệu EBR. Dùng search_production_orders tìm ID lệnh rồi get_production_order lấy toàn bộ hồ sơ lô từ dữ liệu cục bộ; các nhóm nằm trong sections, không cắt bớt bản ghi. Hỏi số lượng/danh sách sai lệch trên nhiều lô hoặc theo mã hàng/ngày dùng search_production_order_deviations: chỉ hỏi số lượng thì mode=count, xem phiếu thì mode=list. Hôm nay dùng today=true theo ngày Việt Nam, không cần tải hồ sơ các lô để đếm. Dùng search_items và get_item để xem cấu hình sản phẩm hiện tại; không tự áp dụng cấu hình mới cho lô cũ. Nhóm thiếu quyền đọc có available=false, không được kết luận là không có dữ liệu. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Chỉ đọc dữ liệu; ảnh/tệp trả tham chiếu, không tải nội dung.',
+        'Tra cứu EBR. Dùng search_production_orders tìm lệnh rồi get_production_order xem hồ sơ lô. Riêng phiếu pha chế/gia công chỉ có số lượng và ids trong sections.mixing_records; muốn đọc phiếu phải gọi get_mixing_records. Dùng search_mixing_records tìm phiếu theo mã hàng/mã lệnh/số lô/thông số/ngày/duyệt, sau đó get_mixing_records theo ids; view=results cho so sánh thông số gọn hơn, view=full để đọc cả phiếu. Mỗi lần đọc tối đa 10 phiếu. Hỏi đếm sai lệch dùng search_production_order_deviations mode=count, xem danh sách dùng mode=list; today=true theo ngày Việt Nam. Dùng search_items/get_item xem cấu hình sản phẩm hiện tại, không tự áp dụng cho lô cũ. Nhóm thiếu quyền có available=false, khác với dữ liệu rỗng. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Chỉ đọc dữ liệu cục bộ và tham chiếu ảnh/tệp.',
     });
 
     server.registerTool(
@@ -112,7 +113,7 @@ export class McpService implements OnModuleDestroy {
       'get_production_order',
       {
         description:
-          'Lấy toàn bộ hồ sơ lô/lệnh sản xuất theo id từ search_production_orders: thông tin chung, số đăng ký, PYCLM và toàn bộ lịch sử lấy mẫu, cấp/nhận hồ sơ, hướng dẫn sản xuất, checklist; toàn bộ phiếu pha chế/gia công đã lưu, sai lệch, kiểm tra/tiệt trùng/lọc, đóng gói, tổng kết sản lượng/hao hụt, xét duyệt xuất xưởng và tài liệu đính kèm. Các bảng chi tiết nằm trong sections với available, total và data; không phân trang và không giới hạn số bản ghi. Kiểm tra quyền đọc từng nhóm, loại bỏ sai lệch/ảnh đã xóa. Chỉ trả metadata/tham chiếu ảnh và tệp. null hoặc dữ liệu rỗng không đồng nghĩa đạt chất lượng hay đã phê duyệt.',
+          'Lấy hồ sơ lô/lệnh theo id: thông tin chung, số đăng ký, PYCLM/lịch sử lấy mẫu, giao nhận hồ sơ, hướng dẫn, checklist, sai lệch, kiểm tra/tiệt trùng/lọc, đóng gói, tổng kết, xét duyệt và tài liệu. Các nhóm trong sections trả đầy đủ bản ghi theo quyền đọc. Riêng mixing_records chỉ trả total, ids và detail_tool=get_mixing_records, không trả nội dung phiếu pha chế/gia công; cần gọi get_mixing_records để đọc các phiếu đó. Ảnh/tệp chỉ trả tham chiếu. Có dữ liệu không đồng nghĩa đạt hoặc đã duyệt.',
         inputSchema: z
           .object({ id: z.number().int().positive().max(2147483647) })
           .strict(),
@@ -201,6 +202,40 @@ export class McpService implements OnModuleDestroy {
             }
             return this.tools.searchProductionOrderDeviations(input);
           },
+        ),
+    );
+
+    server.registerTool(
+      'search_mixing_records',
+      {
+        description:
+          'Tìm phiếu pha chế/gia công trên nhiều lô, chỉ trả thông tin nhận diện và duyệt, không tải cấu trúc/kết quả. Lọc chính xác item_code, production_order_code (mã lệnh), lot_no, production_order_id, record_type, created_by_id; query tìm gần đúng mô tả/mã lệnh/mã hàng/tên hàng/số lô. parameter_name tìm phiếu có thông số chứa tên này (ví dụ pH). qa_status/ipc_status=approved|pending dựa trên có/chưa có người duyệt. date_from/date_to dạng YYYY-MM-DD bao gồm cả ngày cuối theo ngày Việt Nam, lọc created_at của phiếu. Không truyền record_type lấy mọi loại; phiếu pha chế là mixing. Có phân trang. Dùng ID kết quả để gọi get_mixing_records.',
+        inputSchema: mixingSearchSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'search_mixing_records',
+          auth,
+          'production-orders.read',
+          () => this.tools.searchMixingRecords(input),
+        ),
+    );
+
+    server.registerTool(
+      'get_mixing_records',
+      {
+        description:
+          'Đọc nhiều phiếu pha chế/gia công đã lưu theo ids từ search_mixing_records hoặc get_production_order, tối đa 10 ID khác nhau mỗi lần. view=full mặc định trả toàn bộ giai đoạn/bước/thông số, yêu cầu/kết quả/ghi chú, tham chiếu ảnh, người/thời gian ghi nhận và duyệt QA/IPC; không dựng lại từ mẫu hiện tại. view=results trả thông tin phiếu và danh sách thông số đã có kết quả/ảnh/ghi chú, bỏ các thông số trống để so sánh gọn hơn. Trả theo thứ tự ids, missing_ids liệt kê phiếu không tồn tại. Không tải ảnh/tệp. Có nhiều hơn 10 phiếu thì gọi theo từng nhóm.',
+        inputSchema: mixingReadSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'get_mixing_records',
+          auth,
+          'production-orders.read',
+          () => this.tools.getMixingRecords(input),
         ),
     );
 

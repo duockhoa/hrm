@@ -2,6 +2,14 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
+import type { MixingRecordForReport } from '../production-orders/exports/mixing-records-report-html';
+import {
+  buildMixingSearch,
+  mixingSummarySelect,
+  mixingOrderSelect,
+  type MixingSearchInput,
+  type MixingReadInput,
+} from './mcp-mixing-search';
 import { getAuthenticatedDeviationImagePath } from '../production-order-deviations/production-order-deviation-upload.config';
 import { ProductionOrderLocalCompletenessService } from '../production-orders/production-order-local-completeness.service';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
@@ -145,6 +153,89 @@ export class McpToolsService {
     private readonly prisma: PrismaService,
     private readonly completeness: ProductionOrderLocalCompletenessService,
   ) {}
+
+  async searchMixingRecords(input: MixingSearchInput) {
+    const { where, date_range } = buildMixingSearch(input);
+    const skip = (input.page - 1) * input.limit;
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.productionOrderMixingRecords.count({ where }),
+      this.prisma.productionOrderMixingRecords.findMany({
+        where,
+        select: mixingSummarySelect,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        skip,
+        take: input.limit,
+      }),
+    ]);
+    return {
+      data,
+      date_range,
+      pagination: {
+        page: input.page,
+        limit: input.limit,
+        total,
+        total_pages: Math.ceil(total / input.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  async getMixingRecords(input: MixingReadInput) {
+    const rows = await this.prisma.productionOrderMixingRecords.findMany({
+      where: { id: { in: input.ids } },
+      include: {
+        ...mixingRecordsReportInclude,
+        productionOrder: { select: mixingOrderSelect },
+      },
+    });
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const data = input.ids.flatMap((id): unknown[] => {
+      const row = byId.get(id);
+      if (!row) return [];
+      if (input.view === 'full') return [row];
+      const { stages: _stages, ...metadata } = row;
+      return [{ ...metadata, parameters: this.mixingResults(row) }];
+    });
+    return {
+      view: input.view,
+      requested: input.ids.length,
+      returned: data.length,
+      missing_ids: input.ids.filter((id) => !byId.has(id)),
+      data,
+    };
+  }
+
+  private mixingResults(record: MixingRecordForReport) {
+    return record.stages.flatMap((stage) =>
+      stage.steps.flatMap((step) =>
+        step.parameters
+          .filter(
+            (parameter) =>
+              parameter.result_value?.trim() ||
+              parameter.result_image_path?.trim() ||
+              parameter.note?.trim(),
+          )
+          .map((parameter) => ({
+            id: parameter.id,
+            stage_name: stage.stage_name,
+            step_name: step.step_name,
+            parameter_name: parameter.parameter_name,
+            data_type: parameter.data_type,
+            requirement: parameter.requirement,
+            unit: parameter.unit,
+            result_value: parameter.result_value,
+            note: parameter.note,
+            result_image_path: parameter.result_image_path,
+            recordedBy: parameter.recordedBy,
+            recorded_at: parameter.recorded_at,
+            noteRecordedBy: parameter.noteRecordedBy,
+            note_recorded_at: parameter.note_recorded_at,
+            imageUploadedBy: parameter.imageUploadedBy,
+            image_uploaded_at: parameter.image_uploaded_at,
+          })),
+      ),
+    );
+  }
 
   async searchProductionOrderDeviations(
     input: SearchProductionOrderDeviationsInput,
@@ -426,9 +517,9 @@ export class McpToolsService {
         orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
       };
     }
-    // All saved record types, including primary-packaging records, belong to the lot.
+    // Full record structures are read separately through get_mixing_records.
     select.mixingRecords = {
-      include: mixingRecordsReportInclude,
+      select: { id: true },
       orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     };
     const result = await this.prisma.productionOrders.findUnique({
@@ -443,6 +534,7 @@ export class McpToolsService {
     const raw = result as unknown as Record<string, unknown>;
     type SectionData =
       | { available: true; total: number; data: unknown[] }
+      | { available: true; total: number; ids: number[]; detail_tool: string }
       | { available: false; reason: 'permission_required' };
     const sections: Record<string, SectionData> = {};
     for (const [key, config] of Object.entries(recordSections)) {
@@ -475,11 +567,12 @@ export class McpToolsService {
     sections.deviations = canReadDeviations
       ? { available: true, total: deviations.length, data: deviations }
       : { available: false, reason: 'permission_required' };
-    const mixingRecords = (raw.mixingRecords ?? []) as unknown[];
+    const mixingRecords = (raw.mixingRecords ?? []) as { id: number }[];
     sections.mixing_records = {
       available: true,
       total: mixingRecords.length,
-      data: mixingRecords,
+      ids: mixingRecords.map((record) => record.id),
+      detail_tool: 'get_mixing_records',
     };
 
     const latestRequest = order.samplingRequests?.[0] ?? null;

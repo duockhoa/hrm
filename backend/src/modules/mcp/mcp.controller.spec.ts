@@ -74,6 +74,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     resolveMcpToken: jest.fn(),
   };
   const prisma = {
+    productionOrderMixingRecords: { count: jest.fn(), findMany: jest.fn() },
     productionOrderDeviations: { count: jest.fn(), findMany: jest.fn() },
     items: { count: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
     productionOrders: {
@@ -101,6 +102,8 @@ describe('MCP Streamable HTTP endpoint', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.productionOrderMixingRecords.count.mockResolvedValue(0);
+    prisma.productionOrderMixingRecords.findMany.mockResolvedValue([]);
     prisma.productionOrderDeviations.count.mockResolvedValue(0);
     prisma.productionOrderDeviations.findMany.mockResolvedValue([]);
     prisma.items.count.mockResolvedValue(0);
@@ -680,7 +683,262 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(response.text).not.toContain('private item database failure');
   });
 
-  it('exposes exactly six read-only tools', async () => {
+  it('searches mixing records by order/product, parameter, dates and QA/IPC without loading results', async () => {
+    prisma.productionOrderMixingRecords.count.mockResolvedValue(45);
+    prisma.productionOrderMixingRecords.findMany.mockResolvedValue([
+      {
+        id: 11,
+        record_type: 'mixing',
+        productionOrder: { id: 7, item_code: 'BTP0001', lot_no: 'LOT1' },
+      },
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'search_mixing_records',
+      arguments: {
+        item_code: ' BTP0001 ',
+        production_order_code: ' LSX007 ',
+        production_order_id: 7,
+        lot_no: ' LOT1 ',
+        record_type: 'mixing',
+        parameter_name: ' pH ',
+        query: ' BTP ',
+        qa_status: 'approved',
+        ipc_status: 'pending',
+        created_by_id: 2,
+        date_from: '2026-10-01',
+        date_to: '2026-10-18',
+        page: 2,
+        limit: 20,
+      },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      data: [{ id: 11 }],
+      pagination: { total: 45, page: 2, limit: 20, has_next_page: true },
+    });
+    const [countArgs] = prisma.productionOrderMixingRecords.count.mock
+      .calls[0] as [{ where: object }];
+    expect(countArgs.where).toMatchObject({
+      production_order_id: 7,
+      productionOrder: {
+        is: {
+          item_code: 'BTP0001',
+          production_order_code: 'LSX007',
+          lot_no: 'LOT1',
+        },
+      },
+      record_type: 'mixing',
+      created_by_id: 2,
+      qa_staff_approved_by_id: { not: null },
+      ipc_staff_approved_by_id: null,
+      created_at: {
+        gte: new Date('2026-09-30T17:00:00Z'),
+        lt: new Date('2026-10-18T17:00:00Z'),
+      },
+      stages: {
+        some: {
+          steps: {
+            some: {
+              parameters: { some: { parameter_name: { contains: 'pH' } } },
+            },
+          },
+        },
+      },
+    });
+    expect(prisma.productionOrderMixingRecords.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: countArgs.where,
+        skip: 20,
+        take: 20,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      }),
+    );
+    const [query] = prisma.productionOrderMixingRecords.findMany.mock
+      .calls[0] as [{ select: Record<string, unknown> }];
+    expect(query.select).not.toHaveProperty('stages');
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns an empty mixing search and includes all record types unless filtered', async () => {
+    const response = await rpc('tools/call', {
+      name: 'search_mixing_records',
+      arguments: {},
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      data: [],
+      pagination: { total: 0, has_next_page: false },
+    });
+    expect(prisma.productionOrderMixingRecords.count).toHaveBeenCalledWith({
+      where: {},
+    });
+  });
+
+  it('reads complete saved mixing records in requested order and reports missing IDs', async () => {
+    const parameter = {
+      id: 3,
+      parameter_name: 'pH',
+      requirement: '5-7',
+      result_value: '6.2',
+      unit: null,
+      recordedBy: { name: 'QA', username: 'qa' },
+    };
+    const first = {
+      id: 1,
+      record_type: 'mixing',
+      template_version: '1',
+      stages: [
+        {
+          stage_name: 'Pha chế',
+          steps: [{ step_name: 'Đo pH', parameters: [parameter] }],
+        },
+      ],
+      productionOrder: { id: 7, item_code: 'BTP0001' },
+    };
+    const second = { id: 3, record_type: 'primary_packaging', stages: [] };
+    prisma.productionOrderMixingRecords.findMany.mockResolvedValue([
+      first,
+      second,
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'get_mixing_records',
+      arguments: { ids: [3, 2, 1] },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toEqual({
+      view: 'full',
+      requested: 3,
+      returned: 2,
+      missing_ids: [2],
+      data: [second, first],
+    });
+    expect(prisma.productionOrderMixingRecords.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: { in: [3, 2, 1] } },
+        include: expect.objectContaining({
+          createdBy: { select: { name: true, username: true } },
+          stages: expect.objectContaining({
+            orderBy: [{ stage_order: 'asc' }, { id: 'asc' }],
+          }),
+        }),
+      }),
+    );
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns only entered parameters in compact results view, retaining zero/false, notes and image references', async () => {
+    prisma.productionOrderMixingRecords.findMany.mockResolvedValue([
+      {
+        id: 1,
+        record_type: 'mixing',
+        stages: [
+          {
+            stage_name: 'S1',
+            steps: [
+              {
+                step_name: 'B1',
+                parameters: [
+                  { id: 1, parameter_name: 'Zero', result_value: '0' },
+                  { id: 2, parameter_name: 'Boolean', result_value: 'false' },
+                  { id: 3, parameter_name: 'Blank', result_value: '   ' },
+                  {
+                    id: 4,
+                    parameter_name: 'Image',
+                    result_image_path: '/images/result.png',
+                  },
+                  { id: 5, parameter_name: 'Note', note: 'Ghi chú' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'get_mixing_records',
+      arguments: { ids: [1], view: 'results' },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      view: 'results',
+      data: [
+        {
+          id: 1,
+          parameters: [
+            { id: 1, stage_name: 'S1', step_name: 'B1', result_value: '0' },
+            { id: 2, result_value: 'false' },
+            { id: 4, result_image_path: '/images/result.png' },
+            { id: 5, note: 'Ghi chú' },
+          ],
+        },
+      ],
+    });
+    const data = body(response).result.structuredContent.data as object[];
+    expect(data[0]).not.toHaveProperty('stages');
+    expect(response.text).not.toContain('Blank');
+  });
+
+  it('explicitly reports all missing mixing IDs', async () => {
+    const response = await rpc('tools/call', {
+      name: 'get_mixing_records',
+      arguments: { ids: [999] },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toEqual({
+      view: 'full',
+      requested: 1,
+      returned: 0,
+      missing_ids: [999],
+      data: [],
+    });
+  });
+
+  it.each([
+    ['get_mixing_records', { ids: [] }],
+    ['get_mixing_records', { ids: [1, 1] }],
+    ['get_mixing_records', { ids: [0] }],
+    [
+      'get_mixing_records',
+      { ids: Array.from({ length: 11 }, (_, i) => i + 1) },
+    ],
+    ['get_mixing_records', { ids: [1], view: 'unknown' }],
+    [
+      'search_mixing_records',
+      { date_from: '2026-10-19', date_to: '2026-10-18' },
+    ],
+    ['search_mixing_records', { date_from: '2026-02-30' }],
+    ['search_mixing_records', { limit: 101 }],
+    ['search_mixing_records', { qa_status: 'done' }],
+    ['search_mixing_records', { item_code: ' ' }],
+  ] as [string, object][])(
+    'validates mixing arguments for %s: %j',
+    async (name, arguments_) => {
+      const response = await rpc('tools/call', {
+        name,
+        arguments: arguments_,
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(
+        prisma.productionOrderMixingRecords.findMany,
+      ).not.toHaveBeenCalled();
+      expect(prisma.productionOrderMixingRecords.count).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['search_mixing_records', 'get_mixing_records'])(
+    'requires order read permission for %s',
+    async (name) => {
+      const identity = authenticated();
+      identity.auth.extra.permissions = ['production-orders.list'];
+      oauth.resolveMcpToken.mockResolvedValue(identity);
+      const response = await rpc('tools/call', {
+        name,
+        arguments: name === 'get_mixing_records' ? { ids: [1] } : {},
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(
+        prisma.productionOrderMixingRecords.findMany,
+      ).not.toHaveBeenCalled();
+      expect(prisma.productionOrderMixingRecords.count).not.toHaveBeenCalled();
+    },
+  );
+
+  it('exposes exactly eight read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
@@ -689,6 +947,8 @@ describe('MCP Streamable HTTP endpoint', () => {
       'search_items',
       'get_item',
       'search_production_order_deviations',
+      'search_mixing_records',
+      'get_mixing_records',
     ]);
     expect(
       body(response).result.tools.every(
@@ -1000,7 +1260,13 @@ describe('MCP Streamable HTTP endpoint', () => {
       affected_quantity: '1.234',
       images: [{ image_path: '/production-order-deviations/images/test.png' }],
     });
-    expect(data.sections.mixing_records.data).toEqual(order.mixingRecords);
+    expect(data.sections.mixing_records).toEqual({
+      available: true,
+      total: 2,
+      ids: [1, 2],
+      detail_tool: 'get_mixing_records',
+    });
+    expect(response.text).not.toContain('result_value');
     const [query] = prisma.productionOrders.findUnique.mock.calls[0] as [
       { where: { id: number }; select: Record<string, unknown> },
     ];
@@ -1016,6 +1282,8 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(query.select.deviations).not.toHaveProperty('take');
     expect(query.select.mixingRecords).not.toHaveProperty('where');
     expect(query.select.mixingRecords).not.toHaveProperty('take');
+    expect(query.select.mixingRecords).toMatchObject({ select: { id: true } });
+    expect(query.select.mixingRecords).not.toHaveProperty('include');
     expect(query.select.equipmentMonitoringRecords).toMatchObject({
       where: { deleted_at: null },
     });
@@ -1079,7 +1347,12 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(body(response).result.structuredContent.data).toMatchObject({
       sections: {
         sampling_records: { available: true, total: 0, data: [] },
-        mixing_records: { available: true, total: 0, data: [] },
+        mixing_records: {
+          available: true,
+          total: 0,
+          ids: [],
+          detail_tool: 'get_mixing_records',
+        },
       },
       completeness: {
         available: true,

@@ -35,7 +35,7 @@ SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/nod
 Chạy backend bằng `npm run start:dev` trong thư mục `backend`, rồi nhập URL trên
 vào client MCP. Không cần API key của nhà cung cấp AI để chạy module này.
 
-## Sáu tool hiện có
+## Tám tool hiện có
 
 | Tool                                 | Tham số                                                                                                                                       | Kết quả                                                      |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -45,10 +45,64 @@ vào client MCP. Không cần API key của nhà cung cấp AI để chạy modu
 | `search_items`                       | `query?`, `item_code?`, `code_prefix?`, `page?`, `limit?`                                                                                     | Tìm sản phẩm theo mã/tên/mã DK, có phân trang                |
 | `get_item`                           | `item_code`                                                                                                                                   | Thông tin và cấu hình hiện tại của một sản phẩm              |
 | `search_production_order_deviations` | `mode?`, `today?`, `date_from?`, `date_to?`, `item_code?`, `lot_no?`, `production_order_id?`, `approval_status?`, `query?`, `page?`, `limit?` | Đếm hoặc tìm sai lệch trên nhiều lô                          |
+| `search_mixing_records`              | Bộ lọc mã hàng/lệnh/lô, ngày, loại phiếu, thông số, QA/IPC và phân trang                                                                      | Danh sách nhận diện phiếu pha chế/gia công                   |
+| `get_mixing_records`                 | `ids`, `view?`                                                                                                                                | Nội dung nhiều phiếu đã chọn, tối đa 10 ID mỗi lần           |
 
-Có sáu tên tool trên được đăng ký. Các tool riêng theo lô cho pha chế, sai lệch,
-checklist, kiểm tra, tổng kết, đóng gói, lấy mẫu và tài liệu đã được gom vào
-`get_production_order`. Client đã kết nối trước đó cần làm mới danh sách tool.
+Có tám tên tool trên được đăng ký. Phiếu pha chế/gia công được tìm và đọc riêng;
+`get_production_order` chỉ giữ số lượng/ID tham chiếu của nhóm này. Các nhóm sai
+lệch, checklist, kiểm tra, tổng kết, đóng gói, lấy mẫu và tài liệu tiếp tục nằm
+trong hồ sơ lô. Client đã kết nối trước đó cần làm mới danh sách tool.
+
+### Tìm và đọc phiếu pha chế/gia công
+
+`search_mixing_records` trả metadata, mã/tên hàng, mã lệnh, số lô, loại/phiên bản
+phiếu, ngày tạo và thông tin người tạo/duyệt QA/IPC; không tải cấu trúc hay kết quả.
+Tool hỗ trợ:
+
+- `item_code`, `production_order_code`, `production_order_id`, `lot_no`,
+  `record_type`, `created_by_id`: lọc chính xác và kết hợp bằng AND.
+- `query`: tìm trong mô tả, mã lệnh, mã hàng, tên hàng, số lô.
+- `parameter_name`: tìm phiếu có thông số chứa tên này, ví dụ `pH`.
+- `qa_status`, `ipc_status`: `approved`/`pending`, dựa trên có/chưa có người duyệt.
+- `date_from`, `date_to`: ngày tạo phiếu dạng `YYYY-MM-DD`, bao gồm cả ngày cuối
+  theo ngày Việt Nam; có thể truyền một đầu khoảng ngày.
+- `page=1`, `limit=20` mặc định, tối đa 100; sắp theo ngày tạo giảm dần rồi ID.
+
+Không truyền `record_type` sẽ lấy tất cả loại phiếu; chỉ phiếu pha chế dùng
+`record_type=mixing`. Bộ lọc thông số chỉ tìm phiếu phù hợp, không thay đổi nội
+dung phiếu khi đọc chi tiết.
+
+```json
+{
+  "name": "search_mixing_records",
+  "arguments": {
+    "item_code": "BTP0001",
+    "record_type": "mixing",
+    "parameter_name": "pH",
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+`get_mixing_records` nhận 1–10 ID khác nhau, trả theo đúng thứ tự yêu cầu, và
+liệt kê ID không tồn tại trong `missing_ids`. Phiếu được đọc từ cấu trúc đã lưu,
+không dựng lại từ mẫu hiện tại. Cả hai tool cần `production-orders.read`.
+
+- `view=full` (mặc định): toàn bộ phiếu, giai đoạn, bước, thông số, yêu cầu,
+  kết quả/ghi chú/ảnh, người/thời gian ghi nhận và duyệt QA/IPC, thông tin lệnh.
+- `view=results`: metadata phiếu và mảng `parameters` chứa các thông số có kết quả,
+  ảnh hoặc ghi chú, kèm tên giai đoạn/bước và thông tin ghi nhận. Giữ kết quả `0`
+  và `false`; bỏ thông số trống. Dữ liệu kết quả chưa được tổng hợp thống kê.
+
+```json
+{
+  "name": "get_mixing_records",
+  "arguments": { "ids": [101, 102, 108], "view": "results" }
+}
+```
+
+Nếu cần nhiều hơn 10 phiếu, gọi theo từng nhóm. Ảnh/tệp chỉ trả tham chiếu.
 
 ### Đếm và tra cứu sai lệch trên nhiều lô
 
@@ -200,25 +254,28 @@ Kết quả có dạng `{ "data": { ... } }`, gồm:
   lô vẫn được trả. Mục phụ thuộc nguồn ngoài phạm vi cục bộ là `unavailable`.
 - `sections`: toàn bộ bản ghi chi tiết theo nhóm dưới đây.
 
-| Nhóm                                                 | Nội dung                                                                                                                                                    |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mixing_records`                                     | Tất cả phiếu pha chế/gia công đã lưu, gồm các loại `record_type`; cấu trúc giai đoạn → bước → thông số, kết quả/ghi chú/ảnh, người ghi nhận và duyệt QA/IPC |
-| `deviations`                                         | Toàn bộ sai lệch, nguyên nhân, xử lý, số lượng/đơn vị, người báo cáo/phê duyệt và tham chiếu ảnh còn hiệu lực                                               |
-| `*_checks`, `cylinder_calibration`                   | Kiểm tra môi trường, vệ sinh, dọn quang, cảm quan, khối lượng, thể tích, độ cứng/dày/rã/mài mòn/kín, soi lọ, in date, hiệu chuẩn, tiệt trùng và lọc         |
-| `*_summaries`, `finished_product_summary`            | Tổng kết các công đoạn, thành phẩm/bán thành phẩm, sản lượng, lượng dư và hao hụt                                                                           |
-| `factory_release_reviews`                            | Toàn bộ bản xét duyệt xuất xưởng, các kết quả đã lưu và người duyệt                                                                                         |
-| `primary_packaging_confirmations`, các nhóm đóng gói | Xác nhận, kiểm tra và tổng kết đóng gói, gồm các mục chờ xử lý/hủy                                                                                          |
-| `sampling_requests`, `sampling_records`              | Toàn bộ lịch sử gửi PYCLM và lấy mẫu thực tế                                                                                                                |
-| `disinfectant_preparations`                          | Các phiếu pha dung dịch sát khuẩn                                                                                                                           |
-| `equipment_monitoring_records`                       | Theo dõi thiết bị, thông số/kết quả, người ghi nhận và tham chiếu ảnh còn hiệu lực                                                                          |
-| `attachments`                                        | Hồ sơ đính kèm, người nhập, trạng thái/người phê duyệt và metadata/tham chiếu tệp                                                                           |
+| Nhóm                                                 | Nội dung                                                                                                                                            |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mixing_records`                                     | Chỉ có `total`, `ids`, `detail_tool=get_mixing_records`; không có nội dung phiếu                                                                    |
+| `deviations`                                         | Toàn bộ sai lệch, nguyên nhân, xử lý, số lượng/đơn vị, người báo cáo/phê duyệt và tham chiếu ảnh còn hiệu lực                                       |
+| `*_checks`, `cylinder_calibration`                   | Kiểm tra môi trường, vệ sinh, dọn quang, cảm quan, khối lượng, thể tích, độ cứng/dày/rã/mài mòn/kín, soi lọ, in date, hiệu chuẩn, tiệt trùng và lọc |
+| `*_summaries`, `finished_product_summary`            | Tổng kết các công đoạn, thành phẩm/bán thành phẩm, sản lượng, lượng dư và hao hụt                                                                   |
+| `factory_release_reviews`                            | Toàn bộ bản xét duyệt xuất xưởng, các kết quả đã lưu và người duyệt                                                                                 |
+| `primary_packaging_confirmations`, các nhóm đóng gói | Xác nhận, kiểm tra và tổng kết đóng gói, gồm các mục chờ xử lý/hủy                                                                                  |
+| `sampling_requests`, `sampling_records`              | Toàn bộ lịch sử gửi PYCLM và lấy mẫu thực tế                                                                                                        |
+| `disinfectant_preparations`                          | Các phiếu pha dung dịch sát khuẩn                                                                                                                   |
+| `equipment_monitoring_records`                       | Theo dõi thiết bị, thông số/kết quả, người ghi nhận và tham chiếu ảnh còn hiệu lực                                                                  |
+| `attachments`                                        | Hồ sơ đính kèm, người nhập, trạng thái/người phê duyệt và metadata/tham chiếu tệp                                                                   |
 
-Mỗi section có cấu trúc `{ "available": true, "total": N, "data": [...] }`.
+Các section trả nội dung có cấu trúc `{ "available": true, "total": N, "data": [...] }`;
+riêng `mixing_records` trả `ids` và `detail_tool` thay cho `data`.
 Nhóm không có dữ liệu trả `total=0`, `data=[]`. Phiếu đơn như hiệu chuẩn và
 khối lượng 10 vỏ vẫn trả dạng mảng với tối đa một bản ghi.
 
-Tool chi tiết **không phân trang và không cắt bớt bản ghi**, kể cả lịch sử lấy
-mẫu, phiếu pha chế, sai lệch hay các bảng con. Các phiếu sắp theo thời gian và ID;
+Tool chi tiết lô **không phân trang và không cắt bớt bản ghi** của các nhóm được
+trả nội dung như lấy mẫu/sai lệch. Riêng phiếu pha chế/gia công chỉ lấy ID và số
+lượng trong `sections.mixing_records`, gọi `get_mixing_records` để đọc nội dung.
+Các phiếu sắp theo thời gian và ID;
 các bước/thông số giữ thứ tự cấu trúc đã lưu. Ngày dạng ISO 8601 và Decimal dạng
 chuỗi để giữ độ chính xác. Trường `planned_quatity` giữ tên hiện tại của schema.
 Không cộng gộp sản lượng giữa các công đoạn hoặc đơn vị khác nhau.
