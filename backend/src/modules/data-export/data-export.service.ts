@@ -8,6 +8,9 @@ import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post
 import { ExportSemiFinishedProductSummariesQueryDto } from './dto/export-semi-finished-product-summaries.query.dto';
 import { ExportSemiFinishedWeightChecksQueryDto } from './dto/export-semi-finished-weight-checks.query.dto';
 import { ExportVolumeChecksQueryDto } from './dto/export-volume-checks.query.dto';
+import { ExportShellWeightChecksQueryDto } from './dto/export-shell-weight-checks.query.dto';
+import { ExportDensityChecksQueryDto } from './dto/export-density-checks.query.dto';
+import { ExportCylinderCalibrationsQueryDto } from './dto/export-cylinder-calibrations.query.dto';
 
 const ITEM_EXPORT_SELECT = {
   item_code: true,
@@ -393,6 +396,143 @@ const FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
 @Injectable()
 export class DataExportService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async exportCylinderCalibrations(query: ExportCylinderCalibrationsQueryDto) {
+    const where: Prisma.ProductionOrderCylinderCalibrationsWhereInput = {};
+
+    if (query.updated_from) {
+      where.updated_at = { gte: new Date(query.updated_from) };
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const [total, calibrations] = await this.prisma.$transaction([
+      this.prisma.productionOrderCylinderCalibrations.count({ where }),
+      this.prisma.productionOrderCylinderCalibrations.findMany({
+        where,
+        include: {
+          createdBy: { select: USER_EXPORT_SELECT },
+          productionOrder: {
+            select: POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
+          },
+        },
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+      }),
+    ]);
+
+    const data = calibrations.map((calibration) => ({
+      ...calibration,
+      calibration_number: Number(calibration.calibration_number),
+    }));
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  async exportDensityChecks(query: ExportDensityChecksQueryDto) {
+    const where: Prisma.ProductionOrderDensityChecksWhereInput = {};
+
+    if (query.updated_from) {
+      where.updated_at = { gte: new Date(query.updated_from) };
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const [total, checks] = await this.prisma.$transaction([
+      this.prisma.productionOrderDensityChecks.count({ where }),
+      this.prisma.productionOrderDensityChecks.findMany({
+        where,
+        include: {
+          createdBy: { select: USER_EXPORT_SELECT },
+          productionOrder: {
+            select: POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
+          },
+        },
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+      }),
+    ]);
+
+    const data = checks.map((check) => ({
+      ...check,
+      empty_pycnometer_mass_g: Number(check.empty_pycnometer_mass_g),
+      solution_pycnometer_mass_g: Number(check.solution_pycnometer_mass_g),
+      water_pycnometer_mass_g: Number(check.water_pycnometer_mass_g),
+      density: Number(check.density),
+      apparent_density:
+        check.apparent_density === null ? null : Number(check.apparent_density),
+    }));
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  async exportShellWeightChecks(query: ExportShellWeightChecksQueryDto) {
+    const where: Prisma.ProductionOrderShellWeightChecksWhereInput = {};
+
+    if (query.updated_from) {
+      where.updated_at = { gte: new Date(query.updated_from) };
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const [total, checks] = await this.prisma.$transaction([
+      this.prisma.productionOrderShellWeightChecks.count({ where }),
+      this.prisma.productionOrderShellWeightChecks.findMany({
+        where,
+        include: {
+          createdBy: { select: USER_EXPORT_SELECT },
+          productionOrder: {
+            select: POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
+          },
+        },
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+      }),
+    ]);
+
+    const data = checks.map((check) => ({
+      ...check,
+      shell_1_weight: Number(check.shell_1_weight),
+      shell_2_weight: Number(check.shell_2_weight),
+      shell_3_weight: Number(check.shell_3_weight),
+      shell_4_weight: Number(check.shell_4_weight),
+      shell_5_weight: Number(check.shell_5_weight),
+      shell_6_weight: Number(check.shell_6_weight),
+      shell_7_weight: Number(check.shell_7_weight),
+      shell_8_weight: Number(check.shell_8_weight),
+      shell_9_weight: Number(check.shell_9_weight),
+      shell_10_weight: Number(check.shell_10_weight),
+    }));
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
 
   async exportProductionOrderDeviations(
     query: ExportProductionOrderDeviationsQueryDto,

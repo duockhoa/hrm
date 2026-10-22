@@ -22,7 +22,10 @@ import { ExportPostSecondaryPackagingSummariesQueryDto } from './dto/export-post
 import { ExportSemiFinishedProductSummariesQueryDto } from './dto/export-semi-finished-product-summaries.query.dto';
 import { ExportSemiFinishedWeightChecksQueryDto } from './dto/export-semi-finished-weight-checks.query.dto';
 import { ExportVolumeChecksQueryDto } from './dto/export-volume-checks.query.dto';
+import { ExportShellWeightChecksQueryDto } from './dto/export-shell-weight-checks.query.dto';
 import { DataExportService } from './data-export.service';
+import { ExportDensityChecksQueryDto } from './dto/export-density-checks.query.dto';
+import { ExportCylinderCalibrationsQueryDto } from './dto/export-cylinder-calibrations.query.dto';
 
 @Controller('data-export')
 @ApiTags('Data export')
@@ -35,6 +38,36 @@ import { DataExportService } from './data-export.service';
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class DataExportController {
   constructor(private readonly dataExportService: DataExportService) {}
+
+  @Get('cylinder-calibrations')
+  @ApiOperation({
+    summary: 'Xuất dữ liệu hiệu chỉnh ống đong cho Google Sheets',
+  })
+  @ApiOkResponse({ description: 'Danh sách hiệu chỉnh ống đong theo trang' })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportCylinderCalibrations(
+    @Query() query: ExportCylinderCalibrationsQueryDto,
+  ) {
+    return this.dataExportService.exportCylinderCalibrations(query);
+  }
+
+  @Get('density-checks')
+  @ApiOperation({ summary: 'Xuất dữ liệu tỉ trọng cho Google Sheets' })
+  @ApiOkResponse({ description: 'Danh sách kiểm tra tỉ trọng theo trang' })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportDensityChecks(@Query() query: ExportDensityChecksQueryDto) {
+    return this.dataExportService.exportDensityChecks(query);
+  }
+
+  @Get('shell-weight-checks')
+  @ApiOperation({
+    summary: 'Xuất dữ liệu khối lượng vỏ cho Google Sheets',
+  })
+  @ApiOkResponse({ description: 'Danh sách khối lượng vỏ theo trang' })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportShellWeightChecks(@Query() query: ExportShellWeightChecksQueryDto) {
+    return this.dataExportService.exportShellWeightChecks(query);
+  }
 
   @Get('items')
   @ApiOperation({
@@ -101,7 +134,9 @@ export class DataExportController {
   @ApiOperation({
     summary: 'Xuất dữ liệu tổng kết bán thành phẩm cho Google Sheets',
   })
-  @ApiOkResponse({ description: 'Danh sách tổng kết bán thành phẩm theo trang' })
+  @ApiOkResponse({
+    description: 'Danh sách tổng kết bán thành phẩm theo trang',
+  })
   @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
   exportSemiFinishedProductSummaries(
     @Query() query: ExportSemiFinishedProductSummariesQueryDto,

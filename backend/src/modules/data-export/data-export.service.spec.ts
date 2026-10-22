@@ -1,7 +1,20 @@
 import { DataExportService } from './data-export.service';
+import { Prisma } from '@prisma/client';
 
 describe('DataExportService', () => {
   const prisma = {
+    productionOrderCylinderCalibrations: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
+    productionOrderDensityChecks: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
+    productionOrderShellWeightChecks: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
     items: {
       count: jest.fn(),
       findMany: jest.fn(),
@@ -36,6 +49,275 @@ describe('DataExportService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('exports cylinder calibrations as numbers including negative and zero values', async () => {
+    const calibration = {
+      id: 1,
+      cylinder_code: '00012',
+      calibration_number: new Prisma.Decimal('-0.1234'),
+      created_at: new Date('2026-01-01T08:00:00.000Z'),
+      productionOrder: {
+        lot_no: '00123',
+        item: { item_code: 'BTP001', item_name: 'Bán thành phẩm A' },
+      },
+      createdBy: { name: 'Người nhập' },
+    };
+    prisma.$transaction.mockResolvedValue([
+      3,
+      [
+        calibration,
+        {
+          ...calibration,
+          id: 2,
+          cylinder_code: null,
+          calibration_number: new Prisma.Decimal(0),
+        },
+      ],
+    ]);
+
+    const result = await service.exportCylinderCalibrations({
+      page: 1,
+      limit: 2,
+    });
+
+    expect(result.data).toEqual([
+      { ...calibration, calibration_number: -0.1234 },
+      { ...calibration, id: 2, cylinder_code: null, calibration_number: 0 },
+    ]);
+    expect(result.pagination).toEqual({
+      page: 1,
+      limit: 2,
+      total: 3,
+      total_pages: 2,
+      has_next_page: true,
+    });
+    expect(
+      prisma.productionOrderCylinderCalibrations.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {},
+        include: expect.objectContaining({
+          productionOrder: expect.anything(),
+          createdBy: expect.anything(),
+        }),
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip: 0,
+        take: 2,
+      }),
+    );
+  });
+
+  it('filters cylinder calibration exports by update time and handles empty pages', async () => {
+    const updatedFrom = '2026-01-01T00:00:00.000Z';
+    prisma.$transaction.mockResolvedValue([1, []]);
+
+    await expect(
+      service.exportCylinderCalibrations({
+        page: 2,
+        limit: 500,
+        updated_from: updatedFrom,
+      }),
+    ).resolves.toEqual({
+      data: [],
+      pagination: {
+        page: 2,
+        limit: 500,
+        total: 1,
+        total_pages: 1,
+        has_next_page: false,
+      },
+    });
+    expect(
+      prisma.productionOrderCylinderCalibrations.count,
+    ).toHaveBeenCalledWith({
+      where: { updated_at: { gte: new Date(updatedFrom) } },
+    });
+    expect(
+      prisma.productionOrderCylinderCalibrations.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { updated_at: { gte: new Date(updatedFrom) } },
+        skip: 500,
+        take: 500,
+      }),
+    );
+  });
+
+  it('exports density masses and densities as numbers while preserving optional null values', async () => {
+    const check = {
+      id: 1,
+      empty_pycnometer_mass_g: new Prisma.Decimal('12.3456'),
+      solution_pycnometer_mass_g: new Prisma.Decimal('23.4567'),
+      water_pycnometer_mass_g: new Prisma.Decimal('22.4567'),
+      density: new Prisma.Decimal('1.098765'),
+      apparent_density: null,
+      productionOrder: {
+        lot_no: '00123',
+        item: { item_code: 'BTP001', item_name: 'Bán thành phẩm A' },
+      },
+      createdBy: { name: 'Người nhập' },
+    };
+    prisma.$transaction.mockResolvedValue([
+      3,
+      [
+        check,
+        { ...check, id: 2, apparent_density: new Prisma.Decimal('0.987654') },
+      ],
+    ]);
+
+    const result = await service.exportDensityChecks({ page: 1, limit: 2 });
+
+    expect(result.data).toEqual([
+      {
+        ...check,
+        empty_pycnometer_mass_g: 12.3456,
+        solution_pycnometer_mass_g: 23.4567,
+        water_pycnometer_mass_g: 22.4567,
+        density: 1.098765,
+        apparent_density: null,
+      },
+      expect.objectContaining({ id: 2, apparent_density: 0.987654 }),
+    ]);
+    expect(result.pagination).toEqual({
+      page: 1,
+      limit: 2,
+      total: 3,
+      total_pages: 2,
+      has_next_page: true,
+    });
+    expect(prisma.productionOrderDensityChecks.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {},
+        include: expect.objectContaining({
+          productionOrder: expect.anything(),
+          createdBy: expect.anything(),
+        }),
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip: 0,
+        take: 2,
+      }),
+    );
+  });
+
+  it('filters density exports by update time and handles pages beyond the last record', async () => {
+    const updatedFrom = '2026-01-01T00:00:00.000Z';
+    prisma.$transaction.mockResolvedValue([1, []]);
+
+    await expect(
+      service.exportDensityChecks({
+        page: 2,
+        limit: 500,
+        updated_from: updatedFrom,
+      }),
+    ).resolves.toEqual({
+      data: [],
+      pagination: {
+        page: 2,
+        limit: 500,
+        total: 1,
+        total_pages: 1,
+        has_next_page: false,
+      },
+    });
+    expect(prisma.productionOrderDensityChecks.count).toHaveBeenCalledWith({
+      where: { updated_at: { gte: new Date(updatedFrom) } },
+    });
+    expect(prisma.productionOrderDensityChecks.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { updated_at: { gte: new Date(updatedFrom) } },
+        skip: 500,
+        take: 500,
+      }),
+    );
+  });
+
+  it('exports all ten shell weights as numbers with product, lot and creator data', async () => {
+    const weights = Object.fromEntries(
+      Array.from({ length: 10 }, (_, i) => [
+        `shell_${i + 1}_weight`,
+        new Prisma.Decimal(`${i + 1}.25`),
+      ]),
+    );
+    const check = {
+      id: 1,
+      ...weights,
+      unit: 'mg',
+      created_at: new Date('2026-01-01T08:00:00.000Z'),
+      productionOrder: {
+        lot_no: '00123',
+        item: { item_code: 'BTP001', item_name: 'Bán thành phẩm A' },
+      },
+      createdBy: { name: 'Người nhập' },
+    };
+    prisma.$transaction.mockResolvedValue([3, [check]]);
+
+    const result = await service.exportShellWeightChecks({ page: 2, limit: 1 });
+
+    expect(result.data).toEqual([
+      {
+        ...check,
+        ...Object.fromEntries(
+          Array.from({ length: 10 }, (_, i) => [
+            `shell_${i + 1}_weight`,
+            i + 1.25,
+          ]),
+        ),
+      },
+    ]);
+    expect(result.pagination).toEqual({
+      page: 2,
+      limit: 1,
+      total: 3,
+      total_pages: 3,
+      has_next_page: true,
+    });
+    expect(
+      prisma.productionOrderShellWeightChecks.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {},
+        include: expect.objectContaining({
+          productionOrder: expect.anything(),
+          createdBy: expect.anything(),
+        }),
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip: 1,
+        take: 1,
+      }),
+    );
+  });
+
+  it('filters shell weight exports by update time and handles empty pages', async () => {
+    const updatedFrom = '2026-01-01T00:00:00.000Z';
+    prisma.$transaction.mockResolvedValue([0, []]);
+
+    await expect(
+      service.exportShellWeightChecks({
+        page: 1,
+        limit: 500,
+        updated_from: updatedFrom,
+      }),
+    ).resolves.toEqual({
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 500,
+        total: 0,
+        total_pages: 0,
+        has_next_page: false,
+      },
+    });
+    expect(prisma.productionOrderShellWeightChecks.count).toHaveBeenCalledWith({
+      where: { updated_at: { gte: new Date(updatedFrom) } },
+    });
+    expect(
+      prisma.productionOrderShellWeightChecks.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { updated_at: { gte: new Date(updatedFrom) } },
+      }),
+    );
   });
 
   it('exports active items as a paginated, flat dataset', async () => {
@@ -434,7 +716,10 @@ describe('DataExportService', () => {
           productionOrder: expect.anything(),
           semiFinishedProductOrder: expect.anything(),
           pendingProcessItems: expect.objectContaining({
-            select: expect.objectContaining({ pending_quantity: true, unit: true }),
+            select: expect.objectContaining({
+              pending_quantity: true,
+              unit: true,
+            }),
           }),
           pendingCancellationItems: expect.objectContaining({
             select: expect.objectContaining({
