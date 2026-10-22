@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { ProductionOrderShellWeightCheck } from "@/features/production-order-shell-weight-checks/types";
 import { API_ROUTES } from "@/lib/api-routes";
-import itemsService from "@/services/items.service";
+import productionSpecificationsService from "@/services/production-specifications.service";
 import productionOrdersService from "@/services/product-orders.service";
 import type { CreateSemiFinishedGrossWeightCheckPayload } from "../../types";
 import {
@@ -89,7 +89,6 @@ const getErrorMessage = (error: any, fallback: string) =>
 
 export default function FormProductionOrderSolutionPackageWeightCheck({
   productionOrderId,
-  itemCode,
   containerType = "package",
   onClose,
 }: {
@@ -103,12 +102,18 @@ export default function FormProductionOrderSolutionPackageWeightCheck({
   const containerLabel = isTubeWeightCheck ? "tuýp" : "gói dịch";
   const containerLabelTitle = isTubeWeightCheck ? "Tuýp" : "Gói dịch";
   const title = `Kiểm tra khối lượng ${containerLabel}`;
-  const itemCodeValue = itemCode ? String(itemCode) : "";
-  const { data: item } = useSWR(
-    itemCodeValue
-      ? `${API_ROUTES.items.base}/${encodeURIComponent(itemCodeValue)}`
+  const {
+    data: specification,
+    isLoading: isLoadingSpecification,
+    error: specificationError,
+  } = useSWR(
+    productionOrderId
+      ? API_ROUTES.productionOrders.specification(productionOrderId)
       : null,
-    () => itemsService.fetchItemById(itemCodeValue),
+    () =>
+      productionSpecificationsService.fetchProductionSpecificationByProductionOrder(
+        productionOrderId,
+      ),
   );
   const { data: shellWeightChecks } = useSWR<ProductionOrderShellWeightCheck[]>(
     productionOrderId
@@ -127,7 +132,7 @@ export default function FormProductionOrderSolutionPackageWeightCheck({
   const latestDensity = getLatestDensityValue(densityChecks);
   const calculatedRequirement =
     calculateSemiFinishedSolutionPackageGrossWeightRequirement(
-      item?.productionSpecification ?? item,
+      specification,
       latestShellWeightAverageGram,
       latestDensity,
       containerLabel,
@@ -159,6 +164,11 @@ export default function FormProductionOrderSolutionPackageWeightCheck({
   };
 
   const onSubmit = async (values: FormValues) => {
+    if (isLoadingSpecification || specificationError) {
+      toast.error("Chưa tải được tiêu chuẩn của lô. Vui lòng thử lại.");
+      return;
+    }
+
     if (!productionOrderId) {
       toast.error("Không tìm thấy lệnh sản xuất.");
       return;
@@ -297,7 +307,10 @@ export default function FormProductionOrderSolutionPackageWeightCheck({
             >
               Đặt lại
             </Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting || isLoadingSpecification}
+            >
               {form.formState.isSubmitting ? "Đang lưu..." : "Lưu"}
             </Button>
           </div>

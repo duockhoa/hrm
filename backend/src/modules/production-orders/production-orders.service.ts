@@ -25,6 +25,10 @@ import { readFeatureConfigSnapshot } from '../features/item-feature-config';
 import { productionOrderDocumentControlInclude } from './production-order-document-controls.service';
 import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 import { UpdateProductionOrderChangeContentDto } from './dto/update-production-order-change-content.dto';
+import {
+  productionSpecificationInclude,
+  resolveProductionOrderSpecification,
+} from './production-order-specification-snapshot';
 
 export type SapProductionOrderLine = {
   StageID?: number | null;
@@ -73,6 +77,15 @@ type ProductionOrderSamplingRequestForPyclm = {
 
 type ProductionOrderWithSamplingRequests = {
   samplingRequests: ProductionOrderSamplingRequestForPyclm[];
+  item_code?: string;
+  item?: {
+    productionSpecification?: Prisma.ProductionSpecificationsGetPayload<{
+      include: typeof productionSpecificationInclude;
+    }> | null;
+  } | null;
+  documentControl?: {
+    production_specification_snapshot?: Prisma.JsonValue | null;
+  } | null;
 };
 
 const productionOrderSamplingRequestInclude = {
@@ -333,6 +346,27 @@ export class ProductionOrdersService {
     });
   }
 
+  async findProductionOrderSpecification(id: number) {
+    const order = await this.prismaService.productionOrders.findUnique({
+      where: { id },
+      select: {
+        item_code: true,
+        item: {
+          select: {
+            productionSpecification: {
+              include: productionSpecificationInclude,
+            },
+          },
+        },
+        documentControl: {
+          select: { production_specification_snapshot: true },
+        },
+      },
+    });
+    if (!order) throw new NotFoundException('Production order not found');
+    return resolveProductionOrderSpecification(order);
+  }
+
   private normalizeChangeContent(value: unknown) {
     if (value === null) {
       return null;
@@ -357,9 +391,24 @@ export class ProductionOrdersService {
     productionOrder: T,
   ) {
     const latestSamplingRequest = productionOrder.samplingRequests?.[0] ?? null;
+    const specification = productionOrder.item_code
+      ? resolveProductionOrderSpecification({
+          ...productionOrder,
+          item_code: productionOrder.item_code,
+        })
+      : null;
 
     return {
       ...productionOrder,
+      ...(specification && {
+        ...specification,
+        ...(productionOrder.item && {
+          item: {
+            ...productionOrder.item,
+            productionSpecification: specification.productionSpecification,
+          },
+        }),
+      }),
       pyclm: {
         isSent: latestSamplingRequest?.status === 'sent',
         status: latestSamplingRequest?.status ?? null,

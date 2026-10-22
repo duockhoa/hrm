@@ -2336,6 +2336,12 @@ export class ProductionOrdersController {
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Get(':id/production-specification')
+  async findProductionOrderSpecification(@Param('id', ParseIntPipe) id: number) {
+    return this.productionOrdersService.findProductionOrderSpecification(id);
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get(':id')
   async findProductionOrderById(@Param('id', ParseIntPipe) id: number) {
     return this.productionOrdersService.findProductionOrderById(id);

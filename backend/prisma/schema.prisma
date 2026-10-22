@@ -1186,6 +1186,7 @@ model ProductionOrderDocumentControls {
   batchRecordIssuedBy              Users?           @relation("ProductionOrderBatchRecordIssuer", fields: [batch_record_issued_by_id], references: [id], map: "po_document_controls_batch_record_issued_by_fkey")
   batch_record_issued_at           DateTime?
   feature_config_snapshot          Json?
+  production_specification_snapshot Json?
   batch_record_received_by_id      Int?
   batchRecordReceivedBy            Users?           @relation("ProductionOrderBatchRecordReceiver", fields: [batch_record_received_by_id], references: [id], map: "po_document_controls_batch_record_received_by_fkey")
   batch_record_received_at         DateTime?

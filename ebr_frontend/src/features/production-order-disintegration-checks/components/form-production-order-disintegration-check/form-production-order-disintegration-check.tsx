@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { API_ROUTES } from "@/lib/api-routes";
-import itemsService from "@/services/items.service";
+import productionSpecificationsService from "@/services/production-specifications.service";
 import productionOrdersService from "@/services/product-orders.service";
 import type { DisintegrationCheckPayload } from "../../types";
 import {
@@ -40,19 +40,24 @@ const createDefaultResults = () =>
 
 export default function FormProductionOrderDisintegrationCheck({
   productionOrderId,
-  itemCode,
   onClose,
 }: {
   productionOrderId: string | number;
   itemCode?: string | number | null;
   onClose?: () => void;
 }) {
-  const itemCodeValue = itemCode ? String(itemCode) : "";
-  const { data: item, isLoading: isLoadingItem } = useSWR(
-    itemCodeValue
-      ? `${API_ROUTES.items.base}/${encodeURIComponent(itemCodeValue)}`
+  const {
+    data: specification,
+    isLoading: isLoadingItem,
+    error: specificationError,
+  } = useSWR(
+    productionOrderId
+      ? API_ROUTES.productionOrders.specification(productionOrderId)
       : null,
-    () => itemsService.fetchItemById(itemCodeValue),
+    () =>
+      productionSpecificationsService.fetchProductionSpecificationByProductionOrder(
+        productionOrderId,
+      ),
   );
   const [dosageFormStage, setDosageFormStage] = React.useState("");
   const [unitResults, setUnitResults] = React.useState(createDefaultResults);
@@ -61,7 +66,7 @@ export default function FormProductionOrderDisintegrationCheck({
     ? API_ROUTES.productionOrders.disintegrationChecks(productionOrderId)
     : null;
   const calculatedRequirement = calculateDisintegrationRequirement(
-    item?.productionSpecification ?? item,
+    specification,
   );
   const requirement = calculatedRequirement.requirement;
 
@@ -83,13 +88,18 @@ export default function FormProductionOrderDisintegrationCheck({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (specificationError) {
+      toast.error("Không tải được tiêu chuẩn của lô. Vui lòng thử lại.");
+      return;
+    }
+
     if (!productionOrderId) {
       toast.error("Không tìm thấy lệnh sản xuất.");
       return;
     }
 
     if (isLoadingItem) {
-      toast.error("Đang tải specification của Item.");
+      toast.error("Đang tải tiêu chuẩn của lô.");
       return;
     }
 

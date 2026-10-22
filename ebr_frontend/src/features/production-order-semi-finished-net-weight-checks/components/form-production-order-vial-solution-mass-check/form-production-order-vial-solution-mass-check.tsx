@@ -22,7 +22,7 @@ import {
   OPTIONAL_SEMI_FINISHED_GROSS_WEIGHT_KEYS,
 } from "@/features/production-order-semi-finished-gross-weight-checks/utils";
 import { API_ROUTES } from "@/lib/api-routes";
-import itemsService from "@/services/items.service";
+import productionSpecificationsService from "@/services/production-specifications.service";
 import productionOrdersService from "@/services/product-orders.service";
 import type { CreateSemiFinishedNetWeightCheckPayload } from "../../types";
 import {
@@ -89,7 +89,6 @@ const getErrorMessage = (error: any, fallback: string) =>
 
 export default function FormProductionOrderVialSolutionMassCheck({
   productionOrderId,
-  itemCode,
   checkType = "solution",
   onClose,
 }: {
@@ -98,7 +97,6 @@ export default function FormProductionOrderVialSolutionMassCheck({
   checkType?: "vial" | "solution" | "tube";
   onClose?: () => void;
 }) {
-  const itemCodeValue = itemCode ? String(itemCode) : "";
   const isVialWeightCheck = checkType === "vial";
   const title = isVialWeightCheck
     ? "Kiểm tra khối lượng lọ"
@@ -111,11 +109,18 @@ export default function FormProductionOrderVialSolutionMassCheck({
       : null,
     () => productionOrdersService.fetchDensityChecks(productionOrderId),
   );
-  const { data: item } = useSWR(
-    itemCodeValue
-      ? `${API_ROUTES.items.base}/${encodeURIComponent(itemCodeValue)}`
+  const {
+    data: specification,
+    isLoading: isLoadingSpecification,
+    error: specificationError,
+  } = useSWR(
+    productionOrderId
+      ? API_ROUTES.productionOrders.specification(productionOrderId)
       : null,
-    () => itemsService.fetchItemById(itemCodeValue),
+    () =>
+      productionSpecificationsService.fetchProductionSpecificationByProductionOrder(
+        productionOrderId,
+      ),
   );
   const { data: shellWeightChecks } = useSWR(
     isVialWeightCheck && productionOrderId
@@ -126,7 +131,7 @@ export default function FormProductionOrderVialSolutionMassCheck({
   const density = getLatestDensityValue(densityChecks);
   const averageShellWeight = getAverageShellWeight(shellWeightChecks);
   const calculatedRequirement = calculateVialMassRequirement(
-    item?.productionSpecification ?? item,
+    specification,
     density,
     {
       title: isVialWeightCheck
@@ -159,6 +164,11 @@ export default function FormProductionOrderVialSolutionMassCheck({
   const resetForm = () => form.reset(createDefaultValues(requirementValue));
 
   const onSubmit = async (values: FormValues) => {
+    if (isLoadingSpecification || specificationError) {
+      toast.error("Chưa tải được tiêu chuẩn của lô. Vui lòng thử lại.");
+      return;
+    }
+
     if (isVialWeightCheck && averageShellWeight === null) {
       toast.error("Vui lòng lưu đủ khối lượng bao bì 1 đến 10 trước.");
       return;
@@ -304,7 +314,10 @@ export default function FormProductionOrderVialSolutionMassCheck({
             >
               Đặt lại
             </Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting || isLoadingSpecification}
+            >
               {form.formState.isSubmitting ? "Đang lưu..." : "Lưu"}
             </Button>
           </div>

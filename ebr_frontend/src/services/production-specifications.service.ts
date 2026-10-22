@@ -86,6 +86,15 @@ const fetchProductionSpecificationByItemCode = async (
   return response.data;
 };
 
+const fetchProductionSpecificationByProductionOrder = async (
+  productionOrderId: string | number,
+): Promise<ProductionSpecification | null> => {
+  const response = await axiosClient.get(
+    API_ROUTES.productionOrders.specification(productionOrderId),
+  );
+  return response.data.productionSpecification;
+};
+
 const createProductionSpecification = async (
   payload: ProductionSpecificationPayload & { item_code: string },
 ): Promise<ProductionSpecification> => {
@@ -115,6 +124,7 @@ const deleteProductionSpecification = async (itemCode: string) => {
 };
 
 const productionSpecificationsService = {
+  fetchProductionSpecificationByProductionOrder,
   fetchProductionSpecifications,
   fetchProductionSpecificationByItemCode,
   createProductionSpecification,

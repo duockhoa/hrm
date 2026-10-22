@@ -99,6 +99,7 @@ const orderDetailSelect = {
       warehouseReleaseReceivedBy: { select: userSelect },
       test_certificate_received_at: true,
       testCertificateReceivedBy: { select: userSelect },
+      production_specification_snapshot: true,
     },
   },
   productionGuide: {

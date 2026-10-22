@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { mutate } from "swr";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import productionOrdersService from "@/services/product-orders.service";
+import { API_ROUTES } from "@/lib/api-routes";
 
 const formSchema = z.object({
   location: z.string().trim().min(1, "Vui lòng nhập vị trí lấy mẫu"),
@@ -52,6 +54,7 @@ export default function FormCreateSamplingRequest({
       toast.success("Đã tạo phiếu yêu cầu lấy mẫu.");
       form.reset();
       try {
+        await mutate(API_ROUTES.productionOrders.specification(productionOrderId));
         await onCreated?.();
       } catch (refreshError) {
         console.error("Error refreshing sampling request data:", refreshError);

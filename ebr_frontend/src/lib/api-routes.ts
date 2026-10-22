@@ -74,6 +74,8 @@ const REGISTRATION_NUMBERS = {
 
 const PRODUCTION_ORDERS = {
   base: "/production-orders",
+  specification: (id: string | number) =>
+    `/production-orders/${id}/production-specification`,
   completeness: (id: string | number) =>
     `/production-orders/${id}/completeness`,
   mixingRecords: (id: string | number) =>

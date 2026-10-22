@@ -98,13 +98,17 @@ export default function FormProductionOrderTabletThicknessCheck({
   const hasSpecificationFromOrder = hasTabletThicknessSpecification(
     productionSpecification,
   );
-  const { data: fetchedProductionSpecification, isLoading } = useSWR(
+  const {
+    data: fetchedProductionSpecification,
+    isLoading,
+    error: specificationError,
+  } = useSWR(
     !hasSpecificationFromOrder && itemCodeValue
-      ? `${API_ROUTES.productionSpecifications.base}/${itemCodeValue}`
+      ? API_ROUTES.productionOrders.specification(productionOrderId)
       : null,
     () =>
-      productionSpecificationsService.fetchProductionSpecificationByItemCode(
-        itemCodeValue,
+      productionSpecificationsService.fetchProductionSpecificationByProductionOrder(
+        productionOrderId,
       ),
   );
   const specification = hasSpecificationFromOrder
@@ -126,13 +130,13 @@ export default function FormProductionOrderTabletThicknessCheck({
   const resetForm = () => form.reset(createDefaultValues(requirementValue));
 
   const onSubmit = async (values: FormValues) => {
-    if (!productionOrderId) {
-      toast.error("Không tìm thấy lệnh sản xuất.");
+    if (isLoading || specificationError) {
+      toast.error("Chưa tải được tiêu chuẩn của lô. Vui lòng thử lại.");
       return;
     }
 
-    if (isLoading) {
-      toast.error("Đang tải specification của Item.");
+    if (!productionOrderId) {
+      toast.error("Không tìm thấy lệnh sản xuất.");
       return;
     }
 
@@ -227,7 +231,10 @@ export default function FormProductionOrderTabletThicknessCheck({
             >
               Đặt lại
             </Button>
-            <Button type="submit" disabled={form.formState.isSubmitting || isLoading}>
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting || isLoading}
+            >
               {form.formState.isSubmitting ? "Đang lưu..." : "Lưu"}
             </Button>
           </div>

@@ -104,13 +104,17 @@ export default function FormProductionOrderCapsuleGrossWeightCheck({
   const itemCodeValue = itemCode ? String(itemCode) : "";
   const hasProductionSpecificationFromOrder =
     hasProductionSpecificationLimits(productionSpecification);
-  const { data: fetchedProductionSpecification } = useSWR(
+  const {
+    data: fetchedProductionSpecification,
+    isLoading: isLoadingSpecification,
+    error: specificationError,
+  } = useSWR(
     !hasProductionSpecificationFromOrder && itemCodeValue
-      ? `${API_ROUTES.productionSpecifications.base}/${itemCodeValue}`
+      ? API_ROUTES.productionOrders.specification(productionOrderId)
       : null,
     () =>
-      productionSpecificationsService.fetchProductionSpecificationByItemCode(
-        itemCodeValue,
+      productionSpecificationsService.fetchProductionSpecificationByProductionOrder(
+        productionOrderId,
       ),
   );
   const { data: tenShellWeightCheck } =
@@ -156,6 +160,11 @@ export default function FormProductionOrderCapsuleGrossWeightCheck({
   };
 
   const onSubmit = async (values: FormValues) => {
+    if (isLoadingSpecification || specificationError) {
+      toast.error("Chưa tải được tiêu chuẩn của lô. Vui lòng thử lại.");
+      return;
+    }
+
     if (!productionOrderId) {
       toast.error("Không tìm thấy lệnh sản xuất.");
       return;
@@ -284,7 +293,10 @@ export default function FormProductionOrderCapsuleGrossWeightCheck({
             >
               Đặt lại
             </Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting || isLoadingSpecification}
+            >
               {form.formState.isSubmitting ? "Đang lưu..." : "Lưu"}
             </Button>
           </div>

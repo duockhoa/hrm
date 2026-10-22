@@ -13,6 +13,10 @@ import { EMAIL_TYPE_CODES } from '../email-settings/constants/email-settings.con
 import { CreateProductionOrderSamplingRequestDto } from './dto/create-production-order-sampling-request.dto';
 import { FeaturesService } from '../features/features.service';
 import { createFeatureConfigSnapshot } from '../features/item-feature-config';
+import {
+  createProductionSpecificationSnapshot,
+  productionSpecificationInclude,
+} from './production-order-specification-snapshot';
 
 type AppsScriptPyclmResponse = {
   status?: string;
@@ -224,13 +228,16 @@ export class ProductionOrderSamplingRequestsService {
     const samplingRequest = await this.prismaService.$transaction(
       async (tx) => {
         // Updating the lot ID locks this row until the transaction finishes, so
-        // concurrent successful sends preserve the first feature snapshot.
+        // concurrent successful sends preserve the first snapshots.
         const documentControl = await tx.productionOrderDocumentControls.upsert(
           {
             where: { production_order_id: productionOrderId },
             create: { production_order_id: productionOrderId },
             update: { production_order_id: productionOrderId },
-            select: { feature_config_snapshot: true },
+            select: {
+              feature_config_snapshot: true,
+              production_specification_snapshot: true,
+            },
           },
         );
         if (documentControl.feature_config_snapshot == null) {
@@ -246,6 +253,25 @@ export class ProductionOrderSamplingRequestsService {
                 config,
                 sentAt,
               ),
+            },
+          });
+        }
+
+        if (documentControl.production_specification_snapshot == null) {
+          const specification = await tx.productionSpecifications.findUnique({
+            where: { item_code: productionOrder.item_code },
+            include: productionSpecificationInclude,
+          });
+          await tx.productionOrderDocumentControls.update({
+            where: { production_order_id: productionOrderId },
+            data: {
+              production_specification_snapshot:
+                createProductionSpecificationSnapshot(
+                  productionOrder.item_code,
+                  specification,
+                  sentAt,
+                  this.normalizeUserId(user),
+                ),
             },
           });
         }

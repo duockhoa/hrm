@@ -96,7 +96,6 @@ import {
 import { API_ROUTES } from "@/lib/api-routes";
 import useUserStore from "@/store/user.store";
 import userService from "@/services/user.service";
-import { productionSpecificationsService } from "@/services/index.service";
 import productionOrdersService from "@/services/product-orders.service";
 import {
   Beaker,
@@ -730,23 +729,14 @@ export default function ProductOrderDetail({
     userId ? [API_ROUTES.users.myPermissions, userId] : null,
     () => userService.fetchMyPermissions(),
   );
-  const productOrderItemCode =
-    productOrder?.item_code ?? productOrder?.item?.item_code;
-  const { data: fetchedProductionSpecification } = useSWR(
-    productOrderItemCode
-      ? `${API_ROUTES.productionSpecifications.base}/${encodeURIComponent(String(productOrderItemCode))}`
-      : null,
-    () =>
-      productionSpecificationsService.fetchProductionSpecificationByItemCode(
-        String(productOrderItemCode),
-      ),
-  );
 
   if (!productOrder) {
     return <ProductOrderDetailSkeleton />;
   }
 
   const itemName = productOrder.item?.item_name ?? "";
+  const productOrderItemCode =
+    productOrder.item_code ?? productOrder.item?.item_code;
   const registrationNumber = productOrder.pyclm?.isSent
     ? (productOrder.registrationNumber?.registration_number ?? "")
     : (productOrder.item?.registration?.registration_number ?? "");
@@ -754,11 +744,9 @@ export default function ProductOrderDetail({
     productOrder.id ??
     productOrder.production_order_id ??
     productOrder.DocumentAbsoluteEntry;
-  const productionSpecification =
-    fetchedProductionSpecification ??
-    productOrder.productionSpecification ??
-    productOrder.item?.productionSpecification ??
-    null;
+  const productionSpecification = productOrder.productionSpecificationSource
+    ? productOrder.productionSpecification
+    : productOrder.item?.productionSpecification ?? null;
   const productionOrderDosageFormId =
     productionSpecification?.dosage_form_id ??
     productionSpecification?.dosageForm?.id;
@@ -769,8 +757,7 @@ export default function ProductOrderDetail({
     productionSpecification?.dosageForm?.sensory_requirement;
   const volumeRequirementSource = {
     ...(productOrder.item ?? {}),
-    ...(productOrder.productionSpecification ?? {}),
-    ...(productOrder.item?.productionSpecification ?? {}),
+    ...(productionSpecification ?? {}),
   };
   const featureConfig = productOrder.featureConfig;
   const isActionEnabled = (key: string, permissionKey?: string) =>
@@ -819,6 +806,13 @@ export default function ProductOrderDetail({
             {productOrder.lot_no}
           </p>
         </div>
+
+        {productOrder.productionSpecificationSource === "snapshot" && (
+          <p className="text-sm text-emerald-700">
+            Tiêu chuẩn đã chốt khi gửi PYCLM: {formatDateTime(productOrder.productionSpecificationCapturedAt)}
+            {!productionSpecification && " · Chưa có bộ tiêu chuẩn tại thời điểm chốt"}
+          </p>
+        )}
 
         <div className="grid w-full grid-cols-4 justify-items-center gap-x-1 gap-y-1 md:min-h-50 md:grid-cols-[repeat(auto-fill,minmax(90px,1fr))] md:gap-2">
           {isActionEnabled(

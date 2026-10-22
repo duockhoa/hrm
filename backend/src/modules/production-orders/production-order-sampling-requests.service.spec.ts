@@ -1,3 +1,9 @@
+import { Prisma } from '@prisma/client';
+import { specificationFixture } from './production-specification.fixture';
+import {
+  createProductionSpecificationSnapshot,
+  readProductionSpecificationSnapshot,
+} from './production-order-specification-snapshot';
 import { Test, TestingModule } from '@nestjs/testing';
 import axios from 'axios';
 import { PrismaService } from 'src/prisma.service';
@@ -50,6 +56,7 @@ describe('ProductionOrderSamplingRequestsService', () => {
     $transaction: jest.Mock;
   };
   let tx: {
+    productionSpecifications: { findUnique: jest.Mock };
     productionOrderSamplingRequests: { create: jest.Mock };
     productionOrderRegistrationNumbers: {
       upsert: jest.Mock;
@@ -85,6 +92,9 @@ describe('ProductionOrderSamplingRequestsService', () => {
       $transaction: jest.fn().mockImplementation((callback) => callback(tx)),
     };
     tx = {
+      productionSpecifications: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
       productionOrderSamplingRequests: { create: jest.fn() },
       productionOrderRegistrationNumbers: {
         upsert: jest.fn(),
@@ -230,7 +240,10 @@ describe('ProductionOrderSamplingRequestsService', () => {
       where: { production_order_id: 2031 },
       create: { production_order_id: 2031 },
       update: { production_order_id: 2031 },
-      select: { feature_config_snapshot: true },
+      select: {
+        feature_config_snapshot: true,
+        production_specification_snapshot: true,
+      },
     });
     const sentAt = tx.productionOrderSamplingRequests.create.mock.calls[0][0]
       .data.sent_at as Date;
@@ -412,6 +425,13 @@ describe('ProductionOrderSamplingRequestsService', () => {
         };
         tx.productionOrderDocumentControls.upsert.mockResolvedValue({
           feature_config_snapshot: original,
+          production_specification_snapshot:
+            createProductionSpecificationSnapshot(
+              'TP00063',
+              null,
+              new Date(),
+              7,
+            ),
         });
         featuresService.findConfigByItemCode.mockResolvedValue(
           buildItemFeatureConfig('TP00063', []),
@@ -430,6 +450,67 @@ describe('ProductionOrderSamplingRequestsService', () => {
         });
       },
     );
+
+    it('captures quality limits in the send transaction, preserving them on resend', async () => {
+      const master = specificationFixture();
+      tx.productionSpecifications.findUnique.mockResolvedValue(master);
+      await service.create(2031, {}, { id: 7 });
+      const saved = tx.productionOrderDocumentControls.update.mock.calls
+        .map(([args]) => args.data.production_specification_snapshot)
+        .find(Boolean);
+      const sentAt =
+        tx.productionOrderSamplingRequests.create.mock.calls[0][0].data.sent_at;
+      expect(
+        readProductionSpecificationSnapshot(saved, 'TP00063'),
+      ).toMatchObject({
+        captured_at: sentAt.toISOString(),
+        captured_by_id: 7,
+        specification: {
+          upper_control_limit: '12.654321',
+          disintegration_time_allowed_limit: '45',
+        },
+      });
+      tx.productionOrderDocumentControls.upsert.mockResolvedValue({
+        feature_config_snapshot: { version: 1 },
+        production_specification_snapshot: saved,
+      });
+      tx.productionSpecifications.findUnique.mockClear();
+      tx.productionOrderDocumentControls.update.mockClear();
+      master.disintegration_time_allowed_limit = new Prisma.Decimal('99');
+      await service.create(2031, {}, { id: 7 });
+      expect(tx.productionSpecifications.findUnique).not.toHaveBeenCalled();
+      expect(tx.productionOrderDocumentControls.update).not.toHaveBeenCalled();
+      expect(
+        readProductionSpecificationSnapshot(saved, 'TP00063')?.specification,
+      ).toMatchObject({
+        disintegration_time_allowed_limit: '45',
+      });
+    });
+
+    it('captures an explicit empty specification for items without one', async () => {
+      await service.create(2031, {}, { id: 7 });
+      expect(tx.productionOrderDocumentControls.update).toHaveBeenCalledWith({
+        where: { production_order_id: 2031 },
+        data: {
+          production_specification_snapshot: expect.objectContaining({
+            specification: null,
+          }),
+        },
+      });
+    });
+
+    it('rejects the send transaction if saving quality limits fails', async () => {
+      tx.productionOrderDocumentControls.upsert.mockResolvedValue({
+        feature_config_snapshot: { version: 1 },
+      });
+      tx.productionOrderDocumentControls.update.mockRejectedValue(
+        new Error('snapshot write failed'),
+      );
+      await expect(service.create(2031, {}, { id: 7 })).rejects.toThrow(
+        'snapshot write failed',
+      );
+      expect(tx.productionOrderSamplingRequests.create).not.toHaveBeenCalled();
+    });
 
     it('captures an empty configuration after the provider succeeds', async () => {
       featuresService.findConfigByItemCode.mockResolvedValue(

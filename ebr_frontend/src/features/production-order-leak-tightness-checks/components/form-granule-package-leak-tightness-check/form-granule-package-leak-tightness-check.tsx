@@ -87,13 +87,17 @@ export default function FormGranulePackageLeakTightnessCheck({
   onClose?: () => void;
 }) {
   const itemCodeValue = itemCode ? String(itemCode) : "";
-  const { data: fetchedProductionSpecification } = useSWR(
+  const {
+    data: fetchedProductionSpecification,
+    isLoading: isLoadingSpecification,
+    error: specificationError,
+  } = useSWR(
     !productionSpecification && itemCodeValue
-      ? `${API_ROUTES.productionSpecifications.base}/${itemCodeValue}`
+      ? API_ROUTES.productionOrders.specification(productionOrderId)
       : null,
     () =>
-      productionSpecificationsService.fetchProductionSpecificationByItemCode(
-        itemCodeValue,
+      productionSpecificationsService.fetchProductionSpecificationByProductionOrder(
+        productionOrderId,
       ),
   );
   const requirementValue =
@@ -121,6 +125,11 @@ export default function FormGranulePackageLeakTightnessCheck({
   };
 
   const onSubmit = async (values: FormValues) => {
+    if (isLoadingSpecification || specificationError) {
+      toast.error("Chưa tải được tiêu chuẩn của lô. Vui lòng thử lại.");
+      return;
+    }
+
     if (!productionOrderId) {
       toast.error("Không tìm thấy lệnh sản xuất.");
       return;
@@ -230,7 +239,10 @@ export default function FormGranulePackageLeakTightnessCheck({
             >
               Đặt lại
             </Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting || isLoadingSpecification}
+            >
               {form.formState.isSubmitting ? "Đang lưu..." : "Lưu"}
             </Button>
           </div>

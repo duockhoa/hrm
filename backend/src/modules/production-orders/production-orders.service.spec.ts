@@ -1,3 +1,6 @@
+import { Prisma } from '@prisma/client';
+import { specificationFixture } from './production-specification.fixture';
+import { createProductionSpecificationSnapshot } from './production-order-specification-snapshot';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProductionOrdersService } from './production-orders.service';
@@ -212,6 +215,9 @@ describe('ProductionOrdersService', () => {
     await expect(service.findAll()).resolves.toEqual([
       {
         ...productionOrders[0],
+        productionSpecification: null,
+        productionSpecificationSource: 'item',
+        productionSpecificationCapturedAt: null,
         pyclm: {
           isSent: true,
           status: 'sent',
@@ -224,6 +230,9 @@ describe('ProductionOrdersService', () => {
       },
       {
         ...productionOrders[1],
+        productionSpecification: null,
+        productionSpecificationSource: 'item',
+        productionSpecificationCapturedAt: null,
         pyclm: {
           isSent: false,
           status: null,
@@ -252,6 +261,9 @@ describe('ProductionOrdersService', () => {
     await expect(service.findFinishedProducts()).resolves.toEqual([
       {
         ...productionOrders[0],
+        productionSpecification: null,
+        productionSpecificationSource: 'item',
+        productionSpecificationCapturedAt: null,
         pyclm: {
           isSent: false,
           status: null,
@@ -286,6 +298,9 @@ describe('ProductionOrdersService', () => {
     await expect(service.findSemiFinishedProducts()).resolves.toEqual([
       {
         ...productionOrders[0],
+        productionSpecification: null,
+        productionSpecificationSource: 'item',
+        productionSpecificationCapturedAt: null,
         pyclm: {
           isSent: false,
           status: null,
@@ -298,6 +313,9 @@ describe('ProductionOrdersService', () => {
       },
       {
         ...productionOrders[1],
+        productionSpecification: null,
+        productionSpecificationSource: 'item',
+        productionSpecificationCapturedAt: null,
         pyclm: {
           isSent: false,
           status: null,
@@ -391,6 +409,9 @@ describe('ProductionOrdersService', () => {
 
     await expect(service.findProductionOrderById(2031)).resolves.toEqual({
       ...productionOrder,
+      productionSpecification: null,
+      productionSpecificationSource: 'item',
+      productionSpecificationCapturedAt: null,
       pyclm: {
         isSent: true,
         status: 'sent',
@@ -443,6 +464,57 @@ describe('ProductionOrdersService', () => {
     });
   });
 
+  it('returns frozen quality limits in both the detail API and the specification endpoint', async () => {
+    const master = specificationFixture();
+    const snapshot = createProductionSpecificationSnapshot(
+      'TP00063',
+      master,
+      new Date(),
+      7,
+    );
+    master.disintegration_time_allowed_limit = new Prisma.Decimal('99');
+    prismaService.productionOrders.findUnique.mockResolvedValue({
+      id: 2031,
+      item_code: 'TP00063',
+      item: { item_name: 'Test', productionSpecification: master },
+      samplingRequests: [],
+      documentControl: { production_specification_snapshot: snapshot },
+    });
+    featuresService.findConfigByItemCode.mockResolvedValue(
+      buildItemFeatureConfig('TP00063', []),
+    );
+    const detail = await service.findProductionOrderById(2031);
+    expect(detail).toMatchObject({
+      productionSpecificationSource: 'snapshot',
+      productionSpecification: { disintegration_time_allowed_limit: '45' },
+      item: {
+        item_name: 'Test',
+        productionSpecification: { disintegration_time_allowed_limit: '45' },
+      },
+    });
+    expect(await service.findProductionOrderSpecification(2031)).toMatchObject({
+      productionSpecificationSource: 'snapshot',
+      productionSpecification: { disintegration_time_allowed_limit: '45' },
+    });
+  });
+
+  it('uses current quality limits for legacy lots and returns 404 for missing orders', async () => {
+    const specification = specificationFixture();
+    prismaService.productionOrders.findUnique.mockResolvedValue({
+      item_code: 'TP00063',
+      item: { productionSpecification: specification },
+    });
+    expect(await service.findProductionOrderSpecification(2031)).toEqual({
+      productionSpecification: specification,
+      productionSpecificationSource: 'item',
+      productionSpecificationCapturedAt: null,
+    });
+    prismaService.productionOrders.findUnique.mockResolvedValue(null);
+    await expect(
+      service.findProductionOrderSpecification(9999),
+    ).rejects.toThrow(NotFoundException);
+  });
+
   it('returns the stored dossier configuration instead of changed item settings', async () => {
     const config = buildItemFeatureConfig('TP00001', [
       {
@@ -480,6 +552,8 @@ describe('ProductionOrdersService', () => {
       item: {},
       samplingRequests: [],
       documentControl: {
+        production_specification_snapshot:
+          createProductionSpecificationSnapshot('TP00001', null, new Date(), 7),
         feature_config_snapshot: createFeatureConfigSnapshot(
           config,
           new Date(),
@@ -498,6 +572,9 @@ describe('ProductionOrdersService', () => {
     expect(exporter).toHaveBeenCalledWith(
       expect.objectContaining({
         featureConfig: expect.objectContaining(config),
+        productionSpecification: null,
+        productionSpecificationSource: 'snapshot',
+        item: { productionSpecification: null },
       }),
       undefined,
       undefined,
