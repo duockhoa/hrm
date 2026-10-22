@@ -807,13 +807,6 @@ export default function ProductOrderDetail({
           </p>
         </div>
 
-        {productOrder.productionSpecificationSource === "snapshot" && (
-          <p className="text-sm text-emerald-700">
-            Tiêu chuẩn đã chốt khi gửi PYCLM: {formatDateTime(productOrder.productionSpecificationCapturedAt)}
-            {!productionSpecification && " · Chưa có bộ tiêu chuẩn tại thời điểm chốt"}
-          </p>
-        )}
-
         <div className="grid w-full grid-cols-4 justify-items-center gap-x-1 gap-y-1 md:min-h-50 md:grid-cols-[repeat(auto-fill,minmax(90px,1fr))] md:gap-2">
           {isActionEnabled(
             "export_production_order",
