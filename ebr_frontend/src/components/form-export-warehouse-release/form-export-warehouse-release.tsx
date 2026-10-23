@@ -1,6 +1,8 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
+import useSWR from "swr";
+import { API_ROUTES } from "@/lib/api-routes";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "sonner";
@@ -77,7 +79,7 @@ const downloadBlob = (blob: Blob, fileName: string) => {
 
 export default function ExportWarehouseRelease({
   data,
-  productionOrderLines = [],
+  productionOrderLines,
   onClose,
 }: {
   data: any;
@@ -85,7 +87,20 @@ export default function ExportWarehouseRelease({
   onClose?: () => void;
 }) {
   const stageAnchor = useComboboxAnchor();
-  const stageOptions = productionOrderLines.reduce<ProductionOrdersStage[]>(
+  const productionOrderId = data?.DocumentAbsoluteEntry ?? data?.id;
+  const {
+    data: fetchedProductionOrderLines,
+    isLoading: isLoadingLines,
+    error: linesError,
+  } = useSWR<ProductionOrderLine[]>(
+    productionOrderLines === undefined && productionOrderId != null
+      ? `${API_ROUTES.productionOrders.base}/${productionOrderId}/production-order-lines`
+      : null,
+    () => productionOrdersService.fetchProductionOrderLines(productionOrderId),
+  );
+  const stageOptions = (
+    productionOrderLines ?? fetchedProductionOrderLines ?? []
+  ).reduce<ProductionOrdersStage[]>(
     (options, line) => {
       const stage = line.ProductionOrdersStage;
 
@@ -157,6 +172,12 @@ export default function ExportWarehouseRelease({
           <p className="text-center text-xl font-semibold uppercase text-gray-900">
             Xuất phiếu xuất kho
           </p>
+          {isLoadingLines && <p>Đang tải danh sách giai đoạn...</p>}
+          {linesError && (
+            <p role="alert" className="text-sm text-red-600">
+              Không thể tải danh sách giai đoạn. Vui lòng thử lại.
+            </p>
+          )}
           <FormField
             control={form.control}
             name="stage"
@@ -220,7 +241,9 @@ export default function ExportWarehouseRelease({
           />
           <div aria-hidden className="h-32" />
           <div className="flex justify-end pt-1">
-            <Button type="submit">Xuất phiếu</Button>
+            <Button type="submit" disabled={isLoadingLines || Boolean(linesError)}>
+              Xuất phiếu
+            </Button>
           </div>
         </form>
       </Form>

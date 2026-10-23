@@ -129,6 +129,8 @@ export default function DetailProductOrderPage() {
       "production_order_lines",
     ],
   );
+  const isSectionEnabled = (sectionKey: string) =>
+    Boolean(data) && enabledSectionKeys.includes(sectionKey);
   const shouldRenderDateChecks = enabledSectionKeys.includes("date_checks");
   const orderedSectionKeys = [
     ...enabledSectionKeys.filter(
@@ -141,12 +143,17 @@ export default function DetailProductOrderPage() {
   ];
 
   const { data: productionOrderLines } = useSWR(
-    `${API_ROUTES.productionOrders.base}/${params.id}/production-order-lines`,
+    isSectionEnabled("production_order_lines") ||
+      isSectionEnabled("material_summaries")
+      ? `${API_ROUTES.productionOrders.base}/${params.id}/production-order-lines`
+      : null,
     () => productOrdersService.fetchProductionOrderLines(params.id),
   );
 
   const { data: productionOrderDeviations } = useSWR(
-    `${API_ROUTES.productionOrderDeviations.base}?production_order_id=${params.id}`,
+    isSectionEnabled("production_order_deviations")
+      ? `${API_ROUTES.productionOrderDeviations.base}?production_order_id=${params.id}`
+      : null,
     () =>
       productionOrderDeviationsService.fetchProductionOrderDeviations(
         params.id,
@@ -154,167 +161,233 @@ export default function DetailProductOrderPage() {
   );
 
   const { data: productionOrderEnvironmentChecks } = useSWR(
-    API_ROUTES.productionOrders.environmentChecks(params.id),
+    isSectionEnabled("environment_checks")
+      ? API_ROUTES.productionOrders.environmentChecks(params.id)
+      : null,
     () => productOrdersService.fetchEnvironmentChecks(params.id),
   );
 
   const { data: productionOrderLineClearanceChecks } = useSWR(
-    API_ROUTES.productionOrders.lineClearanceChecks(params.id),
+    isSectionEnabled("line_clearance_checks")
+      ? API_ROUTES.productionOrders.lineClearanceChecks(params.id)
+      : null,
     () => productOrdersService.fetchLineClearanceChecks(params.id),
   );
 
   const { data: productionOrderSecondaryPackagingChecks } = useSWR(
-    API_ROUTES.productionOrders.secondaryPackagingChecks(params.id),
+    isSectionEnabled("secondary_packaging_checks")
+      ? API_ROUTES.productionOrders.secondaryPackagingChecks(params.id)
+      : null,
     () => productOrdersService.fetchSecondaryPackagingChecks(params.id),
   );
 
   const { data: productionOrderPreSecondaryPackagingChecks } = useSWR(
-    API_ROUTES.productionOrders.preSecondaryPackagingChecks(params.id),
+    isSectionEnabled("pre_secondary_packaging_checks")
+      ? API_ROUTES.productionOrders.preSecondaryPackagingChecks(params.id)
+      : null,
     () => productOrdersService.fetchPreSecondaryPackagingChecks(params.id),
   );
 
   const { data: productionOrderHygieneChecks } = useSWR(
-    API_ROUTES.productionOrders.hygieneChecks(params.id),
+    isSectionEnabled("hygiene_checks")
+      ? API_ROUTES.productionOrders.hygieneChecks(params.id)
+      : null,
     () => productOrdersService.fetchHygieneChecks(params.id),
   );
 
   const { data: productionOrderDensityChecks } = useSWR(
-    API_ROUTES.productionOrders.densityChecks(params.id),
+    isSectionEnabled("density_checks")
+      ? API_ROUTES.productionOrders.densityChecks(params.id)
+      : null,
     () => productOrdersService.fetchDensityChecks(params.id),
   );
 
   const { data: productionOrderPostHomogenizationGranuleChecks } = useSWR(
-    API_ROUTES.productionOrders.postHomogenizationGranuleChecks(params.id),
+    isSectionEnabled("post_homogenization_granule_checks")
+      ? API_ROUTES.productionOrders.postHomogenizationGranuleChecks(params.id)
+      : null,
     () => productOrdersService.fetchPostHomogenizationGranuleChecks(params.id),
   );
 
   const { data: productionOrderPostPreparationSolutionChecks } = useSWR(
-    API_ROUTES.productionOrders.postPreparationSolutionChecks(params.id),
+    isSectionEnabled("post_preparation_solution_checks")
+      ? API_ROUTES.productionOrders.postPreparationSolutionChecks(params.id)
+      : null,
     () => productOrdersService.fetchPostPreparationSolutionChecks(params.id),
   );
 
   const { data: productionOrderFriabilityChecks } = useSWR(
-    API_ROUTES.productionOrders.friabilityChecks(params.id),
+    isSectionEnabled("friability_checks")
+      ? API_ROUTES.productionOrders.friabilityChecks(params.id)
+      : null,
     () => productOrdersService.fetchFriabilityChecks(params.id),
   );
 
   const { data: productionOrderCylinderCalibration } = useSWR(
-    API_ROUTES.productionOrders.cylinderCalibration(params.id),
+    isSectionEnabled("cylinder_calibration")
+      ? API_ROUTES.productionOrders.cylinderCalibration(params.id)
+      : null,
     () => productOrdersService.fetchCylinderCalibration(params.id),
   );
 
   const { data: productionOrderDisintegrationChecks } = useSWR(
-    API_ROUTES.productionOrders.disintegrationChecks(params.id),
+    isSectionEnabled("disintegration_checks")
+      ? API_ROUTES.productionOrders.disintegrationChecks(params.id)
+      : null,
     () => productOrdersService.fetchDisintegrationChecks(params.id),
   );
 
   const { data: productionOrderVialInspectionChecks } = useSWR(
-    API_ROUTES.productionOrders.vialInspectionChecks(params.id),
+    isSectionEnabled("vial_inspection_checks")
+      ? API_ROUTES.productionOrders.vialInspectionChecks(params.id)
+      : null,
     () => productOrdersService.fetchVialInspectionChecks(params.id),
   );
 
   const { data: productionOrderSensoryChecks } = useSWR(
-    API_ROUTES.productionOrders.sensoryChecks(params.id),
+    isSectionEnabled("sensory_checks")
+      ? API_ROUTES.productionOrders.sensoryChecks(params.id)
+      : null,
     () => productOrdersService.fetchSensoryChecks(params.id),
   );
 
   const { data: productionOrderProductSensoryChecks } = useSWR(
-    API_ROUTES.productionOrders.productSensoryChecks(params.id),
+    isSectionEnabled("product_sensory_checks")
+      ? API_ROUTES.productionOrders.productSensoryChecks(params.id)
+      : null,
     () => productOrdersService.fetchProductSensoryChecks(params.id),
   );
 
   const { data: productionOrderHardCapsuleLeakageChecks } = useSWR(
-    API_ROUTES.productionOrders.hardCapsuleLeakageChecks(params.id),
+    isSectionEnabled("hard_capsule_leakage_checks")
+      ? API_ROUTES.productionOrders.hardCapsuleLeakageChecks(params.id)
+      : null,
     () => productOrdersService.fetchHardCapsuleLeakageChecks(params.id),
   );
 
   const { data: productionOrderLeakTightnessChecks } = useSWR(
-    API_ROUTES.productionOrders.leakTightnessChecks(params.id),
+    isSectionEnabled("leak_tightness_checks")
+      ? API_ROUTES.productionOrders.leakTightnessChecks(params.id)
+      : null,
     () => productOrdersService.fetchLeakTightnessChecks(params.id),
   );
 
   const { data: productionOrderVolumeChecks } = useSWR(
-    API_ROUTES.productionOrders.volumeChecks(params.id),
+    isSectionEnabled("volume_checks")
+      ? API_ROUTES.productionOrders.volumeChecks(params.id)
+      : null,
     () => productOrdersService.fetchVolumeChecks(params.id),
   );
 
   const { data: productionOrderSprayDoseChecks } = useSWR(
-    API_ROUTES.productionOrders.sprayDoseChecks(params.id),
+    isSectionEnabled("spray_dose_checks")
+      ? API_ROUTES.productionOrders.sprayDoseChecks(params.id)
+      : null,
     () => productOrdersService.fetchSprayDoseChecks(params.id),
   );
 
   const { data: productionOrderHardnessChecks } = useSWR(
-    API_ROUTES.productionOrders.hardnessChecks(params.id),
+    isSectionEnabled("hardness_checks")
+      ? API_ROUTES.productionOrders.hardnessChecks(params.id)
+      : null,
     () => productOrdersService.fetchHardnessChecks(params.id),
   );
 
   const { data: productionOrderTabletThicknessChecks } = useSWR(
-    API_ROUTES.productionOrders.tabletThicknessChecks(params.id),
+    isSectionEnabled("tablet_thickness_checks")
+      ? API_ROUTES.productionOrders.tabletThicknessChecks(params.id)
+      : null,
     () => productOrdersService.fetchTabletThicknessChecks(params.id),
   );
 
   const { data: productionOrderSemiFinishedGrossWeightChecks } = useSWR(
-    API_ROUTES.productionOrders.semiFinishedGrossWeightChecks(params.id),
+    isSectionEnabled("semi_finished_gross_weight_checks")
+      ? API_ROUTES.productionOrders.semiFinishedGrossWeightChecks(params.id)
+      : null,
     () => productOrdersService.fetchSemiFinishedGrossWeightChecks(params.id),
   );
 
   const { data: productionOrderSemiFinishedNetWeightChecks } = useSWR(
-    API_ROUTES.productionOrders.semiFinishedNetWeightChecks(params.id),
+    isSectionEnabled("semi_finished_net_weight_checks")
+      ? API_ROUTES.productionOrders.semiFinishedNetWeightChecks(params.id)
+      : null,
     () => productOrdersService.fetchSemiFinishedNetWeightChecks(params.id),
   );
 
   const { data: productionOrderShellWeightChecks } = useSWR(
-    API_ROUTES.productionOrders.shellWeightChecks(params.id),
+    isSectionEnabled("shell_weight_checks")
+      ? API_ROUTES.productionOrders.shellWeightChecks(params.id)
+      : null,
     () => productOrdersService.fetchShellWeightChecks(params.id),
   );
 
   const { data: productionOrderTenShellWeightCheck } = useSWR(
-    API_ROUTES.productionOrders.tenShellWeightCheck(params.id),
+    isSectionEnabled("ten_shell_weight_check")
+      ? API_ROUTES.productionOrders.tenShellWeightCheck(params.id)
+      : null,
     () => productOrdersService.fetchTenShellWeightCheck(params.id),
   );
 
   const { data: productionOrderDateChecks } = useSWR(
-    API_ROUTES.productionOrders.dateChecks(params.id),
+    isSectionEnabled("date_checks")
+      ? API_ROUTES.productionOrders.dateChecks(params.id)
+      : null,
     () => productOrdersService.fetchDateChecks(params.id),
   );
 
   const { data: productionOrderFinishedProductSummary } = useSWR(
-    API_ROUTES.productionOrders.finishedProductSummary(params.id),
+    isSectionEnabled("finished_product_summary")
+      ? API_ROUTES.productionOrders.finishedProductSummary(params.id)
+      : null,
     () => productOrdersService.fetchFinishedProductSummary(params.id),
   );
 
   const { data: productionOrderAttachments } = useSWR(
-    API_ROUTES.productionOrders.attachments(params.id),
+    isSectionEnabled("production_order_attachments")
+      ? API_ROUTES.productionOrders.attachments(params.id)
+      : null,
     () => productOrdersService.fetchProductionOrderAttachments(params.id),
   );
 
   const { data: productionOrderSemiFinishedProductSummaries } = useSWR(
-    API_ROUTES.productionOrders.semiFinishedProductSummaries(params.id),
+    isSectionEnabled("semi_finished_product_summaries")
+      ? API_ROUTES.productionOrders.semiFinishedProductSummaries(params.id)
+      : null,
     () => productOrdersService.fetchSemiFinishedProductSummaries(params.id),
   );
 
   const { data: productionOrderMaterialProcessSummaries } = useSWR(
-    API_ROUTES.productionOrders.materialProcessSummaries(params.id),
+    isSectionEnabled("material_process_summaries")
+      ? API_ROUTES.productionOrders.materialProcessSummaries(params.id)
+      : null,
     () => productOrdersService.fetchMaterialProcessSummaries(params.id),
   );
 
   const { data: productionOrderFactoryReleaseReviews } = useSWR(
-    API_ROUTES.productionOrders.factoryReleaseReviews(params.id),
+    isSectionEnabled("factory_release_reviews")
+      ? API_ROUTES.productionOrders.factoryReleaseReviews(params.id)
+      : null,
     () => productOrdersService.fetchFactoryReleaseReviews(params.id),
   );
 
   const { data: primaryPackagingConfirmations } = useSWR(
-    API_ROUTES.productionOrders.primaryPackagingConfirmations(params.id),
+    isSectionEnabled("primary_packaging_confirmations")
+      ? API_ROUTES.productionOrders.primaryPackagingConfirmations(params.id)
+      : null,
     () => productOrdersService.fetchPrimaryPackagingConfirmations(params.id),
   );
 
   const { data: productionOrderSamplingRecords } = useSWR(
-    API_ROUTES.productionOrders.samplingRecords(params.id),
+    isSectionEnabled("sampling_records")
+      ? API_ROUTES.productionOrders.samplingRecords(params.id)
+      : null,
     () => productOrdersService.fetchSamplingRecords(params.id),
   );
 
   const { data: productionOrderDisinfectantPreparations } = useSWR(
-    API_ROUTES.productionOrders.disinfectantPreparations(params.id),
+    isSectionEnabled("disinfectant_preparations")
+      ? API_ROUTES.productionOrders.disinfectantPreparations(params.id)
+      : null,
     () => productOrdersService.fetchDisinfectantPreparations(params.id),
   );
 

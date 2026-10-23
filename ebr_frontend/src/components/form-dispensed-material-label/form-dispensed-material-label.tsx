@@ -1,6 +1,9 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
+import useSWR from "swr";
+import { API_ROUTES } from "@/lib/api-routes";
+import productionOrdersService from "@/services/product-orders.service";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "sonner";
@@ -52,7 +55,7 @@ const DISPENSED_MATERIAL_LABEL_URL = "/label/dispensed-material-label";
 
 export default function DispenseMaterialLabelForm({
   data,
-  productionOrderLines = [],
+  productionOrderLines,
   onClose,
 }: {
   data: any;
@@ -60,7 +63,20 @@ export default function DispenseMaterialLabelForm({
   onClose?: () => void;
 }) {
   const stageAnchor = useComboboxAnchor();
-  const stageOptions = productionOrderLines.reduce<ProductionOrdersStage[]>(
+  const productionOrderId = data?.DocumentAbsoluteEntry ?? data?.id;
+  const {
+    data: fetchedProductionOrderLines,
+    isLoading: isLoadingLines,
+    error: linesError,
+  } = useSWR<ProductionOrderLine[]>(
+    productionOrderLines === undefined && productionOrderId != null
+      ? `${API_ROUTES.productionOrders.base}/${productionOrderId}/production-order-lines`
+      : null,
+    () => productionOrdersService.fetchProductionOrderLines(productionOrderId),
+  );
+  const stageOptions = (
+    productionOrderLines ?? fetchedProductionOrderLines ?? []
+  ).reduce<ProductionOrdersStage[]>(
     (options, line) => {
       const stage = line.ProductionOrdersStage;
 
@@ -125,6 +141,12 @@ export default function DispenseMaterialLabelForm({
           <p className="text-center text-xl font-semibold uppercase text-gray-900">
             Tạo nhãn cấp phát
           </p>
+          {isLoadingLines && <p>Đang tải danh sách giai đoạn...</p>}
+          {linesError && (
+            <p role="alert" className="text-sm text-red-600">
+              Không thể tải danh sách giai đoạn. Vui lòng thử lại.
+            </p>
+          )}
           <FormField
             control={form.control}
             name="stage"
@@ -188,7 +210,9 @@ export default function DispenseMaterialLabelForm({
           />
           <div aria-hidden className="h-32" />
           <div className="flex justify-end pt-1">
-            <Button type="submit">Tạo nhãn</Button>
+            <Button type="submit" disabled={isLoadingLines || Boolean(linesError)}>
+              Tạo nhãn
+            </Button>
           </div>
         </form>
       </Form>
