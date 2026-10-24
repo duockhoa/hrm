@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { isAxiosError } from "axios";
 import useSWR from "swr";
-import { ArrowLeft, FileText, Loader2, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  EllipsisVertical,
+  FileText,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -72,6 +85,11 @@ export default function InlineProductionOrderWeighingRecord({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingRecord, setDeletingRecord] =
+    useState<ProductionOrderWeighingRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const deletingRef = useRef(false);
   const recordsKey =
     productionOrderId != null
       ? API_ROUTES.productionOrders.weighingRecords(productionOrderId)
@@ -110,6 +128,32 @@ export default function InlineProductionOrderWeighingRecord({
       toast.error(errorMessage(createError, "Không thể tạo phiếu cân."));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const deleteRecord = async () => {
+    if (!deletingRecord || deletingRef.current) return;
+    deletingRef.current = true;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      await productionOrderWeighingRecordsService.delete(deletingRecord.id);
+      await mutate(
+        (current) =>
+          current?.filter((record) => record.id !== deletingRecord.id),
+        { revalidate: false },
+      );
+      setDeletingRecord(null);
+      toast.success("Đã xóa phiếu cân.");
+      void mutate().catch(() => undefined);
+    } catch (error) {
+      const text = errorMessage(error, "Không thể xóa phiếu cân.");
+      setDeleteError(text);
+      toast.error(text);
+      void mutate().catch(() => undefined);
+    } finally {
+      deletingRef.current = false;
+      setIsDeleting(false);
     }
   };
 
@@ -214,36 +258,75 @@ export default function InlineProductionOrderWeighingRecord({
         ) : records?.length ? (
           <div className="mt-4 divide-y border-y">
             {records.map((record) => (
-              <button
+              <div
                 key={record.id}
-                type="button"
-                onClick={() =>
-                  onSelectRecord
-                    ? onSelectRecord(record)
-                    : setSelectedId(record.id)
-                }
-                className="flex w-full items-start justify-between gap-4 px-3 py-5 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                className="group flex items-stretch transition-colors hover:bg-slate-50"
               >
-                <div className="flex min-w-0 items-start gap-3">
-                  <FileText className="mt-0.5 size-5 shrink-0 text-slate-700" />
-                  <div className="min-w-0">
-                    <p className="break-words font-semibold text-slate-900">
-                      {record.description || "Phiếu cân của lệnh sản xuất"}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onSelectRecord
+                      ? onSelectRecord(record)
+                      : setSelectedId(record.id)
+                  }
+                  className="flex min-w-0 flex-1 items-start justify-between gap-4 px-3 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <FileText className="mt-0.5 size-5 shrink-0 text-slate-700" />
+                    <div className="min-w-0">
+                      <p className="break-words font-semibold text-slate-900">
+                        {record.description || "Phiếu cân của lệnh sản xuất"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Tạo lúc {formatDate(record.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right text-sm">
+                    <p className="font-medium text-slate-800">
+                      {statusLabels[record.status] ?? record.status}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Tạo lúc {formatDate(record.created_at)}
+                    <p className="mt-1 text-orange-600">
+                      {personLabel(record.createdBy)}
                     </p>
                   </div>
+                </button>
+                <div className="flex shrink-0 items-center pr-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-slate-700"
+                        aria-label="Thao tác phiếu cân"
+                        title="Thao tác phiếu cân"
+                      >
+                        <EllipsisVertical className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        variant="destructive"
+                        disabled={
+                          record.status === "approved" ||
+                          Boolean(
+                            record.qa_staff_approved_at ||
+                            record.ipc_staff_approved_at,
+                          )
+                        }
+                        onSelect={() => {
+                          setDeleteError("");
+                          setDeletingRecord(record);
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                        Xóa
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <div className="shrink-0 text-right text-sm">
-                  <p className="font-medium text-slate-800">
-                    {statusLabels[record.status] ?? record.status}
-                  </p>
-                  <p className="mt-1 text-orange-600">
-                    {personLabel(record.createdBy)}
-                  </p>
-                </div>
-              </button>
+              </div>
             ))}
           </div>
         ) : embedded ? (
@@ -262,6 +345,63 @@ export default function InlineProductionOrderWeighingRecord({
           </div>
         )}
       </section>
+
+      <Dialog
+        open={Boolean(deletingRecord)}
+        onOpenChange={(open) => {
+          if (!open && !deletingRef.current) {
+            setDeletingRecord(null);
+            setDeleteError("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xóa phiếu cân</DialogTitle>
+            <DialogDescription>
+              Phiếu cân và toàn bộ danh sách nguyên liệu trong phiếu sẽ bị xóa.
+              Thao tác này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded border bg-slate-50 p-3 text-sm">
+            <p className="font-semibold text-slate-900">Phiếu cân</p>
+            <p className="mt-1 break-words text-slate-600">
+              {deletingRecord?.description || "Phiếu cân của lệnh sản xuất"}
+            </p>
+          </div>
+          {deleteError ? (
+            <p role="alert" className="text-sm text-red-600">
+              {deleteError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isDeleting}
+              onClick={() => {
+                setDeletingRecord(null);
+                setDeleteError("");
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => void deleteRecord()}
+            >
+              {isDeleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              {isDeleting ? "Đang xóa..." : "Xóa phiếu"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isCreateOpen}

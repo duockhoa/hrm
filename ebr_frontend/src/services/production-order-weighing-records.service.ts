@@ -30,6 +30,12 @@ const create = async (
 const productionOrderWeighingRecordsService = {
   fetchAllByProductionOrderId,
   create,
+  async delete(recordId: string | number) {
+    const response = await axiosClient.delete<ProductionOrderWeighingRecord>(
+      API_ROUTES.productionOrders.weighingRecordDetail(recordId),
+    );
+    return response.data;
+  },
   async fetchById(recordId: string | number) {
     const response = await axiosClient.get<ProductionOrderWeighingRecord>(
       API_ROUTES.productionOrders.weighingRecordDetail(recordId),
