@@ -1098,11 +1098,33 @@ model ProductionOrderWeighingRecords {
   created_at               DateTime         @default(now())
   updated_at               DateTime         @default(now()) @updatedAt
 
+  lines ProductionOrderWeighingRecordLines[]
+
   @@index([production_order_id, created_at, id], map: "po_weighing_records_order_idx")
   @@index([created_by_id], map: "po_weighing_records_creator_idx")
   @@index([qa_staff_approved_by_id], map: "po_weighing_records_qa_idx")
   @@index([ipc_staff_approved_by_id], map: "po_weighing_records_ipc_idx")
   @@map("production_order_weighing_records")
+}
+
+model ProductionOrderWeighingRecordLines {
+  id Int @id @default(autoincrement())
+  production_order_weighing_record_id Int
+  weighingRecord ProductionOrderWeighingRecords @relation(fields: [production_order_weighing_record_id], references: [id], onDelete: Cascade, map: "po_weighing_lines_record_fkey")
+  source_line_number Int?
+  source_stage_id Int?
+  stage_name String? @db.VarChar(255)
+  item_code String @db.VarChar(255)
+  item_name String @db.VarChar(255)
+  lot_no String? @db.VarChar(255)
+  planned_quantity Decimal @db.Decimal(18, 6)
+  unit String @db.VarChar(50)
+  note String? @db.Text
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  @@index([production_order_weighing_record_id, id], map: "po_weighing_lines_record_idx")
+  @@map("production_order_weighing_record_lines")
 }
 
 model ProductionOrderMixingRecords {

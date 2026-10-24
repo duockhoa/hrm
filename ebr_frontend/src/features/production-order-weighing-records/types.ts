@@ -39,3 +39,23 @@ export type WeighingProductionOrder = {
   PlannedQuantity?: number | string | null;
   unit?: string | null;
 };
+export type ProductionOrderWeighingRecordLine = {
+  id: number;
+  production_order_weighing_record_id: number;
+  source_line_number: number | null;
+  source_stage_id: number | null;
+  stage_name: string | null;
+  item_code: string;
+  item_name: string;
+  lot_no: string | null;
+  planned_quantity: string;
+  unit: string;
+  note: string | null;
+};
+
+export type WeighingImportStage = {
+  id: number;
+  name: string;
+  material_count: number;
+  imported: boolean;
+};

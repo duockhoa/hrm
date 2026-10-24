@@ -1,0 +1,326 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import useSWR from "swr";
+import { isAxiosError } from "axios";
+import { Loader2, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { API_ROUTES } from "@/lib/api-routes";
+import service from "@/services/production-order-weighing-records.service";
+import type { ProductionOrderWeighingRecordLine } from "../types";
+
+const compareMaterials = (
+  a: ProductionOrderWeighingRecordLine,
+  b: ProductionOrderWeighingRecordLine,
+) =>
+  a.item_code.localeCompare(b.item_code, "vi", { sensitivity: "base" }) ||
+  a.id - b.id;
+
+const message = (error: unknown, fallback: string) => {
+  if (isAxiosError(error)) {
+    const value: unknown = error.response?.data?.message;
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) return value.join("; ");
+  }
+  return fallback;
+};
+
+const quantityLabel = (value: string) => {
+  if (!/^\d+(\.\d+)?$/.test(value)) return value;
+  const [integer, fraction = ""] = value.split(".");
+  const decimals = fraction.replace(/0+$/, "");
+  return `${BigInt(integer).toLocaleString("vi-VN")}${decimals ? `,${decimals}` : ""}`;
+};
+
+export default function WeighingRecordMaterials({
+  recordId,
+  isImportOpen,
+  onImportOpenChange,
+  locked,
+}: {
+  recordId: number;
+  isImportOpen: boolean;
+  onImportOpenChange: (open: boolean) => void;
+  locked: boolean;
+}) {
+  const [selectedStage, setSelectedStage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const base = API_ROUTES.productionOrders.weighingRecordDetail(recordId);
+  const {
+    data: lines,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR(`${base}/lines`, () => service.fetchLines(recordId));
+  const {
+    data: stages,
+    error: stagesError,
+    isLoading: stagesLoading,
+    mutate: refreshStages,
+  } = useSWR(isImportOpen ? `${base}/stages` : null, () =>
+    service.fetchStages(recordId),
+  );
+  const stage = stages?.find((entry) => String(entry.id) === selectedStage);
+
+  const importStage = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isSubmitting || locked || !stage || stage.imported) return;
+    setIsSubmitting(true);
+    setSubmitError("");
+    try {
+      const imported = await service.importStage(recordId, stage.id);
+      await mutate(
+        (current) => [...(current ?? []), ...imported].sort(compareMaterials),
+        { revalidate: false },
+      );
+      onImportOpenChange(false);
+      setSelectedStage("");
+      toast.success(`Đã thêm ${imported.length} dòng hàng vào phiếu cân.`);
+      void mutate().catch(() => undefined);
+      void refreshStages().catch(() => undefined);
+    } catch (error) {
+      setSubmitError(
+        message(error, "Không thể thêm hàng hóa từ giai đoạn đã chọn."),
+      );
+      void refreshStages().catch(() => undefined);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="mt-6">
+        <h3 className="mb-2 text-base font-bold uppercase">
+          Danh sách nguyên liệu
+        </h3>
+        {isLoading ? (
+          <p role="status" className="py-4 text-center">
+            Đang tải nguyên liệu...
+          </p>
+        ) : error ? (
+          <div
+            role="alert"
+            className="border border-red-200 bg-red-50 p-3 font-sans text-sm text-red-700"
+          >
+            <p>{message(error, "Không thể tải danh sách nguyên liệu.")}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={() => void mutate().catch(() => undefined)}
+            >
+              Thử lại
+            </Button>
+          </div>
+        ) : lines?.length ? (
+          <table className="w-full table-fixed border-collapse border border-black">
+            <colgroup>
+              <col className="w-[130px]" />
+              <col className="w-[100px]" />
+              <col />
+              <col className="w-[115px]" />
+              <col className="w-[110px]" />
+              <col className="w-[70px]" />
+            </colgroup>
+            <thead>
+              <tr>
+                {[
+                  "Giai đoạn",
+                  "Mã nguyên liệu",
+                  "Tên nguyên liệu",
+                  "Số lô",
+                  "Lượng yêu cầu",
+                  "Đơn vị",
+                ].map((label) => (
+                  <th
+                    key={label}
+                    className="border border-black px-2 py-2 text-center font-bold"
+                  >
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[...lines].sort(compareMaterials).map((line) => (
+                <tr key={line.id}>
+                  <td className="break-words border border-black px-2 py-2">
+                    {line.stage_name ?? line.source_stage_id ?? "—"}
+                  </td>
+                  <td className="break-words border border-black px-2 py-2">
+                    {line.item_code}
+                  </td>
+                  <td className="break-words border border-black px-2 py-2">
+                    {line.item_name}
+                    {line.note ? (
+                      <p className="mt-1 whitespace-pre-wrap text-sm">
+                        {line.note}
+                      </p>
+                    ) : null}
+                  </td>
+                  <td className="break-words border border-black px-2 py-2">
+                    {line.lot_no || "—"}
+                  </td>
+                  <td className="border border-black px-2 py-2 text-right tabular-nums">
+                    {quantityLabel(line.planned_quantity)}
+                  </td>
+                  <td className="break-words border border-black px-2 py-2 text-center">
+                    {line.unit}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="border border-dashed p-5 text-center text-sm text-slate-500">
+            Chưa có nguyên liệu trong phiếu cân.
+          </p>
+        )}
+      </div>
+
+      <Dialog
+        open={isImportOpen}
+        onOpenChange={(open) => {
+          if (isSubmitting) return;
+          onImportOpenChange(open);
+          if (!open) {
+            setSelectedStage("");
+            setSubmitError("");
+          }
+        }}
+      >
+        <DialogContent className="font-sans sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Thêm hàng hóa theo giai đoạn</DialogTitle>
+            <DialogDescription>
+              Chọn giai đoạn để thêm toàn bộ hàng hóa thuộc giai đoạn đó từ lệnh
+              sản xuất vào phiếu cân.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={importStage} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor={`weighing-stage-${recordId}`}
+                className="text-sm font-medium"
+              >
+                Giai đoạn
+              </label>
+              <select
+                id={`weighing-stage-${recordId}`}
+                value={selectedStage}
+                required
+                disabled={
+                  stagesLoading ||
+                  Boolean(stagesError) ||
+                  isSubmitting ||
+                  locked
+                }
+                onChange={(event) => {
+                  setSelectedStage(event.target.value);
+                  setSubmitError("");
+                }}
+                className="min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+              >
+                <option value="">
+                  {stagesLoading ? "Đang tải giai đoạn..." : "Chọn giai đoạn"}
+                </option>
+                {stages?.map((entry) => (
+                  <option
+                    key={entry.id}
+                    value={entry.id}
+                    disabled={entry.imported}
+                  >
+                    {entry.name} · {entry.material_count} dòng
+                    {entry.imported ? " · Đã thêm" : ""}
+                  </option>
+                ))}
+              </select>
+              {stage && !stage.imported ? (
+                <p className="text-sm text-slate-500">
+                  Sẽ thêm {stage.material_count} dòng hàng vào phiếu cân.
+                </p>
+              ) : null}
+              {!stagesLoading && !stagesError && stages?.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  Lệnh sản xuất không có giai đoạn chứa hàng hóa.
+                </p>
+              ) : null}
+              {stages?.length && stages.every((entry) => entry.imported) ? (
+                <p className="text-sm text-slate-500">
+                  Tất cả giai đoạn đã được thêm vào phiếu cân.
+                </p>
+              ) : null}
+              {stagesError ? (
+                <div role="alert" className="text-sm text-red-600">
+                  <p>
+                    {message(
+                      stagesError,
+                      "Không thể tải giai đoạn từ lệnh sản xuất.",
+                    )}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void refreshStages().catch(() => undefined)}
+                  >
+                    Thử lại
+                  </Button>
+                </div>
+              ) : null}
+              {submitError ? (
+                <p role="alert" className="text-sm text-red-600">
+                  {submitError}
+                </p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSubmitting}
+                onClick={() => {
+                  onImportOpenChange(false);
+                  setSelectedStage("");
+                  setSubmitError("");
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  isSubmitting ||
+                  stagesLoading ||
+                  Boolean(stagesError) ||
+                  !stage ||
+                  stage.imported ||
+                  locked
+                }
+              >
+                {isSubmitting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+                {isSubmitting ? "Đang thêm..." : "Thêm vào phiếu cân"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

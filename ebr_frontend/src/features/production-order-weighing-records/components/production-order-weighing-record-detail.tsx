@@ -3,6 +3,13 @@
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Plus } from "lucide-react";
+import WeighingRecordMaterials from "./weighing-record-materials";
+import WeighingRecordApprovals from "./weighing-record-approvals";
+import useSWR, { useSWRConfig } from "swr";
+import { API_ROUTES } from "@/lib/api-routes";
+import service from "@/services/production-order-weighing-records.service";
 import type {
   ProductionOrderWeighingRecord,
   WeighingProductionOrder,
@@ -41,7 +48,7 @@ const formatCreatedAt = (value: string) => {
 };
 
 export default function ProductionOrderWeighingRecordDetail({
-  record,
+  record: initialRecord,
   productionOrder,
   onClose,
 }: {
@@ -49,6 +56,16 @@ export default function ProductionOrderWeighingRecordDetail({
   productionOrder: WeighingProductionOrder;
   onClose: () => void;
 }) {
+  const { mutate: mutateGlobal } = useSWRConfig();
+  const { data: record = initialRecord, mutate } = useSWR(
+    API_ROUTES.productionOrders.weighingRecordDetail(initialRecord.id),
+    () => service.fetchById(initialRecord.id),
+    { fallbackData: initialRecord },
+  );
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const locked =
+    record.status === "approved" ||
+    Boolean(record.qa_staff_approved_at || record.ipc_staff_approved_at);
   const itemCode =
     productionOrder.item_code ?? productionOrder.item?.item_code ?? "";
   const itemName =
@@ -89,6 +106,16 @@ export default function ProductionOrderWeighingRecordDetail({
             {lotNumber ? ` - Lô ${lotNumber}` : ""}
           </p>
         </div>
+        {!locked ? (
+          <Button
+            type="button"
+            className="shrink-0 bg-slate-900 text-white hover:bg-slate-800"
+            onClick={() => setIsImportOpen(true)}
+          >
+            <Plus className="size-4" />
+            Thêm mới
+          </Button>
+        ) : null}
       </div>
       <div className="overflow-x-auto bg-gray-50 p-2 sm:p-3">
         <div
@@ -205,6 +232,23 @@ export default function ProductionOrderWeighingRecordDetail({
               </tr>
             </tbody>
           </table>
+          <WeighingRecordMaterials
+            recordId={record.id}
+            isImportOpen={isImportOpen}
+            onImportOpenChange={setIsImportOpen}
+            locked={locked}
+          />
+          <WeighingRecordApprovals
+            record={record}
+            onChanged={async (updated) => {
+              await mutate(updated, { revalidate: false });
+              void mutateGlobal(
+                API_ROUTES.productionOrders.weighingRecords(
+                  updated.production_order_id,
+                ),
+              ).catch(() => undefined);
+            }}
+          />
         </div>
       </div>
     </section>
