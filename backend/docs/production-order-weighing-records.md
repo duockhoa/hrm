@@ -8,9 +8,11 @@ Quan hệ: một `production_orders` có nhiều phiếu cân qua `production_or
 
 Danh mục nút có action **Phiếu cân**, key `view_weighing_record`, nhóm **Biểu mẫu Pha chế**. Bật action này trong cấu hình nút của mã hàng để hiển thị nút trên chi tiết lô bán thành phẩm, lô thành phẩm và tổng hợp lô. Cấu hình độc lập với `view_mixing_record`; các lô đã chốt snapshot cấu hình tiếp tục dùng snapshot hiện có.
 
-Bấm **Phiếu cân** để mở danh sách inline, có nút quay lại và **Thêm phiếu cân**. Form nhận mã phiếu (tùy chọn, bỏ trống để tự sinh) và mô tả; sau khi lưu cập nhật danh sách của đúng lệnh đang xem. Bấm một phiếu để xem thông tin chung và thông tin duyệt. Phần giao diện này hiện hỗ trợ danh sách, xem và tạo phiếu.
+Bấm **Phiếu cân** để mở danh sách inline, có nút quay lại và **Thêm phiếu cân**. Form chỉ nhập mô tả; sau khi lưu cập nhật danh sách của đúng lệnh đang xem. Danh sách dùng mô tả làm tên phiếu. Bấm một phiếu để xem thông tin chung và thông tin duyệt.
 
 ## API
+
+Section **Phiếu cân** dùng key `weighing_records`, kind `section`, nhóm **Biểu mẫu Pha chế**, độc lập với action `view_weighing_record`. Migration khởi tạo bật/tắt và thứ tự từ cấu hình action hiện có của từng mã hàng. Section hiển thị số lượng và danh sách phiếu, bấm một phiếu để mở detail; tạo phiếu qua nút action. Có thể đặt section bắt buộc: đạt khi có ít nhất một phiếu đã lưu thuộc lệnh này. Các lô có snapshot tiếp tục dùng cấu hình đã chốt.
 
 Tất cả endpoint yêu cầu `Authorization: Bearer <accessToken>`. Quyền dùng chung nhóm `production-orders`, giống phiếu pha chế. Phạm vi truy cập lệnh sản xuất và audit log kế thừa Prisma extension hiện tại.
 
@@ -28,12 +30,11 @@ POST body:
 
 ```json
 {
-  "record_code": "PC-2026-001",
   "description": "Phiếu cân nguyên liệu"
 }
 ```
 
-Cả hai trường đều tùy chọn; có thể gửi `{}`. Nếu bỏ `record_code`, hệ thống sinh `PC-<UUID>`. Mã phiếu là duy nhất, tối đa 50 ký tự. Người tạo lấy từ tài khoản đăng nhập; trạng thái ban đầu là `draft`.
+Chỉ nhận trường `description` (tùy chọn, có thể gửi `{}`). Người tạo lấy từ tài khoản đăng nhập; trạng thái ban đầu là `draft`. Phiếu dùng `id` nội bộ, không có mã phiếu.
 
 PATCH body (gửi ít nhất một trường):
 
@@ -44,14 +45,16 @@ PATCH body (gửi ít nhất một trường):
 }
 ```
 
-Cho phép sửa `record_code`, `description`, `status`. Trạng thái được nhập: `draft`, `in_progress`, `completed`, `cancelled`. Gửi `description: null` để xóa nội dung. Các trường khác bị từ chối, bao gồm ID người tạo và thông tin duyệt.
+Cho phép sửa `description`, `status`. Trạng thái được nhập: `draft`, `in_progress`, `completed`, `cancelled`. Gửi `description: null` để xóa nội dung. Các trường khác bị từ chối, bao gồm ID người tạo và thông tin duyệt.
 
 Duyệt QA/IPC không cần body. Chỉ phiếu `completed` được duyệt. Mỗi chữ ký chỉ được ghi một lần; người duyệt và thời gian do server ghi. Phiếu khóa sửa/xóa ngay khi có một chữ ký. Khi đủ cả QA và IPC, trạng thái tự chuyển thành `approved`. API duyệt dùng quyền update giống phiếu pha chế hiện tại, chưa kiểm tra chức danh QA/IPC riêng.
 
 Danh sách trả về mảng theo ngày tạo và ID giảm dần. Các API khác trả về object phiếu với `createdBy`, `qaStaffApprovedBy`, `ipcStaffApprovedBy` (chỉ `id`, `username`, `name`).
 
-Lỗi: `400` dữ liệu/trạng thái không hợp lệ; `401` chưa đăng nhập; `403` thiếu quyền; `404` lệnh/phiếu không tồn tại hoặc ngoài phạm vi truy cập; `409` mã trùng, phiếu đã ký, hoặc có thay đổi đồng thời (tải lại rồi thử lại).
+Lỗi: `400` dữ liệu/trạng thái không hợp lệ; `401` chưa đăng nhập; `403` thiếu quyền; `404` lệnh/phiếu không tồn tại hoặc ngoài phạm vi truy cập; `409` phiếu đã ký hoặc có thay đổi đồng thời (tải lại rồi thử lại).
 
 ## Migration
 
 `prisma/migrations/20261024000000_add_production_order_weighing_records/migration.sql` chỉ tạo bảng phiếu cân, index và khóa ngoại tới các bảng hiện có.
+
+`prisma/migrations/20261024020000_remove_weighing_record_code/migration.sql` bỏ cột mã phiếu và unique index tương ứng.

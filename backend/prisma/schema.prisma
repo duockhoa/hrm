@@ -1085,7 +1085,6 @@ model ProductionOrderWeighingRecords {
   id                       Int              @id @default(autoincrement())
   production_order_id      Int
   productionOrder          ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Restrict, map: "po_weighing_records_order_id_fkey")
-  record_code              String           @unique(map: "po_weighing_records_code_key") @db.VarChar(50)
   description              String?          @db.Text
   status                   String           @default("draft") @db.VarChar(30)
   created_by_id            Int

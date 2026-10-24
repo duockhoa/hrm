@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 // Each entry addresses the exact relation used by the section, never all
 // records from a shared table or a related production order.
 export const SECTION_COUNT_RELATIONS = {
+  weighing_records: 'weighingRecords',
   production_order_deviations: 'deviations',
   environment_checks: 'environmentChecks',
   line_clearance_checks: 'lineClearanceChecks',

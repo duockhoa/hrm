@@ -1,9 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProductionOrderWeighingRecordDto {
-  @ApiPropertyOptional({ maxLength: 50 })
-  record_code?: string;
-
   @ApiPropertyOptional({ type: String, nullable: true })
   description?: string | null;
 

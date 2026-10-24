@@ -63,7 +63,11 @@ import {
   ProductionOrderMixingRecordDetail,
   type ProductionOrderMixingRecord,
 } from "@/features/production-order-mixing-records";
-import { InlineProductionOrderWeighingRecord } from "@/features/production-order-weighing-records";
+import {
+  InlineProductionOrderWeighingRecord,
+  ProductionOrderWeighingRecordDetail,
+  type ProductionOrderWeighingRecord,
+} from "@/features/production-order-weighing-records";
 import { getEnabledProductionOrderFeatureKeys } from "@/features/features";
 import {
   InlineMaterialSummarySection,
@@ -78,6 +82,8 @@ export default function DetailLotPage() {
     useState<ProductionOrderDetailSelection | null>(null);
   const [showMixingRecord, setShowMixingRecord] = useState(false);
   const [showWeighingRecord, setShowWeighingRecord] = useState(false);
+  const [selectedWeighingRecord, setSelectedWeighingRecord] =
+    useState<ProductionOrderWeighingRecord | null>(null);
   const [selectedMixingRecord, setSelectedMixingRecord] =
     useState<ProductionOrderMixingRecord | null>(null);
   const DetailComponent = detailSelection
@@ -93,6 +99,7 @@ export default function DetailLotPage() {
     [
       "production_order_deviations",
       "mixing_records",
+      "weighing_records",
       "environment_checks",
       "line_clearance_checks",
       "secondary_packaging_checks",
@@ -431,6 +438,14 @@ export default function DetailLotPage() {
                 }}
               />
             </div>
+          ) : selectedWeighingRecord ? (
+            <div className="flex flex-col items-center rounded">
+              <ProductionOrderWeighingRecordDetail
+                record={selectedWeighingRecord}
+                productionOrder={data}
+                onClose={() => setSelectedWeighingRecord(null)}
+              />
+            </div>
           ) : showWeighingRecord ? (
             <div className="flex flex-col items-center rounded">
               <InlineProductionOrderWeighingRecord
@@ -550,6 +565,23 @@ export default function DetailLotPage() {
                 </div>
               ) : null}
               {orderedSectionKeys.map((sectionKey) => {
+                if (sectionKey === "weighing_records") {
+                  return (
+                    <div
+                      key={sectionKey}
+                      id={getProductionOrderSectionId(sectionKey)}
+                      tabIndex={-1}
+                      className="mt-2 flex flex-col items-center gap-2 rounded md:mt-4 md:gap-4"
+                    >
+                      <InlineProductionOrderWeighingRecord
+                        productionOrder={data}
+                        embedded
+                        onSelectRecord={setSelectedWeighingRecord}
+                      />
+                    </div>
+                  );
+                }
+
                 if (sectionKey === "mixing_records") {
                   return (
                     <div

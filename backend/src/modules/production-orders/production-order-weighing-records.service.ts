@@ -6,7 +6,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderWeighingRecordDto } from './dto/create-production-order-weighing-record.dto';
 import { UpdateProductionOrderWeighingRecordDto } from './dto/update-production-order-weighing-record.dto';
@@ -49,11 +48,7 @@ export class ProductionOrderWeighingRecordsService {
     user?: AuthenticatedUser,
   ) {
     const userId = this.userId(user);
-    this.validateBody(dto, ['record_code', 'description']);
-    const code =
-      dto.record_code === undefined
-        ? `PC-${randomUUID()}`
-        : this.recordCode(dto.record_code);
+    this.validateBody(dto, ['description']);
     const description =
       dto.description === undefined ? null : this.description(dto.description);
     await this.ensureProductionOrder(productionOrderId);
@@ -61,7 +56,6 @@ export class ProductionOrderWeighingRecordsService {
       return await this.prisma.productionOrderWeighingRecords.create({
         data: {
           production_order_id: productionOrderId,
-          record_code: code,
           description,
           created_by_id: userId,
         },
@@ -73,10 +67,8 @@ export class ProductionOrderWeighingRecordsService {
   }
 
   async update(id: number, dto: UpdateProductionOrderWeighingRecordDto) {
-    this.validateBody(dto, ['record_code', 'description', 'status']);
+    this.validateBody(dto, ['description', 'status']);
     const data: Prisma.ProductionOrderWeighingRecordsUpdateInput = {};
-    if (dto.record_code !== undefined)
-      data.record_code = this.recordCode(dto.record_code);
     if (dto.description !== undefined)
       data.description = this.description(dto.description);
     if (dto.status !== undefined) {
@@ -221,19 +213,6 @@ export class ProductionOrderWeighingRecordsService {
     }
   }
 
-  private recordCode(value: unknown) {
-    if (
-      typeof value !== 'string' ||
-      !value.trim() ||
-      value.trim().length > 50
-    ) {
-      throw new BadRequestException(
-        'record_code must be a non-empty string of at most 50 characters',
-      );
-    }
-    return value.trim();
-  }
-
   private description(value: unknown) {
     if (value === null) return null;
     if (typeof value !== 'string')
@@ -246,8 +225,6 @@ export class ProductionOrderWeighingRecordsService {
 
   private handleWriteError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002')
-        throw new ConflictException('record_code already exists');
       if (error.code === 'P2025')
         throw new ConflictException(
           'Weighing record changed; reload and try again',

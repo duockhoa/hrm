@@ -116,6 +116,30 @@ describe('ProductionOrderCompletenessService', () => {
     });
   });
 
+  it.each([0, 1])(
+    'checks required weighing records using the owning order count (%i)',
+    async (count) => {
+      features.findConfigByItemCode.mockResolvedValue(
+        buildItemFeatureConfig(itemCode, [section('weighing_records')]),
+      );
+      prisma.productionOrders.findUnique
+        .mockResolvedValueOnce({ item_code: itemCode })
+        .mockResolvedValueOnce({ _count: { weighingRecords: count } });
+      const result = await service.findByProductionOrder(2031);
+      expect(result.required_sections).toEqual([
+        expect.objectContaining({
+          key: 'weighing_records',
+          record_count: count,
+          status: count ? 'has_data' : 'missing',
+        }),
+      ]);
+      expect(prisma.productionOrders.findUnique).toHaveBeenLastCalledWith({
+        where: { id: 2031 },
+        select: { id: true, _count: { select: { weighingRecords: true } } },
+      });
+    },
+  );
+
   it('does not treat deleted deviations as existing batch records', async () => {
     features.findConfigByItemCode.mockResolvedValue(
       buildItemFeatureConfig(itemCode, [

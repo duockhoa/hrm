@@ -6,7 +6,6 @@ import useSWR from "swr";
 import { ArrowLeft, FileText, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -21,17 +20,10 @@ import productionOrderWeighingRecordsService from "@/services/production-order-w
 import type {
   ProductionOrderWeighingRecord,
   WeighingRecordPerson,
+  WeighingProductionOrder,
 } from "../types";
 
-type ProductionOrder = {
-  id?: string | number;
-  production_order_id?: string | number;
-  DocumentAbsoluteEntry?: string | number;
-  item_code?: string;
-  item_name?: string;
-  item?: { item_code?: string; item_name?: string };
-  lot_no?: string;
-};
+import ProductionOrderWeighingRecordDetail from "./production-order-weighing-record-detail";
 
 const statusLabels: Record<ProductionOrderWeighingRecord["status"], string> = {
   draft: "Bản nháp",
@@ -60,9 +52,13 @@ const errorMessage = (error: unknown, fallback: string) => {
 export default function InlineProductionOrderWeighingRecord({
   productionOrder,
   onClose,
+  embedded = false,
+  onSelectRecord,
 }: {
-  productionOrder: ProductionOrder;
-  onClose: () => void;
+  productionOrder: WeighingProductionOrder;
+  onClose?: () => void;
+  embedded?: boolean;
+  onSelectRecord?: (record: ProductionOrderWeighingRecord) => void;
 }) {
   const productionOrderId =
     productionOrder?.id ??
@@ -74,7 +70,6 @@ export default function InlineProductionOrderWeighingRecord({
     productionOrder?.item?.item_name ?? productionOrder?.item_name ?? "";
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [recordCode, setRecordCode] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const recordsKey =
@@ -101,7 +96,6 @@ export default function InlineProductionOrderWeighingRecord({
       const created = await productionOrderWeighingRecordsService.create(
         productionOrderId,
         {
-          ...(recordCode.trim() ? { record_code: recordCode.trim() } : {}),
           description: description.trim() || null,
         },
       );
@@ -119,52 +113,67 @@ export default function InlineProductionOrderWeighingRecord({
     }
   };
 
+  if (selectedRecord) {
+    return (
+      <ProductionOrderWeighingRecordDetail
+        record={selectedRecord}
+        productionOrder={productionOrder}
+        onClose={() => setSelectedId(null)}
+      />
+    );
+  }
+
   return (
     <>
       <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
         <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="mt-0.5 shrink-0"
-              onClick={() => (selectedRecord ? setSelectedId(null) : onClose())}
-              title={
-                selectedRecord
-                  ? "Quay lại danh sách phiếu cân"
-                  : "Quay lại chi tiết lệnh sản xuất"
-              }
-              aria-label={
-                selectedRecord
-                  ? "Quay lại danh sách phiếu cân"
-                  : "Quay lại chi tiết lệnh sản xuất"
-              }
-            >
-              <ArrowLeft className="size-5" />
-            </Button>
+            {!embedded && onClose ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="mt-0.5 shrink-0"
+                onClick={onClose}
+                title="Quay lại chi tiết lệnh sản xuất"
+                aria-label="Quay lại chi tiết lệnh sản xuất"
+              >
+                <ArrowLeft className="size-5" />
+              </Button>
+            ) : null}
             <div className="min-w-0">
-              <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
-                {selectedRecord ? "Chi tiết phiếu cân" : "Phiếu cân"}
-              </h2>
-              <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
-                {itemCode}
-                {itemName ? ` - ${itemName}` : ""}
-                {productionOrder?.lot_no
-                  ? ` - Lô ${productionOrder.lot_no}`
-                  : ""}
-              </p>
+              <div className="flex items-center gap-3">
+                <h2
+                  className={
+                    embedded
+                      ? "text-lg font-semibold"
+                      : "text-2xl font-bold leading-tight text-blue-500 md:text-3xl"
+                  }
+                >
+                  Phiếu cân
+                </h2>
+                {embedded && records ? (
+                  <span className="rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700">
+                    {records.length}
+                  </span>
+                ) : null}
+              </div>
+              {!embedded ? (
+                <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
+                  {itemCode}
+                  {itemName ? ` - ${itemName}` : ""}
+                  {productionOrder?.lot_no
+                    ? ` - Lô ${productionOrder.lot_no}`
+                    : ""}
+                </p>
+              ) : null}
             </div>
           </div>
-          {!selectedRecord &&
-          productionOrderId != null &&
-          !isLoading &&
-          !error ? (
+          {!embedded && productionOrderId != null && !isLoading && !error ? (
             <Button
               type="button"
               className="shrink-0 self-end bg-slate-900 text-white hover:bg-slate-800 sm:self-auto"
               onClick={() => {
-                setRecordCode("");
                 setDescription("");
                 setIsCreateOpen(true);
               }}
@@ -202,55 +211,23 @@ export default function InlineProductionOrderWeighingRecord({
               Thử lại
             </Button>
           </div>
-        ) : selectedRecord ? (
-          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
-            {[
-              ["Mã phiếu", selectedRecord.record_code],
-              [
-                "Trạng thái",
-                statusLabels[selectedRecord.status] ?? selectedRecord.status,
-              ],
-              ["Người tạo", personLabel(selectedRecord.createdBy)],
-              ["Ngày tạo", formatDate(selectedRecord.created_at)],
-              [
-                "QA duyệt",
-                `${personLabel(selectedRecord.qaStaffApprovedBy)} · ${formatDate(selectedRecord.qa_staff_approved_at)}`,
-              ],
-              [
-                "IPC duyệt",
-                `${personLabel(selectedRecord.ipcStaffApprovedBy)} · ${formatDate(selectedRecord.ipc_staff_approved_at)}`,
-              ],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <dt className="text-slate-500">{label}</dt>
-                <dd className="mt-1 break-words font-medium text-slate-900">
-                  {value}
-                </dd>
-              </div>
-            ))}
-            <div className="sm:col-span-2">
-              <dt className="text-slate-500">Mô tả</dt>
-              <dd className="mt-1 whitespace-pre-wrap break-words text-slate-900">
-                {selectedRecord.description || "—"}
-              </dd>
-            </div>
-          </dl>
         ) : records?.length ? (
           <div className="mt-4 divide-y border-y">
             {records.map((record) => (
               <button
                 key={record.id}
                 type="button"
-                onClick={() => setSelectedId(record.id)}
+                onClick={() =>
+                  onSelectRecord
+                    ? onSelectRecord(record)
+                    : setSelectedId(record.id)
+                }
                 className="flex w-full items-start justify-between gap-4 px-3 py-5 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
               >
                 <div className="flex min-w-0 items-start gap-3">
                   <FileText className="mt-0.5 size-5 shrink-0 text-slate-700" />
                   <div className="min-w-0">
                     <p className="break-words font-semibold text-slate-900">
-                      {record.record_code}
-                    </p>
-                    <p className="mt-1 break-words text-sm text-slate-600">
                       {record.description || "Phiếu cân của lệnh sản xuất"}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -268,6 +245,10 @@ export default function InlineProductionOrderWeighingRecord({
                 </div>
               </button>
             ))}
+          </div>
+        ) : embedded ? (
+          <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
+            chưa có dữ liệu
           </div>
         ) : (
           <div className="mt-4 flex min-h-40 flex-col items-center justify-center rounded border border-dashed px-4 text-center">
@@ -298,22 +279,6 @@ export default function InlineProductionOrderWeighingRecord({
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={createRecord} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="weighing-record-code"
-                className="text-sm font-medium text-slate-800"
-              >
-                Mã phiếu
-              </label>
-              <Input
-                id="weighing-record-code"
-                value={recordCode}
-                maxLength={50}
-                disabled={isSubmitting}
-                onChange={(event) => setRecordCode(event.target.value)}
-                placeholder="Để trống để tự động tạo mã"
-              />
-            </div>
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="weighing-record-description"

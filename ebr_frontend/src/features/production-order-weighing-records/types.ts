@@ -7,7 +7,6 @@ export type WeighingRecordPerson = {
 export type ProductionOrderWeighingRecord = {
   id: number;
   production_order_id: number;
-  record_code: string;
   description: string | null;
   status: "draft" | "in_progress" | "completed" | "approved" | "cancelled";
   created_by_id: number;
@@ -23,6 +22,20 @@ export type ProductionOrderWeighingRecord = {
 };
 
 export type CreateProductionOrderWeighingRecordPayload = {
-  record_code?: string;
   description?: string | null;
+};
+export type WeighingProductionOrder = {
+  id?: string | number;
+  production_order_id?: string | number;
+  DocumentAbsoluteEntry?: string | number;
+  item_code?: string;
+  item_name?: string;
+  item?: { item_code?: string; item_name?: string; unit?: string | null };
+  lot_no?: string;
+  lot_number?: string;
+  batch_number?: string;
+  planned_quatity?: number | string | null;
+  planned_quantity?: number | string | null;
+  PlannedQuantity?: number | string | null;
+  unit?: string | null;
 };

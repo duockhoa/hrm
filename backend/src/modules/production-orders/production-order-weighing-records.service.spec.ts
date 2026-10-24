@@ -15,7 +15,6 @@ describe('ProductionOrderWeighingRecordsService', () => {
   const record = {
     id: 1,
     production_order_id: 42,
-    record_code: 'PC-001',
     status: 'draft',
     qa_staff_approved_at: null,
     ipc_staff_approved_at: null,
@@ -51,7 +50,7 @@ describe('ProductionOrderWeighingRecordsService', () => {
       created_by_id: 7,
       description: 'Can nguyen lieu',
     });
-    expect(result.record_code).toMatch(/^PC-[a-f0-9-]{36}$/);
+    expect(result).not.toHaveProperty('record_code');
   });
 
   it('rejects missing authentication and spoofed creator or approval fields', async () => {
@@ -98,7 +97,6 @@ describe('ProductionOrderWeighingRecordsService', () => {
 
   it.each([
     { record_code: '' },
-    { record_code: 'x'.repeat(51) },
     { description: 3 },
     { status: 'approved' },
     { status: null },
@@ -182,18 +180,12 @@ describe('ProductionOrderWeighingRecordsService', () => {
     );
   });
 
-  it('maps duplicate codes and concurrent signature changes to conflicts', async () => {
+  it('maps concurrent signature changes to conflicts', async () => {
     const error = (code: string) =>
       new Prisma.PrismaClientKnownRequestError('conflict', {
         code,
         clientVersion: '6',
       });
-    prisma.productionOrderWeighingRecords.create.mockRejectedValue(
-      error('P2002'),
-    );
-    await expect(
-      service.create(42, { record_code: 'PC-001' }, { id: 7 }),
-    ).rejects.toBeInstanceOf(ConflictException);
     prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
       ...record,
       status: 'completed',
