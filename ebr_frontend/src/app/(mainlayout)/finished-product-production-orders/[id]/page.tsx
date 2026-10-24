@@ -47,6 +47,7 @@ import {
   ProductionOrderMixingRecordDetail,
   type ProductionOrderMixingRecord,
 } from "@/features/production-order-mixing-records";
+import { InlineProductionOrderWeighingRecord } from "@/features/production-order-weighing-records";
 import { getEnabledProductionOrderFeatureKeys } from "@/features/features";
 import {
   InlineMaterialSummarySection,
@@ -76,6 +77,7 @@ export default function DetailLotPage() {
   const [detailSelection, setDetailSelection] =
     useState<ProductionOrderDetailSelection | null>(null);
   const [showMixingRecord, setShowMixingRecord] = useState(false);
+  const [showWeighingRecord, setShowWeighingRecord] = useState(false);
   const [selectedMixingRecord, setSelectedMixingRecord] =
     useState<ProductionOrderMixingRecord | null>(null);
   const DetailComponent = detailSelection
@@ -436,6 +438,14 @@ export default function DetailLotPage() {
                 }}
               />
             </div>
+          ) : showWeighingRecord ? (
+            <div className="flex flex-col items-center rounded">
+              <InlineProductionOrderWeighingRecord
+                key={params.id}
+                productionOrder={data}
+                onClose={() => setShowWeighingRecord(false)}
+              />
+            </div>
           ) : showMixingRecord ? (
             <div className="flex flex-col items-center rounded">
               <InlineProductionOrderMixingRecord
@@ -458,6 +468,12 @@ export default function DetailLotPage() {
                 <ProductOrderDetail
                   productOrder={data}
                   productionOrderLines={productionOrderLines}
+                  onOpenWeighingRecord={() => {
+                    setDetailSelection(null);
+                    setSelectedMixingRecord(null);
+                    setShowMixingRecord(false);
+                    setShowWeighingRecord(true);
+                  }}
                   onOpenMixingRecord={() => {
                     setDetailSelection(null);
                     setShowMixingRecord(true);

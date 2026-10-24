@@ -78,6 +78,10 @@ const PRODUCTION_ORDERS = {
     `/production-orders/${id}/production-specification`,
   completeness: (id: string | number) =>
     `/production-orders/${id}/completeness`,
+  weighingRecords: (id: string | number) =>
+    `/production-orders/${id}/weighing-records`,
+  weighingRecordDetail: (recordId: string | number) =>
+    `/production-orders/weighing-records/${recordId}`,
   mixingRecords: (id: string | number) =>
     `/production-orders/${id}/mixing-records`,
   mixingRecordDetail: (recordId: string | number) =>

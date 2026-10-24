@@ -22,6 +22,7 @@ import mixingActivityTemplateStagesService from "./mixing-activity-template-stag
 import mixingActivityTemplateStageStepsService from "./mixing-activity-template-stage-steps.service";
 import mixingActivityTemplateStageStepParametersService from "./mixing-activity-template-stage-step-parameters.service";
 import productionOrderMixingRecordsService from "./production-order-mixing-records.service";
+import productionOrderWeighingRecordsService from "./production-order-weighing-records.service";
 
 export {
   userService,
@@ -47,4 +48,5 @@ export {
   mixingActivityTemplateStageStepsService,
   mixingActivityTemplateStageStepParametersService,
   productionOrderMixingRecordsService,
+  productionOrderWeighingRecordsService,
 };

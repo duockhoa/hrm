@@ -695,6 +695,7 @@ export default function ProductOrderDetail({
   productionOrderLines,
   onOpenMaterialSummary,
   onOpenMixingRecord,
+  onOpenWeighingRecord,
   onOpenEquipmentMonitoringRecord,
   onOpenSteamSterilizationChecks,
   onOpenSteamSterilizationCheckDetail,
@@ -708,6 +709,7 @@ export default function ProductOrderDetail({
   productionOrderLines?: any[];
   onOpenMaterialSummary?: (productionOrderId: string | number) => void;
   onOpenMixingRecord?: (productionOrderId: string | number) => void;
+  onOpenWeighingRecord?: (productionOrderId: string | number) => void;
   onOpenEquipmentMonitoringRecord?: (
     productionOrderId: string | number,
     itemCode?: string | number | null,
@@ -955,6 +957,26 @@ export default function ProductOrderDetail({
                 <div className="w-[68px] md:w-[90px]">
                   <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
                     Phiếu pha chế
+                  </p>
+                </div>
+              </div>
+            )}
+          {isActionEnabled("view_weighing_record") &&
+            productionOrderId !== null &&
+            productionOrderId !== undefined && (
+              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
+                <button
+                  type="button"
+                  title="Phiếu cân"
+                  aria-label="Phiếu cân"
+                  onClick={() => onOpenWeighingRecord?.(productionOrderId)}
+                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-blue-500 px-3 py-2 text-white hover:bg-blue-600 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
+                >
+                  <FileText />
+                </button>
+                <div className="w-[68px] md:w-[90px]">
+                  <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+                    Phiếu cân
                   </p>
                 </div>
               </div>

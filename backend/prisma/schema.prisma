@@ -128,6 +128,9 @@ model Users {
   createdMixingActivityTemplateStages                   MixingActivityTemplateStages[]                                  @relation("MixingActivityTemplateStageCreator")
   createdMixingActivityTemplateStageSteps               MixingActivityTemplateStageSteps[]                              @relation("MixingActivityTemplateStageStepCreator")
   createdMixingActivityTemplateStageStepParameters      MixingActivityTemplateStageStepParameters[]                     @relation("MixingActivityTemplateStageStepParameterCreator")
+  createdProductionOrderWeighingRecords                 ProductionOrderWeighingRecords[]                                @relation("ProductionOrderWeighingRecordCreator")
+  qaStaffApprovedProductionOrderWeighingRecords         ProductionOrderWeighingRecords[]                                @relation("ProductionOrderWeighingRecordQaStaffApprover")
+  ipcStaffApprovedProductionOrderWeighingRecords        ProductionOrderWeighingRecords[]                                @relation("ProductionOrderWeighingRecordIpcStaffApprover")
   createdProductionOrderMixingRecords                   ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordCreator")
   qaStaffApprovedProductionOrderMixingRecords           ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordQaStaffApprover")
   ipcStaffApprovedProductionOrderMixingRecords          ProductionOrderMixingRecords[]                                  @relation("ProductionOrderMixingRecordIpcStaffApprover")
@@ -1067,6 +1070,7 @@ model ProductionOrders {
   primaryPackagingConfirmations                 ProductionOrderPrimaryPackagingConfirmations[]
   attachments                                   ProductionOrderAttachments[]
   registrationNumber                            ProductionOrderRegistrationNumbers?
+  weighingRecords                               ProductionOrderWeighingRecords[]
   mixingRecords                                 ProductionOrderMixingRecords[]
 
   @@index([item_code], map: "production_orders_item_code_fkey")
@@ -1075,6 +1079,31 @@ model ProductionOrders {
   @@index([production_order_code], map: "po_search_code_idx")
   @@index([lot_no], map: "po_search_lot_idx")
   @@map("production_orders")
+}
+
+model ProductionOrderWeighingRecords {
+  id                       Int              @id @default(autoincrement())
+  production_order_id      Int
+  productionOrder          ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Restrict, map: "po_weighing_records_order_id_fkey")
+  record_code              String           @unique(map: "po_weighing_records_code_key") @db.VarChar(50)
+  description              String?          @db.Text
+  status                   String           @default("draft") @db.VarChar(30)
+  created_by_id            Int
+  createdBy                Users            @relation("ProductionOrderWeighingRecordCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "po_weighing_records_creator_fkey")
+  qa_staff_approved_by_id  Int?
+  qaStaffApprovedBy        Users?           @relation("ProductionOrderWeighingRecordQaStaffApprover", fields: [qa_staff_approved_by_id], references: [id], onDelete: SetNull, map: "po_weighing_records_qa_fkey")
+  qa_staff_approved_at     DateTime?
+  ipc_staff_approved_by_id Int?
+  ipcStaffApprovedBy       Users?           @relation("ProductionOrderWeighingRecordIpcStaffApprover", fields: [ipc_staff_approved_by_id], references: [id], onDelete: SetNull, map: "po_weighing_records_ipc_fkey")
+  ipc_staff_approved_at    DateTime?
+  created_at               DateTime         @default(now())
+  updated_at               DateTime         @default(now()) @updatedAt
+
+  @@index([production_order_id, created_at, id], map: "po_weighing_records_order_idx")
+  @@index([created_by_id], map: "po_weighing_records_creator_idx")
+  @@index([qa_staff_approved_by_id], map: "po_weighing_records_qa_idx")
+  @@index([ipc_staff_approved_by_id], map: "po_weighing_records_ipc_idx")
+  @@map("production_order_weighing_records")
 }
 
 model ProductionOrderMixingRecords {

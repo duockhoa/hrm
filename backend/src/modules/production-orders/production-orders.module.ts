@@ -1,3 +1,5 @@
+import { ProductionOrderWeighingRecordsController } from './production-order-weighing-records.controller';
+import { ProductionOrderWeighingRecordsService } from './production-order-weighing-records.service';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from '../users/users.module';
 import { ProductionOrderMixingRecordsGateway } from './production-order-mixing-records.gateway';
@@ -71,6 +73,7 @@ import { EmailSettingsModule } from '../email-settings/email-settings.module';
   controllers: [
     ProductionOrdersController,
     ProductionOrderMixingRecordsController,
+    ProductionOrderWeighingRecordsController,
   ],
   providers: [
     ProductionOrdersService,
@@ -116,6 +119,7 @@ import { EmailSettingsModule } from '../email-settings/email-settings.module';
     ProductionOrderProductionGuidesService,
     ProductionOrderAttachmentsService,
     ProductionOrderMixingRecordsService,
+    ProductionOrderWeighingRecordsService,
     ProductionOrderMixingRecordsGateway,
     ProductionOrderMixingRecordsEventsInterceptor,
     WarehouseReleaseExportService,
