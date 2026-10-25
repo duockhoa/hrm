@@ -136,7 +136,7 @@ export default function WeighingRecordMaterials({
         ) : lines?.length ? (
           <table className="w-full min-w-[860px] table-fixed border-collapse border border-black">
             <colgroup>
-              <col className="w-[100px]" />
+              <col className="w-[80px]" />
               <col />
               <col className="w-[95px]" />
               <col className="w-[100px]" />
