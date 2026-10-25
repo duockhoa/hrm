@@ -87,38 +87,110 @@ export class ProductionOrderWeighingStageImportService {
     );
     if (!selected.length)
       throw new BadRequestException('Selected stage has no material lines');
-    const rows = selected.map((line) => {
-      let quantity: Prisma.Decimal;
-      try {
-        quantity = new Prisma.Decimal(String(line.PlannedQuantity));
-      } catch {
-        throw new BadRequestException(
-          'Source material has an invalid planned quantity',
-        );
-      }
-      if (
-        !quantity.isFinite() ||
-        !quantity.greaterThan(0) ||
-        quantity.decimalPlaces() > 6 ||
-        quantity.greaterThan('999999999999.999999')
-      ) {
-        throw new BadRequestException(
-          'Source material quantity must fit positive Decimal(18,6)',
-        );
-      }
-      return {
-        source_line_number:
-          line.LineNumber == null ? null : Number(line.LineNumber),
-        source_stage_id: stageId,
-        stage_name: String(line.ProductionOrdersStage?.Name ?? stageId),
-        item_code: String(line.ItemNo ?? ''),
-        item_name: String(line.ItemName ?? ''),
-        lot_no: line.U_SL == null ? null : String(line.U_SL),
-        planned_quantity: quantity.toFixed(),
-        unit: String(line.UnitOfMeasurement?.Code ?? line.UoMCode ?? ''),
-        note: null,
-      };
-    });
+    const rows = selected.map((line) => this.toRow(line));
     return this.lines.importStage(recordId, stageId, rows);
+  }
+
+  async sourceMaterials(recordId: number) {
+    const source = await this.source(recordId);
+    const imported =
+      await this.prisma.productionOrderWeighingRecordLines.findMany({
+        where: { production_order_weighing_record_id: recordId },
+        select: { source_line_number: true },
+      });
+    const numbers = new Set(imported.map((row) => row.source_line_number));
+    return source
+      .filter((line) => line.ItemType === 'pit_Item')
+      .map((line) => {
+        const row = this.toRow(line);
+        return {
+          ...row,
+          imported:
+            row.source_line_number !== null &&
+            numbers.has(row.source_line_number),
+        };
+      });
+  }
+
+  async importLines(recordId: number, dto: unknown) {
+    if (
+      !dto ||
+      typeof dto !== 'object' ||
+      Array.isArray(dto) ||
+      Object.keys(dto).some((key) => key !== 'line_numbers')
+    ) {
+      throw new BadRequestException('Only line_numbers is allowed');
+    }
+    const numbers = (dto as { line_numbers?: unknown }).line_numbers;
+    if (
+      !Array.isArray(numbers) ||
+      !numbers.length ||
+      numbers.some(
+        (value) => !Number.isInteger(value) || value < 0 || value > 2147483647,
+      ) ||
+      new Set(numbers).size !== numbers.length
+    ) {
+      throw new BadRequestException(
+        'line_numbers must contain distinct non-negative integers',
+      );
+    }
+    const source = (await this.source(recordId)).filter(
+      (line) =>
+        line.ItemType === 'pit_Item' &&
+        line.LineNumber != null &&
+        numbers.includes(Number(line.LineNumber)),
+    );
+    if (
+      source.length !== numbers.length ||
+      numbers.some(
+        (number) => !source.some((line) => Number(line.LineNumber) === number),
+      )
+    ) {
+      throw new BadRequestException(
+        'Selected materials do not belong to this production order',
+      );
+    }
+    return this.lines.importLines(
+      recordId,
+      source.map((line) => this.toRow(line)),
+    );
+  }
+
+  private toRow(line: ProductionOrderLineWithRelations) {
+    let quantity: Prisma.Decimal;
+    try {
+      quantity = new Prisma.Decimal(String(line.PlannedQuantity));
+    } catch {
+      throw new BadRequestException(
+        'Source material has an invalid planned quantity',
+      );
+    }
+    if (
+      !quantity.isFinite() ||
+      !quantity.greaterThan(0) ||
+      quantity.decimalPlaces() > 6 ||
+      quantity.greaterThan('999999999999.999999')
+    ) {
+      throw new BadRequestException(
+        'Source material quantity must fit positive Decimal(18,6)',
+      );
+    }
+    return {
+      source_line_number:
+        line.LineNumber == null ? null : Number(line.LineNumber),
+      source_stage_id: line.StageID ?? null,
+      stage_name:
+        line.ProductionOrdersStage?.Name == null
+          ? line.StageID == null
+            ? null
+            : String(line.StageID)
+          : String(line.ProductionOrdersStage.Name),
+      item_code: String(line.ItemNo ?? ''),
+      item_name: String(line.ItemName ?? ''),
+      lot_no: line.U_SL == null ? null : String(line.U_SL),
+      planned_quantity: quantity.toFixed(),
+      unit: String(line.UnitOfMeasurement?.Code ?? line.UoMCode ?? ''),
+      note: null,
+    };
   }
 }

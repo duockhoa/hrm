@@ -75,6 +75,11 @@ export type WeighingImportStage = {
   imported: boolean;
 };
 
+export type WeighingSourceMaterial = Omit<
+  ProductionOrderWeighingRecordLine,
+  "id" | "production_order_weighing_record_id" | "details"
+> & { imported: boolean };
+
 export type UpdateWeighingRecordLinePayload = Partial<
   Pick<
     ProductionOrderWeighingRecordLine,

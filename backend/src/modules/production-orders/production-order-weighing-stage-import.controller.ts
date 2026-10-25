@@ -19,6 +19,11 @@ class ImportWeighingStageDto {
   stage_id: number;
 }
 
+class ImportWeighingLinesDto {
+  @ApiProperty({ type: [Number] })
+  line_numbers: number[];
+}
+
 @UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('production-orders/weighing-records/:recordId')
 export class ProductionOrderWeighingStageImportController {
@@ -30,6 +35,21 @@ export class ProductionOrderWeighingStageImportController {
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   stages(@Param('recordId', ParseIntPipe) id: number) {
     return this.service.stages(id);
+  }
+
+  @Get('source-materials')
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  sourceMaterials(@Param('recordId', ParseIntPipe) id: number) {
+    return this.service.sourceMaterials(id);
+  }
+
+  @Post('import-lines')
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  importLines(
+    @Param('recordId', ParseIntPipe) id: number,
+    @Body() dto: ImportWeighingLinesDto,
+  ) {
+    return this.service.importLines(id, dto);
   }
 
   @Post('import-stage')

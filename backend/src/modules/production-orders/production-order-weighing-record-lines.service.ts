@@ -37,7 +37,9 @@ export class ProductionOrderWeighingRecordLinesService {
       include: {
         details: {
           orderBy: { id: 'asc' },
-          include: { weighedBy: { select: { id: true, username: true, name: true } } },
+          include: {
+            weighedBy: { select: { id: true, username: true, name: true } },
+          },
         },
       },
     });
@@ -105,6 +107,40 @@ export class ProductionOrderWeighingRecordLinesService {
               source_stage_id: stageId,
               production_order_weighing_record_id: recordId,
             },
+          }),
+        );
+      }
+      return imported;
+    });
+  }
+
+  async importLines(
+    recordId: number,
+    rows: CreateProductionOrderWeighingRecordLineDto[],
+  ) {
+    if (!rows.length)
+      throw new BadRequestException('Select at least one material');
+    const data = rows.map((row) => this.buildData(row, true) as LineData);
+    return this.write(recordId, async (tx) => {
+      const existing = await tx.productionOrderWeighingRecordLines.findFirst({
+        where: {
+          production_order_weighing_record_id: recordId,
+          source_line_number: {
+            in: rows.map((row) => row.source_line_number!),
+          },
+        },
+        select: { id: true },
+      });
+      if (existing)
+        throw new ConflictException(
+          'Selected materials have already been added to the weighing record',
+        );
+      const imported: Prisma.ProductionOrderWeighingRecordLinesGetPayload<object>[] =
+        [];
+      for (const row of data) {
+        imported.push(
+          await tx.productionOrderWeighingRecordLines.create({
+            data: { ...row, production_order_weighing_record_id: recordId },
           }),
         );
       }

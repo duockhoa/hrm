@@ -22,6 +22,7 @@ import WeighingRecordWeightCell, {
 } from "./weighing-record-weight-cell";
 import WeighingRecordMaterialMenu from "./weighing-record-material-menu";
 import WeighingRecordDetailMenu from "./weighing-record-detail-menu";
+import WeighingRecordManualImport from "./weighing-record-manual-import";
 
 const compareMaterials = (
   a: ProductionOrderWeighingRecordLine,
@@ -60,6 +61,7 @@ export default function WeighingRecordMaterials({
   isEditing?: boolean;
 }) {
   const [selectedStage, setSelectedStage] = useState("");
+  const [isManualOpen, setIsManualOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const base = API_ROUTES.productionOrders.weighingRecordDetail(recordId);
@@ -293,7 +295,7 @@ export default function WeighingRecordMaterials({
           }
         }}
       >
-        <DialogContent className="font-sans sm:max-w-lg">
+        <DialogContent className="font-sans sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Thêm hàng hóa theo giai đoạn</DialogTitle>
             <DialogDescription>
@@ -392,6 +394,20 @@ export default function WeighingRecordMaterials({
                 Hủy
               </Button>
               <Button
+                type="button"
+                variant="outline"
+                disabled={isSubmitting || locked}
+                onClick={() => {
+                  onImportOpenChange(false);
+                  setSelectedStage("");
+                  setSubmitError("");
+                  setIsManualOpen(true);
+                }}
+              >
+                <Plus className="size-4" />
+                Thêm thủ công
+              </Button>
+              <Button
                 type="submit"
                 disabled={
                   isSubmitting ||
@@ -413,6 +429,21 @@ export default function WeighingRecordMaterials({
           </form>
         </DialogContent>
       </Dialog>
+      <WeighingRecordManualImport
+        recordId={recordId}
+        open={isManualOpen}
+        onOpenChange={setIsManualOpen}
+        locked={locked}
+        onImported={async (imported) => {
+          await mutate(
+            (current) =>
+              [...(current ?? []), ...imported].sort(compareMaterials),
+            { revalidate: false },
+          );
+          void mutate().catch(() => undefined);
+          void refreshStages().catch(() => undefined);
+        }}
+      />
     </>
   );
 }

@@ -12,6 +12,11 @@ Bấm **Phiếu cân** để mở danh sách inline, có nút quay lại và **T
 
 ## API
 
+Trong form thêm hàng hóa theo giai đoạn, nút **Thêm thủ công** mở bảng nguyên vật liệu của lệnh sản xuất. Có thể tìm kiếm và chọn nhiều dòng; các dòng đã thêm được đánh dấu và không thể chọn lại. Dữ liệu được sao chép từ nguồn phía server, lưu toàn bộ lựa chọn trong một transaction và khóa thêm sau khi phiếu có chữ ký.
+
+- `GET /production-orders/weighing-records/:recordId/source-materials`: danh sách dòng `pit_Item`, gồm cả dòng không có giai đoạn và cờ `imported`; quyền `production-orders.read`.
+- `POST /production-orders/weighing-records/:recordId/import-lines`: body `{ "line_numbers": [0, 1] }`, lấy đúng các dòng thuộc lệnh của phiếu; quyền `production-orders.create`. Từ chối lựa chọn trùng, dòng ngoài lệnh và dòng đã thêm.
+
 Section **Phiếu cân** dùng key `weighing_records`, kind `section`, nhóm **Biểu mẫu Pha chế**, độc lập với action `view_weighing_record`. Migration khởi tạo bật/tắt và thứ tự từ cấu hình action hiện có của từng mã hàng. Section hiển thị số lượng và danh sách phiếu, bấm một phiếu để mở detail; tạo phiếu qua nút action. Có thể đặt section bắt buộc: đạt khi có ít nhất một phiếu đã lưu thuộc lệnh này. Các lô có snapshot tiếp tục dùng cấu hình đã chốt.
 
 Tất cả endpoint yêu cầu `Authorization: Bearer <accessToken>`. Quyền dùng chung nhóm `production-orders`, giống phiếu pha chế. Phạm vi truy cập lệnh sản xuất và audit log kế thừa Prisma extension hiện tại.

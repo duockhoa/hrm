@@ -248,6 +248,50 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
     });
   });
 
+  it('imports selected lines atomically using source line identity', async () => {
+    const result = await service.importLines(3, [
+      { ...dto, source_line_number: 0, lot_no: 'LOT-A' },
+      { ...dto, source_line_number: 1, lot_no: 'LOT-B' },
+    ]);
+    expect(result.map((row) => row.lot_no)).toEqual(['LOT-A', 'LOT-B']);
+    expect(
+      prisma.productionOrderWeighingRecordLines.findFirst,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          production_order_weighing_record_id: 3,
+          source_line_number: { in: [0, 1] },
+        },
+      }),
+    );
+    expect(prisma.$transaction).toHaveBeenCalled();
+  });
+
+  it('rejects any duplicate selected source line before writing', async () => {
+    prisma.productionOrderWeighingRecordLines.findFirst.mockResolvedValue({
+      id: 7,
+    });
+    await expect(
+      service.importLines(3, [{ ...dto, source_line_number: 0 }]),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(
+      prisma.productionOrderWeighingRecordLines.create,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('blocks manual imports after signing', async () => {
+    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+      ...parent,
+      ipc_staff_approved_at: new Date(),
+    });
+    await expect(
+      service.importLines(3, [{ ...dto, source_line_number: 0 }]),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(
+      prisma.productionOrderWeighingRecordLines.create,
+    ).not.toHaveBeenCalled();
+  });
+
   it('imports all lines atomically without changing their lots', async () => {
     const result = await service.importStage(3, 2, [
       { ...dto, lot_no: 'LOT-A' },

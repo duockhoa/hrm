@@ -27,25 +27,97 @@ describe('Weighing stage import', () => {
       },
     };
     orders = {
-      findProductionOrderLines: jest
-        .fn()
-        .mockResolvedValue([
-          material,
-          { ...material, LineNumber: 1, ItemNo: 'NL002', U_SL: 'LOT-B' },
-          { ...material, LineNumber: 2, ItemType: 'pit_Resource' },
-          {
-            ...material,
-            StageID: 3,
-            ProductionOrdersStage: { Name: 'Packing' },
-          },
-        ]),
+      findProductionOrderLines: jest.fn().mockResolvedValue([
+        material,
+        { ...material, LineNumber: 1, ItemNo: 'NL002', U_SL: 'LOT-B' },
+        { ...material, LineNumber: 2, ItemType: 'pit_Resource' },
+        {
+          ...material,
+          StageID: 3,
+          ProductionOrdersStage: { Name: 'Packing' },
+        },
+      ]),
     };
-    writer = { importStage: jest.fn().mockResolvedValue([{ id: 1 }]) };
+    writer = {
+      importStage: jest.fn().mockResolvedValue([{ id: 1 }]),
+      importLines: jest.fn().mockResolvedValue([{ id: 1 }]),
+    };
     service = new ProductionOrderWeighingStageImportService(
       prisma,
       orders,
       writer,
     );
+  });
+
+  it('lists source materials including unstaged materials and marks imported source lines', async () => {
+    orders.findProductionOrderLines.mockResolvedValue([
+      material,
+      {
+        ...material,
+        LineNumber: 1,
+        StageID: null,
+        ProductionOrdersStage: null,
+      },
+      { ...material, LineNumber: 2, ItemType: 'pit_Resource' },
+    ]);
+    prisma.productionOrderWeighingRecordLines.findMany.mockResolvedValue([
+      { source_line_number: 0 },
+    ]);
+    expect(await service.sourceMaterials(7)).toEqual([
+      expect.objectContaining({ source_line_number: 0, imported: true }),
+      expect.objectContaining({
+        source_line_number: 1,
+        source_stage_id: null,
+        stage_name: null,
+        imported: false,
+      }),
+    ]);
+  });
+
+  it('copies only selected source lines with server-sourced values', async () => {
+    await service.importLines(7, { line_numbers: [1] });
+    expect(writer.importLines).toHaveBeenCalledWith(7, [
+      expect.objectContaining({
+        source_line_number: 1,
+        item_code: 'NL002',
+        lot_no: 'LOT-B',
+        planned_quantity: '12.345678',
+        source_stage_id: 2,
+      }),
+    ]);
+  });
+
+  it.each([
+    {},
+    { line_numbers: [] },
+    { line_numbers: [0, 0] },
+    { line_numbers: ['0'] },
+    { line_numbers: [-1] },
+    { line_numbers: [0.5] },
+    { line_numbers: [0], item_code: 'spoofed' },
+  ])('rejects invalid manual selection %j', async (dto) => {
+    await expect(service.importLines(7, dto)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(writer.importLines).not.toHaveBeenCalled();
+  });
+
+  it.each([{ numbers: [99] }, { numbers: [2] }, { numbers: [0, 99] }])(
+    'rejects foreign or non-material source lines $numbers',
+    async ({ numbers }) => {
+      await expect(
+        service.importLines(7, { line_numbers: numbers }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(writer.importLines).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not load source lines for a missing manual-import parent', async () => {
+    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue(null);
+    await expect(
+      service.importLines(7, { line_numbers: [0] }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(orders.findProductionOrderLines).not.toHaveBeenCalled();
   });
 
   it('lists only material stages with counts and imported flags', async () => {

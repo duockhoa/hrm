@@ -7,6 +7,7 @@ import type {
   ProductionOrderWeighingRecordDetail,
   WeighingImportStage,
   UpdateWeighingRecordLinePayload,
+  WeighingSourceMaterial,
 } from "@/features/production-order-weighing-records/types";
 
 const fetchAllByProductionOrderId = async (
@@ -123,6 +124,21 @@ const productionOrderWeighingRecordsService = {
   async fetchStages(recordId: string | number) {
     const response = await axiosClient.get<WeighingImportStage[]>(
       `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/stages`,
+    );
+    return response.data;
+  },
+  async fetchSourceMaterials(recordId: number) {
+    const response = await axiosClient.get<WeighingSourceMaterial[]>(
+      `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/source-materials`,
+    );
+    return response.data;
+  },
+  async importLines(recordId: number, lineNumbers: number[]) {
+    const response = await axiosClient.post<
+      ProductionOrderWeighingRecordLine[]
+    >(
+      `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/import-lines`,
+      { line_numbers: lineNumbers },
     );
     return response.data;
   },
