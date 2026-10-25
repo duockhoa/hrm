@@ -7,6 +7,14 @@ import {
   productionOrderScopeSql,
 } from '../../access/production-order-scope';
 import { mixingRecordsReportInclude } from '../production-orders/exports/mixing-records-report-html';
+import {
+  buildWeighingSearch,
+  weighingSummarySelect,
+  weighingDetailSelect,
+  weighingTotals,
+  type WeighingSearchInput,
+  type WeighingReadInput,
+} from './mcp-weighing-records';
 import type { MixingRecordForReport } from '../production-orders/exports/mixing-records-report-html';
 import {
   buildMixingSearch,
@@ -210,6 +218,61 @@ export class McpToolsService {
     return {
       ...decodeParameterAnalysis(plan, summary, data),
       data_scope: productionOrderScopeMetadata(scope),
+    };
+  }
+
+  async searchWeighingRecords(input: WeighingSearchInput) {
+    const { where, date_range } = buildWeighingSearch(input);
+    const skip = (input.page - 1) * input.limit;
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.productionOrderWeighingRecords.count({ where }),
+      this.prisma.productionOrderWeighingRecords.findMany({
+        where,
+        select: weighingSummarySelect,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        skip,
+        take: input.limit,
+      }),
+    ]);
+    return {
+      data,
+      date_range,
+      pagination: {
+        page: input.page,
+        limit: input.limit,
+        total,
+        total_pages: Math.ceil(total / input.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  async getWeighingRecords(input: WeighingReadInput) {
+    const rows = await this.prisma.productionOrderWeighingRecords.findMany({
+      where: { id: { in: input.ids } },
+      select: weighingDetailSelect,
+    });
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const data = input.ids.flatMap((id) => {
+      const row = byId.get(id);
+      if (!row) return [];
+      return [
+        {
+          ...row,
+          lines:
+            input.view === 'results'
+              ? row.lines.filter((line) => line.details.length > 0)
+              : row.lines,
+          material_totals: weighingTotals(row.lines),
+        },
+      ];
+    });
+    return {
+      view: input.view,
+      requested: input.ids.length,
+      returned: data.length,
+      missing_ids: input.ids.filter((id) => !byId.has(id)),
+      data,
     };
   }
 
@@ -621,6 +684,12 @@ export class McpToolsService {
       select: { id: true },
       orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     };
+    if (permissions.includes('production-orders.read')) {
+      select.weighingRecords = {
+        select: { id: true },
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      };
+    }
     const result = await this.prisma.productionOrders.findUnique({
       where: { id },
       select,
@@ -673,6 +742,15 @@ export class McpToolsService {
       ids: mixingRecords.map((record) => record.id),
       detail_tool: 'get_mixing_records',
     };
+    const weighingRecords = (raw.weighingRecords ?? []) as { id: number }[];
+    sections.weighing_records = permissions.includes('production-orders.read')
+      ? {
+          available: true,
+          total: weighingRecords.length,
+          ids: weighingRecords.map((record) => record.id),
+          detail_tool: 'get_weighing_records',
+        }
+      : { available: false, reason: 'permission_required' };
 
     const latestRequest = order.samplingRequests?.[0] ?? null;
     const { deleted_at: _deletedAt, ...documentControl } =

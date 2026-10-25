@@ -147,6 +147,49 @@ describe('MCP order search planner', () => {
     expect(result.whereSql.values).toContain('%' + injection + '%');
   });
 
+  it('filters and counts weighing records, requiring the same record to match QA and IPC', () => {
+    const result = plan({
+      presence: { weighing_records: true },
+      counts: ['weighing_records'],
+      weighing_status: 'draft',
+      weighing_qa_status: 'approved',
+      weighing_ipc_status: 'pending',
+      weighing_has_weights: false,
+    });
+    expect(result.requiresSql).toBe(true);
+    expect(result.where.AND).toContainEqual({
+      weighingRecords: {
+        some: {
+          status: 'draft',
+          qa_staff_approved_by_id: { not: null },
+          ipc_staff_approved_by_id: null,
+        },
+      },
+    });
+    expect(result.whereSql.sql).toContain(
+      'production_order_weighing_record_details',
+    );
+    expect(result.whereSql.sql).toContain('NOT (EXISTS');
+    const metadata = orderSearchMetadataQuery(result, [7]);
+    expect(metadata.columns).toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: 'has_weights' })]),
+    );
+    expect(metadata.query.sql).toContain('production_order_weighing_records');
+  });
+
+  it('requires read permission for weighing presence, counts, and approval filters', () => {
+    for (const input of [
+      { presence: { weighing_records: false } },
+      { counts: ['weighing_records'] },
+      { weighing_qa_status: 'pending' },
+      { weighing_has_weights: false },
+    ]) {
+      expect(() =>
+        buildOrderSearch(orderSearchSchema.parse(input), []),
+      ).toThrow();
+    }
+  });
+
   it('distinguishes created mixing records from records with entered results', () => {
     const result = plan({
       mixing_record_type: 'mixing',

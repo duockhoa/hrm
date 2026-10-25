@@ -18,6 +18,10 @@ import { ITEM_PERMISSIONS } from '../items/items.permissions';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
 import { deviationSearchSchema } from './mcp-deviation-search';
 import { mixingSearchSchema, mixingReadSchema } from './mcp-mixing-search';
+import {
+  weighingSearchSchema,
+  weighingReadSchema,
+} from './mcp-weighing-records';
 import { orderSearchSchema } from './mcp-order-search';
 import { productionStatisticsSchema } from './mcp-production-statistics';
 import { parameterAnalysisSchema } from './mcp-parameter-analysis';
@@ -64,6 +68,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
+        'Phiếu cân: dùng search_weighing_records để tìm, get_weighing_records đọc theo ids (tối đa 10). sections.weighing_records trả ids và detail_tool. Lọc lô theo phiếu cân bằng presence.weighing_records, weighing_status, weighing_qa_status, weighing_ipc_status, weighing_has_weights; include/counts hỗ trợ weighing_records. Tổng cân tính cả số âm, tách mã nguyên liệu và đơn vị; ảnh chỉ trả tham chiếu. ' +
         'Tra cứu EBR. Dùng search_production_orders tìm lệnh rồi get_production_order xem hồ sơ lô. Câu hỏi liệt kê lô theo giao nhận hồ sơ, PYCLM, có/chưa có phiếu hoặc trạng thái duyệt dùng bộ lọc search_production_orders; include lấy trạng thái và counts đếm nhóm phiếu cho từng lô trong trang. Thống kê nhiều lô dùng get_production_statistics; thống kê pH/thông số dùng analyze_production_parameters, chọn đúng source và parameter, không tải hàng loạt hồ sơ chi tiết để tự tính. Hai tool thống kê mặc định 30 ngày gần nhất, ngày bắt đầu lệnh, loại lô hủy; muốn toàn bộ thời gian phải all_time=true. Kết quả phân trang theo nhóm; kiểm tra pagination trước khi kết luận đủ nhóm. Thông số tách mã hàng, đơn vị, công đoạn và phiên bản, trung bình theo phép đo, không suy ra đạt chất lượng. Riêng phiếu pha chế/gia công chỉ có số lượng và ids trong sections.mixing_records; muốn đọc phiếu phải gọi get_mixing_records. Dùng search_mixing_records tìm phiếu theo mã hàng/mã lệnh/số lô/thông số/ngày/duyệt, sau đó get_mixing_records theo ids; view=results cho so sánh thông số gọn hơn, view=full để đọc cả phiếu. Mỗi lần đọc tối đa 10 phiếu. Hỏi đếm sai lệch dùng search_production_order_deviations mode=count, xem danh sách dùng mode=list; today=true theo ngày Việt Nam. Dùng search_items/get_item xem cấu hình sản phẩm hiện tại, không tự áp dụng cho lô cũ. Nhóm thiếu quyền có available=false, khác với dữ liệu rỗng. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Chỉ đọc dữ liệu cục bộ và tham chiếu ảnh/tệp.',
     });
 
@@ -200,6 +205,39 @@ export class McpService implements OnModuleDestroy {
             }
             return this.tools.searchProductionOrderDeviations(input);
           },
+        ),
+    );
+
+    server.registerTool(
+      'search_weighing_records',
+      {
+        description:
+          'Tìm phiếu cân theo production_order_id, mã lệnh production_order_code, mã sản phẩm item_code, số lô lot_no, mô tả query, người tạo, trạng thái phiếu và duyệt QA/IPC. material_code là mã nguyên liệu trên phiếu; has_weights lọc có/chưa có lần cân. Ngày lọc created_at theo ngày Việt Nam, bao gồm ngày cuối. Có phân trang; chỉ trả metadata và số dòng nguyên liệu, dùng get_weighing_records để đọc chi tiết.',
+        inputSchema: weighingSearchSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'search_weighing_records',
+          auth,
+          'production-orders.read',
+          () => this.tools.searchWeighingRecords(input),
+        ),
+    );
+    server.registerTool(
+      'get_weighing_records',
+      {
+        description:
+          'Đọc phiếu cân đã lưu theo ids (1–10 ID khác nhau) từ search_weighing_records hoặc sections.weighing_records. Trả nguyên liệu, mã hàng/số lô/giai đoạn, lượng yêu cầu, từng lần cân kể cả số âm, ghi chú, người/thời điểm cân, tất cả tham chiếu ảnh và ký duyệt QA/IPC. material_totals cộng yêu cầu và thực tế theo mã nguyên liệu cùng đơn vị, không quy đổi đơn vị và không kết luận đạt. view=full gồm mọi dòng; view=results chỉ hiển thị dòng có lần cân, material_totals vẫn tính toàn bộ phiếu. Trả đúng thứ tự ids và missing_ids cho ID không tìm thấy hoặc ngoài phạm vi. Không tải nội dung ảnh/tệp.',
+        inputSchema: weighingReadSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'get_weighing_records',
+          auth,
+          'production-orders.read',
+          () => this.tools.getWeighingRecords(input),
         ),
     );
 

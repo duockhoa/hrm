@@ -83,6 +83,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     userRoles: { findMany: jest.fn() },
     $queryRaw: jest.fn(),
     productionOrderMixingRecords: { count: jest.fn(), findMany: jest.fn() },
+    productionOrderWeighingRecords: { count: jest.fn(), findMany: jest.fn() },
     productionOrderDeviations: { count: jest.fn(), findMany: jest.fn() },
     items: { count: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
     productionOrders: {
@@ -119,6 +120,8 @@ describe('MCP Streamable HTTP endpoint', () => {
     prisma.$queryRaw.mockResolvedValue([]);
     prisma.productionOrderMixingRecords.count.mockResolvedValue(0);
     prisma.productionOrderMixingRecords.findMany.mockResolvedValue([]);
+    prisma.productionOrderWeighingRecords.count.mockResolvedValue(0);
+    prisma.productionOrderWeighingRecords.findMany.mockResolvedValue([]);
     prisma.productionOrderDeviations.count.mockResolvedValue(0);
     prisma.productionOrderDeviations.findMany.mockResolvedValue([]);
     prisma.items.count.mockResolvedValue(0);
@@ -1263,7 +1266,219 @@ describe('MCP Streamable HTTP endpoint', () => {
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
 
-  it('exposes exactly ten read-only tools', async () => {
+  it('searches weighing records with exact order/material, date, approval and entered-weight filters', async () => {
+    prisma.productionOrderWeighingRecords.count.mockResolvedValue(2);
+    prisma.productionOrderWeighingRecords.findMany.mockResolvedValue([
+      { id: 4, description: 'Weighing' },
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'search_weighing_records',
+      arguments: {
+        production_order_id: 7,
+        material_code: 'NL001',
+        qa_status: 'approved',
+        ipc_status: 'pending',
+        has_weights: true,
+        date_to: '2026-10-25',
+        page: 2,
+        limit: 1,
+      },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent.pagination).toMatchObject({
+      page: 2,
+      total: 2,
+      has_next_page: false,
+    });
+    expect(prisma.productionOrderWeighingRecords.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          production_order_id: 7,
+          lines: { some: { item_code: 'NL001' } },
+          qa_staff_approved_by_id: { not: null },
+          ipc_staff_approved_by_id: null,
+          created_at: { lt: new Date('2026-10-25T17:00:00Z') },
+        }),
+        skip: 1,
+        take: 1,
+      }),
+    );
+    const query =
+      prisma.productionOrderWeighingRecords.findMany.mock.calls[0][0];
+    expect(query.select).not.toHaveProperty('lines');
+    expect(query.select._count).toEqual({ select: { lines: true } });
+  });
+
+  it('reads weighing records in requested order, preserving each weighing, images and precise totals', async () => {
+    const line = {
+      id: 1,
+      item_code: 'NL001',
+      unit: 'g',
+      planned_quantity: new Prisma.Decimal('0.1'),
+      details: [
+        {
+          id: 1,
+          net_weight: new Prisma.Decimal('0.3'),
+          unit: 'g',
+          note: 'note',
+          weighedBy: { id: 4, name: 'Weigher' },
+          images: [
+            { id: 1, image_path: '/images/a.png' },
+            { id: 2, image_path: '/images/b.png' },
+          ],
+        },
+      ],
+    };
+    prisma.productionOrderWeighingRecords.findMany.mockResolvedValue([
+      {
+        id: 1,
+        lines: [
+          line,
+          {
+            ...line,
+            id: 2,
+            planned_quantity: new Prisma.Decimal('0.2'),
+            details: [{ net_weight: new Prisma.Decimal('-0.1'), unit: 'g' }],
+          },
+        ],
+      },
+      { id: 3, lines: [] },
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'get_weighing_records',
+      arguments: { ids: [3, 99, 1] },
+    }).expect(200);
+    const result = body(response).result.structuredContent as any;
+    expect(result.missing_ids).toEqual([99]);
+    expect(result.data.map((row) => row.id)).toEqual([3, 1]);
+    expect(result.data[1].material_totals).toEqual([
+      {
+        item_code: 'NL001',
+        unit: 'g',
+        line_ids: [1, 2],
+        required_quantity: '0.3',
+        actual_quantities: [{ unit: 'g', quantity: '0.2' }],
+        weighing_count: 2,
+      },
+    ]);
+    expect(result.data[1].lines[0].details[0].images).toHaveLength(2);
+    expect(result.data[1].lines[0].details[0].note).toBe('note');
+    const query =
+      prisma.productionOrderWeighingRecords.findMany.mock.calls[0][0];
+    expect(query.select.createdBy.select).toEqual({
+      id: true,
+      name: true,
+      username: true,
+    });
+    expect(query.select.lines.select.details.select.weighedBy.select).toEqual({
+      id: true,
+      name: true,
+      username: true,
+    });
+  });
+
+  it('returns only weighed lines in results view while keeping all required totals', async () => {
+    prisma.productionOrderWeighingRecords.findMany.mockResolvedValue([
+      {
+        id: 1,
+        lines: [
+          {
+            id: 1,
+            item_code: 'A',
+            unit: 'g',
+            planned_quantity: new Prisma.Decimal(2),
+            details: [],
+          },
+          {
+            id: 2,
+            item_code: 'A',
+            unit: 'g',
+            planned_quantity: new Prisma.Decimal(3),
+            details: [{ net_weight: new Prisma.Decimal(-1), unit: 'g' }],
+          },
+        ],
+      },
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'get_weighing_records',
+      arguments: { ids: [1], view: 'results' },
+    }).expect(200);
+    const result = body(response).result.structuredContent as any;
+    expect(result.data[0].lines.map((line) => line.id)).toEqual([2]);
+    expect(result.data[0].material_totals[0].required_quantity).toBe('5');
+  });
+
+  it.each([
+    ['get_weighing_records', { ids: [] }],
+    ['get_weighing_records', { ids: [1, 1] }],
+    [
+      'get_weighing_records',
+      { ids: Array.from({ length: 11 }, (_, i) => i + 1) },
+    ],
+    ['get_weighing_records', { ids: [0] }],
+    ['get_weighing_records', { ids: [1], view: 'unknown' }],
+    ['search_weighing_records', { qa_status: 'done' }],
+    ['search_weighing_records', { status: 'unknown' }],
+    [
+      'search_weighing_records',
+      { date_from: '2026-10-26', date_to: '2026-10-25' },
+    ],
+    ['search_weighing_records', { limit: 101 }],
+    ['search_weighing_records', { material_code: ' ' }],
+  ])('validates weighing arguments for %s: %j', async (name, args) => {
+    const response = await rpc('tools/call', { name, arguments: args }).expect(
+      200,
+    );
+    expect(body(response).result.isError).toBe(true);
+    expect(
+      prisma.productionOrderWeighingRecords.findMany,
+    ).not.toHaveBeenCalled();
+  });
+
+  it.each(['search_weighing_records', 'get_weighing_records'])(
+    'requires read permission for %s',
+    async (name) => {
+      const identity = authenticated();
+      identity.auth.extra.permissions = ['production-orders.list'];
+      oauth.resolveMcpToken.mockResolvedValue(identity);
+      const response = await rpc('tools/call', {
+        name,
+        arguments: name === 'get_weighing_records' ? { ids: [1] } : {},
+      }).expect(200);
+      expect(body(response).result.isError).toBe(true);
+      expect(
+        prisma.productionOrderWeighingRecords.findMany,
+      ).not.toHaveBeenCalled();
+      expect(
+        prisma.productionOrderWeighingRecords.count,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
+  it('links weighing records from the production-order detail without loading their contents', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      id: 7,
+      weighingRecords: [{ id: 5 }, { id: 6 }],
+      samplingRequests: [],
+    });
+    const response = await rpc('tools/call', {
+      name: 'get_production_order',
+      arguments: { id: 7 },
+    }).expect(200);
+    const result = body(response).result.structuredContent as any;
+    expect(result.data.sections.weighing_records).toEqual({
+      available: true,
+      total: 2,
+      ids: [5, 6],
+      detail_tool: 'get_weighing_records',
+    });
+    expect(
+      prisma.productionOrders.findUnique.mock.calls[0][0].select.weighingRecords
+        .select,
+    ).toEqual({ id: true });
+  });
+
+  it('exposes exactly twelve read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
@@ -1272,6 +1487,8 @@ describe('MCP Streamable HTTP endpoint', () => {
       'search_items',
       'get_item',
       'search_production_order_deviations',
+      'search_weighing_records',
+      'get_weighing_records',
       'search_mixing_records',
       'get_mixing_records',
       'analyze_production_parameters',

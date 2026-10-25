@@ -50,7 +50,30 @@ vào client MCP. Không cần API key của nhà cung cấp AI để chạy modu
 | `analyze_production_parameters`      | `source`, `parameter`, bộ lọc lệnh/ngày/công đoạn/đơn vị, `group_by?`, `sort_by?`, `page?`, `limit?`                                          | Thống kê số học trên nhiều lô, phân biệt phép đo và lô       |
 | `get_production_statistics`          | `metrics?`, bộ lọc lệnh/ngày, `group_by?`, `category?`, `page?`, `limit?`                                                                     | Tổng hợp số lô, hồ sơ, PYCLM, sản lượng và các nhóm đã chọn  |
 
-Có mười tên tool trên được đăng ký. Phiếu pha chế/gia công được tìm và đọc riêng;
+Hai tool bổ sung cho phiếu cân:
+
+| Tool | Tham số | Kết quả |
+| --- | --- | --- |
+| `search_weighing_records` | `production_order_id?`, `production_order_code?`, `item_code?`, `lot_no?`, `query?`, `material_code?`, `status?`, `has_weights?`, `created_by_id?`, `qa_status?`, `ipc_status?`, `date_from?`, `date_to?`, `page?`, `limit?` | Metadata phiếu cân, người tạo/duyệt và số dòng nguyên liệu; có phân trang |
+| `get_weighing_records` | `ids` (1–10 ID khác nhau), `view?` (`full` hoặc `results`) | Nguyên liệu, lượng yêu cầu, từng lần cân kể cả âm, ghi chú, người/thời điểm cân, tất cả tham chiếu ảnh và duyệt QA/IPC |
+
+Phiếu cân dùng quyền `production-orders.read`, scope OAuth `mcp:read` và phạm vi lệnh của vai trò giống các tool khác. Tool chỉ đọc dữ liệu cục bộ; không tải tệp ảnh, không tạo/sửa/xóa/ký phiếu. `item_code` lọc sản phẩm của lệnh, `material_code` lọc mã nguyên liệu trong phiếu. Bộ lọc `has_weights` xét có/chưa có bất kỳ lần cân nào trên phiếu; ngày lọc `created_at` theo Việt Nam, bao gồm toàn bộ ngày cuối.
+
+`get_production_order` bổ sung `sections.weighing_records` với `total`, `ids`, `detail_tool=get_weighing_records`. Khi đọc phiếu, `material_totals` cộng yêu cầu theo mã nguyên liệu và đơn vị, thực tế cộng mọi lần cân của các dòng thuộc nhóm, tách từng đơn vị và tính cả số âm. `actual_quantities=[]` là chưa cân, khác với đã cân có tổng bằng 0. Không quy đổi đơn vị hoặc suy ra đạt yêu cầu. `view=results` chỉ giữ dòng có lần cân nhưng tổng yêu cầu vẫn tính từ toàn bộ phiếu. Kết quả giữ thứ tự `ids`; `missing_ids` gồm ID không tồn tại hoặc ngoài phạm vi.
+
+`search_production_orders` hỗ trợ `presence.weighing_records`, `include: ["weighing_records"]`, `counts: ["weighing_records"]` và `weighing_status`, `weighing_qa_status`, `weighing_ipc_status`, `weighing_has_weights`. QA/IPC dùng `approved|pending`, kiểm tra trên cùng phiếu. `weighing_has_weights=false` nghĩa là không có phiếu phù hợp bộ lọc đã ghi lần cân; có thể kết hợp presence để yêu cầu lô đã tạo phiếu. Count đếm số phiếu, không đếm số lần cân; count/presence áp dụng `weighing_status` nếu truyền, cờ QA/IPC là metadata riêng. Có dữ liệu hay có người duyệt không phải kết luận đạt chất lượng.
+
+Ví dụ tìm rồi đọc phiếu cân:
+
+```json
+{ "name": "search_weighing_records", "arguments": { "production_order_id": 7, "qa_status": "pending", "has_weights": true } }
+```
+
+```json
+{ "name": "get_weighing_records", "arguments": { "ids": [1, 2], "view": "full" } }
+```
+
+Có mười hai tên tool được đăng ký. Phiếu cân và phiếu pha chế/gia công được tìm và đọc riêng;
 `get_production_order` chỉ giữ số lượng/ID tham chiếu của nhóm này. Các nhóm sai
 lệch, checklist, kiểm tra, tổng kết, đóng gói, lấy mẫu và tài liệu tiếp tục nằm
 trong hồ sơ lô. Client đã kết nối trước đó cần làm mới danh sách tool.

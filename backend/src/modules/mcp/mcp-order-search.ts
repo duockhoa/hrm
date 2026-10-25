@@ -34,6 +34,13 @@ export const orderSearchGroups: Record<string, Group> = Object.fromEntries(
   }),
 );
 Object.assign(orderSearchGroups, {
+  weighing_records: {
+    relation: 'weighingRecords',
+    table: 'production_order_weighing_records',
+    dateField: 'created_at',
+    singleton: false,
+    permission: read,
+  },
   mixing_records: {
     relation: 'mixingRecords',
     table: 'production_order_mixing_records',
@@ -136,6 +143,12 @@ export const orderSearchSchema = z
     mixing_qa_status: approval(),
     mixing_ipc_status: approval(),
     mixing_has_results: z.boolean().optional(),
+    weighing_status: z
+      .enum(['draft', 'in_progress', 'completed', 'approved', 'cancelled'])
+      .optional(),
+    weighing_qa_status: approval(),
+    weighing_ipc_status: approval(),
+    weighing_has_weights: z.boolean().optional(),
     sampling_type: text(),
     semi_finished_summary_stage: text(),
     material_process_stage: text(),
@@ -203,6 +216,11 @@ const hasEnteredValue = Prisma.sql`EXISTS (
   WHERE ms.production_order_mixing_record_id=r.id AND
   (mp.result_value REGEXP '[^[:space:]]' OR mp.result_image_path REGEXP '[^[:space:]]')
 )`;
+const hasWeighingWeights = Prisma.sql`EXISTS (
+  SELECT 1 FROM production_order_weighing_record_lines wl
+  JOIN production_order_weighing_record_details wd ON wd.production_order_weighing_record_line_id=wl.id
+  WHERE wl.production_order_weighing_record_id=r.id
+)`;
 
 function groupConditions(key: string, input: OrderSearchInput) {
   const prisma: Record<string, unknown> = {};
@@ -224,6 +242,8 @@ function groupConditions(key: string, input: OrderSearchInput) {
   }
   if (key === 'mixing_records' && input.mixing_record_type)
     eq('record_type', input.mixing_record_type);
+  if (key === 'weighing_records' && input.weighing_status)
+    eq('status', input.weighing_status);
   if (key === 'sampling_records' && input.sampling_type)
     eq('sampling_type', input.sampling_type);
   if (
@@ -478,6 +498,31 @@ export function buildOrderSearch(
     ]);
     sql.push(input.mixing_has_results ? expression : not(expression));
   }
+  const weighingCriteria: Record<string, unknown> = {};
+  const weighingSql: Prisma.Sql[] = [];
+  for (const [status, field] of [
+    [input.weighing_qa_status, 'qa_staff_approved_by_id'],
+    [input.weighing_ipc_status, 'ipc_staff_approved_by_id'],
+  ] as const) {
+    if (!status) continue;
+    weighingCriteria[field] = status === 'approved' ? { not: null } : null;
+    weighingSql.push(
+      status === 'approved'
+        ? Prisma.sql`${col('r', field)} IS NOT NULL`
+        : Prisma.sql`${col('r', field)} IS NULL`,
+    );
+  }
+  if (input.weighing_status || weighingSql.length)
+    hasCriteria('weighing_records', weighingCriteria, weighingSql);
+  if (input.weighing_has_weights !== undefined) {
+    use('weighing_records');
+    requiresSql = true;
+    const expression = existsSql('weighing_records', input, [
+      ...weighingSql,
+      hasWeighingWeights,
+    ]);
+    sql.push(input.weighing_has_weights ? expression : not(expression));
+  }
   if (input.sampling_type) hasCriteria('sampling_records', {}, []);
   if (input.semi_finished_summary_stage)
     hasCriteria('semi_finished_product_summaries', {}, []);
@@ -619,7 +664,7 @@ export function orderSearchMetadataQuery(plan: Plan, ids: number[]) {
           existsSql(key, plan.input, [Prisma.sql`r.requires_approval=1`]),
           'boolean',
         );
-      if (key === 'mixing_records') {
+      if (key === 'mixing_records' || key === 'weighing_records') {
         for (const [name, field] of [
           ['qa', 'qa_staff_approved_by_id'],
           ['ipc', 'ipc_staff_approved_by_id'],
@@ -641,11 +686,28 @@ export function orderSearchMetadataQuery(plan: Plan, ids: number[]) {
             'boolean',
           );
         }
-        if (plan.input.mixing_has_results !== undefined) {
-          const enteredScope: Prisma.Sql[] = [hasEnteredValue];
+        const weighing = key === 'weighing_records';
+        if (
+          (weighing
+            ? plan.input.weighing_has_weights
+            : plan.input.mixing_has_results) !== undefined
+        ) {
+          const enteredScope: Prisma.Sql[] = [
+            weighing ? hasWeighingWeights : hasEnteredValue,
+          ];
           for (const [status, field] of [
-            [plan.input.mixing_qa_status, 'qa_staff_approved_by_id'],
-            [plan.input.mixing_ipc_status, 'ipc_staff_approved_by_id'],
+            [
+              weighing
+                ? plan.input.weighing_qa_status
+                : plan.input.mixing_qa_status,
+              'qa_staff_approved_by_id',
+            ],
+            [
+              weighing
+                ? plan.input.weighing_ipc_status
+                : plan.input.mixing_ipc_status,
+              'ipc_staff_approved_by_id',
+            ],
           ] as const) {
             if (status)
               enteredScope.push(
@@ -656,7 +718,7 @@ export function orderSearchMetadataQuery(plan: Plan, ids: number[]) {
           }
           add(
             key,
-            'has_results',
+            weighing ? 'has_weights' : 'has_results',
             existsSql(key, plan.input, enteredScope),
             'boolean',
           );
