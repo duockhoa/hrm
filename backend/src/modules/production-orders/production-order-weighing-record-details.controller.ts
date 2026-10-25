@@ -14,10 +14,15 @@ import {
   Res,
   StreamableFile,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FilesInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { createReadStream } from 'fs';
 import type { Response } from 'express';
@@ -70,15 +75,33 @@ export class ProductionOrderWeighingRecordDetailsController {
       properties: {
         net_weight: { oneOf: [{ type: 'string' }, { type: 'number' }] },
         note: { type: 'string', nullable: true },
-        image: { type: 'string', format: 'binary' },
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          maxItems: 20,
+        },
+        image: {
+          type: 'string',
+          format: 'binary',
+          description: 'Legacy single-image field',
+        },
       },
     },
   })
   @UseInterceptors(
     new WeighingDetailUploadCleanupInterceptor(),
-    FileInterceptor(
-      'image',
-      productionOrderWeighingRecordDetailImageUploadOptions,
+    FileFieldsInterceptor(
+      [
+        { name: 'image', maxCount: 1 },
+        { name: 'images', maxCount: 20 },
+      ],
+      {
+        ...productionOrderWeighingRecordDetailImageUploadOptions,
+        limits: {
+          ...productionOrderWeighingRecordDetailImageUploadOptions.limits,
+          files: 20,
+        },
+      },
     ),
   )
   create(
@@ -86,10 +109,20 @@ export class ProductionOrderWeighingRecordDetailsController {
     @Param('lineId', ParseIntPipe) lineId: number,
     @Body() dto: CreateProductionOrderWeighingRecordDetailDto,
     @Request() req: UserRequest,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles()
+    files?: { image?: Express.Multer.File[]; images?: Express.Multer.File[] },
   ) {
-    return file
-      ? this.service.create(recordId, lineId, dto, req.user, file)
+    const uploaded = [...(files?.image ?? []), ...(files?.images ?? [])];
+    return uploaded.length
+      ? this.service.create(
+          recordId,
+          lineId,
+          dto,
+          req.user,
+          uploaded.length === 1 && files?.image?.length
+            ? uploaded[0]
+            : uploaded,
+        )
       : this.service.create(recordId, lineId, dto, req.user);
   }
 
@@ -113,6 +146,52 @@ export class ProductionOrderWeighingRecordDetailsController {
     @Param('detailId', ParseIntPipe) id: number,
   ) {
     return this.service.delete(recordId, lineId, id);
+  }
+
+  @Post(':detailId/images')
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['images'],
+      properties: {
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          maxItems: 20,
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    new WeighingDetailUploadCleanupInterceptor(),
+    FilesInterceptor('images', 20, {
+      ...productionOrderWeighingRecordDetailImageUploadOptions,
+      limits: {
+        ...productionOrderWeighingRecordDetailImageUploadOptions.limits,
+        files: 20,
+      },
+    }),
+  )
+  uploadImages(
+    @Param('recordId', ParseIntPipe) recordId: number,
+    @Param('lineId', ParseIntPipe) lineId: number,
+    @Param('detailId', ParseIntPipe) id: number,
+    @UploadedFiles() files?: Express.Multer.File[],
+  ) {
+    return this.service.uploadImages(recordId, lineId, id, files ?? []);
+  }
+
+  @Delete(':detailId/images/:imageId')
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.UPDATE)
+  deleteImageById(
+    @Param('recordId', ParseIntPipe) recordId: number,
+    @Param('lineId', ParseIntPipe) lineId: number,
+    @Param('detailId', ParseIntPipe) id: number,
+    @Param('imageId', ParseIntPipe) imageId: number,
+  ) {
+    return this.service.deleteImageById(recordId, lineId, id, imageId);
   }
 
   @Post(':detailId/image')

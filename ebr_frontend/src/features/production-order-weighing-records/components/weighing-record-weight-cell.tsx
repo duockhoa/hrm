@@ -62,7 +62,7 @@ export default function WeighingRecordWeightCell({
   const [isOpen, setIsOpen] = useState(false);
   const [weight, setWeight] = useState("");
   const [note, setNote] = useState("");
-  const [image, setImage] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -71,21 +71,27 @@ export default function WeighingRecordWeightCell({
   const inputRef = useRef<HTMLInputElement>(null);
   const details = [...(line.details ?? [])].sort((a, b) => a.id - b.id);
 
-  const chooseImage = (file?: File) => {
-    if (!file) return;
-    if (
-      !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
-        file.type,
-      )
-    ) {
-      setError("Chọn ảnh JPG, PNG, WEBP hoặc GIF.");
+  const chooseImages = (files: File[]) => {
+    if (!files.length) return;
+    for (const file of files) {
+      if (
+        !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
+          file.type,
+        )
+      ) {
+        setError("Chọn ảnh JPG, PNG, WEBP hoặc GIF.");
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        setError("Ảnh tối đa 20 MB.");
+        return;
+      }
+    }
+    if (images.length + files.length > 20) {
+      setError("Mỗi lần tải lên tối đa 20 ảnh.");
       return;
     }
-    if (file.size > 20 * 1024 * 1024) {
-      setError("Ảnh tối đa 20 MB.");
-      return;
-    }
-    setImage(file);
+    setImages((current) => [...current, ...files]);
     setError("");
   };
 
@@ -108,12 +114,12 @@ export default function WeighingRecordWeightCell({
         recordId,
         line.id,
         normalized,
-        { note: note.trim() || null, image: image ?? undefined },
+        { note: note.trim() || null, images },
       );
       await onSaved(detail);
       setWeight("");
       setNote("");
-      setImage(null);
+      setImages([]);
       setIsOpen(false);
       toast.success("Đã lưu khối lượng thực tế.");
     } catch (error) {
@@ -157,7 +163,7 @@ export default function WeighingRecordWeightCell({
             onClick={() => {
               setWeight("");
               setNote("");
-              setImage(null);
+              setImages([]);
               setError("");
               setIsOpen(true);
             }}
@@ -244,18 +250,19 @@ export default function WeighingRecordWeightCell({
                 className="hidden"
                 disabled={isSaving || locked}
                 onChange={(event) => {
-                  chooseImage(event.target.files?.[0]);
+                  chooseImages(Array.from(event.target.files ?? []));
                   event.target.value = "";
                 }}
               />
               <input
                 ref={fileRef}
                 type="file"
+                multiple
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 className="hidden"
                 disabled={isSaving || locked}
                 onChange={(event) => {
-                  chooseImage(event.target.files?.[0]);
+                  chooseImages(Array.from(event.target.files ?? []));
                   event.target.value = "";
                 }}
               />
@@ -279,21 +286,28 @@ export default function WeighingRecordWeightCell({
                   Chọn ảnh
                 </Button>
               </div>
-              {image ? (
-                <div className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm">
+              {images.map((image, index) => (
+                <div
+                  key={`${image.name}-${index}`}
+                  className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm"
+                >
                   <span className="min-w-0 break-words">{image.name}</span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
                     disabled={isSaving || locked}
-                    onClick={() => setImage(null)}
+                    onClick={() =>
+                      setImages((current) =>
+                        current.filter((_, position) => position !== index),
+                      )
+                    }
                     aria-label="Bỏ ảnh đã chọn"
                   >
                     <X className="size-4" />
                   </Button>
                 </div>
-              ) : null}
+              ))}
             </div>
             <DialogFooter>
               <Button

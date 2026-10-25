@@ -60,6 +60,7 @@ export type ProductionOrderWeighingRecordDetail = {
   net_weight: string;
   unit: string;
   image_path: string | null;
+  images?: { id: number; image_path: string; created_at: string }[];
   weighed_by_id: number;
   weighedBy: WeighingRecordPerson;
   weighed_at: string;

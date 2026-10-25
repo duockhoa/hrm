@@ -19,6 +19,7 @@ import {
 
 type User = { id?: number | string | null };
 const include = {
+  images: { orderBy: { id: 'asc' } },
   weighedBy: { select: { id: true, username: true, name: true } },
 } satisfies Prisma.ProductionOrderWeighingRecordDetailsInclude;
 
@@ -48,8 +49,12 @@ export class ProductionOrderWeighingRecordDetailsService {
     lineId: number,
     dto: CreateProductionOrderWeighingRecordDetailDto,
     user?: User,
-    file?: Express.Multer.File,
+    file?: Express.Multer.File | Express.Multer.File[],
   ) {
+    const files = file ? (Array.isArray(file) ? file : [file]) : [];
+    const paths = files.map((entry) =>
+      getProductionOrderWeighingRecordDetailImagePath(entry)!,
+    );
     const userId = this.userId(user);
     const data = this.data(dto, true);
     return this.write(recordId, lineId, (tx, line) =>
@@ -59,7 +64,12 @@ export class ProductionOrderWeighingRecordDetailsService {
           net_weight: data.net_weight!,
           unit: line.unit,
           note: data.note,
-          image_path: getProductionOrderWeighingRecordDetailImagePath(file),
+          image_path: paths[0],
+          ...(paths.length
+            ? {
+                images: { create: paths.map((image_path) => ({ image_path })) },
+              }
+            : {}),
           weighed_by_id: userId,
           weighed_at: new Date(),
         },
@@ -100,7 +110,7 @@ export class ProductionOrderWeighingRecordDetailsService {
         include,
       });
     });
-    await this.removeImage(result.image_path);
+    await this.removeImages(result);
     return result;
   }
 
@@ -119,13 +129,16 @@ export class ProductionOrderWeighingRecordDetailsService {
         const current = await this.detail(tx, lineId, id);
         const updated = await tx.productionOrderWeighingRecordDetails.update({
           where: { id, production_order_weighing_record_line_id: lineId },
-          data: { image_path: imagePath },
+          data: {
+            image_path: imagePath,
+            images: { deleteMany: {}, create: { image_path: imagePath } },
+          },
           include,
         });
-        return { updated, oldPath: current.image_path };
+        return { updated, oldPath: current };
       },
     );
-    await this.removeImage(oldPath);
+    await this.removeImages(oldPath);
     return updated;
   }
 
@@ -137,21 +150,96 @@ export class ProductionOrderWeighingRecordDetailsService {
         const current = await this.detail(tx, lineId, id);
         const updated = await tx.productionOrderWeighingRecordDetails.update({
           where: { id, production_order_weighing_record_line_id: lineId },
-          data: { image_path: null },
+          data: { image_path: null, images: { deleteMany: {} } },
           include,
         });
-        return { updated, oldPath: current.image_path };
+        return { updated, oldPath: current };
       },
     );
-    await this.removeImage(oldPath);
+    await this.removeImages(oldPath);
     return updated;
+  }
+
+  async uploadImages(
+    recordId: number,
+    lineId: number,
+    id: number,
+    files: Express.Multer.File[],
+  ) {
+    if (!files.length) throw new BadRequestException('images are required');
+    const paths = files.map((file) =>
+      getProductionOrderWeighingRecordDetailImagePath(file)!,
+    );
+    return this.write(recordId, lineId, async (tx) => {
+      const current = await this.detail(tx, lineId, id);
+      return tx.productionOrderWeighingRecordDetails.update({
+        where: { id, production_order_weighing_record_line_id: lineId },
+        data: {
+          image_path: current.image_path ?? paths[0],
+          images: { create: paths.map((image_path) => ({ image_path })) },
+        },
+        include,
+      });
+    });
+  }
+
+  async deleteImageById(
+    recordId: number,
+    lineId: number,
+    id: number,
+    imageId: number,
+  ) {
+    const { updated, path } = await this.write(recordId, lineId, async (tx) => {
+      const current = await this.detail(tx, lineId, id);
+      const image = current.images.find((entry) => entry.id === imageId);
+      if (!image)
+        throw new NotFoundException('Weighing detail image not found');
+      const remaining = current.images.filter((entry) => entry.id !== imageId);
+      const updated = await tx.productionOrderWeighingRecordDetails.update({
+        where: { id, production_order_weighing_record_line_id: lineId },
+        data: {
+          image_path: remaining[0]?.image_path ?? null,
+          images: { delete: { id: imageId } },
+        },
+        include,
+      });
+      return { updated, path: image.image_path };
+    });
+    await this.removeImage(path);
+    return updated;
+  }
+
+  private async removeImages(detail: {
+    image_path: string | null;
+    images?: { image_path: string }[];
+  }) {
+    const paths = new Set([
+      detail.image_path,
+      ...(detail.images ?? []).map((image) => image.image_path),
+    ]);
+    await Promise.all(
+      [...paths]
+        .filter((path): path is string => Boolean(path))
+        .map((path) => this.removeImage(path)),
+    );
   }
 
   async findImage(filename: string, original = false) {
     const detail =
       await this.prisma.productionOrderWeighingRecordDetails.findFirst({
         where: {
-          image_path: `${PRODUCTION_ORDER_WEIGHING_RECORD_DETAIL_IMAGE_ROUTE}/${filename}`,
+          OR: [
+            {
+              image_path: `${PRODUCTION_ORDER_WEIGHING_RECORD_DETAIL_IMAGE_ROUTE}/${filename}`,
+            },
+            {
+              images: {
+                some: {
+                  image_path: `${PRODUCTION_ORDER_WEIGHING_RECORD_DETAIL_IMAGE_ROUTE}/${filename}`,
+                },
+              },
+            },
+          ],
         },
         select: { id: true },
       });

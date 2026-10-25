@@ -152,6 +152,7 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
         details: {
           orderBy: { id: 'asc' },
           include: {
+            images: { orderBy: { id: 'asc' } },
             weighedBy: { select: { id: true, username: true, name: true } },
           },
         },

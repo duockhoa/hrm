@@ -44,6 +44,10 @@ describe('Weighing record details', () => {
     net_weight: new Prisma.Decimal('1'),
     unit: 'kg',
     image_path: '/images/old.png',
+    images: [
+      { id: 11, image_path: '/images/old.png' },
+      { id: 12, image_path: '/images/second.png' },
+    ],
     weighed_by_id: 1,
   };
   beforeEach(() => {
@@ -279,9 +283,120 @@ describe('Weighing record details', () => {
     await expect(service.deleteImage(3, 7, 9)).rejects.toBeInstanceOf(
       ConflictException,
     );
+    await expect(service.uploadImages(3, 7, 9, [file])).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    await expect(service.deleteImageById(3, 7, 9, 11)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
     expect(
       removeProductionOrderWeighingRecordDetailImageByPath,
     ).not.toHaveBeenCalled();
+  });
+
+  it('creates all images together with the weight', async () => {
+    await service.create(3, 7, { net_weight: '1' }, { id: 4 }, [
+      { filename: 'a.png' },
+      { filename: 'b.png' },
+    ] as Express.Multer.File[]);
+    expect(
+      prisma.productionOrderWeighingRecordDetails.create,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          image_path: '/images/a.png',
+          images: {
+            create: [
+              { image_path: '/images/a.png' },
+              { image_path: '/images/b.png' },
+            ],
+          },
+        }),
+      }),
+    );
+  });
+
+  it('appends images without replacing existing images', async () => {
+    await service.uploadImages(3, 7, 9, [
+      { filename: 'a.png' },
+    ] as Express.Multer.File[]);
+    expect(
+      prisma.productionOrderWeighingRecordDetails.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          image_path: '/images/old.png',
+          images: { create: [{ image_path: '/images/a.png' }] },
+        },
+      }),
+    );
+    expect(
+      removeProductionOrderWeighingRecordDetailImageByPath,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('deletes only the requested image and updates the legacy preview', async () => {
+    await service.deleteImageById(3, 7, 9, 11);
+    expect(
+      prisma.productionOrderWeighingRecordDetails.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          image_path: '/images/second.png',
+          images: { delete: { id: 11 } },
+        },
+      }),
+    );
+    expect(
+      removeProductionOrderWeighingRecordDetailImageByPath,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      removeProductionOrderWeighingRecordDetailImageByPath,
+    ).toHaveBeenCalledWith('/images/old.png');
+  });
+
+  it('rejects deleting an image belonging to a different detail', async () => {
+    await expect(service.deleteImageById(3, 7, 9, 99)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(
+      prisma.productionOrderWeighingRecordDetails.update,
+    ).not.toHaveBeenCalled();
+    expect(
+      removeProductionOrderWeighingRecordDetailImageByPath,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('serves images through the scoped detail and its image relation', async () => {
+    await service.findImage('second.png');
+    expect(
+      prisma.productionOrderWeighingRecordDetails.findFirst,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [
+            { image_path: '/images/second.png' },
+            { images: { some: { image_path: '/images/second.png' } } },
+          ],
+        },
+      }),
+    );
+    expect(
+      productionOrderModelWhere(
+        'ProductionOrderWeighingRecordDetailImages',
+        [42],
+      ),
+    ).toEqual({
+      weighingRecordDetail: {
+        is: {
+          weighingRecordLine: {
+            is: {
+              weighingRecord: { is: { production_order_id: { in: [42] } } },
+            },
+          },
+        },
+      },
+    });
   });
 
   it('replaces and removes a single image only after the database change', async () => {

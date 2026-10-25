@@ -12,6 +12,17 @@ Bấm **Phiếu cân** để mở danh sách inline, có nút quay lại và **T
 
 ## API
 
+### Nhiều ảnh cho từng lần cân
+
+Bảng `production_order_weighing_record_detail_images` có `id`, `production_order_weighing_record_detail_id` (FK tới lần cân, xóa cascade), `image_path`, `created_at`. Một lần cân có nhiều ảnh; API trả mảng `images` theo ID tăng dần. Migration sao chép đường dẫn ảnh cũ sang bảng mới. Giữ `image_path` trên lần cân để tương thích; giá trị này trỏ tới ảnh đầu tiên.
+
+- POST tạo lần cân: multipart gồm `net_weight`, `note` tùy chọn và nhiều phần `images`. Tối đa 20 ảnh/request, mỗi ảnh tối đa 20 MB, định dạng JPG/PNG/WEBP/GIF. Lưu lần cân và các dòng ảnh trong cùng transaction; dọn tệp nếu request thất bại. Trường `image` cũ vẫn được hỗ trợ.
+- `POST /production-orders/weighing-records/:recordId/lines/:lineId/details/:detailId/images`: tải thêm nhiều ảnh, không thay thế ảnh hiện có; quyền `production-orders.update`.
+- `DELETE /production-orders/weighing-records/:recordId/lines/:lineId/details/:detailId/images/:imageId`: xóa riêng một ảnh thuộc lần cân; quyền `production-orders.update`.
+- Các endpoint `/image` cũ tiếp tục thay thế/xóa toàn bộ ảnh. Tất cả thao tác ảnh vẫn khóa sau chữ ký đầu tiên; truy cập ảnh kế thừa phạm vi lệnh sản xuất.
+
+Form nhập lần cân cho phép chọn nhiều ảnh và chụp bổ sung; có thể bỏ riêng từng ảnh trước khi lưu. Bảng chi tiết lần cân hiển thị toàn bộ ảnh với chức năng xem lớn.
+
 Trong form thêm hàng hóa theo giai đoạn, nút **Thêm thủ công** mở bảng nguyên vật liệu của lệnh sản xuất. Có thể tìm kiếm và chọn nhiều dòng; các dòng đã thêm được đánh dấu và không thể chọn lại. Dữ liệu được sao chép từ nguồn phía server, lưu toàn bộ lựa chọn trong một transaction và khóa thêm sau khi phiếu có chữ ký.
 
 - `GET /production-orders/weighing-records/:recordId/source-materials`: danh sách dòng `pit_Item`, gồm cả dòng không có giai đoạn và cờ `imported`; quyền `production-orders.read`.

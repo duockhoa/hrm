@@ -8,9 +8,20 @@ export class WeighingDetailUploadCleanupInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler) {
     return next.handle().pipe(
       catchError(async (error: unknown) => {
-        await removeUploadedProductionOrderWeighingRecordDetailImage(
-          context.switchToHttp().getRequest().file,
-        ).catch(() => undefined);
+        const request = context.switchToHttp().getRequest();
+        const files: Express.Multer.File[] = [
+          ...(request.file ? [request.file] : []),
+          ...(Array.isArray(request.files)
+            ? request.files
+            : Object.values(request.files ?? {}).flat()),
+        ];
+        await Promise.all(
+          files.map((file) =>
+            removeUploadedProductionOrderWeighingRecordDetailImage(file).catch(
+              () => undefined,
+            ),
+          ),
+        );
         throw error;
       }),
     );

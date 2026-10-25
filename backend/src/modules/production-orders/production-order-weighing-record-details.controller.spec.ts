@@ -41,6 +41,8 @@ describe('Weighing detail HTTP API', () => {
       'update',
       'delete',
       'uploadImage',
+      'uploadImages',
+      'deleteImageById',
       'deleteImage',
       'findImage',
     ].map((key) => [key, jest.fn().mockResolvedValue({ id: 9 })]),
@@ -97,6 +99,7 @@ describe('Weighing detail HTTP API', () => {
     ['patch', '/9', 'update', 'update'],
     ['delete', '/9', 'delete', 'delete'],
     ['delete', '/9/image', 'update', 'deleteImage'],
+    ['delete', '/9/images/12', 'update', 'deleteImageById'],
   ] as const)(
     '%s %s validates permission and parent IDs',
     async (method, suffix, permission, action) => {
@@ -220,6 +223,90 @@ describe('Weighing detail HTTP API', () => {
         contentType: 'image/png',
       })
       .expect(409);
+    expect(
+      (await readdir(directory)).filter((name) => name.startsWith(prefix)),
+    ).toEqual([]);
+  });
+
+  it('creates a weighing detail with multiple images in one request', async () => {
+    await request(app.getHttpServer())
+      .post(base)
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.create')
+      .field('net_weight', '-0.5')
+      .attach('images', png, {
+        filename: `${prefix}-a.png`,
+        contentType: 'image/png',
+      })
+      .attach('images', png, {
+        filename: `${prefix}-b.png`,
+        contentType: 'image/png',
+      })
+      .expect(201);
+    expect(service.create.mock.calls[0][4]).toHaveLength(2);
+    expect(service.create.mock.calls[0][2]).toEqual({ net_weight: '-0.5' });
+  });
+
+  it('cleans all uploaded images if the detail cannot be created', async () => {
+    service.create.mockRejectedValueOnce(new ConflictException('signed'));
+    await request(app.getHttpServer())
+      .post(base)
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.create')
+      .field('net_weight', '1')
+      .attach('images', png, {
+        filename: `${prefix}-a.png`,
+        contentType: 'image/png',
+      })
+      .attach('images', png, {
+        filename: `${prefix}-b.png`,
+        contentType: 'image/png',
+      })
+      .expect(409);
+    expect(
+      (await readdir(directory)).filter((name) => name.startsWith(prefix)),
+    ).toEqual([]);
+  });
+
+  it('appends images using the update permission and parses image deletion IDs', async () => {
+    await request(app.getHttpServer())
+      .post(`${base}/9/images`)
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.update')
+      .attach('images', png, {
+        filename: `${prefix}-a.png`,
+        contentType: 'image/png',
+      })
+      .attach('images', png, {
+        filename: `${prefix}-b.png`,
+        contentType: 'image/png',
+      })
+      .expect(201);
+    expect(service.uploadImages.mock.calls[0].slice(0, 3)).toEqual([3, 7, 9]);
+    expect(service.uploadImages.mock.calls[0][3]).toHaveLength(2);
+    await request(app.getHttpServer())
+      .delete(`${base}/9/images/12`)
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.update')
+      .expect(200);
+    expect(service.deleteImageById).toHaveBeenCalledWith(3, 7, 9, 12);
+  });
+
+  it('cleans multi-image uploads when a route parameter is invalid', async () => {
+    await request(app.getHttpServer())
+      .post(`${base}/invalid/images`)
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.update')
+      .attach('images', png, {
+        filename: `${prefix}-a.png`,
+        contentType: 'image/png',
+      })
+      .attach('images', png, {
+        filename: `${prefix}-b.png`,
+        contentType: 'image/png',
+      })
+      .expect(400);
+    expect(service.uploadImages).not.toHaveBeenCalled();
     expect(
       (await readdir(directory)).filter((name) => name.startsWith(prefix)),
     ).toEqual([]);

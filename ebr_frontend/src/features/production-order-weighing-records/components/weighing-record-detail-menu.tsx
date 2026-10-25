@@ -182,16 +182,24 @@ export default function WeighingRecordDetailMenu({
                             {detail.note || "—"}
                           </td>
                           <td className="border border-slate-300 px-3 py-3">
-                            {detail.image_path ? (
-                              <AuthenticatedImage
-                                src={detail.image_path}
-                                alt={`Ảnh lần cân ${index + 1} của ${line.item_code}`}
-                                previewTitle={`Lần cân ${index + 1} — ${line.item_code}`}
-                                width={140}
-                                height={100}
-                                className="h-24 w-full rounded border"
-                                objectFit="contain"
-                              />
+                            {detail.images?.length || detail.image_path ? (
+                              <div className="flex flex-col gap-2">
+                                {(detail.images?.length
+                                  ? detail.images
+                                  : [{ id: 0, image_path: detail.image_path! }]
+                                ).map((image) => (
+                                  <AuthenticatedImage
+                                    key={image.id}
+                                    src={image.image_path}
+                                    alt={`Ảnh lần cân ${index + 1} của ${line.item_code}`}
+                                    previewTitle={`Lần cân ${index + 1} — ${line.item_code}`}
+                                    width={140}
+                                    height={100}
+                                    className="h-24 w-full rounded border"
+                                    objectFit="contain"
+                                  />
+                                ))}
+                              </div>
                             ) : (
                               <span className="text-slate-500">
                                 Chưa có ảnh

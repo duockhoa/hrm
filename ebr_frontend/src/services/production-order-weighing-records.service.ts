@@ -92,14 +92,14 @@ const productionOrderWeighingRecordsService = {
     recordId: number,
     lineId: number,
     netWeight: string,
-    options?: { note?: string | null; image?: File },
+    options?: { note?: string | null; images?: File[] },
   ) {
     const url = `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/details`;
-    if (options?.image) {
+    if (options?.images?.length) {
       const form = new FormData();
       form.append("net_weight", netWeight);
       if (options.note) form.append("note", options.note);
-      form.append("image", options.image);
+      for (const image of options.images) form.append("images", image);
       const response =
         await axiosClient.post<ProductionOrderWeighingRecordDetail>(url, form, {
           headers: { "Content-Type": "multipart/form-data" },
