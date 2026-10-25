@@ -24,6 +24,7 @@ import WeighingRecordMaterialMenu from "./weighing-record-material-menu";
 import WeighingRecordDetailMenu from "./weighing-record-detail-menu";
 import WeighingRecordManualImport from "./weighing-record-manual-import";
 import { formatWeight, groupRequiredQuantities } from "../weight-utils";
+import { summarizeWeighings } from "../weighing-summary";
 
 const compareMaterials = (
   a: ProductionOrderWeighingRecordLine,
@@ -85,6 +86,7 @@ export default function WeighingRecordMaterials({
     service.fetchStages(recordId),
   );
   const stage = stages?.find((entry) => String(entry.id) === selectedStage);
+  const summary = summarizeWeighings(lines ?? []);
 
   const importStage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -328,6 +330,19 @@ export default function WeighingRecordMaterials({
           </p>
         )}
       </div>
+
+      {!isLoading && !error && lines ? (
+        <div className="mt-4 space-y-2 text-[14px] leading-5 print:text-[12px] print:leading-4">
+          <p className="whitespace-pre-wrap break-words">
+            <span className="font-bold">Ghi chú: </span>
+            {summary.notes || "—"}
+          </p>
+          <p className="break-words">
+            <span className="font-bold">Người cân: </span>
+            {summary.weighers || "—"}
+          </p>
+        </div>
+      ) : null}
 
       <Dialog
         open={isImportOpen}
