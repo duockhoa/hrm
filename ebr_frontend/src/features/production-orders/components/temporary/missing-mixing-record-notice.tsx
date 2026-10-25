@@ -59,13 +59,30 @@ export function MissingMixingRecordNoticeScope({
 // call/import in detail-product-order.tsx and unwrap the scope in mainlayout.
 export default function MissingMixingRecordNotice({
   productionOrderId,
+  creationDate,
 }: {
   productionOrderId: string | number;
+  creationDate?: string | null;
 }) {
   const visit = useContext(NoticeVisitContext);
   if (!visit)
     throw new Error("MissingMixingRecordNotice requires its route scope");
   const { status, resolve, dismiss } = visit;
+  const [today] = useState(() =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(
+      new Date(),
+    ),
+  );
+  const createdAt = creationDate ? new Date(creationDate) : null;
+  const createdDay =
+    createdAt !== null && !Number.isNaN(createdAt.getTime())
+      ? new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Ho_Chi_Minh",
+        }).format(createdAt)
+      : null;
+  // Strictly after October 1, excluding today and any future creation dates.
+  const isEligibleDate =
+    createdDay !== null && createdDay > "2026-10-01" && createdDay < today;
   const [memeNumber] = useState(() => Math.floor(Math.random() * 5) + 1);
   const {
     data: records,
@@ -73,7 +90,7 @@ export default function MissingMixingRecordNotice({
     isLoading,
     isValidating,
   } = useSWR(
-    status === "pending"
+    status === "pending" && isEligibleDate
       ? API_ROUTES.productionOrders.mixingRecords(productionOrderId)
       : null,
     () => mixingRecordsService.fetchAllByProductionOrderId(productionOrderId),
@@ -84,6 +101,7 @@ export default function MissingMixingRecordNotice({
   useEffect(() => {
     if (
       status === "pending" &&
+      isEligibleDate &&
       records &&
       !error &&
       !isLoading &&
@@ -91,11 +109,11 @@ export default function MissingMixingRecordNotice({
     ) {
       resolve(records.length === 0);
     }
-  }, [status, records, error, isLoading, isValidating, resolve]);
+  }, [status, isEligibleDate, records, error, isLoading, isValidating, resolve]);
 
   return (
     <Dialog
-      open={status === "open"}
+      open={status === "open" && isEligibleDate}
       onOpenChange={(value) => {
         if (!value) dismiss();
       }}

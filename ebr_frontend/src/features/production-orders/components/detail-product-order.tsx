@@ -805,6 +805,7 @@ export default function ProductOrderDetail({
         <MissingMixingRecordNotice
           key={productionOrderId}
           productionOrderId={productionOrderId}
+          creationDate={productOrder.creation_date ?? productOrder.created_at}
         />
       ) : null}
       <div className="flex flex-col gap-4 rounded border bg-white p-3 text-center shadow-md md:gap-8 md:p-4">
