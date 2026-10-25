@@ -47,9 +47,9 @@ PATCH body (gửi ít nhất một trường):
 
 Cho phép sửa `description`, `status`. Trạng thái được nhập: `draft`, `in_progress`, `completed`, `cancelled`. Gửi `description: null` để xóa nội dung. Các trường khác bị từ chối, bao gồm ID người tạo và thông tin duyệt.
 
-Duyệt QA/IPC không cần body. Chỉ phiếu `completed` được duyệt. Mỗi chữ ký chỉ được ghi một lần; người duyệt và thời gian do server ghi. Phiếu khóa sửa/xóa ngay khi có một chữ ký. Khi đủ cả QA và IPC, trạng thái tự chuyển thành `approved`. API duyệt dùng quyền update giống phiếu pha chế hiện tại, chưa kiểm tra chức danh QA/IPC riêng.
+Duyệt QA/IPC không cần body. Có thể ký duyệt trực tiếp ở mọi trạng thái, không cần hoàn tất phiếu trước. Mỗi chữ ký chỉ được ghi một lần; người duyệt và thời gian do server ghi. Phiếu khóa sửa/xóa ngay khi có một chữ ký. Khi đủ cả QA và IPC, trạng thái tự chuyển thành `approved`. API duyệt dùng quyền update giống phiếu pha chế hiện tại, chưa kiểm tra chức danh QA/IPC riêng.
 
-Cuối detail phiếu cân có hai cột phê duyệt **Nhân viên ĐBCL (QA)** và **Nhân viên IPC**, hiển thị dấu đã duyệt, tên và thời điểm ký. Phiếu nháp/đang thực hiện có nút **Hoàn tất phiếu** trước khi ký. Sau mỗi thao tác, cập nhật dữ liệu detail và danh sách; ngay sau chữ ký đầu tiên, giao diện khóa thêm nguyên liệu theo quy tắc backend. Phiếu đã hủy không được hoàn tất/ký duyệt. Các thao tác dùng quyền `production-orders.update` hiện có.
+Cuối detail phiếu cân có hai cột phê duyệt **Nhân viên ĐBCL (QA)** và **Nhân viên IPC**, hiển thị dấu đã duyệt, tên và thời điểm ký. QA/IPC ký duyệt trực tiếp, không có bước **Hoàn tất phiếu** trước khi ký. Sau mỗi thao tác, cập nhật dữ liệu detail và danh sách; ngay sau chữ ký đầu tiên, giao diện khóa thêm nguyên liệu theo quy tắc backend. Các thao tác dùng quyền `production-orders.update` hiện có.
 
 Danh sách trả về mảng theo ngày tạo và ID giảm dần. Các API khác trả về object phiếu với `createdBy`, `qaStaffApprovedBy`, `ipcStaffApprovedBy` (chỉ `id`, `username`, `name`).
 

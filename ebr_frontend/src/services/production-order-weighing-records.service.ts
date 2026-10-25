@@ -112,6 +112,14 @@ const productionOrderWeighingRecordsService = {
       );
     return response.data;
   },
+  async fetchWeighingDetails(recordId: number, lineId: number) {
+    const response = await axiosClient.get<
+      ProductionOrderWeighingRecordDetail[]
+    >(
+      `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/details`,
+    );
+    return response.data;
+  },
   async fetchStages(recordId: string | number) {
     const response = await axiosClient.get<WeighingImportStage[]>(
       `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/stages`,

@@ -21,6 +21,7 @@ import WeighingRecordWeightCell, {
   WeighingRecordWeightTotal,
 } from "./weighing-record-weight-cell";
 import WeighingRecordMaterialMenu from "./weighing-record-material-menu";
+import WeighingRecordDetailMenu from "./weighing-record-detail-menu";
 
 const compareMaterials = (
   a: ProductionOrderWeighingRecordLine,
@@ -139,7 +140,7 @@ export default function WeighingRecordMaterials({
               <col className="w-[100px]" />
               <col className="w-[200px]" />
               <col className="w-[125px]" />
-              <col className="w-[60px]" />
+              <col className="w-[100px]" />
             </colgroup>
             <thead>
               <tr>
@@ -262,7 +263,13 @@ export default function WeighingRecordMaterials({
                     <WeighingRecordWeightTotal line={line} />
                   </td>
                   <td className="break-words border border-black px-2 py-2 text-center">
-                    {line.unit}
+                    <div className="flex items-center justify-center gap-1">
+                      <span>{line.unit}</span>
+                      <WeighingRecordDetailMenu
+                        recordId={recordId}
+                        line={line}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

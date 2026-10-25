@@ -133,11 +133,6 @@ export class ProductionOrderWeighingRecordsService {
   ) {
     const userId = this.userId(user);
     const record = await this.findById(id);
-    if (record.status !== 'completed') {
-      throw new BadRequestException(
-        'Only completed weighing records can be approved',
-      );
-    }
     const alreadyApproved =
       role === 'qa'
         ? record.qa_staff_approved_at
@@ -154,7 +149,7 @@ export class ProductionOrderWeighingRecordsService {
         // Compare both signatures so concurrent approvals cannot leave status stale.
         where: {
           id,
-          status: 'completed',
+          status: record.status,
           qa_staff_approved_at: record.qa_staff_approved_at,
           ipc_staff_approved_at: record.ipc_staff_approved_at,
         },
@@ -162,7 +157,7 @@ export class ProductionOrderWeighingRecordsService {
           ...(role === 'qa'
             ? { qa_staff_approved_by_id: userId, qa_staff_approved_at: now }
             : { ipc_staff_approved_by_id: userId, ipc_staff_approved_at: now }),
-          status: otherApproved ? 'approved' : 'completed',
+          status: otherApproved ? 'approved' : record.status,
         },
         include: recordInclude,
       });

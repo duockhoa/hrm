@@ -11,7 +11,7 @@ import type {
   WeighingRecordPerson,
 } from "../types";
 
-type Action = "complete" | "qa" | "ipc";
+type Action = "qa" | "ipc";
 const formatDate = (value: string) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -25,7 +25,6 @@ function ApprovalColumn({
   approvedBy,
   busy,
   submitting,
-  canApprove,
   onApprove,
 }: {
   title: string;
@@ -33,7 +32,6 @@ function ApprovalColumn({
   approvedBy: WeighingRecordPerson | null;
   busy: boolean;
   submitting: boolean;
-  canApprove: boolean;
   onApprove: () => void;
 }) {
   const approved = Boolean(approvedAt);
@@ -44,17 +42,13 @@ function ApprovalColumn({
         type="button"
         variant="ghost"
         className="mt-10 h-auto gap-2 px-3 py-2 font-serif font-normal text-black hover:bg-gray-100"
-        disabled={busy || approved || !canApprove}
+        disabled={busy || approved}
         aria-pressed={approved}
         aria-label={
           approved ? `${title} đã ký duyệt` : `Ký duyệt với vai trò ${title}`
         }
         title={
-          approved
-            ? `${title} đã ký duyệt`
-            : canApprove
-              ? `Ký duyệt với vai trò ${title}`
-              : "Hoàn tất phiếu để ký duyệt"
+          approved ? `${title} đã ký duyệt` : `Ký duyệt với vai trò ${title}`
         }
         onClick={onApprove}
       >
@@ -98,42 +92,24 @@ export default function WeighingRecordApprovals({
   const [action, setAction] = useState<Action | null>(null);
   const [error, setError] = useState("");
   const busyRef = useRef(false);
-  const signed = Boolean(
-    record.qa_staff_approved_at || record.ipc_staff_approved_at,
-  );
-  const canComplete =
-    !signed && (record.status === "draft" || record.status === "in_progress");
-  const canApprove = record.status === "completed";
-
   const perform = async (next: Action) => {
     if (busyRef.current) return;
     if (
-      next === "complete"
-        ? !canComplete
-        : !canApprove ||
-          Boolean(
-            next === "qa"
-              ? record.qa_staff_approved_at
-              : record.ipc_staff_approved_at,
-          )
+      next === "qa" ? record.qa_staff_approved_at : record.ipc_staff_approved_at
     )
       return;
     busyRef.current = true;
     setAction(next);
     setError("");
     try {
-      const updated = await (next === "complete"
-        ? service.complete(record.id)
-        : next === "qa"
-          ? service.approveByQaStaff(record.id)
-          : service.approveByIpcStaff(record.id));
+      const updated = await (next === "qa"
+        ? service.approveByQaStaff(record.id)
+        : service.approveByIpcStaff(record.id));
       await onChanged(updated);
       toast.success(
-        next === "complete"
-          ? "Đã hoàn tất phiếu cân."
-          : next === "qa"
-            ? "Nhân viên QA đã ký duyệt phiếu cân."
-            : "Nhân viên IPC đã ký duyệt phiếu cân.",
+        next === "qa"
+          ? "Nhân viên QA đã ký duyệt phiếu cân."
+          : "Nhân viên IPC đã ký duyệt phiếu cân.",
       );
     } catch (error) {
       const detail: unknown = isAxiosError(error)
@@ -155,29 +131,6 @@ export default function WeighingRecordApprovals({
 
   return (
     <section className="mt-6" aria-label="Phê duyệt phiếu cân">
-      {canComplete ? (
-        <div className="flex items-center justify-between gap-4 border-y border-gray-200 px-3 py-3 font-sans text-sm">
-          <p>Hoàn tất phiếu để ký duyệt QA và IPC.</p>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={action !== null}
-            onClick={() => void perform("complete")}
-          >
-            {action === "complete" ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Check className="size-4" />
-            )}
-            Hoàn tất phiếu
-          </Button>
-        </div>
-      ) : null}
-      {record.status === "cancelled" ? (
-        <p className="px-3 py-2 font-sans text-sm text-slate-500">
-          Phiếu đã hủy, không thể ký duyệt.
-        </p>
-      ) : null}
       {error ? (
         <p role="alert" className="px-3 py-2 font-sans text-sm text-red-600">
           {error}
@@ -190,7 +143,6 @@ export default function WeighingRecordApprovals({
           approvedBy={record.qaStaffApprovedBy}
           busy={action !== null}
           submitting={action === "qa"}
-          canApprove={canApprove}
           onApprove={() => void perform("qa")}
         />
         <ApprovalColumn
@@ -199,7 +151,6 @@ export default function WeighingRecordApprovals({
           approvedBy={record.ipcStaffApprovedBy}
           busy={action !== null}
           submitting={action === "ipc"}
-          canApprove={canApprove}
           onApprove={() => void perform("ipc")}
         />
       </div>

@@ -135,11 +135,29 @@ describe('ProductionOrderWeighingRecordsService', () => {
     expect(prisma.productionOrderWeighingRecords.delete).not.toHaveBeenCalled();
   });
 
-  it('requires completion before signing', async () => {
-    await expect(service.approveByQaStaff(1, { id: 7 })).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-  });
+  it.each(
+    ['draft', 'in_progress', 'completed', 'cancelled'].flatMap((status) =>
+      ['qa', 'ipc'].map((role) => ({ status, role })),
+    ),
+  )(
+    'allows $role to sign a $status record directly',
+    async ({ status, role }) => {
+      prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+        ...record,
+        status,
+      });
+      const result =
+        role === 'qa'
+          ? await service.approveByQaStaff(1, { id: 7 })
+          : await service.approveByIpcStaff(1, { id: 7 });
+      expect(result.status).toBe(status);
+      expect(result[`${role}_staff_approved_by_id`]).toBe(7);
+      expect(result[`${role}_staff_approved_at`]).toBeInstanceOf(Date);
+      expect(prisma.productionOrderWeighingRecords.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ status }) }),
+      );
+    },
+  );
 
   it.each(['qa', 'ipc'])(
     'records the %s signature and approves when both have signed',
