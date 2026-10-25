@@ -4,7 +4,7 @@ import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Check, Edit2, Plus } from "lucide-react";
 import WeighingRecordMaterials from "./weighing-record-materials";
 import WeighingRecordApprovals from "./weighing-record-approvals";
 import useSWR, { useSWRConfig } from "swr";
@@ -63,6 +63,7 @@ export default function ProductionOrderWeighingRecordDetail({
     { fallbackData: initialRecord },
   );
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const locked =
     record.status === "approved" ||
     Boolean(record.qa_staff_approved_at || record.ipc_staff_approved_at);
@@ -107,14 +108,29 @@ export default function ProductionOrderWeighingRecordDetail({
           </p>
         </div>
         {!locked ? (
-          <Button
-            type="button"
-            className="shrink-0 bg-slate-900 text-white hover:bg-slate-800"
-            onClick={() => setIsImportOpen(true)}
-          >
-            <Plus className="size-4" />
-            Thêm mới
-          </Button>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant={isEditing ? "default" : "outline"}
+              aria-pressed={isEditing}
+              onClick={() => setIsEditing((current) => !current)}
+            >
+              {isEditing ? (
+                <Check className="size-4" />
+              ) : (
+                <Edit2 className="size-4" />
+              )}
+              {isEditing ? "Hoàn tất" : "Sửa"}
+            </Button>
+            <Button
+              type="button"
+              className="shrink-0 bg-slate-900 text-white hover:bg-slate-800"
+              onClick={() => setIsImportOpen(true)}
+            >
+              <Plus className="size-4" />
+              Thêm mới
+            </Button>
+          </div>
         ) : null}
       </div>
       <div className="overflow-x-auto bg-gray-50 p-2 sm:p-3">
@@ -237,6 +253,7 @@ export default function ProductionOrderWeighingRecordDetail({
             isImportOpen={isImportOpen}
             onImportOpenChange={setIsImportOpen}
             locked={locked}
+            isEditing={isEditing && !locked}
           />
           <WeighingRecordApprovals
             record={record}

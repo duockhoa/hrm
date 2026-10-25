@@ -18,6 +18,7 @@ import { API_ROUTES } from "@/lib/api-routes";
 import service from "@/services/production-order-weighing-records.service";
 import type { ProductionOrderWeighingRecordLine } from "../types";
 import WeighingRecordWeightCell from "./weighing-record-weight-cell";
+import WeighingRecordMaterialMenu from "./weighing-record-material-menu";
 
 const compareMaterials = (
   a: ProductionOrderWeighingRecordLine,
@@ -47,11 +48,13 @@ export default function WeighingRecordMaterials({
   isImportOpen,
   onImportOpenChange,
   locked,
+  isEditing = false,
 }: {
   recordId: number;
   isImportOpen: boolean;
   onImportOpenChange: (open: boolean) => void;
   locked: boolean;
+  isEditing?: boolean;
 }) {
   const [selectedStage, setSelectedStage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -158,7 +161,43 @@ export default function WeighingRecordMaterials({
               {[...lines].sort(compareMaterials).map((line) => (
                 <tr key={line.id}>
                   <td className="break-words border border-black px-2 py-2">
-                    {line.item_code}
+                    <div className="flex items-start justify-between gap-1">
+                      {isEditing && !locked ? (
+                        <WeighingRecordMaterialMenu
+                          recordId={recordId}
+                          line={line}
+                          disabled={locked}
+                          onUpdated={async (updated) => {
+                            await mutate(
+                              (current) =>
+                                current
+                                  ?.map((entry) =>
+                                    entry.id === updated.id
+                                      ? { ...entry, ...updated }
+                                      : entry,
+                                  )
+                                  .sort(compareMaterials),
+                              { revalidate: false },
+                            );
+                            void mutate().catch(() => undefined);
+                          }}
+                          onDeleted={async () => {
+                            await mutate(
+                              (current) =>
+                                current?.filter(
+                                  (entry) => entry.id !== line.id,
+                                ),
+                              { revalidate: false },
+                            );
+                            void mutate().catch(() => undefined);
+                            void refreshStages().catch(() => undefined);
+                          }}
+                        />
+                      ) : null}
+                      <span className="min-w-0 break-words">
+                        {line.item_code}
+                      </span>
+                    </div>
                   </td>
                   <td className="break-words border border-black px-2 py-2">
                     {line.item_name}

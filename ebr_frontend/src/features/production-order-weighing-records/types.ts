@@ -74,3 +74,10 @@ export type WeighingImportStage = {
   material_count: number;
   imported: boolean;
 };
+
+export type UpdateWeighingRecordLinePayload = Partial<
+  Pick<
+    ProductionOrderWeighingRecordLine,
+    "item_code" | "item_name" | "lot_no" | "planned_quantity" | "unit" | "note"
+  >
+>;
