@@ -51,6 +51,21 @@ export type ProductionOrderWeighingRecordLine = {
   planned_quantity: string;
   unit: string;
   note: string | null;
+  details?: ProductionOrderWeighingRecordDetail[];
+};
+
+export type ProductionOrderWeighingRecordDetail = {
+  id: number;
+  production_order_weighing_record_line_id: number;
+  net_weight: string;
+  unit: string;
+  image_path: string | null;
+  weighed_by_id: number;
+  weighedBy: WeighingRecordPerson;
+  weighed_at: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type WeighingImportStage = {

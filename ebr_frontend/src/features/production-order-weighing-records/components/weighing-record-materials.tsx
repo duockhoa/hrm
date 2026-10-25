@@ -17,6 +17,7 @@ import {
 import { API_ROUTES } from "@/lib/api-routes";
 import service from "@/services/production-order-weighing-records.service";
 import type { ProductionOrderWeighingRecordLine } from "../types";
+import WeighingRecordWeightCell from "./weighing-record-weight-cell";
 
 const compareMaterials = (
   a: ProductionOrderWeighingRecordLine,
@@ -125,24 +126,24 @@ export default function WeighingRecordMaterials({
             </Button>
           </div>
         ) : lines?.length ? (
-          <table className="w-full table-fixed border-collapse border border-black">
+          <table className="w-full min-w-[860px] table-fixed border-collapse border border-black">
             <colgroup>
-              <col className="w-[130px]" />
               <col className="w-[100px]" />
               <col />
               <col className="w-[115px]" />
               <col className="w-[110px]" />
               <col className="w-[70px]" />
+              <col className="w-[220px]" />
             </colgroup>
             <thead>
               <tr>
                 {[
-                  "Giai đoạn",
                   "Mã nguyên liệu",
                   "Tên nguyên liệu",
                   "Số lô",
                   "Lượng yêu cầu",
                   "Đơn vị",
+                  "Khối lượng thực tế",
                 ].map((label) => (
                   <th
                     key={label}
@@ -156,9 +157,6 @@ export default function WeighingRecordMaterials({
             <tbody>
               {[...lines].sort(compareMaterials).map((line) => (
                 <tr key={line.id}>
-                  <td className="break-words border border-black px-2 py-2">
-                    {line.stage_name ?? line.source_stage_id ?? "—"}
-                  </td>
                   <td className="break-words border border-black px-2 py-2">
                     {line.item_code}
                   </td>
@@ -178,6 +176,33 @@ export default function WeighingRecordMaterials({
                   </td>
                   <td className="break-words border border-black px-2 py-2 text-center">
                     {line.unit}
+                  </td>
+                  <td className="border border-black px-2 py-2 align-top">
+                    <WeighingRecordWeightCell
+                      recordId={recordId}
+                      line={line}
+                      locked={locked}
+                      onSaved={async (detail) => {
+                        await mutate(
+                          (current) =>
+                            current?.map((entry) =>
+                              entry.id === line.id
+                                ? {
+                                    ...entry,
+                                    details: [
+                                      ...(entry.details ?? []).filter(
+                                        (saved) => saved.id !== detail.id,
+                                      ),
+                                      detail,
+                                    ],
+                                  }
+                                : entry,
+                            ),
+                          { revalidate: false },
+                        );
+                        void mutate().catch(() => undefined);
+                      }}
+                    />
                   </td>
                 </tr>
               ))}

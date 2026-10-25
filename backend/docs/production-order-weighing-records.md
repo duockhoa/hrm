@@ -132,7 +132,9 @@ Chỉ `net_weight` bắt buộc, phải lớn hơn 0 và nằm trong Decimal(18,
 
 Upload dùng multipart/form-data, trường `image`; tối đa một ảnh trên mỗi lần cân, hỗ trợ JPG/PNG/WEBP/GIF tối đa 20 MB. Tải lại ảnh sẽ thay ảnh cũ, dọn ảnh cũ sau khi DB lưu thành công. Đọc ảnh bằng URL `image_path` với Bearer token; mặc định trả thumbnail, thêm `?original=true` để lấy ảnh gốc. Ảnh được kiểm tra quyền theo lần cân và lệnh sản xuất; chỉ biết tên file không đủ để truy cập. DELETE ảnh đặt `image_path` về null và dọn ảnh gốc/thumbnail; xóa từng lần cân cũng dọn ảnh của lần cân đó. Request upload lỗi sẽ dọn tệp đã nhận, kể cả lỗi ID trên URL.
 
-Mọi request phải khớp chuỗi phiếu → dòng nguyên liệu → lần cân. Sai chuỗi hoặc ngoài phạm vi truy cập trả 404. Tạo/sửa/xóa lần cân và ảnh bị khóa ngay khi phiếu cha đã có chữ ký, giống quy tắc hiện tại cho nguyên liệu. Các thay đổi và kiểm tra khóa nằm trong cùng transaction. Chưa bổ sung giao diện.
+Mọi request phải khớp chuỗi phiếu → dòng nguyên liệu → lần cân. Sai chuỗi hoặc ngoài phạm vi truy cập trả 404. Tạo/sửa/xóa lần cân và ảnh bị khóa ngay khi phiếu cha đã có chữ ký, giống quy tắc hiện tại cho nguyên liệu. Các thay đổi và kiểm tra khóa nằm trong cùng transaction.
+
+Detail phiếu cân có cột **Khối lượng thực tế** trên từng dòng nguyên liệu. Nhập lượng cân rồi bấm dấu **+** hoặc Enter để lưu từng lần; hỗ trợ dấu phẩy/dấu chấm thập phân, tối đa 6 chữ số thập phân. Hiển thị từng lần cân và tổng khối lượng theo đơn vị; tổng cộng bằng số nguyên theo phần triệu để tránh sai số dấu phẩy động, không cộng lẫn các đơn vị khác nhau. `GET` danh sách nguyên liệu trả thêm `details` và `weighedBy` để tải lịch sử cân cùng danh sách, không gọi riêng cho từng dòng. Sau khi lưu, cập nhật lịch sử và tổng ngay; phiếu đã có chữ ký không hiển thị ô nhập. Giao diện ảnh, sửa/xóa từng lần cân chưa được bổ sung.
 
 ## Migration
 

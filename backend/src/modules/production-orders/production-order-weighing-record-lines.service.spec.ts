@@ -148,6 +148,14 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
     ).toHaveBeenCalledWith({
       where: { production_order_weighing_record_id: 3 },
       orderBy: [{ item_code: 'asc' }, { id: 'asc' }],
+      include: {
+        details: {
+          orderBy: { id: 'asc' },
+          include: {
+            weighedBy: { select: { id: true, username: true, name: true } },
+          },
+        },
+      },
     });
   });
 

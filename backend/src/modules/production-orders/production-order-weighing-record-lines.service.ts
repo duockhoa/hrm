@@ -34,6 +34,12 @@ export class ProductionOrderWeighingRecordLinesService {
     return this.prisma.productionOrderWeighingRecordLines.findMany({
       where: { production_order_weighing_record_id: recordId },
       orderBy: [{ item_code: 'asc' }, { id: 'asc' }],
+      include: {
+        details: {
+          orderBy: { id: 'asc' },
+          include: { weighedBy: { select: { id: true, username: true, name: true } } },
+        },
+      },
     });
   }
 
