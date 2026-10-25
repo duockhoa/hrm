@@ -23,6 +23,7 @@ import WeighingRecordWeightCell, {
 import WeighingRecordMaterialMenu from "./weighing-record-material-menu";
 import WeighingRecordDetailMenu from "./weighing-record-detail-menu";
 import WeighingRecordManualImport from "./weighing-record-manual-import";
+import { formatWeight, groupRequiredQuantities } from "../weight-utils";
 
 const compareMaterials = (
   a: ProductionOrderWeighingRecordLine,
@@ -134,15 +135,17 @@ export default function WeighingRecordMaterials({
             </Button>
           </div>
         ) : lines?.length ? (
-          <table className="w-full min-w-[860px] table-fixed border-collapse border border-black">
+          <table className="w-full table-fixed border-collapse border border-black text-[14px] leading-5 print:text-[12px] print:leading-4 [&_td]:[overflow-wrap:anywhere]">
             <colgroup>
-              <col className="w-[80px]" />
-              <col />
-              <col className="w-[95px]" />
-              <col className="w-[100px]" />
-              <col className="w-[200px]" />
-              <col className="w-[125px]" />
-              <col className="w-[100px]" />
+              <col className="w-[9%]" />
+              <col className="w-[18%]" />
+              <col className="w-[12%]" />
+              <col className="w-[9%]" />
+              <col className="w-[10%]" />
+              <col className="w-[11%]" />
+              <col className="w-[12%]" />
+              <col className="w-[10%]" />
+              <col className="w-[9%]" />
             </colgroup>
             <thead>
               <tr>
@@ -151,130 +154,162 @@ export default function WeighingRecordMaterials({
                     key={label}
                     rowSpan={2}
                     scope="col"
-                    className="border border-black px-2 py-2 text-center font-bold"
+                    className="border border-black px-1 py-1.5 text-center font-bold"
                   >
                     {label}
                   </th>
                 ))}
                 <th
-                  colSpan={4}
+                  colSpan={6}
                   scope="colgroup"
-                  className="border border-black px-2 py-2 text-center font-bold"
+                  className="border border-black px-1 py-1.5 text-center font-bold"
                 >
                   Số lượng/ Đơn vị
                 </th>
               </tr>
               <tr>
-                {["Yêu cầu", "Thực tế", "Tổng khối lượng", "Đơn vị"].map(
-                  (label) => (
-                    <th
-                      key={label}
-                      scope="col"
-                      className="border border-black px-2 py-2 text-center font-bold"
-                    >
-                      {label}
-                    </th>
-                  ),
-                )}
+                {[
+                  "Yêu cầu",
+                  "Tổng lượng YC",
+                  "Tổng khối lượng thực tế",
+                  "Thực tế",
+                  "Tổng khối lượng",
+                  "ĐVT",
+                ].map((label) => (
+                  <th
+                    key={label}
+                    scope="col"
+                    className="border border-black px-1 py-1.5 text-center font-bold"
+                  >
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {[...lines].sort(compareMaterials).map((line) => (
-                <tr key={line.id}>
-                  <td className="break-words border border-black px-2 py-2">
-                    <div className="flex items-start justify-between gap-1">
-                      {isEditing && !locked ? (
-                        <WeighingRecordMaterialMenu
-                          recordId={recordId}
-                          line={line}
-                          disabled={locked}
-                          onUpdated={async (updated) => {
-                            await mutate(
-                              (current) =>
-                                current
-                                  ?.map((entry) =>
-                                    entry.id === updated.id
-                                      ? { ...entry, ...updated }
-                                      : entry,
-                                  )
-                                  .sort(compareMaterials),
-                              { revalidate: false },
-                            );
-                            void mutate().catch(() => undefined);
-                          }}
-                          onDeleted={async () => {
-                            await mutate(
-                              (current) =>
-                                current?.filter(
-                                  (entry) => entry.id !== line.id,
-                                ),
-                              { revalidate: false },
-                            );
-                            void mutate().catch(() => undefined);
-                            void refreshStages().catch(() => undefined);
-                          }}
-                        />
+              {groupRequiredQuantities([...lines].sort(compareMaterials)).map(
+                ({ line, requiredTotal, requiredRowSpan, actualTotals }) => (
+                  <tr key={line.id}>
+                    <td className="break-words border border-black px-1 py-1.5">
+                      <div className="flex items-start justify-between gap-1">
+                        {isEditing && !locked ? (
+                          <WeighingRecordMaterialMenu
+                            recordId={recordId}
+                            line={line}
+                            disabled={locked}
+                            onUpdated={async (updated) => {
+                              await mutate(
+                                (current) =>
+                                  current
+                                    ?.map((entry) =>
+                                      entry.id === updated.id
+                                        ? { ...entry, ...updated }
+                                        : entry,
+                                    )
+                                    .sort(compareMaterials),
+                                { revalidate: false },
+                              );
+                              void mutate().catch(() => undefined);
+                            }}
+                            onDeleted={async () => {
+                              await mutate(
+                                (current) =>
+                                  current?.filter(
+                                    (entry) => entry.id !== line.id,
+                                  ),
+                                { revalidate: false },
+                              );
+                              void mutate().catch(() => undefined);
+                              void refreshStages().catch(() => undefined);
+                            }}
+                          />
+                        ) : null}
+                        <span className="min-w-0 break-words">
+                          {line.item_code}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="break-words border border-black px-1 py-1.5">
+                      {line.item_name}
+                      {line.note ? (
+                        <p className="mt-1 whitespace-pre-wrap text-sm">
+                          {line.note}
+                        </p>
                       ) : null}
-                      <span className="min-w-0 break-words">
-                        {line.item_code}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="break-words border border-black px-2 py-2">
-                    {line.item_name}
-                    {line.note ? (
-                      <p className="mt-1 whitespace-pre-wrap text-sm">
-                        {line.note}
-                      </p>
+                    </td>
+                    <td className="break-words border border-black px-1 py-1.5">
+                      {line.lot_no || "—"}
+                    </td>
+                    <td className="border border-black px-1 py-1.5 text-right tabular-nums">
+                      {quantityLabel(line.planned_quantity)}
+                    </td>
+                    {requiredRowSpan > 0 ? (
+                      <td
+                        rowSpan={requiredRowSpan}
+                        className="border border-black px-1 py-1.5 text-right align-middle tabular-nums"
+                      >
+                        {quantityLabel(requiredTotal)}
+                      </td>
                     ) : null}
-                  </td>
-                  <td className="break-words border border-black px-2 py-2">
-                    {line.lot_no || "—"}
-                  </td>
-                  <td className="border border-black px-2 py-2 text-right tabular-nums">
-                    {quantityLabel(line.planned_quantity)}
-                  </td>
-                  <td className="border border-black px-2 py-2 align-top">
-                    <WeighingRecordWeightCell
-                      recordId={recordId}
-                      line={line}
-                      locked={locked}
-                      onSaved={async (detail) => {
-                        await mutate(
-                          (current) =>
-                            current?.map((entry) =>
-                              entry.id === line.id
-                                ? {
-                                    ...entry,
-                                    details: [
-                                      ...(entry.details ?? []).filter(
-                                        (saved) => saved.id !== detail.id,
-                                      ),
-                                      detail,
-                                    ],
-                                  }
-                                : entry,
-                            ),
-                          { revalidate: false },
-                        );
-                        void mutate().catch(() => undefined);
-                      }}
-                    />
-                  </td>
-                  <td className="border border-black px-2 py-2 text-right tabular-nums">
-                    <WeighingRecordWeightTotal line={line} />
-                  </td>
-                  <td className="break-words border border-black px-2 py-2 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <span>{line.unit}</span>
-                      <WeighingRecordDetailMenu
+                    {requiredRowSpan > 0 ? (
+                      <td
+                        rowSpan={requiredRowSpan}
+                        className="border border-black px-1 py-1.5 text-right align-middle tabular-nums"
+                      >
+                        {actualTotals.length ? (
+                          actualTotals.map(({ unit, total }) => (
+                            <p key={unit}>
+                              {formatWeight(total)}
+                              {unit !== line.unit ? ` ${unit}` : ""}
+                            </p>
+                          ))
+                        ) : (
+                          <span className="text-slate-500">—</span>
+                        )}
+                      </td>
+                    ) : null}
+                    <td className="border border-black px-1 py-1.5 align-top">
+                      <WeighingRecordWeightCell
                         recordId={recordId}
                         line={line}
+                        locked={locked}
+                        onSaved={async (detail) => {
+                          await mutate(
+                            (current) =>
+                              current?.map((entry) =>
+                                entry.id === line.id
+                                  ? {
+                                      ...entry,
+                                      details: [
+                                        ...(entry.details ?? []).filter(
+                                          (saved) => saved.id !== detail.id,
+                                        ),
+                                        detail,
+                                      ],
+                                    }
+                                  : entry,
+                              ),
+                            { revalidate: false },
+                          );
+                          void mutate().catch(() => undefined);
+                        }}
                       />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="border border-black px-1 py-1.5 text-right tabular-nums">
+                      <WeighingRecordWeightTotal line={line} />
+                    </td>
+                    <td className="break-words border border-black px-1 py-1.5 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <span>{line.unit}</span>
+                        <WeighingRecordDetailMenu
+                          recordId={recordId}
+                          line={line}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         ) : (

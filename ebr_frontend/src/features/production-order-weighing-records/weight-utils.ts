@@ -35,3 +35,45 @@ export const sumWeights = (values: string[]): string => {
     .replace(/0+$/, "");
   return `${total < BigInt(0) ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
 };
+
+export const groupRequiredQuantities = <
+  T extends {
+    item_code: string;
+    unit: string;
+    planned_quantity: string;
+    details?: { net_weight: string; unit: string }[];
+  },
+>(
+  lines: T[],
+) => {
+  const groups = new Map<string, T[]>();
+  for (const line of lines) {
+    const key = JSON.stringify([line.item_code, line.unit]);
+    const group = groups.get(key) ?? [];
+    group.push(line);
+    groups.set(key, group);
+  }
+  return [...groups.values()].flatMap((group) => {
+    const requiredTotal = sumWeights(
+      group.map((line) => line.planned_quantity),
+    );
+    const weightsByUnit = new Map<string, string[]>();
+    for (const line of group) {
+      for (const detail of line.details ?? []) {
+        const weights = weightsByUnit.get(detail.unit) ?? [];
+        weights.push(detail.net_weight);
+        weightsByUnit.set(detail.unit, weights);
+      }
+    }
+    const actualTotals = [...weightsByUnit].map(([unit, weights]) => ({
+      unit,
+      total: sumWeights(weights),
+    }));
+    return group.map((line, index) => ({
+      line,
+      requiredTotal,
+      actualTotals,
+      requiredRowSpan: index === 0 ? group.length : 0,
+    }));
+  });
+};

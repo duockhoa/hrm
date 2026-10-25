@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatWeight, normalizeWeight, sumWeights } from "./weight-utils";
+import {
+  formatWeight,
+  normalizeWeight,
+  sumWeights,
+  groupRequiredQuantities,
+} from "./weight-utils";
 
 test("accepts decimal comma and preserves all six fractional digits", () => {
   assert.equal(normalizeWeight(" 12,345678 "), "12.345678");
@@ -28,6 +33,99 @@ test("adds repeated weighing amounts without floating point errors", () => {
   assert.equal(sumWeights(["0.1", "0.2"]), "0.3");
   assert.equal(sumWeights(["0.000001", "0.000001", "0.000001"]), "0.000003");
   assert.equal(sumWeights([]), "0");
+});
+
+test("merges required totals by material code and unit across different lots", () => {
+  const rows = groupRequiredQuantities([
+    {
+      id: 1,
+      item_code: "NL00404",
+      unit: "Gam",
+      planned_quantity: "130",
+      lot_no: "A",
+    },
+    {
+      id: 2,
+      item_code: "NL00404",
+      unit: "Gam",
+      planned_quantity: "130",
+      lot_no: "B",
+    },
+    {
+      id: 3,
+      item_code: "NL00405",
+      unit: "Gam",
+      planned_quantity: "0.1",
+      lot_no: "C",
+    },
+    {
+      id: 4,
+      item_code: "NL00405",
+      unit: "Gam",
+      planned_quantity: "0.2",
+      lot_no: "D",
+    },
+    {
+      id: 5,
+      item_code: "NL00404",
+      unit: "kg",
+      planned_quantity: "1",
+      lot_no: "E",
+    },
+  ]);
+  assert.deepEqual(
+    rows.map(({ line, requiredTotal, requiredRowSpan }) => [
+      line.id,
+      requiredTotal,
+      requiredRowSpan,
+    ]),
+    [
+      [1, "260", 2],
+      [2, "260", 0],
+      [3, "0.3", 2],
+      [4, "0.3", 0],
+      [5, "1", 1],
+    ],
+  );
+  assert.deepEqual(groupRequiredQuantities([]), []);
+});
+
+test("totals actual weights across lots, including negative corrections, without mixing units or codes", () => {
+  const rows = groupRequiredQuantities([
+    {
+      item_code: "NL01",
+      unit: "g",
+      planned_quantity: "1",
+      details: [
+        { net_weight: "0.3", unit: "g" },
+        { net_weight: "-0.1", unit: "g" },
+      ],
+    },
+    {
+      item_code: "NL01",
+      unit: "g",
+      planned_quantity: "1",
+      details: [
+        { net_weight: "0.2", unit: "g" },
+        { net_weight: "1", unit: "kg" },
+      ],
+    },
+    { item_code: "NL02", unit: "g", planned_quantity: "1", details: [] },
+    {
+      item_code: "NL01",
+      unit: "kg",
+      planned_quantity: "1",
+      details: [{ net_weight: "-0.000001", unit: "kg" }],
+    },
+  ]);
+  assert.deepEqual(rows[0].actualTotals, [
+    { unit: "g", total: "0.4" },
+    { unit: "kg", total: "1" },
+  ]);
+  assert.equal(rows[0].requiredRowSpan, 2);
+  assert.equal(rows[1].requiredRowSpan, 0);
+  assert.deepEqual(rows[2].actualTotals, []);
+  assert.deepEqual(rows[3].actualTotals, [{ unit: "kg", total: "-0.000001" }]);
 });
 
 test("accepts negative actual weights while keeping required quantity positive", () => {

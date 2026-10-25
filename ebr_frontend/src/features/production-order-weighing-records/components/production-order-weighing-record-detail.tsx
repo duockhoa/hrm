@@ -135,7 +135,7 @@ export default function ProductionOrderWeighingRecordDetail({
       </div>
       <div className="overflow-x-auto bg-gray-50 p-2 sm:p-3">
         <div
-          className="min-w-[760px] bg-white text-[15px] leading-6 text-black antialiased [text-rendering:optimizeLegibility]"
+          className="min-w-[760px] bg-white text-[15px] leading-6 text-black antialiased [text-rendering:optimizeLegibility] print:min-w-0"
           style={{ fontFamily: '"Times New Roman", Times, serif' }}
         >
           <table className="w-full table-fixed border-collapse border border-black">
