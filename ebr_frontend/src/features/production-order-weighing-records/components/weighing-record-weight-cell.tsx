@@ -6,12 +6,46 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import service from "@/services/production-order-weighing-records.service";
 import type {
   ProductionOrderWeighingRecordDetail,
   ProductionOrderWeighingRecordLine,
 } from "../types";
 import { formatWeight, normalizeWeight, sumWeights } from "../weight-utils";
+
+export function WeighingRecordWeightTotal({
+  line,
+}: {
+  line: ProductionOrderWeighingRecordLine;
+}) {
+  const details = line.details ?? [];
+  if (!details.length) return <span className="text-slate-500">—</span>;
+  const units = [...new Set(details.map((detail) => detail.unit))];
+  return (
+    <>
+      {units.map((unit) => (
+        <p key={unit}>
+          {formatWeight(
+            sumWeights(
+              details
+                .filter((detail) => detail.unit === unit)
+                .map((detail) => detail.net_weight),
+            ),
+          )}
+          {unit !== line.unit || units.length > 1 ? ` ${unit}` : ""}
+        </p>
+      ))}
+    </>
+  );
+}
 
 export default function WeighingRecordWeightCell({
   recordId,
@@ -24,13 +58,13 @@ export default function WeighingRecordWeightCell({
   locked: boolean;
   onSaved: (detail: ProductionOrderWeighingRecordDetail) => Promise<unknown>;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
   const [weight, setWeight] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const busyRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const details = [...(line.details ?? [])].sort((a, b) => a.id - b.id);
-  const units = [...new Set(details.map((detail) => detail.unit))];
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -54,8 +88,8 @@ export default function WeighingRecordWeightCell({
       );
       await onSaved(detail);
       setWeight("");
+      setIsOpen(false);
       toast.success("Đã lưu khối lượng thực tế.");
-      inputRef.current?.focus();
     } catch (error) {
       const message: unknown = isAxiosError(error)
         ? error.response?.data?.message
@@ -72,87 +106,114 @@ export default function WeighingRecordWeightCell({
   };
 
   return (
-    <div className="space-y-2">
-      {details.length ? (
-        <>
-          <ol className="space-y-1 text-sm">
-            {details.map((detail, index) => (
-              <li
-                key={detail.id}
-                className="flex justify-between gap-2"
-                title={`${detail.weighedBy?.name || detail.weighedBy?.username || ""} · ${new Date(detail.weighed_at).toLocaleString("vi-VN")}`}
-              >
-                <span>Lần {index + 1}:</span>
-                <span className="font-medium tabular-nums">
-                  {formatWeight(detail.net_weight)} {detail.unit}
-                </span>
-              </li>
-            ))}
-          </ol>
-          <div className="border-t border-slate-200 pt-1 text-right text-sm font-bold tabular-nums">
-            {units.map((unit) => (
-              <p key={unit}>
-                Tổng:{" "}
-                {formatWeight(
-                  sumWeights(
-                    details
-                      .filter((detail) => detail.unit === unit)
-                      .map((detail) => detail.net_weight),
-                  ),
-                )}{" "}
-                {unit}
-              </p>
-            ))}
-          </div>
-        </>
-      ) : (
-        <p className="text-center text-sm text-slate-500">Chưa cân</p>
-      )}
-      {!locked ? (
-        <form onSubmit={save} className="flex items-center gap-1 font-sans">
-          <Input
-            ref={inputRef}
-            type="text"
-            inputMode="decimal"
-            value={weight}
-            disabled={isSaving}
-            required
-            maxLength={19}
-            aria-label={`Khối lượng lần cân tiếp theo của ${line.item_code}, lô ${line.lot_no || "chưa có"}, dòng ${line.id}`}
-            aria-invalid={Boolean(error)}
-            aria-describedby={error ? `weight-error-${line.id}` : undefined}
-            onChange={(event) => {
-              setWeight(event.target.value);
-              setError("");
-            }}
-            placeholder={`Nhập lần cân (${line.unit})`}
-            className="h-8 min-w-0 text-sm"
-          />
+    <>
+      <div className="flex flex-wrap items-center gap-1">
+        {details.map((detail, index) => (
+          <span key={detail.id} className="inline-flex items-center gap-1">
+            {index > 0 ? <span aria-hidden="true">+</span> : null}
+            <span
+              className="font-medium tabular-nums"
+              title={`Lần ${index + 1} · ${detail.weighedBy?.name || detail.weighedBy?.username || ""} · ${new Date(detail.weighed_at).toLocaleString("vi-VN")}`}
+            >
+              {formatWeight(detail.net_weight)}
+              {detail.unit !== line.unit ? ` ${detail.unit}` : ""}
+            </span>
+          </span>
+        ))}
+        {!locked ? (
           <Button
-            type="submit"
-            variant="outline"
+            type="button"
+            variant="ghost"
             size="icon-sm"
-            disabled={isSaving || !weight.trim()}
-            aria-label={`Lưu lần cân cho ${line.item_code}, dòng ${line.id}`}
-            title="Lưu lần cân"
+            className="size-7 shrink-0"
+            aria-label={`Thêm lần cân cho ${line.item_code}, dòng ${line.id}`}
+            title="Thêm lần cân"
+            onClick={() => {
+              setWeight("");
+              setError("");
+              setIsOpen(true);
+            }}
           >
-            {isSaving ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Plus className="size-4" />
-            )}
+            <Plus className="size-4" />
           </Button>
-        </form>
-      ) : null}
-      {error ? (
-        <p
-          id={`weight-error-${line.id}`}
-          role="alert"
-          className="font-sans text-xs text-red-600"
-        >
-          {error}
-        </p>
-      ) : null}
-    </div>
+        ) : !details.length ? (
+          <span className="text-slate-500">—</span>
+        ) : null}
+      </div>
+
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!busyRef.current) setIsOpen(open);
+        }}
+      >
+        <DialogContent className="font-sans sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nhập khối lượng thực tế</DialogTitle>
+            <DialogDescription>
+              {line.item_code} — {line.item_name}
+              {line.lot_no ? ` · Lô ${line.lot_no}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={save} className="space-y-4">
+            <div className="space-y-2">
+              <label
+                htmlFor={`weighing-weight-${line.id}`}
+                className="text-sm font-medium"
+              >
+                Khối lượng lần cân ({line.unit})
+              </label>
+              <Input
+                id={`weighing-weight-${line.id}`}
+                ref={inputRef}
+                type="text"
+                inputMode="decimal"
+                value={weight}
+                disabled={isSaving || locked}
+                required
+                maxLength={19}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? `weight-error-${line.id}` : undefined}
+                onChange={(event) => {
+                  setWeight(event.target.value);
+                  setError("");
+                }}
+                placeholder="Nhập khối lượng"
+              />
+              {error ? (
+                <p
+                  id={`weight-error-${line.id}`}
+                  role="alert"
+                  className="text-sm text-red-600"
+                >
+                  {error}
+                </p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSaving}
+                onClick={() => setIsOpen(false)}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSaving || locked || !weight.trim()}
+              >
+                {isSaving ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+                {isSaving ? "Đang lưu..." : "Lưu lần cân"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

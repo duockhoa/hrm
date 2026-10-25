@@ -17,7 +17,9 @@ import {
 import { API_ROUTES } from "@/lib/api-routes";
 import service from "@/services/production-order-weighing-records.service";
 import type { ProductionOrderWeighingRecordLine } from "../types";
-import WeighingRecordWeightCell from "./weighing-record-weight-cell";
+import WeighingRecordWeightCell, {
+  WeighingRecordWeightTotal,
+} from "./weighing-record-weight-cell";
 import WeighingRecordMaterialMenu from "./weighing-record-material-menu";
 
 const compareMaterials = (
@@ -133,28 +135,44 @@ export default function WeighingRecordMaterials({
             <colgroup>
               <col className="w-[100px]" />
               <col />
-              <col className="w-[115px]" />
-              <col className="w-[110px]" />
-              <col className="w-[70px]" />
-              <col className="w-[220px]" />
+              <col className="w-[95px]" />
+              <col className="w-[100px]" />
+              <col className="w-[60px]" />
+              <col className="w-[200px]" />
+              <col className="w-[125px]" />
             </colgroup>
             <thead>
               <tr>
-                {[
-                  "Mã nguyên liệu",
-                  "Tên nguyên liệu",
-                  "Số lô",
-                  "Lượng yêu cầu",
-                  "Đơn vị",
-                  "Khối lượng thực tế",
-                ].map((label) => (
+                {["Mã NL", "Tên nguyên liệu", "Số lô"].map((label) => (
                   <th
                     key={label}
+                    rowSpan={2}
+                    scope="col"
                     className="border border-black px-2 py-2 text-center font-bold"
                   >
                     {label}
                   </th>
                 ))}
+                <th
+                  colSpan={4}
+                  scope="colgroup"
+                  className="border border-black px-2 py-2 text-center font-bold"
+                >
+                  Số lượng/ Đơn vị
+                </th>
+              </tr>
+              <tr>
+                {["Yêu cầu", "Đơn vị", "Thực tế", "Tổng khối lượng"].map(
+                  (label) => (
+                    <th
+                      key={label}
+                      scope="col"
+                      className="border border-black px-2 py-2 text-center font-bold"
+                    >
+                      {label}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
@@ -242,6 +260,9 @@ export default function WeighingRecordMaterials({
                         void mutate().catch(() => undefined);
                       }}
                     />
+                  </td>
+                  <td className="border border-black px-2 py-2 text-right tabular-nums">
+                    <WeighingRecordWeightTotal line={line} />
                   </td>
                 </tr>
               ))}
