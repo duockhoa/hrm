@@ -92,10 +92,10 @@ export default function WeighingRecordWeightCell({
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busyRef.current || locked) return;
-    const normalized = normalizeWeight(weight);
+    const normalized = normalizeWeight(weight, true);
     if (!normalized) {
       setError(
-        "Nhập khối lượng lớn hơn 0, tối đa 12 chữ số nguyên và 6 chữ số thập phân.",
+        "Nhập khối lượng khác 0 (có thể âm), tối đa 12 chữ số nguyên và 6 chữ số thập phân.",
       );
       inputRef.current?.focus();
       return;
@@ -199,7 +199,7 @@ export default function WeighingRecordWeightCell({
                 value={weight}
                 disabled={isSaving || locked}
                 required
-                maxLength={19}
+                maxLength={20}
                 aria-invalid={Boolean(error)}
                 aria-describedby={error ? `weight-error-${line.id}` : undefined}
                 onChange={(event) => {

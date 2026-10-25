@@ -5,7 +5,7 @@ export class CreateProductionOrderWeighingRecordDetailDto {
     oneOf: [{ type: 'string' }, { type: 'number' }],
     example: '12.345678',
     description:
-      'Positive Decimal(18,6). Unit comes from the material line; weigher and time come from the server.',
+      'Non-zero Decimal(18,6), negative values allowed. Unit comes from the material line; weigher and time come from the server.',
   })
   net_weight: string | number;
 

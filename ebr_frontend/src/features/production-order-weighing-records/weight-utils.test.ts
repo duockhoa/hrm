@@ -30,6 +30,36 @@ test("adds repeated weighing amounts without floating point errors", () => {
   assert.equal(sumWeights([]), "0");
 });
 
+test("accepts negative actual weights while keeping required quantity positive", () => {
+  for (const value of ["-1", "-0.000001", "-999999999999.999999"]) {
+    assert.equal(normalizeWeight(value, true), value);
+    assert.equal(normalizeWeight(value), null);
+  }
+  assert.equal(normalizeWeight(" -0,25 ", true), "-0.25");
+  for (const value of [
+    "-0",
+    "-0.000000",
+    "-1000000000000",
+    "-0.0000001",
+    "--1",
+  ]) {
+    assert.equal(normalizeWeight(value, true), null);
+  }
+});
+
+test("subtracts negative weights precisely and retains negative fractional totals", () => {
+  assert.equal(sumWeights(["1.25", "-0.3"]), "0.95");
+  assert.equal(sumWeights(["-0.1", "-0.2"]), "-0.3");
+  assert.equal(sumWeights(["-1.25", "0.2"]), "-1.05");
+  assert.equal(sumWeights(["0.000001", "-0.000001"]), "0");
+  assert.equal(
+    sumWeights(["-999999999999.999999", "-0.000001"]),
+    "-1000000000000",
+  );
+  assert.equal(formatWeight("-0.000001"), "-0,000001");
+  assert.equal(formatWeight("-1234.560000"), "-1.234,56");
+});
+
 test("keeps exact totals even above the precision of a JavaScript number", () => {
   assert.equal(
     sumWeights(["999999999999.999999", "0.000001"]),

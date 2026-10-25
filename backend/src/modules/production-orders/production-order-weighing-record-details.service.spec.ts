@@ -113,7 +113,9 @@ describe('Weighing record details', () => {
 
   it.each([
     0,
-    -1,
+    '-0.000000',
+    '-0.0000001',
+    '-1000000000000',
     null,
     true,
     '1e3',
@@ -127,6 +129,26 @@ describe('Weighing record details', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
+
+  it.each(['-0.000001', '-12.345678', '-999999999999.999999', -1])(
+    'accepts negative weight %s on create and update',
+    async (net_weight) => {
+      const result = await service.create(3, 7, { net_weight }, { id: 4 });
+      expect(result.net_weight.toString()).toBe(
+        new Prisma.Decimal(net_weight).toString(),
+      );
+      await service.update(3, 7, 9, { net_weight }, { id: 4 });
+      expect(
+        prisma.productionOrderWeighingRecordDetails.update,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            net_weight: new Prisma.Decimal(net_weight),
+          }),
+        }),
+      );
+    },
+  );
 
   it.each([
     { unit: 'g' },

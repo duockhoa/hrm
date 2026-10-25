@@ -290,14 +290,14 @@ export class ProductionOrderWeighingRecordDetailsService {
       const value = input.net_weight;
       if (
         (typeof value !== 'string' && typeof value !== 'number') ||
-        !/^\d{1,12}(\.\d{1,6})?$/.test(String(value))
+        !/^-?\d{1,12}(\.\d{1,6})?$/.test(String(value))
       )
         throw new BadRequestException(
-          'net_weight must be a positive Decimal(18,6)',
+          'net_weight must be a non-zero Decimal(18,6)',
         );
       const weight = new Prisma.Decimal(value);
-      if (!weight.greaterThan(0))
-        throw new BadRequestException('net_weight must be greater than zero');
+      if (weight.isZero())
+        throw new BadRequestException('net_weight must not be zero');
       data.net_weight = weight;
     }
     if (input.note !== undefined) {
