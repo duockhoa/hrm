@@ -1,6 +1,6 @@
 # Phiếu cân theo lệnh sản xuất
 
-Phạm vi hiện tại: bảng phiếu cân `production_order_weighing_records` và nguyên liệu `production_order_weighing_record_lines`, chưa có bảng chi tiết lần cân.
+Phạm vi hiện tại: bảng phiếu cân `production_order_weighing_records`, nguyên liệu `production_order_weighing_record_lines` và từng lần cân thực tế `production_order_weighing_record_details`.
 
 Quan hệ: một `production_orders` có nhiều phiếu cân qua `production_order_id`. Không thể xóa lệnh đang có phiếu cân (`ON DELETE RESTRICT`).
 
@@ -102,6 +102,38 @@ Backend lấy `production_order_id` từ phiếu, đọc ProductionOrderLines c�
 
 Toàn bộ dòng của một giai đoạn được nhập trong cùng transaction. Sai dữ liệu ở bất kỳ dòng nào sẽ không lưu cả đợt. Chặn thêm giai đoạn đã có trong phiếu với 409; các giai đoạn đã nhập bị vô hiệu hóa trong form. Phiếu đã ký không thể nhập thêm. Giao dịch khóa phiếu cha và đọc dữ liệu ở mức ReadCommitted để ngăn nhập lặp đồng thời.
 
+## Chi tiết lần cân thực tế
+
+Bảng `production_order_weighing_record_details` lưu `id`, `production_order_weighing_record_line_id`, `net_weight` (Decimal 18,6), `unit`, `image_path` (nullable), `weighed_by_id`, `weighed_at`, `note` (nullable), `created_at`, `updated_at`. Không có mã thùng, thiết bị, cả bì/bì, người kiểm tra hoặc trường thứ tự. Một dòng nguyên liệu có nhiều lần cân; danh sách sắp theo ID tăng dần. Khóa ngoại tới dòng nguyên liệu xóa cascade, người cân xóa restrict.
+
+Base URL: `/production-orders/weighing-records/:recordId/lines/:lineId/details`.
+
+| Method | Endpoint | Quyền |
+| --- | --- | --- |
+| GET | Base URL | `production-orders.read` |
+| POST | Base URL | `production-orders.create` |
+| GET | Base URL + `/:detailId` | `production-orders.read` |
+| PATCH | Base URL + `/:detailId` | `production-orders.update` |
+| DELETE | Base URL + `/:detailId` | `production-orders.delete` |
+| POST | Base URL + `/:detailId/image` | `production-orders.update` |
+| DELETE | Base URL + `/:detailId/image` | `production-orders.update` |
+| GET | `/production-orders/weighing-record-details/images/:filename` | `production-orders.read` |
+
+Body tạo lần cân:
+
+```json
+{
+  "net_weight": "12.345678",
+  "note": "Cân lần thứ nhất"
+}
+```
+
+Chỉ `net_weight` bắt buộc, phải lớn hơn 0 và nằm trong Decimal(18,6). Nên gửi chuỗi để giữ độ chính xác; response trả decimal dạng chuỗi. `unit` tự lấy từ dòng nguyên liệu cha, người cân từ tài khoản đăng nhập, thời điểm cân do server ghi. Không nhận các trường này hoặc `image_path` trong body. PATCH nhận ít nhất một trong hai trường `net_weight`, `note`; gửi `note: null` để xóa ghi chú. Khi sửa khối lượng, cập nhật lại người cân và thời điểm cân theo người thực hiện chỉnh sửa; sửa ghi chú giữ nguyên thông tin cân. Response có `weighedBy` với `id`, `username`, `name`.
+
+Upload dùng multipart/form-data, trường `image`; tối đa một ảnh trên mỗi lần cân, hỗ trợ JPG/PNG/WEBP/GIF tối đa 20 MB. Tải lại ảnh sẽ thay ảnh cũ, dọn ảnh cũ sau khi DB lưu thành công. Đọc ảnh bằng URL `image_path` với Bearer token; mặc định trả thumbnail, thêm `?original=true` để lấy ảnh gốc. Ảnh được kiểm tra quyền theo lần cân và lệnh sản xuất; chỉ biết tên file không đủ để truy cập. DELETE ảnh đặt `image_path` về null và dọn ảnh gốc/thumbnail; xóa từng lần cân cũng dọn ảnh của lần cân đó. Request upload lỗi sẽ dọn tệp đã nhận, kể cả lỗi ID trên URL.
+
+Mọi request phải khớp chuỗi phiếu → dòng nguyên liệu → lần cân. Sai chuỗi hoặc ngoài phạm vi truy cập trả 404. Tạo/sửa/xóa lần cân và ảnh bị khóa ngay khi phiếu cha đã có chữ ký, giống quy tắc hiện tại cho nguyên liệu. Các thay đổi và kiểm tra khóa nằm trong cùng transaction. Chưa bổ sung giao diện.
+
 ## Migration
 
 `prisma/migrations/20261024000000_add_production_order_weighing_records/migration.sql` chỉ tạo bảng phiếu cân, index và khóa ngoại tới các bảng hiện có.
@@ -109,3 +141,5 @@ Toàn bộ dòng của một giai đoạn được nhập trong cùng transactio
 `prisma/migrations/20261024020000_remove_weighing_record_code/migration.sql` bỏ cột mã phiếu và unique index tương ứng.
 
 `prisma/migrations/20261024040000_add_weighing_record_lines/migration.sql` tạo bảng nguyên liệu cần cân, index và khóa ngoại xóa cascade theo phiếu cha.
+
+`prisma/migrations/20261025000000_add_weighing_record_details/migration.sql` tạo bảng từng lần cân thực tế và các khóa ngoại/index tương ứng.

@@ -29,6 +29,7 @@ model AuditLogs {
 }
 
 model Users {
+  weighingRecordDetails ProductionOrderWeighingRecordDetails[] @relation("WeighingRecordDetailWeigher")
   oauthGrants OAuthGrants[]
   notedMixingRecordParameters ProductionOrderMixingRecordParameters[] @relation("MixingRecordParameterNoteRecorder")
   uploadedMixingRecordParameterImages ProductionOrderMixingRecordParameters[] @relation("MixingRecordParameterImageUploader")
@@ -1123,8 +1124,29 @@ model ProductionOrderWeighingRecordLines {
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
 
+  details ProductionOrderWeighingRecordDetails[]
+
   @@index([production_order_weighing_record_id, id], map: "po_weighing_lines_record_idx")
   @@map("production_order_weighing_record_lines")
+}
+
+model ProductionOrderWeighingRecordDetails {
+  id Int @id @default(autoincrement())
+  production_order_weighing_record_line_id Int
+  weighingRecordLine ProductionOrderWeighingRecordLines @relation(fields: [production_order_weighing_record_line_id], references: [id], onDelete: Cascade, map: "po_weighing_details_line_fkey")
+  net_weight Decimal @db.Decimal(18, 6)
+  unit String @db.VarChar(50)
+  image_path String? @db.Text
+  weighed_by_id Int
+  weighedBy Users @relation("WeighingRecordDetailWeigher", fields: [weighed_by_id], references: [id], onDelete: Restrict, map: "po_weighing_details_weigher_fkey")
+  weighed_at DateTime @default(now())
+  note String? @db.Text
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  @@index([production_order_weighing_record_line_id, id], map: "po_weighing_details_line_idx")
+  @@index([weighed_by_id], map: "po_weighing_details_weigher_idx")
+  @@map("production_order_weighing_record_details")
 }
 
 model ProductionOrderMixingRecords {

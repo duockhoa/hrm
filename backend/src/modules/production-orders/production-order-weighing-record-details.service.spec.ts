@@ -1,0 +1,300 @@
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from 'src/prisma.service';
+import { productionOrderModelWhere } from 'src/access/production-order-scope.extension';
+import { ProductionOrderWeighingRecordDetailsService } from './production-order-weighing-record-details.service';
+import {
+  removeProductionOrderWeighingRecordDetailImageByPath,
+  resolveProductionOrderWeighingRecordDetailImageFile,
+} from './production-order-weighing-record-detail-upload.config';
+
+jest.mock('./production-order-weighing-record-detail-upload.config', () => ({
+  PRODUCTION_ORDER_WEIGHING_RECORD_DETAIL_IMAGE_ROUTE: '/images',
+  getProductionOrderWeighingRecordDetailImagePath: (file) =>
+    file ? `/images/${file.filename}` : undefined,
+  removeProductionOrderWeighingRecordDetailImageByPath: jest
+    .fn()
+    .mockResolvedValue(undefined),
+  resolveProductionOrderWeighingRecordDetailImageFile: jest
+    .fn()
+    .mockResolvedValue({
+      filePath: '/test.png',
+      contentType: 'image/png',
+      size: 1,
+    }),
+}));
+
+describe('Weighing record details', () => {
+  let service: ProductionOrderWeighingRecordDetailsService;
+  let prisma: any;
+  const record = {
+    id: 3,
+    status: 'draft',
+    qa_staff_approved_at: null,
+    ipc_staff_approved_at: null,
+  };
+  const detail = {
+    id: 9,
+    production_order_weighing_record_line_id: 7,
+    net_weight: new Prisma.Decimal('1'),
+    unit: 'kg',
+    image_path: '/images/old.png',
+    weighed_by_id: 1,
+  };
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma = {
+      productionOrderWeighingRecords: {
+        findUnique: jest.fn().mockResolvedValue(record),
+        update: jest.fn().mockResolvedValue({ id: 3 }),
+      },
+      productionOrderWeighingRecordLines: {
+        findUnique: jest
+          .fn()
+          .mockImplementation(async ({ where }) =>
+            where.id === 7 && where.production_order_weighing_record_id === 3
+              ? { id: 7, unit: 'kg' }
+              : null,
+          ),
+      },
+      productionOrderWeighingRecordDetails: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue({ id: 9 }),
+        findUnique: jest
+          .fn()
+          .mockImplementation(async ({ where }) =>
+            where.id === 9 &&
+            where.production_order_weighing_record_line_id === 7
+              ? detail
+              : null,
+          ),
+        create: jest
+          .fn()
+          .mockImplementation(async ({ data }) => ({ id: 9, ...data })),
+        update: jest
+          .fn()
+          .mockImplementation(async ({ data }) => ({ ...detail, ...data })),
+        delete: jest.fn().mockResolvedValue(detail),
+      },
+    };
+    prisma.$transaction = jest.fn(async (action) => action(prisma));
+    service = new ProductionOrderWeighingRecordDetailsService(
+      prisma as PrismaService,
+    );
+  });
+
+  it('creates exact weight with the line unit and authenticated weigher/time', async () => {
+    const result = await service.create(
+      3,
+      7,
+      { net_weight: '999999999999.999999', note: ' ok ' },
+      { id: '4' },
+    );
+    expect(result.net_weight.toString()).toBe('999999999999.999999');
+    expect(result).toMatchObject({
+      unit: 'kg',
+      weighed_by_id: 4,
+      note: 'ok',
+      production_order_weighing_record_line_id: 7,
+      weighed_at: expect.any(Date),
+    });
+    expect(
+      prisma.productionOrderWeighingRecords.update.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      prisma.productionOrderWeighingRecordDetails.create.mock
+        .invocationCallOrder[0],
+    );
+  });
+
+  it.each([
+    0,
+    -1,
+    null,
+    true,
+    '1e3',
+    '0.0000001',
+    '1000000000000',
+    '1.1234567',
+    '',
+  ])('rejects invalid weight %j', async (net_weight) => {
+    await expect(
+      service.create(3, 7, { net_weight } as any, { id: 4 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { unit: 'g' },
+    { weighed_by_id: 2 },
+    { weighed_at: '2026-01-01' },
+    { image_path: '/arbitrary.png' },
+    { gross_weight: 1 },
+    { tare_weight: 1 },
+    { container_code: 'x' },
+    { equipment_id: 1 },
+    { checked_by_id: 1 },
+    { line_order: 1 },
+  ])('rejects fields outside the agreed structure %j', async (extra) => {
+    await expect(
+      service.create(3, 7, { net_weight: '1', ...extra } as any, { id: 4 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects missing authentication, empty updates and invalid notes', async () => {
+    await expect(
+      service.create(3, 7, { net_weight: '1' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(service.update(3, 7, 9, {}, { id: 4 })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(
+      service.create(3, 7, {} as any, { id: 4 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.create(3, 7, { net_weight: '1', note: 3 } as any, { id: 4 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('supports note-only corrections without changing weighing identity or time', async () => {
+    await service.update(3, 7, 9, { note: null }, { id: 4 });
+    expect(
+      prisma.productionOrderWeighingRecordDetails.update,
+    ).toHaveBeenCalledWith(expect.objectContaining({ data: { note: null } }));
+    await service.update(3, 7, 9, { net_weight: '0.000001' }, { id: 4 });
+    expect(
+      prisma.productionOrderWeighingRecordDetails.update,
+    ).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: {
+          net_weight: new Prisma.Decimal('0.000001'),
+          weighed_by_id: 4,
+          weighed_at: expect.any(Date),
+        },
+      }),
+    );
+  });
+
+  it('rejects records outside the parent chain', async () => {
+    await expect(service.findAll(4, 7)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(service.findById(3, 7, 10)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(
+      service.update(3, 7, 10, { note: 'x' }, { id: 4 }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(
+      prisma.productionOrderWeighingRecordDetails.update,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('lists only details belonging to the selected material line', async () => {
+    await service.findAll(3, 7);
+    expect(
+      prisma.productionOrderWeighingRecordDetails.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { production_order_weighing_record_line_id: 7 },
+        orderBy: { id: 'asc' },
+      }),
+    );
+  });
+
+  it.each([
+    { status: 'approved' },
+    { qa_staff_approved_at: new Date() },
+    { ipc_staff_approved_at: new Date() },
+  ])('blocks weights and images after signing %j', async (approval) => {
+    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+      ...record,
+      ...approval,
+    });
+    const file = { filename: 'new.png' } as Express.Multer.File;
+    await expect(
+      service.create(3, 7, { net_weight: '1' }, { id: 4 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      service.update(3, 7, 9, { note: 'x' }, { id: 4 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.delete(3, 7, 9)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    await expect(service.uploadImage(3, 7, 9, file)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    await expect(service.deleteImage(3, 7, 9)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(
+      removeProductionOrderWeighingRecordDetailImageByPath,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('replaces and removes a single image only after the database change', async () => {
+    expect(
+      (
+        await service.uploadImage(3, 7, 9, {
+          filename: 'new.png',
+        } as Express.Multer.File)
+      ).image_path,
+    ).toBe('/images/new.png');
+    expect(
+      removeProductionOrderWeighingRecordDetailImageByPath,
+    ).toHaveBeenCalledWith('/images/old.png');
+    expect(
+      prisma.productionOrderWeighingRecordDetails.update.mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(
+      jest.mocked(removeProductionOrderWeighingRecordDetailImageByPath).mock
+        .invocationCallOrder[0],
+    );
+    expect((await service.deleteImage(3, 7, 9)).image_path).toBeNull();
+    await service.delete(3, 7, 9);
+    expect(
+      prisma.productionOrderWeighingRecordDetails.delete,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 9, production_order_weighing_record_line_id: 7 },
+      }),
+    );
+  });
+
+  it('does not remove old files on a failed mutation or serve images outside scope', async () => {
+    prisma.productionOrderWeighingRecordDetails.update.mockRejectedValue(
+      new Error('database failure'),
+    );
+    await expect(
+      service.uploadImage(3, 7, 9, {
+        filename: 'new.png',
+      } as Express.Multer.File),
+    ).rejects.toThrow('database failure');
+    expect(
+      removeProductionOrderWeighingRecordDetailImageByPath,
+    ).not.toHaveBeenCalled();
+    prisma.productionOrderWeighingRecordDetails.findFirst.mockResolvedValue(
+      null,
+    );
+    await expect(service.findImage('new.png')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(
+      resolveProductionOrderWeighingRecordDetailImageFile,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('inherits visibility through line and record, including image lookup', () => {
+    expect(
+      productionOrderModelWhere('ProductionOrderWeighingRecordDetails', [42]),
+    ).toEqual({
+      weighingRecordLine: {
+        is: { weighingRecord: { is: { production_order_id: { in: [42] } } } },
+      },
+    });
+  });
+});
