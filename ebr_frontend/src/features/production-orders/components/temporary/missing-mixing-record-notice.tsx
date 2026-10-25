@@ -1,6 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,48 +23,102 @@ import {
 import { API_ROUTES } from "@/lib/api-routes";
 import mixingRecordsService from "@/services/production-order-mixing-records.service";
 
-// Temporary reminder for BTP lots. To retire it, delete this file and remove
-// its import and JSX call from detail-product-order.tsx. No persisted state.
+const NoticeVisitContext = createContext<{
+  status: "pending" | "open" | "done";
+  resolve: (missing: boolean) => void;
+  dismiss: () => void;
+} | null>(null);
+
+function NoticeVisit({ children }: { children: ReactNode }) {
+  const [status, setStatus] = useState<"pending" | "open" | "done">("pending");
+  const resolve = useCallback((missing: boolean) => {
+    setStatus((current) =>
+      current === "pending" ? (missing ? "open" : "done") : current,
+    );
+  }, []);
+  return (
+    <NoticeVisitContext.Provider
+      value={{ status, resolve, dismiss: () => setStatus("done") }}
+    >
+      {children}
+    </NoticeVisitContext.Provider>
+  );
+}
+
+// Keep dismissal through form/detail remounts; reset only on pathname changes.
+export function MissingMixingRecordNoticeScope({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const pathname = usePathname();
+  return <NoticeVisit key={pathname}>{children}</NoticeVisit>;
+}
+
+// Temporary reminder for BTP lots. To retire it, delete this file, remove its
+// call/import in detail-product-order.tsx and unwrap the scope in mainlayout.
 export default function MissingMixingRecordNotice({
   productionOrderId,
 }: {
   productionOrderId: string | number;
 }) {
-  const [dismissed, setDismissed] = useState(false);
+  const visit = useContext(NoticeVisitContext);
+  if (!visit)
+    throw new Error("MissingMixingRecordNotice requires its route scope");
+  const { status, resolve, dismiss } = visit;
+  const [memeNumber] = useState(() => Math.floor(Math.random() * 5) + 1);
   const {
     data: records,
     error,
     isLoading,
     isValidating,
   } = useSWR(
-    API_ROUTES.productionOrders.mixingRecords(productionOrderId),
+    status === "pending"
+      ? API_ROUTES.productionOrders.mixingRecords(productionOrderId)
+      : null,
     () => mixingRecordsService.fetchAllByProductionOrderId(productionOrderId),
     { revalidateOnMount: true },
   );
-  // Only a successful, refreshed empty response means no form has been created.
-  const open =
-    !dismissed &&
-    !error &&
-    !isLoading &&
-    !isValidating &&
-    records?.length === 0;
+  // Evaluate once per pathname, after a successful refreshed response. Later
+  // form edits, refetches and component remounts must not trigger the reminder.
+  useEffect(() => {
+    if (
+      status === "pending" &&
+      records &&
+      !error &&
+      !isLoading &&
+      !isValidating
+    ) {
+      resolve(records.length === 0);
+    }
+  }, [status, records, error, isLoading, isValidating, resolve]);
 
   return (
     <Dialog
-      open={open}
+      open={status === "open"}
       onOpenChange={(value) => {
-        if (!value) setDismissed(true);
+        if (!value) dismiss();
       }}
     >
-      <DialogContent className="font-sans sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Thông báo</DialogTitle>
-          <DialogDescription>
-            Có vẻ lô sản xuất này bản chưa tạo phiếu pha chế
+      <DialogContent className="max-h-[90dvh] overflow-y-auto font-sans sm:max-w-md">
+        <DialogHeader className="items-center gap-3 text-center sm:text-center">
+          <DialogTitle className="text-2xl font-bold">Thông báo</DialogTitle>
+          <DialogDescription className="w-full rounded-lg bg-amber-50 px-4 py-3 text-center text-base font-semibold leading-relaxed text-red-600 ring-1 ring-inset ring-amber-200">
+            Có vẻ chưa có phiếu pha chế cho lô này
           </DialogDescription>
         </DialogHeader>
+        <div className="flex justify-center">
+          <Image
+            src={`/memes/meme_${memeNumber}.jpg`}
+            alt="Meme nhắc bạn chưa tạo phiếu pha chế"
+            width={554}
+            height={554}
+            sizes="240px"
+            className="max-h-[32dvh] w-60 rounded-lg object-contain"
+          />
+        </div>
         <DialogFooter>
-          <Button type="button" onClick={() => setDismissed(true)}>
+          <Button type="button" onClick={dismiss}>
             OK
           </Button>
         </DialogFooter>

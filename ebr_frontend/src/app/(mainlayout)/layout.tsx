@@ -2,6 +2,7 @@
 
 import ApplicationAccessGuard from "@/components/application-access-guard/application-access-guard";
 import Header from "@/components/header/header";
+import { MissingMixingRecordNoticeScope } from "@/features/production-orders/components/temporary/missing-mixing-record-notice";
 import Sidebar from "@/components/sidebar/sidebar";
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
@@ -163,7 +164,9 @@ export default function MainLayout({
           <div
             className={`relative min-h-0 min-w-0 flex-1 bg-blue-50 p-2 ${isReportsPage ? "overflow-hidden" : "overflow-auto"}`}
           >
-            {children}
+            <MissingMixingRecordNoticeScope>
+              {children}
+            </MissingMixingRecordNoticeScope>
           </div>
         </div>
       </div>

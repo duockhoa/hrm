@@ -797,7 +797,11 @@ export default function ProductOrderDetail({
 
   return (
     <div className="flex w-full max-w-4xl flex-col gap-2 md:gap-4">
-      {String(productOrderItemCode ?? "").startsWith("BTP") && productionOrderId ? (
+      {String(productOrderItemCode ?? "").startsWith("BTP") &&
+      productionOrderId &&
+      ["boposreleased", "boppreleased", "released", "r"].includes(
+        String(productOrder.status ?? "").trim().toLowerCase(),
+      ) ? (
         <MissingMixingRecordNotice
           key={productionOrderId}
           productionOrderId={productionOrderId}
