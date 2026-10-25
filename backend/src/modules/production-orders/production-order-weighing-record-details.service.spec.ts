@@ -35,7 +35,7 @@ describe('Weighing record details', () => {
   const record = {
     id: 3,
     status: 'draft',
-    qa_staff_approved_at: null,
+    qa_staff_approved_at: new Date('2026-10-25T00:00:00Z'),
     ipc_staff_approved_at: null,
   };
   const detail = {
@@ -90,6 +90,39 @@ describe('Weighing record details', () => {
     service = new ProductionOrderWeighingRecordDetailsService(
       prisma as PrismaService,
     );
+  });
+
+  it('requires QA approval before writing a weighing and does not acquire a write lock when missing', async () => {
+    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+      ...record,
+      qa_staff_approved_at: null,
+    });
+    await expect(
+      service.create(3, 7, { net_weight: '1' }, { id: 4 }),
+    ).rejects.toThrow(
+      'Nhân viên ĐBCL cần ký duyệt trước khi nhập khối lượng cân.',
+    );
+    expect(prisma.productionOrderWeighingRecords.update).not.toHaveBeenCalled();
+    expect(
+      prisma.productionOrderWeighingRecordDetails.create,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('allows weighing after QA approval while comparing its signature in the parent lock', async () => {
+    await service.create(3, 7, { net_weight: '-0.5' }, { id: 4 });
+    expect(prisma.productionOrderWeighingRecords.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 3,
+          status: 'draft',
+          qa_staff_approved_at: record.qa_staff_approved_at,
+          ipc_staff_approved_at: null,
+        },
+      }),
+    );
+    expect(
+      prisma.productionOrderWeighingRecordDetails.create,
+    ).toHaveBeenCalled();
   });
 
   it('creates exact weight with the line unit and authenticated weigher/time', async () => {
@@ -260,39 +293,42 @@ describe('Weighing record details', () => {
 
   it.each([
     { status: 'approved' },
-    { qa_staff_approved_at: new Date() },
+    { qa_staff_approved_at: null },
     { ipc_staff_approved_at: new Date() },
-  ])('blocks weights and images after signing %j', async (approval) => {
-    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
-      ...record,
-      ...approval,
-    });
-    const file = { filename: 'new.png' } as Express.Multer.File;
-    await expect(
-      service.create(3, 7, { net_weight: '1' }, { id: 4 }),
-    ).rejects.toBeInstanceOf(ConflictException);
-    await expect(
-      service.update(3, 7, 9, { note: 'x' }, { id: 4 }),
-    ).rejects.toBeInstanceOf(ConflictException);
-    await expect(service.delete(3, 7, 9)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    await expect(service.uploadImage(3, 7, 9, file)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    await expect(service.deleteImage(3, 7, 9)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    await expect(service.uploadImages(3, 7, 9, [file])).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    await expect(service.deleteImageById(3, 7, 9, 11)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    expect(
-      removeProductionOrderWeighingRecordDetailImageByPath,
-    ).not.toHaveBeenCalled();
-  });
+  ])(
+    'blocks weights and images before QA approval or after final approval %j',
+    async (approval) => {
+      prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+        ...record,
+        ...approval,
+      });
+      const file = { filename: 'new.png' } as Express.Multer.File;
+      await expect(
+        service.create(3, 7, { net_weight: '1' }, { id: 4 }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.update(3, 7, 9, { note: 'x' }, { id: 4 }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.delete(3, 7, 9)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      await expect(service.uploadImage(3, 7, 9, file)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      await expect(service.deleteImage(3, 7, 9)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      await expect(
+        service.uploadImages(3, 7, 9, [file]),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.deleteImageById(3, 7, 9, 11)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(
+        removeProductionOrderWeighingRecordDetailImageByPath,
+      ).not.toHaveBeenCalled();
+    },
+  );
 
   it('creates all images together with the weight', async () => {
     await service.create(3, 7, { net_weight: '1' }, { id: 4 }, [

@@ -67,6 +67,10 @@ export default function ProductionOrderWeighingRecordDetail({
   const locked =
     record.status === "approved" ||
     Boolean(record.qa_staff_approved_at || record.ipc_staff_approved_at);
+  const weighingLocked =
+    !record.qa_staff_approved_at ||
+    Boolean(record.ipc_staff_approved_at) ||
+    record.status === "approved";
   const itemCode =
     productionOrder.item_code ?? productionOrder.item?.item_code ?? "";
   const itemName =
@@ -253,6 +257,7 @@ export default function ProductionOrderWeighingRecordDetail({
             isImportOpen={isImportOpen}
             onImportOpenChange={setIsImportOpen}
             locked={locked}
+            weighingLocked={weighingLocked}
             isEditing={isEditing && !locked}
           />
           <WeighingRecordApprovals

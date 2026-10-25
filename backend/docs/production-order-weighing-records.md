@@ -19,7 +19,7 @@ Bảng `production_order_weighing_record_detail_images` có `id`, `production_or
 - POST tạo lần cân: multipart gồm `net_weight`, `note` tùy chọn và nhiều phần `images`. Tối đa 20 ảnh/request, mỗi ảnh tối đa 20 MB, định dạng JPG/PNG/WEBP/GIF. Lưu lần cân và các dòng ảnh trong cùng transaction; dọn tệp nếu request thất bại. Trường `image` cũ vẫn được hỗ trợ.
 - `POST /production-orders/weighing-records/:recordId/lines/:lineId/details/:detailId/images`: tải thêm nhiều ảnh, không thay thế ảnh hiện có; quyền `production-orders.update`.
 - `DELETE /production-orders/weighing-records/:recordId/lines/:lineId/details/:detailId/images/:imageId`: xóa riêng một ảnh thuộc lần cân; quyền `production-orders.update`.
-- Các endpoint `/image` cũ tiếp tục thay thế/xóa toàn bộ ảnh. Tất cả thao tác ảnh vẫn khóa sau chữ ký đầu tiên; truy cập ảnh kế thừa phạm vi lệnh sản xuất.
+- Các endpoint `/image` cũ tiếp tục thay thế/xóa toàn bộ ảnh. Thao tác lần cân và ảnh yêu cầu ĐBCL (QA) đã ký, IPC chưa ký và phiếu chưa `approved`; truy cập ảnh kế thừa phạm vi lệnh sản xuất.
 
 Form nhập lần cân cho phép chọn nhiều ảnh và chụp bổ sung; có thể bỏ riêng từng ảnh trước khi lưu. Bảng chi tiết lần cân hiển thị toàn bộ ảnh với chức năng xem lớn.
 
@@ -150,9 +150,9 @@ Upload dùng multipart/form-data, trường `image`; tối đa một ảnh trên
 
 Form nhập lần cân có thêm ghi chú và nút Chụp ảnh/Chọn ảnh (không bắt buộc). POST tạo lần cân nhận cả JSON và multipart/form-data: `net_weight`, `note` tùy chọn, `image` tùy chọn. Khi có ảnh, form gửi toàn bộ trong một request; khối lượng, ghi chú và đường dẫn ảnh được tạo cùng transaction. Nếu tạo lỗi, tệp đã tải được dọn. Ghi chú và ảnh được lưu nhưng chưa hiển thị trong bảng nguyên liệu.
 
-Mọi request phải khớp chuỗi phiếu → dòng nguyên liệu → lần cân. Sai chuỗi hoặc ngoài phạm vi truy cập trả 404. Tạo/sửa/xóa lần cân và ảnh bị khóa ngay khi phiếu cha đã có chữ ký, giống quy tắc hiện tại cho nguyên liệu. Các thay đổi và kiểm tra khóa nằm trong cùng transaction.
+Mọi request phải khớp chuỗi phiếu → dòng nguyên liệu → lần cân. Sai chuỗi hoặc ngoài phạm vi truy cập trả 404. Tạo/sửa/xóa lần cân và ảnh chỉ được phép sau khi ĐBCL (QA) ký, trước khi IPC ký và khi trạng thái chưa `approved`. Chưa có chữ ký QA trả 409 với thông báo cần ĐBCL ký trước khi nhập khối lượng. Dữ liệu phiếu và nguyên liệu vẫn khóa ngay sau chữ ký đầu tiên. Các thay đổi và kiểm tra khóa nằm trong cùng transaction, so khớp thời điểm ký QA và trạng thái IPC khi khóa phiếu cha để tránh ghi đồng thời với duyệt.
 
-Detail phiếu cân có cột **Khối lượng thực tế** trên từng dòng nguyên liệu. Nhập lượng cân rồi bấm dấu **+** hoặc Enter để lưu từng lần; hỗ trợ dấu phẩy/dấu chấm thập phân, tối đa 6 chữ số thập phân. Hiển thị từng lần cân và tổng khối lượng theo đơn vị; tổng cộng bằng số nguyên theo phần triệu để tránh sai số dấu phẩy động, không cộng lẫn các đơn vị khác nhau. `GET` danh sách nguyên liệu trả thêm `details` và `weighedBy` để tải lịch sử cân cùng danh sách, không gọi riêng cho từng dòng. Sau khi lưu, cập nhật lịch sử và tổng ngay; phiếu đã có chữ ký không hiển thị ô nhập. Giao diện ảnh, sửa/xóa từng lần cân chưa được bổ sung.
+Detail phiếu cân có cột **Thực tế** trên từng dòng nguyên liệu. Bấm dấu **+** để mở form nhập và lưu từng lần; hỗ trợ dấu phẩy/dấu chấm thập phân, tối đa 6 chữ số thập phân, cho phép số âm. Hiển thị từng lần cân và tổng khối lượng theo đơn vị; tổng cộng bằng số nguyên theo phần triệu để tránh sai số dấu phẩy động, không cộng lẫn các đơn vị khác nhau. `GET` danh sách nguyên liệu trả thêm `details`, ảnh và `weighedBy` để tải lịch sử cân cùng danh sách. Sau khi lưu, cập nhật lịch sử và tổng ngay. Chưa có chữ ký ĐBCL hiển thị thông báo và ẩn nút nhập; ký QA xong được nhập cân, IPC ký hoặc phiếu `approved` thì khóa nhập. Xem chi tiết các lần cân vẫn dùng được ở mọi trạng thái.
 
 ## Migration
 

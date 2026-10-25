@@ -53,12 +53,14 @@ export default function WeighingRecordMaterials({
   isImportOpen,
   onImportOpenChange,
   locked,
+  weighingLocked,
   isEditing = false,
 }: {
   recordId: number;
   isImportOpen: boolean;
   onImportOpenChange: (open: boolean) => void;
   locked: boolean;
+  weighingLocked: boolean;
   isEditing?: boolean;
 }) {
   const [selectedStage, setSelectedStage] = useState("");
@@ -272,7 +274,7 @@ export default function WeighingRecordMaterials({
                       <WeighingRecordWeightCell
                         recordId={recordId}
                         line={line}
-                        locked={locked}
+                        locked={weighingLocked}
                         onSaved={async (detail) => {
                           await mutate(
                             (current) =>
