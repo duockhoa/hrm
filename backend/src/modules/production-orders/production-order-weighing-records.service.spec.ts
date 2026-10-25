@@ -123,10 +123,14 @@ describe('ProductionOrderWeighingRecordsService', () => {
     );
   });
 
-  it('blocks edits and deletion after the first approval', async () => {
+  it.each([
+    { qa_staff_approved_at: new Date() },
+    { ipc_staff_approved_at: new Date() },
+    { qa_staff_approved_at: new Date(), ipc_staff_approved_at: new Date() },
+  ])('blocks edits and deletion after approval %j', async (approval) => {
     prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
       ...record,
-      qa_staff_approved_at: new Date(),
+      ...approval,
     });
     await expect(
       service.update(1, { description: 'changed' }),

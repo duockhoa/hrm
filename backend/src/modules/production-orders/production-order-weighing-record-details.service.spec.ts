@@ -125,6 +125,38 @@ describe('Weighing record details', () => {
     ).toHaveBeenCalled();
   });
 
+  it('rejects an IPC signature racing a weighing save before any detail is written', async () => {
+    prisma.productionOrderWeighingRecords.update.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Concurrent IPC approval', {
+        code: 'P2025',
+        clientVersion: '6',
+      }),
+    );
+    await expect(
+      service.create(3, 7, { net_weight: '1' }, { id: 4 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(
+      prisma.productionOrderWeighingRecordDetails.create,
+    ).not.toHaveBeenCalled();
+    expect(
+      prisma.productionOrderWeighingRecordDetails.update,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('reports the IPC lock even when QA has not signed', async () => {
+    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+      ...record,
+      qa_staff_approved_at: null,
+      ipc_staff_approved_at: new Date(),
+    });
+    await expect(
+      service.create(3, 7, { net_weight: '1' }, { id: 4 }),
+    ).rejects.toThrow('IPC đã ký duyệt');
+    expect(
+      prisma.productionOrderWeighingRecordDetails.create,
+    ).not.toHaveBeenCalled();
+  });
+
   it('creates exact weight with the line unit and authenticated weigher/time', async () => {
     const result = await service.create(
       3,

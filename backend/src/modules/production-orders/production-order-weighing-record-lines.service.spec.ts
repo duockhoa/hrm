@@ -327,16 +327,19 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('blocks stage imports after signing', async () => {
-    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
-      ...parent,
-      qa_staff_approved_at: new Date(),
-    });
-    await expect(service.importStage(3, 2, [dto])).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    expect(
-      prisma.productionOrderWeighingRecordLines.create,
-    ).not.toHaveBeenCalled();
-  });
+  it.each(['qa_staff_approved_at', 'ipc_staff_approved_at'])(
+    'blocks stage imports after %s signing',
+    async (signature) => {
+      prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+        ...parent,
+        [signature]: new Date(),
+      });
+      await expect(service.importStage(3, 2, [dto])).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(
+        prisma.productionOrderWeighingRecordLines.create,
+      ).not.toHaveBeenCalled();
+    },
+  );
 });

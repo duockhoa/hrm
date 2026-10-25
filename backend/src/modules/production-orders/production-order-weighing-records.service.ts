@@ -171,11 +171,12 @@ export class ProductionOrderWeighingRecordsService {
     qa_staff_approved_at: Date | null;
     ipc_staff_approved_at: Date | null;
   }) {
-    if (
-      record.status === 'approved' ||
-      record.qa_staff_approved_at ||
-      record.ipc_staff_approved_at
-    ) {
+    if (record.ipc_staff_approved_at) {
+      throw new ConflictException(
+        'IPC đã ký duyệt, không thể sửa hoặc xóa phiếu cân.',
+      );
+    }
+    if (record.status === 'approved' || record.qa_staff_approved_at) {
       throw new ConflictException(
         'Approved weighing records cannot be edited or deleted',
       );

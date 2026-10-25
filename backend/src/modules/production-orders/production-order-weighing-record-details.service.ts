@@ -312,12 +312,17 @@ export class ProductionOrderWeighingRecordDetailsService {
       return await this.prisma.$transaction(
         async (tx) => {
           const { record } = await this.context(tx, recordId, lineId);
+          if (record.ipc_staff_approved_at) {
+            throw new ConflictException(
+              'IPC đã ký duyệt, không thể sửa lần cân hoặc ảnh của phiếu cân.',
+            );
+          }
           if (!record.qa_staff_approved_at) {
             throw new ConflictException(
               'Nhân viên ĐBCL cần ký duyệt trước khi nhập khối lượng cân.',
             );
           }
-          if (record.status === 'approved' || record.ipc_staff_approved_at)
+          if (record.status === 'approved')
             throw new ConflictException(
               'Approved weighing records cannot be edited',
             );
