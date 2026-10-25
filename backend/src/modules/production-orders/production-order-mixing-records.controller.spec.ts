@@ -47,6 +47,12 @@ describe('ProductionOrderMixingRecordsController permissions', () => {
       const requestMethod = Reflect.getMetadata(METHOD_METADATA, handler);
       const permissions = Reflect.getMetadata(PERMISSIONS_KEY, handler);
 
+      if (name === 'create') {
+        expect(permissions).toEqual([
+          PRODUCTION_ORDER_MIXING_RECORD_PERMISSIONS.CREATE,
+        ]);
+        return;
+      }
       if (name === 'delete') {
         expect(permissions).toEqual([
           PRODUCTION_ORDER_MIXING_RECORD_PERMISSIONS.DELETE,

@@ -2,10 +2,11 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { isAxiosError } from "axios";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import {
   ArrowLeft,
   EllipsisVertical,
+  Edit2,
   FileText,
   Loader2,
   Plus,
@@ -37,14 +38,7 @@ import type {
 } from "../types";
 
 import ProductionOrderWeighingRecordDetail from "./production-order-weighing-record-detail";
-
-const statusLabels: Record<ProductionOrderWeighingRecord["status"], string> = {
-  draft: "Bản nháp",
-  in_progress: "Đang thực hiện",
-  completed: "Hoàn tất",
-  approved: "Đã duyệt",
-  cancelled: "Đã hủy",
-};
+import { weighingRecordStatusLabel } from "../record-status";
 
 const personLabel = (person?: WeighingRecordPerson | null) =>
   person?.name || person?.username || "—";
@@ -73,6 +67,13 @@ export default function InlineProductionOrderWeighingRecord({
   embedded?: boolean;
   onSelectRecord?: (record: ProductionOrderWeighingRecord) => void;
 }) {
+  const { mutate: mutateGlobal } = useSWRConfig();
+  const [editingRecord, setEditingRecord] =
+    useState<ProductionOrderWeighingRecord | null>(null);
+  const [editDescription, setEditDescription] = useState("");
+  const [isSavingDescription, setIsSavingDescription] = useState(false);
+  const [editError, setEditError] = useState("");
+  const editBusyRef = useRef(false);
   const productionOrderId =
     productionOrder?.id ??
     productionOrder?.production_order_id ??
@@ -105,6 +106,47 @@ export default function InlineProductionOrderWeighingRecord({
     ),
   );
   const selectedRecord = records?.find((record) => record.id === selectedId);
+  const currentEditingRecord =
+    records?.find((record) => record.id === editingRecord?.id) ?? editingRecord;
+  const editLocked =
+    currentEditingRecord?.status === "approved" ||
+    Boolean(currentEditingRecord?.ipc_staff_approved_at);
+
+  const saveDescription = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingRecord || editBusyRef.current || editLocked) return;
+    editBusyRef.current = true;
+    setIsSavingDescription(true);
+    setEditError("");
+    try {
+      const updated =
+        await productionOrderWeighingRecordsService.updateDescription(
+          editingRecord.id,
+          editDescription.trim() || null,
+        );
+      await mutate(
+        (current) =>
+          current?.map((record) =>
+            record.id === updated.id ? updated : record,
+          ),
+        { revalidate: false },
+      );
+      await mutateGlobal(
+        API_ROUTES.productionOrders.weighingRecordDetail(updated.id),
+        updated,
+        { revalidate: false },
+      );
+      setEditingRecord(null);
+      toast.success("Đã cập nhật mô tả phiếu cân.");
+      void mutate().catch(() => undefined);
+    } catch (error) {
+      setEditError(errorMessage(error, "Không thể sửa mô tả phiếu cân."));
+      void mutate().catch(() => undefined);
+    } finally {
+      editBusyRef.current = false;
+      setIsSavingDescription(false);
+    }
+  };
 
   const createRecord = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -284,7 +326,7 @@ export default function InlineProductionOrderWeighingRecord({
                   </div>
                   <div className="shrink-0 text-right text-sm">
                     <p className="font-medium text-slate-800">
-                      {statusLabels[record.status] ?? record.status}
+                      {weighingRecordStatusLabel(record)}
                     </p>
                     <p className="mt-1 text-orange-600">
                       {personLabel(record.createdBy)}
@@ -306,6 +348,20 @@ export default function InlineProductionOrderWeighingRecord({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        disabled={
+                          record.status === "approved" ||
+                          Boolean(record.ipc_staff_approved_at)
+                        }
+                        onSelect={() => {
+                          setEditingRecord(record);
+                          setEditDescription(record.description ?? "");
+                          setEditError("");
+                        }}
+                      >
+                        <Edit2 className="size-4" />
+                        Sửa mô tả
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         variant="destructive"
                         disabled={
@@ -342,6 +398,63 @@ export default function InlineProductionOrderWeighingRecord({
           </div>
         )}
       </section>
+
+      <Dialog
+        open={Boolean(editingRecord)}
+        onOpenChange={(open) => {
+          if (!open && !editBusyRef.current) setEditingRecord(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Sửa mô tả phiếu cân</DialogTitle>
+            <DialogDescription>
+              Cập nhật mô tả phiếu cân của lệnh sản xuất này.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={saveDescription} className="flex flex-col gap-4">
+            <label
+              htmlFor="weighing-record-edit-description"
+              className="text-sm font-medium"
+            >
+              Mô tả
+            </label>
+            <Textarea
+              id="weighing-record-edit-description"
+              value={editDescription}
+              rows={4}
+              disabled={isSavingDescription || editLocked}
+              onChange={(event) => setEditDescription(event.target.value)}
+            />
+            {editError ? (
+              <p role="alert" className="text-sm text-red-600">
+                {editError}
+              </p>
+            ) : null}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSavingDescription}
+                onClick={() => setEditingRecord(null)}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSavingDescription || editLocked}
+              >
+                {isSavingDescription ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Edit2 className="size-4" />
+                )}
+                {isSavingDescription ? "Đang lưu..." : "Lưu thay đổi"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(deletingRecord)}

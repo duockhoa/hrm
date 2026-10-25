@@ -256,7 +256,7 @@ export class ProductionOrderMixingRecordsController {
     );
   }
 
-  @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @Permissions(PRODUCTION_ORDER_MIXING_RECORD_PERMISSIONS.CREATE)
   @Post(':id/mixing-records')
   async create(
     @Param('id', ParseIntPipe) id: number,
