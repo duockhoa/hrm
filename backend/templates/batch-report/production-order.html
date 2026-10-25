@@ -109,6 +109,45 @@
     .mixing-approvals td { text-align: center; padding-top: 6mm; }
     .mixing-approvals p { margin: 3mm 0; }
 
+    /* Match the printable weighing form on the frontend. */
+    .weighing-record-page { height: 297mm; font-size: 15px; line-height: 24px; }
+    .weighing-record-page table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+    .weighing-record-page th, .weighing-record-page td { border: 1px solid #000; overflow-wrap: anywhere; }
+    .weighing-form-header td { height: 52px; padding: 6px 8px; line-height: 20px; vertical-align: middle; }
+    .weighing-form-header .weighing-logo { text-align: center; padding: 16px; }
+    .weighing-logo img { width: 130px; max-width: 100%; max-height: 64px; object-fit: contain; }
+    .weighing-title { font-size: 20px; text-transform: uppercase; text-align: center; vertical-align: middle; }
+    .weighing-info { margin-top: 24px; }
+    .weighing-info th, .weighing-info td { height: 48px; padding: 8px; text-align: left; vertical-align: middle; white-space: pre-wrap; }
+    .weighing-material-title { font-size: 16px; text-transform: uppercase; margin: 24px 0 8px; }
+    .weighing-content { font-size: 12px; line-height: 16px; }
+    .weighing-content th, .weighing-content td { padding: 6px 4px; }
+    .weighing-content th { text-align: center; vertical-align: middle; }
+    .weighing-content td { vertical-align: top; }
+    .weighing-content p { margin: 0; }
+    .weighing-content .weighing-line-note { margin-top: 4px; white-space: pre-wrap; }
+    .weighing-content .weighing-number { text-align: right; font-variant-numeric: tabular-nums; }
+    .weighing-content .weighing-group-total { vertical-align: middle; }
+    .weighing-unit { text-align: center; }
+    .weighing-empty { color: #64748b; }
+    .weighing-lot-correct { color: #16a34a; font-weight: 600; }
+    .weighing-lot-incorrect { color: #dc2626; font-weight: 600; }
+    .weighing-actual-total { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+    .weighing-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .weighing-status-below { background: #eab308; }
+    .weighing-status-within { background: #22c55e; }
+    .weighing-status-above { background: #ef4444; }
+    .weighing-content .weighing-summary td { border: none; padding: 8px 0 0; white-space: pre-wrap; }
+    .weighing-content .weighing-summary:first-of-type td { padding-top: 16px; }
+    .weighing-content .weighing-approvals td { border: none; padding: 24px 0 0; }
+    .weighing-approval-columns { display: grid; grid-template-columns: 1fr 1fr; font-size: 15px; line-height: 24px; }
+    .weighing-approval { min-height: 256px; padding: 20px 24px; text-align: center; }
+    .weighing-approval .weighing-approved { margin-top: 40px; display: flex; gap: 8px; align-items: center; justify-content: center; }
+    .weighing-checkbox { display: inline-flex; width: 16px; height: 16px; border: 1px solid #000; align-items: center; justify-content: center; font-family: Arial, sans-serif; font-size: 14px; }
+    .weighing-checkbox.checked { background: #047857; border-color: #047857; color: #fff; }
+    .weighing-approval dl { margin: 36px 0 0; }
+    .weighing-approval dd { margin: 4px 0 20px; min-height: 24px; font-weight: 600; }
+
     .page-header {
       position: absolute;
       top: 5mm;
@@ -606,6 +645,7 @@
   </main>
   {{warehouse_release_html}}
   {{mixing_records_html}}
+  {{weighing_records_html}}
   {{deviations_html}}
   {{taste_checks_html}}
   {{vial_inspection_html}}

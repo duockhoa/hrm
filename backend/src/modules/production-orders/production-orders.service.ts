@@ -14,6 +14,7 @@ import { WarehouseReleaseExportService } from './exports/warehouse-release-expor
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { exportDatePrint } from './exports/date-print-export';
 import { mixingRecordsReportInclude } from './exports/mixing-records-report-html';
+import { weighingRecordsReportInclude } from './exports/weighing-records-report-html';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
 import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
 import type {
@@ -590,6 +591,10 @@ export class ProductionOrdersService {
           ...productionOrderFindInclude,
           mixingRecords: {
             include: mixingRecordsReportInclude,
+            orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+          },
+          weighingRecords: {
+            include: weighingRecordsReportInclude,
             orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
           },
           secondaryPackagingChecks: {

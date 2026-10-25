@@ -98,6 +98,10 @@ import {
 } from './material-summaries-report-html';
 import { Injectable } from '@nestjs/common';
 import {
+  buildWeighingRecordsHtml,
+  type WeighingRecordForReport,
+} from './weighing-records-report-html';
+import {
   buildMixingRecordsHtml,
   type MixingRecordForReport,
 } from './mixing-records-report-html';
@@ -147,6 +151,7 @@ const SEMI_FINISHED_PRODUCT_PRODUCTION_ORDER_TEMPLATE_PATH = path.join(
 
 type ProductionOrderForExport = ProductionOrders & {
   mixingRecords?: MixingRecordForReport[];
+  weighingRecords?: WeighingRecordForReport[];
   secondaryPackagingChecks?: buildSecondaryPackagingChecksHtmlRecord[];
   preSecondaryPackagingChecks?: buildPreSecondaryPackagingChecksHtmlRecord[];
   postPreparationSolutionChecks?: buildPostPreparationSolutionChecksHtmlRecord[];
@@ -1631,6 +1636,26 @@ export class ProductionOrderExportService {
               },
             )
           : '',
+        weighing_records_html:
+          productionOrder.featureConfig?.actions?.some(
+            (action) => action.key === 'view_weighing_record' && action.enabled,
+          ) ||
+          productionOrder.featureConfig?.sections?.some(
+            (section) => section.key === 'weighing_records' && section.enabled,
+          )
+            ? buildWeighingRecordsHtml(
+                productionOrder.weighingRecords ?? [],
+                productionOrder,
+                {
+                  appInfo,
+                  headerTitle,
+                  printTime,
+                  printerName,
+                  watermarkDataUri,
+                  logoDataUri: `data:image/png;base64,${logoBuf.toString('base64')}`,
+                },
+              )
+            : '',
         deviations_html: isReportSectionEnabled(productionOrder, 'deviations_html')
           ? await buildDeviationsHtml(productionOrder.deviations ?? [], productionOrder, {
               appInfo, headerTitle, printTime, printerName, watermarkDataUri,
@@ -1809,6 +1834,7 @@ export class ProductionOrderExportService {
         'material_summaries_html',
         'warehouse_release_html',
         'mixing_records_html',
+        'weighing_records_html',
         'deviations_html',
         'taste_checks_html',
         'vial_inspection_html',

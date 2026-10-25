@@ -48,21 +48,43 @@ export class ProductionOrderPdfRendererService {
             Array.from(document.images).map((image) => image.decode()),
           );
           // Measure rows after fonts load so long room/user names also paginate.
-          for (const sheet of Array.from(document.querySelectorAll<HTMLElement>('.deviation-detail-page'))) {
-            const footerTop = sheet.querySelector<HTMLElement>('.page-footer')!.getBoundingClientRect().top - footerRowClearancePx;
-            const gallery = sheet.querySelector<HTMLElement>('.deviation-image-gallery');
+          for (const sheet of Array.from(
+            document.querySelectorAll<HTMLElement>('.deviation-detail-page'),
+          )) {
+            const footerTop =
+              sheet
+                .querySelector<HTMLElement>('.page-footer')!
+                .getBoundingClientRect().top - footerRowClearancePx;
+            const gallery = sheet.querySelector<HTMLElement>(
+              '.deviation-image-gallery',
+            );
             if (gallery) {
               const available = footerTop - gallery.getBoundingClientRect().top;
-              const imageRows = Math.ceil(gallery.children.length / Math.min(gallery.children.length, 3));
+              const imageRows = Math.ceil(
+                gallery.children.length / Math.min(gallery.children.length, 3),
+              );
               if (available < imageRows * 60) return { overflow: true };
               gallery.style.height = `${Math.min(available, 360)}px`;
             }
-            if (sheet.querySelector<HTMLElement>('.deviation-detail-content')!.getBoundingClientRect().bottom > footerTop) return { overflow: true };
+            if (
+              sheet
+                .querySelector<HTMLElement>('.deviation-detail-content')!
+                .getBoundingClientRect().bottom > footerTop
+            )
+              return { overflow: true };
           }
-          for (const sheet of Array.from(document.querySelectorAll<HTMLElement>('.date-print-page'))) {
-            const illustration = sheet.querySelector<HTMLElement>('.illustration');
+          for (const sheet of Array.from(
+            document.querySelectorAll<HTMLElement>('.date-print-page'),
+          )) {
+            const illustration =
+              sheet.querySelector<HTMLElement>('.illustration');
             const footer = sheet.querySelector<HTMLElement>('.footer');
-            if (illustration && footer && illustration.getBoundingClientRect().bottom > footer.getBoundingClientRect().top - footerRowClearancePx) {
+            if (
+              illustration &&
+              footer &&
+              illustration.getBoundingClientRect().bottom >
+                footer.getBoundingClientRect().top - footerRowClearancePx
+            ) {
               return { overflow: true };
             }
           }
@@ -79,7 +101,11 @@ export class ProductionOrderPdfRendererService {
             const groups: HTMLTableRowElement[][] = [];
             for (const row of rows) {
               const previous = groups[groups.length - 1];
-              if (row.dataset.tasteCheckId && previous?.[0].dataset.tasteCheckId === row.dataset.tasteCheckId) previous.push(row);
+              if (
+                row.dataset.tasteCheckId &&
+                previous?.[0].dataset.tasteCheckId === row.dataset.tasteCheckId
+              )
+                previous.push(row);
               else groups.push([row]);
             }
             body.replaceChildren();
@@ -180,6 +206,76 @@ export class ProductionOrderPdfRendererService {
               } else {
                 firstCell = cell;
                 stepId = row.dataset.stepId;
+              }
+            }
+          }
+          // Keep each weighing form's headers and column widths on continuation
+          // pages. Merge totals only after pagination, so rowspans never cross pages.
+          for (const firstPage of Array.from(
+            document.querySelectorAll<HTMLElement>('.weighing-record-page'),
+          )) {
+            let currentPage = firstPage;
+            let body = currentPage.querySelector<HTMLTableSectionElement>(
+              '.weighing-content > tbody',
+            );
+            if (!body) continue;
+            const rows = Array.from(body.rows);
+            const groups: HTMLTableRowElement[][] = [];
+            const summaryRows: HTMLTableRowElement[] = [];
+            for (const row of rows) {
+              if (row.matches('.weighing-summary, .weighing-approvals'))
+                summaryRows.push(row);
+              else groups.push([row]);
+            }
+            if (summaryRows.length) groups.push(summaryRows);
+            body.replaceChildren();
+            const exceedsFooter = (row: HTMLElement) =>
+              row.getBoundingClientRect().bottom >
+              currentPage
+                .querySelector<HTMLElement>('.page-footer')!
+                .getBoundingClientRect().top -
+                footerRowClearancePx;
+            for (const group of groups) {
+              const row = group[group.length - 1];
+              body.append(...group);
+              if (exceedsFooter(row) && body.rows.length > group.length) {
+                group.forEach((member) => member.remove());
+                const nextPage = currentPage.cloneNode(true) as HTMLElement;
+                nextPage.querySelector('.weighing-info')?.remove();
+                if (row.classList.contains('weighing-approvals')) {
+                  nextPage.querySelector('.weighing-material-title')?.remove();
+                  nextPage.querySelector('.weighing-content > thead')?.remove();
+                }
+                body = nextPage.querySelector<HTMLTableSectionElement>(
+                  '.weighing-content > tbody',
+                )!;
+                body.replaceChildren();
+                currentPage.after(nextPage);
+                currentPage = nextPage;
+                body.append(...group);
+              }
+              if (exceedsFooter(row)) return { overflow: true };
+            }
+          }
+          for (const body of Array.from(
+            document.querySelectorAll<HTMLTableSectionElement>(
+              '.weighing-content > tbody',
+            ),
+          )) {
+            let group: string | undefined;
+            let totals: HTMLTableCellElement[] = [];
+            for (const row of Array.from(body.rows)) {
+              const cells = Array.from(
+                row.querySelectorAll<HTMLTableCellElement>(
+                  '[data-weighing-total]',
+                ),
+              );
+              if (cells.length && group === row.dataset.weighingGroup) {
+                totals.forEach((cell) => (cell.rowSpan += 1));
+                cells.forEach((cell) => cell.remove());
+              } else {
+                group = row.dataset.weighingGroup;
+                totals = cells;
               }
             }
           }

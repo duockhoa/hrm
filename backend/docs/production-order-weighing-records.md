@@ -178,6 +178,12 @@ Giao diện bấm số lô để chọn Đúng/Sai; đúng hiển thị chữ xa
 
 Migration `20261025040000_add_weighing_record_line_checks` tạo bảng `production_order_weighing_record_line_checks` với liên kết duy nhất tới dòng nguyên liệu, kết quả đúng/sai, người kiểm tra và thời điểm kiểm tra.
 
+## Xuất PDF báo cáo lô
+
+Phiếu cân được xuất ngay sau phiếu pha chế, trước thông tin sai lệch, khi action `view_weighing_record` hoặc section `weighing_records` được bật. Xuất toàn bộ phiếu đã lưu theo thứ tự tạo; dữ liệu gồm nguyên liệu, các lần cân, kết quả kiểm tra số lô và chữ ký QA/IPC.
+
+Biểu mẫu giữ bố cục frontend: mã BMDB005.01, thông tin sản phẩm, bảng 9 cột với tỷ lệ tương ứng, ô tổng lượng gộp theo mã nguyên liệu và đơn vị, số thập phân tiếng Việt, chấm vàng/xanh/đỏ, số lô xanh/đỏ, ghi chú, người cân và phê duyệt. Khi bảng dài, lặp đầu biểu mẫu và tiêu đề cột; ô tổng chỉ gộp trong từng trang và ghi chú đi cùng phần ký duyệt. Không in các nút thao tác hoặc thông tin người kiểm tra số lô.
+
 ## Migration
 
 `prisma/migrations/20261024000000_add_production_order_weighing_records/migration.sql` chỉ tạo bảng phiếu cân, index và khóa ngoại tới các bảng hiện có.
