@@ -137,9 +137,9 @@ export default function WeighingRecordMaterials({
               <col />
               <col className="w-[95px]" />
               <col className="w-[100px]" />
-              <col className="w-[60px]" />
               <col className="w-[200px]" />
               <col className="w-[125px]" />
+              <col className="w-[60px]" />
             </colgroup>
             <thead>
               <tr>
@@ -162,7 +162,7 @@ export default function WeighingRecordMaterials({
                 </th>
               </tr>
               <tr>
-                {["Yêu cầu", "Đơn vị", "Thực tế", "Tổng khối lượng"].map(
+                {["Yêu cầu", "Thực tế", "Tổng khối lượng", "Đơn vị"].map(
                   (label) => (
                     <th
                       key={label}
@@ -231,9 +231,6 @@ export default function WeighingRecordMaterials({
                   <td className="border border-black px-2 py-2 text-right tabular-nums">
                     {quantityLabel(line.planned_quantity)}
                   </td>
-                  <td className="break-words border border-black px-2 py-2 text-center">
-                    {line.unit}
-                  </td>
                   <td className="border border-black px-2 py-2 align-top">
                     <WeighingRecordWeightCell
                       recordId={recordId}
@@ -263,6 +260,9 @@ export default function WeighingRecordMaterials({
                   </td>
                   <td className="border border-black px-2 py-2 text-right tabular-nums">
                     <WeighingRecordWeightTotal line={line} />
+                  </td>
+                  <td className="break-words border border-black px-2 py-2 text-center">
+                    {line.unit}
                   </td>
                 </tr>
               ))}
