@@ -30,6 +30,7 @@ model AuditLogs {
 
 model Users {
   weighingRecordDetails ProductionOrderWeighingRecordDetails[] @relation("WeighingRecordDetailWeigher")
+  weighingRecordLineChecks ProductionOrderWeighingRecordLineChecks[] @relation("WeighingRecordLineChecker")
   oauthGrants OAuthGrants[]
   notedMixingRecordParameters ProductionOrderMixingRecordParameters[] @relation("MixingRecordParameterNoteRecorder")
   uploadedMixingRecordParameterImages ProductionOrderMixingRecordParameters[] @relation("MixingRecordParameterImageUploader")
@@ -1125,9 +1126,23 @@ model ProductionOrderWeighingRecordLines {
   updated_at DateTime @default(now()) @updatedAt
 
   details ProductionOrderWeighingRecordDetails[]
+  lotCheck ProductionOrderWeighingRecordLineChecks?
 
   @@index([production_order_weighing_record_id, id], map: "po_weighing_lines_record_idx")
   @@map("production_order_weighing_record_lines")
+}
+
+model ProductionOrderWeighingRecordLineChecks {
+  id Int @id @default(autoincrement())
+  production_order_weighing_record_line_id Int @unique(map: "po_weighing_line_checks_line_key")
+  weighingRecordLine ProductionOrderWeighingRecordLines @relation(fields: [production_order_weighing_record_line_id], references: [id], onDelete: Cascade, map: "po_weighing_line_checks_line_fkey")
+  is_correct Boolean
+  checked_by_id Int
+  checkedBy Users @relation("WeighingRecordLineChecker", fields: [checked_by_id], references: [id], onDelete: Restrict, map: "po_weighing_line_checks_user_fkey")
+  checked_at DateTime @default(now())
+
+  @@index([checked_by_id], map: "po_weighing_line_checks_user_idx")
+  @@map("production_order_weighing_record_line_checks")
 }
 
 model ProductionOrderWeighingRecordDetails {

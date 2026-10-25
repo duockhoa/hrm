@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderWeighingRecordLineDto } from './dto/create-production-order-weighing-record-line.dto';
 import { UpdateProductionOrderWeighingRecordLineDto } from './dto/update-production-order-weighing-record-line.dto';
+import { CheckWeighingRecordLotDto } from './dto/check-weighing-record-lot.dto';
 
 const fields = [
   'source_line_number',
@@ -35,6 +36,7 @@ export class ProductionOrderWeighingRecordLinesService {
       where: { production_order_weighing_record_id: recordId },
       orderBy: [{ item_code: 'asc' }, { id: 'asc' }],
       include: {
+        lotCheck: true,
         details: {
           orderBy: { id: 'asc' },
           include: {
@@ -70,10 +72,66 @@ export class ProductionOrderWeighingRecordLinesService {
   ) {
     const data = this.buildData(dto, false);
     return this.write(recordId, async (tx) => {
-      await this.line(tx, recordId, lineId);
-      return tx.productionOrderWeighingRecordLines.update({
+      const current = await this.line(tx, recordId, lineId);
+      await tx.productionOrderWeighingRecordLines.update({
         where: { id: lineId, production_order_weighing_record_id: recordId },
         data,
+      });
+      if (
+        (data.lot_no !== undefined && data.lot_no !== current.lot_no) ||
+        (data.item_code !== undefined && data.item_code !== current.item_code)
+      ) {
+        await tx.productionOrderWeighingRecordLineChecks.deleteMany({
+          where: { production_order_weighing_record_line_id: lineId },
+        });
+      }
+      return tx.productionOrderWeighingRecordLines.findUniqueOrThrow({
+        where: { id: lineId, production_order_weighing_record_id: recordId },
+        include: { lotCheck: true },
+      });
+    });
+  }
+
+  async checkLot(
+    recordId: number,
+    lineId: number,
+    dto: CheckWeighingRecordLotDto,
+    user: { id?: number | string | null },
+  ) {
+    const userId = Number(user?.id);
+    if (!Number.isSafeInteger(userId) || userId <= 0)
+      throw new BadRequestException('Invalid checking user');
+    if (
+      typeof dto?.is_correct !== 'boolean' ||
+      typeof dto?.lot_no !== 'string' ||
+      !dto.lot_no.trim()
+    )
+      throw new BadRequestException('is_correct and lot_no are required');
+    return this.prisma.$transaction(async (tx) => {
+      await this.parent(tx, recordId);
+      await this.line(tx, recordId, lineId);
+      // Lock the material row and reject a form opened for an older lot number.
+      const locked = await tx.productionOrderWeighingRecordLines.updateMany({
+        where: {
+          id: lineId,
+          production_order_weighing_record_id: recordId,
+          lot_no: dto.lot_no,
+        },
+        data: { updated_at: new Date() },
+      });
+      if (locked.count !== 1)
+        throw new ConflictException(
+          'Số lô đã thay đổi. Vui lòng tải lại và kiểm tra lại.',
+        );
+      const data = {
+        is_correct: dto.is_correct,
+        checked_by_id: userId,
+        checked_at: new Date(),
+      };
+      return tx.productionOrderWeighingRecordLineChecks.upsert({
+        where: { production_order_weighing_record_line_id: lineId },
+        create: { ...data, production_order_weighing_record_line_id: lineId },
+        update: data,
       });
     });
   }
@@ -180,6 +238,7 @@ export class ProductionOrderWeighingRecordLinesService {
   ) {
     const line = await tx.productionOrderWeighingRecordLines.findUnique({
       where: { id, production_order_weighing_record_id: recordId },
+      include: { lotCheck: true },
     });
     if (!line) throw new NotFoundException('Weighing record line not found');
     return line;
@@ -281,7 +340,7 @@ export class ProductionOrderWeighingRecordLinesService {
         throw new BadRequestException(
           `${key} must be a non-negative integer or null`,
         );
-      data[key] = value as number | null;
+      data[key] = value;
     }
     if (input.planned_quantity !== undefined) {
       const value = input.planned_quantity;

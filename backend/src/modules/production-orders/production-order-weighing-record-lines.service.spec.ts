@@ -30,6 +30,10 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
         update: jest.fn().mockResolvedValue({ id: 3 }),
       },
       productionOrderWeighingRecordLines: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ id: 7, lotCheck: null }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         findFirst: jest.fn().mockResolvedValue(null),
         findUnique: jest
           .fn()
@@ -46,6 +50,12 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
           .fn()
           .mockImplementation(async ({ data }) => ({ id: 7, ...data })),
         delete: jest.fn().mockResolvedValue({ id: 7 }),
+      },
+      productionOrderWeighingRecordLineChecks: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        upsert: jest
+          .fn()
+          .mockImplementation(async ({ create }) => ({ id: 1, ...create })),
       },
     };
     prisma.$transaction = jest.fn(async (action) => action(prisma));
@@ -149,6 +159,7 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
       where: { production_order_weighing_record_id: 3 },
       orderBy: [{ item_code: 'asc' }, { id: 'asc' }],
       include: {
+        lotCheck: true,
         details: {
           orderBy: { id: 'asc' },
           include: {
@@ -158,6 +169,85 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
         },
       },
     });
+  });
+
+  it.each([true, false])(
+    'stores lot check %s with the authenticated user and server time',
+    async (isCorrect) => {
+      const result = await service.checkLot(
+        3,
+        7,
+        { lot_no: 'LOT01', is_correct: isCorrect },
+        { id: '9' },
+      );
+      expect(result).toMatchObject({
+        production_order_weighing_record_line_id: 7,
+        is_correct: isCorrect,
+        checked_by_id: 9,
+        checked_at: expect.any(Date),
+      });
+      expect(
+        prisma.productionOrderWeighingRecordLineChecks.upsert,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { production_order_weighing_record_line_id: 7 },
+          update: expect.objectContaining({
+            is_correct: isCorrect,
+            checked_by_id: 9,
+          }),
+        }),
+      );
+    },
+  );
+
+  it('rejects stale lot checks without saving a result', async () => {
+    prisma.productionOrderWeighingRecordLines.updateMany.mockResolvedValue({
+      count: 0,
+    });
+    await expect(
+      service.checkLot(3, 7, { lot_no: 'OLD', is_correct: true }, { id: 9 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(
+      prisma.productionOrderWeighingRecordLineChecks.upsert,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('rejects a lot check for a line belonging to another record', async () => {
+    await expect(
+      service.checkLot(4, 7, { lot_no: 'LOT', is_correct: true }, { id: 9 }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(
+      prisma.productionOrderWeighingRecordLineChecks.upsert,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('clears lot checks when the lot or material code changes, keeping checks on other edits', async () => {
+    await service.update(3, 7, { lot_no: 'NEW' });
+    expect(
+      prisma.productionOrderWeighingRecordLineChecks.deleteMany,
+    ).toHaveBeenCalledWith({
+      where: { production_order_weighing_record_line_id: 7 },
+    });
+    prisma.productionOrderWeighingRecordLineChecks.deleteMany.mockClear();
+    await service.update(3, 7, { note: 'note' });
+    expect(
+      prisma.productionOrderWeighingRecordLineChecks.deleteMany,
+    ).not.toHaveBeenCalled();
+    await service.update(3, 7, { item_code: 'NEW' });
+    expect(
+      prisma.productionOrderWeighingRecordLineChecks.deleteMany,
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects non-boolean results and missing users', async () => {
+    await expect(
+      service.checkLot(3, 7, { lot_no: 'LOT', is_correct: 'false' } as any, {
+        id: 9,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.checkLot(3, 7, { lot_no: 'LOT', is_correct: false }, {}),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('returns 404 for a missing or hidden parent', async () => {

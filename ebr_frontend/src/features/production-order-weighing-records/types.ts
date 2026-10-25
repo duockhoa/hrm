@@ -52,6 +52,15 @@ export type ProductionOrderWeighingRecordLine = {
   unit: string;
   note: string | null;
   details?: ProductionOrderWeighingRecordDetail[];
+  lotCheck?: WeighingRecordLotCheck | null;
+};
+
+export type WeighingRecordLotCheck = {
+  id: number;
+  production_order_weighing_record_line_id: number;
+  is_correct: boolean;
+  checked_by_id: number;
+  checked_at: string;
 };
 
 export type ProductionOrderWeighingRecordDetail = {

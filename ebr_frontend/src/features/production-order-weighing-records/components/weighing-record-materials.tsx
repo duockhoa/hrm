@@ -23,6 +23,7 @@ import WeighingRecordWeightCell, {
 import WeighingRecordMaterialMenu from "./weighing-record-material-menu";
 import WeighingRecordDetailMenu from "./weighing-record-detail-menu";
 import WeighingRecordManualImport from "./weighing-record-manual-import";
+import WeighingRecordLotCheckButton from "./weighing-record-lot-check";
 import {
   formatWeight,
   getWeightStatus,
@@ -283,7 +284,19 @@ export default function WeighingRecordMaterials({
                       ) : null}
                     </td>
                     <td className="break-words border border-black px-1 py-1.5">
-                      {line.lot_no || "—"}
+                      <WeighingRecordLotCheckButton
+                        recordId={recordId}
+                        line={line}
+                        onSaved={async (lotCheck) => {
+                          await mutate(
+                            (current) => current?.map((entry) =>
+                              entry.id === line.id ? { ...entry, lotCheck } : entry,
+                            ),
+                            { revalidate: false },
+                          );
+                          void mutate().catch(() => undefined);
+                        }}
+                      />
                     </td>
                     <td className="border border-black px-1 py-1.5 text-right tabular-nums">
                       {quantityLabel(line.planned_quantity)}

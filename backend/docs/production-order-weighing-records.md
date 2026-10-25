@@ -162,6 +162,22 @@ Mọi request phải khớp chuỗi phiếu → dòng nguyên liệu → lần c
 
 Detail phiếu cân có cột **Thực tế** trên từng dòng nguyên liệu. Bấm dấu **+** để mở form nhập và lưu từng lần; hỗ trợ dấu phẩy/dấu chấm thập phân, tối đa 6 chữ số thập phân, cho phép số âm. Hiển thị từng lần cân và tổng khối lượng theo đơn vị; tổng cộng bằng số nguyên theo phần triệu để tránh sai số dấu phẩy động, không cộng lẫn các đơn vị khác nhau. `GET` danh sách nguyên liệu trả thêm `details`, ảnh và `weighedBy` để tải lịch sử cân cùng danh sách. Sau khi lưu, cập nhật lịch sử và tổng ngay. Chưa có chữ ký ĐBCL ẩn nút nhập; ký QA xong được nhập cân, IPC ký hoặc phiếu `approved` thì khóa nhập. Xem chi tiết các lần cân vẫn dùng được ở mọi trạng thái.
 
+## Kiểm tra số lô
+
+`PATCH /production-orders/weighing-records/:recordId/lines/:lineId/lot-check`
+
+Yêu cầu đăng nhập, không yêu cầu permission riêng. Body:
+
+```json
+{ "lot_no": "LOT001", "is_correct": true }
+```
+
+`lot_no` phải khớp số lô hiện tại của dòng nguyên liệu; form cũ gửi số lô đã thay đổi trả 409. Server tự lấy `checked_by_id` từ tài khoản đăng nhập và ghi `checked_at`. Mỗi dòng có một kết quả hiện tại, kiểm tra lại cập nhật kết quả đó. API trả bản ghi kiểm tra; GET danh sách/chi tiết dòng trả thêm `lotCheck` (null nếu chưa kiểm tra). Kiểm tra được thực hiện ở mọi trạng thái phiếu. Khi thay đổi mã nguyên liệu hoặc số lô, kết quả cũ bị xóa trong cùng transaction.
+
+Giao diện bấm số lô để chọn Đúng/Sai; đúng hiển thị chữ xanh, sai hiển thị chữ đỏ, chưa kiểm tra giữ màu mặc định. Không hiển thị người kiểm tra trên giao diện.
+
+Migration `20261025040000_add_weighing_record_line_checks` tạo bảng `production_order_weighing_record_line_checks` với liên kết duy nhất tới dòng nguyên liệu, kết quả đúng/sai, người kiểm tra và thời điểm kiểm tra.
+
 ## Migration
 
 `prisma/migrations/20261024000000_add_production_order_weighing_records/migration.sql` chỉ tạo bảng phiếu cân, index và khóa ngoại tới các bảng hiện có.

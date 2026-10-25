@@ -14,10 +14,9 @@ import { ProductionOrderWeighingRecordLinesService } from './production-order-we
 describe('Weighing record line HTTP routes', () => {
   let app: INestApplication;
   const service = Object.fromEntries(
-    ['findAll', 'findById', 'create', 'update', 'delete'].map((method) => [
-      method,
-      jest.fn().mockResolvedValue({ id: 7 }),
-    ]),
+    ['findAll', 'findById', 'create', 'update', 'delete', 'checkLot'].map(
+      (method) => [method, jest.fn().mockResolvedValue({ id: 7 })],
+    ),
   );
   const base = '/production-orders/weighing-records/3/lines';
   beforeAll(async () => {
@@ -40,7 +39,7 @@ describe('Weighing record line HTTP routes', () => {
         canActivate(context: ExecutionContext) {
           const req = context.switchToHttp().getRequest();
           if (!req.headers.authorization) throw new UnauthorizedException();
-          req.user = { permissions: [req.headers['x-test-permission']] };
+          req.user = { id: 9, permissions: [req.headers['x-test-permission']] };
           return true;
         },
       })
@@ -52,6 +51,25 @@ describe('Weighing record line HTTP routes', () => {
     await app.close();
   });
   beforeEach(() => jest.clearAllMocks());
+
+  it('allows lot checking without a permission while requiring login', async () => {
+    const body = { lot_no: 'LOT01', is_correct: false };
+    await request(app.getHttpServer())
+      .patch(base + '/7/lot-check')
+      .send(body)
+      .expect(401);
+    await request(app.getHttpServer())
+      .patch(base + '/7/lot-check')
+      .set('Authorization', 'test')
+      .send(body)
+      .expect(200);
+    expect(service.checkLot).toHaveBeenCalledWith(
+      3,
+      7,
+      body,
+      expect.objectContaining({ id: 9 }),
+    );
+  });
 
   it.each([
     ['get', '', 'read', 'findAll'],

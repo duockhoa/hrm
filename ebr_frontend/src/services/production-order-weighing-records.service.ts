@@ -8,6 +8,7 @@ import type {
   WeighingImportStage,
   UpdateWeighingRecordLinePayload,
   WeighingSourceMaterial,
+  WeighingRecordLotCheck,
 } from "@/features/production-order-weighing-records/types";
 
 const fetchAllByProductionOrderId = async (
@@ -93,6 +94,13 @@ const productionOrderWeighingRecordsService = {
       await axiosClient.delete<ProductionOrderWeighingRecordLine>(
         `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}`,
       );
+    return response.data;
+  },
+  async checkLot(recordId: number, lineId: number, lotNo: string, isCorrect: boolean) {
+    const response = await axiosClient.patch<WeighingRecordLotCheck>(
+      `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/lot-check`,
+      { lot_no: lotNo, is_correct: isCorrect },
+    );
     return response.data;
   },
   async createWeighingDetail(
