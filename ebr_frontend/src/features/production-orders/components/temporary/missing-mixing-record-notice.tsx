@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import Image from "next/image";
+import { X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
@@ -109,16 +110,62 @@ export default function MissingMixingRecordNotice({
     ) {
       resolve(records.length === 0);
     }
-  }, [status, isEligibleDate, records, error, isLoading, isValidating, resolve]);
+  }, [
+    status,
+    isEligibleDate,
+    records,
+    error,
+    isLoading,
+    isValidating,
+    resolve,
+  ]);
+
+  const open = status === "open" && isEligibleDate;
+  const [remainingSeconds, setRemainingSeconds] = useState(5);
+  useEffect(() => {
+    if (!open) return;
+    const unlockAt = Date.now() + 5000;
+    const timer = window.setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((unlockAt - Date.now()) / 1000));
+      setRemainingSeconds(remaining);
+      if (remaining === 0) window.clearInterval(timer);
+    }, 100);
+    return () => window.clearInterval(timer);
+  }, [open]);
+  const canDismiss = remainingSeconds === 0;
+  const close = () => {
+    if (canDismiss) dismiss();
+  };
 
   return (
     <Dialog
-      open={status === "open" && isEligibleDate}
+      open={open}
       onOpenChange={(value) => {
-        if (!value) dismiss();
+        if (!value) close();
       }}
     >
-      <DialogContent className="max-h-[90dvh] overflow-y-auto font-sans sm:max-w-md">
+      <DialogContent
+        className="max-h-[90dvh] overflow-y-auto font-sans sm:max-w-md"
+        showCloseButton={false}
+        onEscapeKeyDown={(event) => {
+          if (!canDismiss) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (!canDismiss) event.preventDefault();
+        }}
+      >
+        <button
+          type="button"
+          disabled={!canDismiss}
+          onClick={close}
+          aria-label="Đóng thông báo"
+          title={
+            canDismiss ? "Đóng" : `Có thể đóng sau ${remainingSeconds} giây`
+          }
+          className="absolute top-4 right-4 rounded-xs opacity-70 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <X className="size-4" />
+        </button>
         <DialogHeader className="items-center gap-3 text-center sm:text-center">
           <DialogTitle className="text-2xl font-bold">Thông báo</DialogTitle>
           <DialogDescription className="w-full rounded-lg bg-amber-50 px-4 py-3 text-center text-base font-semibold leading-relaxed text-red-600 ring-1 ring-inset ring-amber-200">
@@ -136,8 +183,8 @@ export default function MissingMixingRecordNotice({
           />
         </div>
         <DialogFooter>
-          <Button type="button" onClick={dismiss}>
-            OK
+          <Button type="button" disabled={!canDismiss} onClick={close}>
+            {canDismiss ? "OK" : `OK (${remainingSeconds}s)`}
           </Button>
         </DialogFooter>
       </DialogContent>
