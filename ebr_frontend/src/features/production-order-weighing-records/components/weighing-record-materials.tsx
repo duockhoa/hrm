@@ -23,7 +23,12 @@ import WeighingRecordWeightCell, {
 import WeighingRecordMaterialMenu from "./weighing-record-material-menu";
 import WeighingRecordDetailMenu from "./weighing-record-detail-menu";
 import WeighingRecordManualImport from "./weighing-record-manual-import";
-import { formatWeight, groupRequiredQuantities } from "../weight-utils";
+import {
+  formatWeight,
+  getWeightStatus,
+  groupRequiredQuantities,
+  sumWeights,
+} from "../weight-utils";
 import { summarizeWeighings } from "../weighing-summary";
 
 const compareMaterials = (
@@ -49,6 +54,12 @@ const quantityLabel = (value: string) => {
   return `${BigInt(integer).toLocaleString("vi-VN")}${decimals ? `,${decimals}` : ""}`;
 };
 
+const weightStatuses = {
+  below: { color: "bg-yellow-500", label: "Khối lượng thấp hơn mức cho phép" },
+  within: { color: "bg-green-500", label: "Khối lượng trong mức cho phép" },
+  above: { color: "bg-red-500", label: "Khối lượng cao hơn mức cho phép" },
+};
+
 export default function WeighingRecordMaterials({
   recordId,
   isImportOpen,
@@ -70,6 +81,10 @@ export default function WeighingRecordMaterials({
   const [isManualOpen, setIsManualOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [selectedQuantity, setSelectedQuantity] = useState<{
+    itemCode: string;
+    unit: string;
+  } | null>(null);
   const base = API_ROUTES.productionOrders.weighingRecordDetail(recordId);
   const {
     data: lines,
@@ -87,6 +102,27 @@ export default function WeighingRecordMaterials({
   );
   const stage = stages?.find((entry) => String(entry.id) === selectedStage);
   const summary = summarizeWeighings(lines ?? []);
+  const groupedLines = groupRequiredQuantities(
+    [...(lines ?? [])].sort(compareMaterials),
+  );
+  const selectedMaterial = selectedQuantity
+    ? groupedLines.find(
+        ({ line }) =>
+          line.item_code === selectedQuantity.itemCode &&
+          line.unit === selectedQuantity.unit,
+      )
+    : undefined;
+  const selectedActualTotal = selectedMaterial?.actualTotals.find(
+    ({ unit }) => unit === selectedQuantity?.unit,
+  )?.total ?? "0";
+  const remainingQuantity = selectedMaterial
+    ? sumWeights([
+        selectedMaterial.requiredTotal,
+        selectedActualTotal.startsWith("-")
+          ? selectedActualTotal.slice(1)
+          : `-${selectedActualTotal}`,
+      ])
+    : "0";
 
   const importStage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -145,11 +181,11 @@ export default function WeighingRecordMaterials({
           <table className="w-full table-fixed border-collapse border border-black text-[14px] leading-5 print:text-[12px] print:leading-4 [&_td]:[overflow-wrap:anywhere]">
             <colgroup>
               <col className="w-[9%]" />
-              <col className="w-[18%]" />
+              <col className="w-[21%]" />
               <col className="w-[12%]" />
               <col className="w-[9%]" />
-              <col className="w-[10%]" />
-              <col className="w-[11%]" />
+              <col className="w-[9%]" />
+              <col className="w-[9%]" />
               <col className="w-[12%]" />
               <col className="w-[10%]" />
               <col className="w-[9%]" />
@@ -178,7 +214,7 @@ export default function WeighingRecordMaterials({
                 {[
                   "Yêu cầu",
                   "Tổng lượng YC",
-                  "Tổng khối lượng thực tế",
+                  "Tổng lượng TT",
                   "Thực tế",
                   "Tổng khối lượng",
                   "ĐVT",
@@ -194,7 +230,7 @@ export default function WeighingRecordMaterials({
               </tr>
             </thead>
             <tbody>
-              {groupRequiredQuantities([...lines].sort(compareMaterials)).map(
+              {groupedLines.map(
                 ({ line, requiredTotal, requiredRowSpan, actualTotals }) => (
                   <tr key={line.id}>
                     <td className="break-words border border-black px-1 py-1.5">
@@ -257,7 +293,19 @@ export default function WeighingRecordMaterials({
                         rowSpan={requiredRowSpan}
                         className="border border-black px-1 py-1.5 text-right align-middle tabular-nums"
                       >
-                        {quantityLabel(requiredTotal)}
+                        <button
+                          type="button"
+                          className="cursor-pointer rounded-sm underline decoration-dotted underline-offset-4 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 print:no-underline"
+                          aria-label={`Xem lượng còn thiếu của ${line.item_code}`}
+                          onClick={() =>
+                            setSelectedQuantity({
+                              itemCode: line.item_code,
+                              unit: line.unit,
+                            })
+                          }
+                        >
+                          {quantityLabel(requiredTotal)}
+                        </button>
                       </td>
                     ) : null}
                     {requiredRowSpan > 0 ? (
@@ -266,12 +314,33 @@ export default function WeighingRecordMaterials({
                         className="border border-black px-1 py-1.5 text-right align-middle tabular-nums"
                       >
                         {actualTotals.length ? (
-                          actualTotals.map(({ unit, total }) => (
-                            <p key={unit}>
-                              {formatWeight(total)}
-                              {unit !== line.unit ? ` ${unit}` : ""}
-                            </p>
-                          ))
+                          actualTotals.map(({ unit, total }) => {
+                            const status =
+                              unit === line.unit
+                                ? weightStatuses[
+                                    getWeightStatus(requiredTotal, total)
+                                  ]
+                                : null;
+                            return (
+                              <p
+                                key={unit}
+                                className="flex items-center justify-end gap-1.5"
+                              >
+                                {status ? (
+                                  <span
+                                    role="img"
+                                    aria-label={status.label}
+                                    title={status.label}
+                                    className={`size-2 shrink-0 rounded-full print:[print-color-adjust:exact] ${status.color}`}
+                                  />
+                                ) : null}
+                                <span>
+                                  {formatWeight(total)}
+                                  {unit !== line.unit ? ` ${unit}` : ""}
+                                </span>
+                              </p>
+                            );
+                          })
                         ) : (
                           <span className="text-slate-500">—</span>
                         )}
@@ -343,6 +412,51 @@ export default function WeighingRecordMaterials({
           </p>
         </div>
       ) : null}
+
+      <Dialog
+        open={selectedQuantity !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedQuantity(null);
+        }}
+      >
+        <DialogContent className="font-sans sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Lượng còn thiếu</DialogTitle>
+            <DialogDescription>
+              {selectedMaterial
+                ? `${selectedMaterial.line.item_code} — ${selectedMaterial.line.item_name}`
+                : "Nguyên liệu không còn trong phiếu cân."}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedMaterial ? (
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt>Tổng lượng YC</dt>
+                <dd className="text-right tabular-nums">
+                  {formatWeight(selectedMaterial.requiredTotal)} {selectedMaterial.line.unit}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt>Tổng lượng TT</dt>
+                <dd className="text-right tabular-nums">
+                  {formatWeight(selectedActualTotal)} {selectedMaterial.line.unit}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 border-t pt-3 font-semibold">
+                <dt>Lượng còn thiếu</dt>
+                <dd className="text-right tabular-nums">
+                  {formatWeight(remainingQuantity)} {selectedMaterial.line.unit}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" onClick={() => setSelectedQuantity(null)}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isImportOpen}

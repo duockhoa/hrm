@@ -36,6 +36,36 @@ export const sumWeights = (values: string[]): string => {
   return `${total < BigInt(0) ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
 };
 
+export const getWeightStatus = (
+  requiredTotal: string,
+  actualTotal: string,
+): "below" | "within" | "above" => {
+  // Compare in millionths so values exactly on a decimal boundary stay green.
+  const scaled = (value: string) => {
+    const [whole, fraction = ""] = value.replace(/^-/, "").split(".");
+    return (
+      (value.startsWith("-") ? BigInt(-1) : BigInt(1)) *
+      (BigInt(whole) * BigInt(1000000) + BigInt(fraction.padEnd(6, "0")))
+    );
+  };
+  const required = scaled(requiredTotal);
+  const tolerance = scaled(
+    required >= scaled("100000")
+      ? "200"
+      : required >= scaled("10000")
+        ? "100"
+        : required >= scaled("4000")
+          ? "50"
+          : required >= scaled("10")
+            ? "0.1"
+            : "0.02",
+  );
+  const difference = scaled(actualTotal) - required;
+  if (difference < -tolerance) return "below";
+  if (difference > tolerance) return "above";
+  return "within";
+};
+
 export const groupRequiredQuantities = <
   T extends {
     item_code: string;

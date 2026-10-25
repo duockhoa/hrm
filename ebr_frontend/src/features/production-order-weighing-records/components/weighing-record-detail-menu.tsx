@@ -23,7 +23,7 @@ import {
 import { API_ROUTES } from "@/lib/api-routes";
 import service from "@/services/production-order-weighing-records.service";
 import type { ProductionOrderWeighingRecordLine } from "../types";
-import { formatWeight } from "../weight-utils";
+import { formatWeight, sumWeights } from "../weight-utils";
 
 const formatTime = (value: string) => {
   const date = new Date(value);
@@ -56,6 +56,12 @@ export default function WeighingRecordDetailMenu({
   const errorDetail: unknown = isAxiosError(error)
     ? error.response?.data?.message
     : null;
+  const weightsByUnit = new Map<string, string[]>();
+  for (const detail of details ?? []) {
+    const weights = weightsByUnit.get(detail.unit) ?? [];
+    weights.push(detail.net_weight);
+    weightsByUnit.set(detail.unit, weights);
+  }
 
   return (
     <>
@@ -217,6 +223,22 @@ export default function WeighingRecordDetailMenu({
                         </tr>
                       ))}
                   </tbody>
+                  <tfoot className="bg-slate-100 font-semibold">
+                    <tr>
+                      <td colSpan={7} className="border border-slate-300 px-3 py-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <span>Tổng khối lượng</span>
+                          <div className="text-right tabular-nums">
+                            {[...weightsByUnit].map(([unit, weights]) => (
+                              <p key={unit}>
+                                {formatWeight(sumWeights(weights))} {unit}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </>
             ) : !error && !isLoading ? (

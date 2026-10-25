@@ -5,7 +5,38 @@ import {
   normalizeWeight,
   sumWeights,
   groupRequiredQuantities,
+  getWeightStatus,
 } from "./weight-utils";
+
+for (const [required, tolerance] of [
+  ["100000", "200"],
+  ["99999.999999", "100"],
+  ["10000", "100"],
+  ["9999.999999", "50"],
+  ["4000", "50"],
+  ["3999.999999", "0.1"],
+  ["10", "0.1"],
+  ["9.999999", "0.02"],
+  ["0.01", "0.02"],
+]) {
+  test(`classifies required ${required} with tolerance ${tolerance}, including both boundaries`, () => {
+    const lower = sumWeights([required, `-${tolerance}`]);
+    const upper = sumWeights([required, tolerance]);
+    assert.equal(getWeightStatus(required, sumWeights([lower, "-0.000001"])), "below");
+    assert.equal(getWeightStatus(required, lower), "within");
+    assert.equal(getWeightStatus(required, required), "within");
+    assert.equal(getWeightStatus(required, upper), "within");
+    assert.equal(getWeightStatus(required, sumWeights([upper, "0.000001"])), "above");
+  });
+}
+
+test("uses combined required and actual totals across lots for material status", () => {
+  const [row] = groupRequiredQuantities([
+    { item_code: "NL01", unit: "g", planned_quantity: "6000", details: [{ net_weight: "5900", unit: "g" }] },
+    { item_code: "NL01", unit: "g", planned_quantity: "4000", details: [{ net_weight: "4000", unit: "g" }] },
+  ]);
+  assert.equal(getWeightStatus(row.requiredTotal, row.actualTotals[0].total), "within");
+});
 
 test("accepts decimal comma and preserves all six fractional digits", () => {
   assert.equal(normalizeWeight(" 12,345678 "), "12.345678");
