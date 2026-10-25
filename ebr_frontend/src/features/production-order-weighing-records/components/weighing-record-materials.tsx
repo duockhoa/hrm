@@ -270,7 +270,9 @@ export default function WeighingRecordMaterials({
                         )}
                       </td>
                     ) : null}
-                    <td className="border border-black px-1 py-1.5 align-top">
+                    <td
+                      className={`border border-black px-1 py-1.5 ${(line.details?.length ?? 0) === 0 ? "align-middle" : "align-top"}`}
+                    >
                       <WeighingRecordWeightCell
                         recordId={recordId}
                         line={line}

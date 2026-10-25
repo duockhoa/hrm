@@ -139,7 +139,9 @@ export default function WeighingRecordWeightCell({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-1">
+      <div
+        className={`flex flex-wrap items-center gap-1 ${details.length === 0 ? "justify-center" : ""}`}
+      >
         {details.map((detail, index) => (
           <span key={detail.id} className="inline-flex items-center gap-1">
             {index > 0 ? <span aria-hidden="true">+</span> : null}
@@ -157,7 +159,7 @@ export default function WeighingRecordWeightCell({
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="size-7 shrink-0"
+            className="size-7 shrink-0 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800"
             aria-label={`Thêm lần cân cho ${line.item_code}, dòng ${line.id}`}
             title="Thêm lần cân"
             onClick={() => {
