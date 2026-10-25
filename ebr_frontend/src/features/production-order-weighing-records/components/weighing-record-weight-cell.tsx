@@ -2,10 +2,11 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { isAxiosError } from "axios";
-import { Loader2, Plus } from "lucide-react";
+import { Camera, ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -60,11 +61,33 @@ export default function WeighingRecordWeightCell({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [weight, setWeight] = useState("");
+  const [note, setNote] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const busyRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const details = [...(line.details ?? [])].sort((a, b) => a.id - b.id);
+
+  const chooseImage = (file?: File) => {
+    if (!file) return;
+    if (
+      !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
+        file.type,
+      )
+    ) {
+      setError("Chọn ảnh JPG, PNG, WEBP hoặc GIF.");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setError("Ảnh tối đa 20 MB.");
+      return;
+    }
+    setImage(file);
+    setError("");
+  };
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -85,9 +108,12 @@ export default function WeighingRecordWeightCell({
         recordId,
         line.id,
         normalized,
+        { note: note.trim() || null, image: image ?? undefined },
       );
       await onSaved(detail);
       setWeight("");
+      setNote("");
+      setImage(null);
       setIsOpen(false);
       toast.success("Đã lưu khối lượng thực tế.");
     } catch (error) {
@@ -130,6 +156,8 @@ export default function WeighingRecordWeightCell({
             title="Thêm lần cân"
             onClick={() => {
               setWeight("");
+              setNote("");
+              setImage(null);
               setError("");
               setIsOpen(true);
             }}
@@ -147,7 +175,7 @@ export default function WeighingRecordWeightCell({
           if (!busyRef.current) setIsOpen(open);
         }}
       >
-        <DialogContent className="font-sans sm:max-w-md">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Nhập khối lượng thực tế</DialogTitle>
             <DialogDescription>
@@ -188,6 +216,83 @@ export default function WeighingRecordWeightCell({
                 >
                   {error}
                 </p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <label
+                htmlFor={`weighing-note-${line.id}`}
+                className="text-sm font-medium"
+              >
+                Ghi chú
+              </label>
+              <Textarea
+                id={`weighing-note-${line.id}`}
+                value={note}
+                rows={3}
+                disabled={isSaving || locked}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Nhập ghi chú (tùy chọn)"
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Hình ảnh (tùy chọn)</p>
+              <input
+                ref={cameraRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                capture="environment"
+                className="hidden"
+                disabled={isSaving || locked}
+                onChange={(event) => {
+                  chooseImage(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                disabled={isSaving || locked}
+                onChange={(event) => {
+                  chooseImage(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSaving || locked}
+                  onClick={() => cameraRef.current?.click()}
+                >
+                  <Camera className="size-4" />
+                  Chụp ảnh
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSaving || locked}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <ImagePlus className="size-4" />
+                  Chọn ảnh
+                </Button>
+              </div>
+              {image ? (
+                <div className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm">
+                  <span className="min-w-0 break-words">{image.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={isSaving || locked}
+                    onClick={() => setImage(null)}
+                    aria-label="Bỏ ảnh đã chọn"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
               ) : null}
             </div>
             <DialogFooter>

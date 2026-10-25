@@ -189,6 +189,42 @@ describe('Weighing detail HTTP API', () => {
     ).toEqual([]);
   });
 
+  it('creates weight, note and optional image together in one request', async () => {
+    await request(app.getHttpServer())
+      .post(base)
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.create')
+      .field('net_weight', '1.123456')
+      .field('note', 'Weighing note')
+      .attach('image', png, {
+        filename: `${prefix}.png`,
+        contentType: 'image/png',
+      })
+      .expect(201);
+    const [recordId, lineId, dto, user, file] = service.create.mock.calls[0];
+    expect([recordId, lineId]).toEqual([3, 7]);
+    expect(dto).toEqual({ net_weight: '1.123456', note: 'Weighing note' });
+    expect(user.id).toBe(4);
+    expect(file.filename).toContain(prefix);
+  });
+
+  it('cleans image upload when creating the weighing detail is rejected', async () => {
+    service.create.mockRejectedValueOnce(new ConflictException('signed'));
+    await request(app.getHttpServer())
+      .post(base)
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.create')
+      .field('net_weight', '1')
+      .attach('image', png, {
+        filename: `${prefix}.png`,
+        contentType: 'image/png',
+      })
+      .expect(409);
+    expect(
+      (await readdir(directory)).filter((name) => name.startsWith(prefix)),
+    ).toEqual([]);
+  });
+
   it('requires an image and rejects unsupported file types', async () => {
     await request(app.getHttpServer())
       .post(`${base}/9/image`)

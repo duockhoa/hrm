@@ -91,11 +91,24 @@ const productionOrderWeighingRecordsService = {
     recordId: number,
     lineId: number,
     netWeight: string,
+    options?: { note?: string | null; image?: File },
   ) {
+    const url = `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/details`;
+    if (options?.image) {
+      const form = new FormData();
+      form.append("net_weight", netWeight);
+      if (options.note) form.append("note", options.note);
+      form.append("image", options.image);
+      const response =
+        await axiosClient.post<ProductionOrderWeighingRecordDetail>(url, form, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      return response.data;
+    }
     const response =
       await axiosClient.post<ProductionOrderWeighingRecordDetail>(
         `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/details`,
-        { net_weight: netWeight },
+        { net_weight: netWeight, note: options?.note ?? null },
       );
     return response.data;
   },

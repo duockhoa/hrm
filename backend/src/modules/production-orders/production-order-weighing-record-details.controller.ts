@@ -62,13 +62,35 @@ export class ProductionOrderWeighingRecordDetailsController {
 
   @Post()
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.CREATE)
+  @ApiConsumes('application/json', 'multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['net_weight'],
+      properties: {
+        net_weight: { oneOf: [{ type: 'string' }, { type: 'number' }] },
+        note: { type: 'string', nullable: true },
+        image: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(
+    new WeighingDetailUploadCleanupInterceptor(),
+    FileInterceptor(
+      'image',
+      productionOrderWeighingRecordDetailImageUploadOptions,
+    ),
+  )
   create(
     @Param('recordId', ParseIntPipe) recordId: number,
     @Param('lineId', ParseIntPipe) lineId: number,
     @Body() dto: CreateProductionOrderWeighingRecordDetailDto,
     @Request() req: UserRequest,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.service.create(recordId, lineId, dto, req.user);
+    return file
+      ? this.service.create(recordId, lineId, dto, req.user, file)
+      : this.service.create(recordId, lineId, dto, req.user);
   }
 
   @Patch(':detailId')

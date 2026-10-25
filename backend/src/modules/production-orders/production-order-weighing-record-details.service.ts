@@ -48,6 +48,7 @@ export class ProductionOrderWeighingRecordDetailsService {
     lineId: number,
     dto: CreateProductionOrderWeighingRecordDetailDto,
     user?: User,
+    file?: Express.Multer.File,
   ) {
     const userId = this.userId(user);
     const data = this.data(dto, true);
@@ -58,6 +59,7 @@ export class ProductionOrderWeighingRecordDetailsService {
           net_weight: data.net_weight!,
           unit: line.unit,
           note: data.note,
+          image_path: getProductionOrderWeighingRecordDetailImagePath(file),
           weighed_by_id: userId,
           weighed_at: new Date(),
         },

@@ -145,6 +145,32 @@ describe('Weighing record details', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('saves the image reference and note in the same create transaction as the weight', async () => {
+    const result = await service.create(
+      3,
+      7,
+      { net_weight: '1.25', note: ' note ' },
+      { id: 4 },
+      { filename: 'new.png' } as Express.Multer.File,
+    );
+    expect(result).toMatchObject({
+      image_path: '/images/new.png',
+      note: 'note',
+    });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(
+      prisma.productionOrderWeighingRecordDetails.create,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          image_path: '/images/new.png',
+          net_weight: new Prisma.Decimal('1.25'),
+          note: 'note',
+        }),
+      }),
+    );
+  });
+
   it('rejects missing authentication, empty updates and invalid notes', async () => {
     await expect(
       service.create(3, 7, { net_weight: '1' }),
