@@ -4,6 +4,8 @@ import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { toast } from "sonner";
+import { useWeighingRecordSocket } from "../use-weighing-record-socket";
 import { Check, Edit2, Plus } from "lucide-react";
 import WeighingRecordMaterials from "./weighing-record-materials";
 import WeighingRecordApprovals from "./weighing-record-approvals";
@@ -64,9 +66,44 @@ export default function ProductionOrderWeighingRecordDetail({
   );
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const base = API_ROUTES.productionOrders.weighingRecordDetail(
+    initialRecord.id,
+  );
+  const { connected, requestRefresh } = useWeighingRecordSocket(
+    initialRecord.id,
+    async () => {
+      const results = await Promise.allSettled([
+        mutate(),
+        mutateGlobal(`${base}/lines`),
+        mutateGlobal(`${base}/stages`),
+        mutateGlobal(`${base}/source-materials`),
+        mutateGlobal(
+          (key) =>
+            typeof key === "string" &&
+            key.startsWith(`${base}/lines/`) &&
+            key.endsWith("/details"),
+        ),
+        mutateGlobal(
+          API_ROUTES.productionOrders.weighingRecords(
+            initialRecord.production_order_id,
+          ),
+        ),
+      ]);
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed?.status === "rejected") throw failed.reason;
+    },
+    () => {
+      toast.info("Phiếu cân đã bị xóa hoặc không còn tồn tại.");
+      void mutateGlobal(
+        API_ROUTES.productionOrders.weighingRecords(
+          initialRecord.production_order_id,
+        ),
+      );
+      onClose();
+    },
+  );
   const locked =
-    record.status === "approved" ||
-    Boolean(record.qa_staff_approved_at || record.ipc_staff_approved_at);
+    record.status === "approved" || Boolean(record.ipc_staff_approved_at);
   const weighingLocked =
     !record.qa_staff_approved_at ||
     Boolean(record.ipc_staff_approved_at) ||
@@ -137,6 +174,19 @@ export default function ProductionOrderWeighingRecordDetail({
           </div>
         ) : null}
       </div>
+      {!connected ? (
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-2 text-sm text-slate-500 print:hidden">
+          <span>Đang kết nối cập nhật trực tiếp...</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void requestRefresh()}
+          >
+            Làm mới
+          </Button>
+        </div>
+      ) : null}
       <div className="overflow-x-auto bg-gray-50 p-2 sm:p-3">
         <div
           className="min-w-[760px] bg-white text-[15px] leading-6 text-black antialiased [text-rendering:optimizeLegibility] print:min-w-0"
@@ -258,12 +308,14 @@ export default function ProductionOrderWeighingRecordDetail({
             onImportOpenChange={setIsImportOpen}
             locked={locked}
             weighingLocked={weighingLocked}
+            onChanged={requestRefresh}
             isEditing={isEditing && !locked}
           />
           <WeighingRecordApprovals
             record={record}
             onChanged={async (updated) => {
               await mutate(updated, { revalidate: false });
+              await requestRefresh();
               void mutateGlobal(
                 API_ROUTES.productionOrders.weighingRecords(
                   updated.production_order_id,

@@ -1,3 +1,4 @@
+import { ProductionOrderWeighingRecordsEventsInterceptor } from './production-order-weighing-records-events.interceptor';
 import { WeighingDetailUploadCleanupInterceptor } from './production-order-weighing-detail-upload-cleanup.interceptor';
 import {
   BadRequestException,
@@ -37,6 +38,7 @@ import { productionOrderWeighingRecordDetailImageUploadOptions } from './product
 
 type UserRequest = { user: { id?: number | string | null } };
 
+@UseInterceptors(ProductionOrderWeighingRecordsEventsInterceptor)
 @UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller(
   'production-orders/weighing-records/:recordId/lines/:lineId/details',

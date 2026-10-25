@@ -5,7 +5,7 @@ import type { ManagerOptions, Socket, SocketOptions } from "socket.io-client";
 import { createMixingRecordConnection } from "./mixing-record-connection";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const setup = (revalidate?: () => Promise<unknown>) => {
+const setup = (revalidate?: () => Promise<unknown>, eventPrefix?: string) => {
   let token: string | null = "access-token";
   let listener = () => {};
   let calls = 0;
@@ -30,6 +30,7 @@ const setup = (revalidate?: () => Promise<unknown>) => {
     listener();
   };
   const connection = createMixingRecordConnection({
+    eventPrefix,
     recordId: 1,
     createSocket: (options) => {
       socketOptions = options;
@@ -135,7 +136,12 @@ test("refreshes expired/legacy credentials once and stops the socket on logout",
     assert.equal(state.stats().connects, 2);
     const auth = state.options().auth;
     if (typeof auth === "function")
-      auth((payload) => assert.equal((payload as { accessToken: string }).accessToken, "new-access-token"));
+      auth((payload) =>
+        assert.equal(
+          (payload as { accessToken: string }).accessToken,
+          "new-access-token",
+        ),
+      );
     state.changeToken(null);
     assert.equal(state.stats().connects, 2);
     assert.ok(state.stats().disconnects > 0);
@@ -153,4 +159,25 @@ test("disposal cancels pending fetches and token listeners", async () => {
   assert.equal(state.stats().calls, 0);
   assert.equal(state.stats().connects, 1);
   assert.equal(state.socket.listenerCount("mixing-record:changed"), 0);
+});
+
+test("weighing events resync only their record and keep the mixing channel separate", async () => {
+  const state = setup(undefined, "weighing-record");
+  try {
+    state.socket.emit("mixing-record:changed", { recordId: 1 });
+    state.socket.emit("weighing-record:changed", { recordId: 2 });
+    await wait(300);
+    assert.equal(state.stats().calls, 0);
+    state.socket.emit("weighing-record:ready", { recordId: 1 });
+    state.socket.emit("weighing-record:changed", { recordId: 1 });
+    await wait(300);
+    assert.equal(state.stats().calls, 1);
+    state.socket.emit("weighing-record:changed", {
+      recordId: 1,
+      deleted: true,
+    });
+    assert.equal(state.stats().deleted, 1);
+  } finally {
+    state.connection.dispose();
+  }
 });

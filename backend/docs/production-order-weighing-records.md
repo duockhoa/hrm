@@ -12,6 +12,14 @@ Bấm **Phiếu cân** để mở danh sách inline, có nút quay lại và **T
 
 ## API
 
+### Realtime phiếu cân
+
+Chi tiết phiếu cân dùng Socket.IO namespace `/weighing-records`, cùng cơ chế kết nối của phiếu pha chế. Handshake gửi `accessToken`, `recordId`; server kiểm tra JWT access token, quyền `production-orders.read` và phạm vi lệnh sản xuất trước khi tham gia phòng `weighing-record:<id>`. Refresh token không được dùng để kết nối. Token hết hạn sẽ ngắt kết nối; client làm mới qua luồng đăng nhập hiện có và kết nối lại.
+
+Server gửi `weighing-record:ready` sau khi tham gia phòng và `weighing-record:changed` sau REST mutation thành công. Payload chỉ có `recordId`, `deleted`, không có nội dung phiếu/ảnh. Bao gồm cập nhật phiếu, ký QA/IPC, thêm/sửa/xóa nguyên liệu, thêm theo giai đoạn/thủ công, các lần cân và ảnh. Không gửi sự kiện cho GET hoặc thao tác thất bại. Xóa nguyên liệu/lần cân/ảnh không bị hiểu nhầm là xóa toàn bộ phiếu.
+
+Các màn hình đang mở cùng phiếu tự tải lại thông tin phiếu, nguyên liệu, lịch sử cân đang xem, ảnh và tổng khối lượng; cập nhật trạng thái khóa khi IPC ký. Client gộp các sự kiện trong 250 ms, đồng bộ lại khi kết nối trở lại, không polling định kỳ. Khi mất kết nối có nút **Làm mới**. Khi phiếu bị xóa hoặc không còn truy cập được, đóng detail và làm mới danh sách.
+
 ### Nhiều ảnh cho từng lần cân
 
 Bảng `production_order_weighing_record_detail_images` có `id`, `production_order_weighing_record_detail_id` (FK tới lần cân, xóa cascade), `image_path`, `created_at`. Một lần cân có nhiều ảnh; API trả mảng `images` theo ID tăng dần. Migration sao chép đường dẫn ảnh cũ sang bảng mới. Giữ `image_path` trên lần cân để tương thích; giá trị này trỏ tới ảnh đầu tiên.
@@ -23,7 +31,7 @@ Bảng `production_order_weighing_record_detail_images` có `id`, `production_or
 
 Form nhập lần cân cho phép chọn nhiều ảnh và chụp bổ sung; có thể bỏ riêng từng ảnh trước khi lưu. Bảng chi tiết lần cân hiển thị toàn bộ ảnh với chức năng xem lớn.
 
-Trong form thêm hàng hóa theo giai đoạn, nút **Thêm thủ công** mở bảng nguyên vật liệu của lệnh sản xuất. Có thể tìm kiếm và chọn nhiều dòng; các dòng đã thêm được đánh dấu và không thể chọn lại. Dữ liệu được sao chép từ nguồn phía server, lưu toàn bộ lựa chọn trong một transaction và khóa thêm sau khi phiếu có chữ ký.
+Trong form thêm hàng hóa theo giai đoạn, nút **Thêm thủ công** mở bảng nguyên vật liệu của lệnh sản xuất. Có thể tìm kiếm và chọn nhiều dòng; các dòng đã thêm được đánh dấu và không thể chọn lại. Dữ liệu được sao chép từ nguồn phía server, lưu toàn bộ lựa chọn trong một transaction và khóa thêm sau khi IPC ký hoặc phiếu ở trạng thái `approved`.
 
 - `GET /production-orders/weighing-records/:recordId/source-materials`: danh sách dòng `pit_Item`, gồm cả dòng không có giai đoạn và cờ `imported`; quyền `production-orders.read`.
 - `POST /production-orders/weighing-records/:recordId/import-lines`: body `{ "line_numbers": [0, 1] }`, lấy đúng các dòng thuộc lệnh của phiếu; quyền `production-orders.create`. Từ chối lựa chọn trùng, dòng ngoài lệnh và dòng đã thêm.
@@ -63,9 +71,9 @@ PATCH body (gửi ít nhất một trường):
 
 Cho phép sửa `description`, `status`. Trạng thái được nhập: `draft`, `in_progress`, `completed`, `cancelled`. Gửi `description: null` để xóa nội dung. Các trường khác bị từ chối, bao gồm ID người tạo và thông tin duyệt.
 
-Duyệt QA/IPC không cần body. Có thể ký duyệt trực tiếp ở mọi trạng thái, không cần hoàn tất phiếu trước. Mỗi chữ ký chỉ được ghi một lần; người duyệt và thời gian do server ghi. Phiếu khóa sửa/xóa ngay khi có một chữ ký. Khi đủ cả QA và IPC, trạng thái tự chuyển thành `approved`. API duyệt dùng quyền update giống phiếu pha chế hiện tại, chưa kiểm tra chức danh QA/IPC riêng.
+Duyệt QA/IPC không cần body. Có thể ký duyệt trực tiếp ở mọi trạng thái, không cần hoàn tất phiếu trước. Mỗi chữ ký chỉ được ghi một lần; người duyệt và thời gian do server ghi. Phiếu vẫn cho phép thêm/sửa sau khi ĐBCL (QA) ký; chỉ khóa sửa/xóa khi IPC ký hoặc trạng thái là `approved`. Chữ ký QA được giữ nguyên khi chỉnh sửa. Khi đủ cả QA và IPC, trạng thái tự chuyển thành `approved`. API duyệt dùng quyền update giống phiếu pha chế hiện tại, chưa kiểm tra chức danh QA/IPC riêng.
 
-Cuối detail phiếu cân có hai cột phê duyệt **Nhân viên ĐBCL (QA)** và **Nhân viên IPC**, hiển thị dấu đã duyệt, tên và thời điểm ký. QA/IPC ký duyệt trực tiếp, không có bước **Hoàn tất phiếu** trước khi ký. Sau mỗi thao tác, cập nhật dữ liệu detail và danh sách; ngay sau chữ ký đầu tiên, giao diện khóa thêm nguyên liệu theo quy tắc backend. Các thao tác dùng quyền `production-orders.update` hiện có.
+Cuối detail phiếu cân có hai cột phê duyệt **Nhân viên ĐBCL (QA)** và **Nhân viên IPC**, hiển thị dấu đã duyệt, tên và thời điểm ký. QA/IPC ký duyệt trực tiếp, không có bước **Hoàn tất phiếu** trước khi ký. Sau mỗi thao tác, cập nhật dữ liệu detail và danh sách; sau khi IPC ký, giao diện khóa thêm/sửa nguyên liệu theo quy tắc backend. Các thao tác dùng quyền `production-orders.update` hiện có.
 
 Danh sách trả về mảng theo ngày tạo và ID giảm dần. Các API khác trả về object phiếu với `createdBy`, `qaStaffApprovedBy`, `ipcStaffApprovedBy` (chỉ `id`, `username`, `name`).
 
@@ -103,7 +111,7 @@ Ví dụ tạo dòng:
 
 Bắt buộc: `item_code`, `item_name`, `planned_quantity`, `unit`. Số lượng phải lớn hơn 0, tối đa 12 chữ số nguyên và 6 chữ số thập phân; ưu tiên truyền chuỗi để giữ độ chính xác. Response trả số lượng dạng chuỗi decimal. Các trường nguồn và mô tả bổ sung là tùy chọn, nhận `null` để xóa. `source_line_number` và `source_stage_id` nhận số nguyên không âm.
 
-PATCH chỉ gửi trường cần sửa; trường bắt buộc không nhận null/rỗng. Không nhận `line_order`, ID phiếu cha, ID dòng hoặc timestamp trong body. Không được chuyển dòng sang phiếu khác. Truy cập dòng qua sai phiếu trả 404. Tạo/sửa/xóa bị chặn với 409 ngay khi phiếu cha có chữ ký hoặc trạng thái approved; kiểm tra và ghi dữ liệu trong cùng transaction để tránh sửa đồng thời với duyệt. Phạm vi truy cập lệnh sản xuất được kế thừa qua quan hệ phiếu cha.
+PATCH chỉ gửi trường cần sửa; trường bắt buộc không nhận null/rỗng. Không nhận `line_order`, ID phiếu cha, ID dòng hoặc timestamp trong body. Không được chuyển dòng sang phiếu khác. Truy cập dòng qua sai phiếu trả 404. Tạo/sửa/xóa bị chặn với 409 ngay khi phiếu cha có chữ ký IPC hoặc trạng thái approved; kiểm tra và ghi dữ liệu trong cùng transaction để tránh sửa đồng thời với duyệt. Phạm vi truy cập lệnh sản xuất được kế thừa qua quan hệ phiếu cha.
 
 Dữ liệu nguồn được lưu trực tiếp trên dòng; chưa nhập kết quả cân thực tế.
 
@@ -116,7 +124,7 @@ Trong detail phiếu cân, nút **Thêm mới** ở góc phải tiêu đề mở
 
 Backend lấy `production_order_id` từ phiếu, đọc ProductionOrderLines của đúng lệnh qua dịch vụ SAP hiện có. Chỉ nhập dòng hàng hóa `ItemType = pit_Item` có `StageID` trùng lựa chọn; dòng nguồn lực không được đưa vào phiếu cân. Sao chép `LineNumber`, `StageID`, tên giai đoạn, `ItemNo`, `ItemName`, `U_SL`, `PlannedQuantity` và mã đơn vị (ưu tiên `UnitOfMeasurement.Code`, dự phòng `UoMCode`). Giữ nguyên từng dòng và từng lô, không gộp nguyên liệu.
 
-Toàn bộ dòng của một giai đoạn được nhập trong cùng transaction. Sai dữ liệu ở bất kỳ dòng nào sẽ không lưu cả đợt. Chặn thêm giai đoạn đã có trong phiếu với 409; các giai đoạn đã nhập bị vô hiệu hóa trong form. Phiếu đã ký không thể nhập thêm. Giao dịch khóa phiếu cha và đọc dữ liệu ở mức ReadCommitted để ngăn nhập lặp đồng thời.
+Toàn bộ dòng của một giai đoạn được nhập trong cùng transaction. Sai dữ liệu ở bất kỳ dòng nào sẽ không lưu cả đợt. Chặn thêm giai đoạn đã có trong phiếu với 409; các giai đoạn đã nhập bị vô hiệu hóa trong form. Phiếu chỉ có chữ ký QA vẫn nhập thêm được; có chữ ký IPC thì không thể nhập thêm. Giao dịch khóa phiếu cha và đọc dữ liệu ở mức ReadCommitted để ngăn nhập lặp đồng thời.
 
 ## Chi tiết lần cân thực tế
 
@@ -150,9 +158,9 @@ Upload dùng multipart/form-data, trường `image`; tối đa một ảnh trên
 
 Form nhập lần cân có thêm ghi chú và nút Chụp ảnh/Chọn ảnh (không bắt buộc). POST tạo lần cân nhận cả JSON và multipart/form-data: `net_weight`, `note` tùy chọn, `image` tùy chọn. Khi có ảnh, form gửi toàn bộ trong một request; khối lượng, ghi chú và đường dẫn ảnh được tạo cùng transaction. Nếu tạo lỗi, tệp đã tải được dọn. Ghi chú và ảnh được lưu nhưng chưa hiển thị trong bảng nguyên liệu.
 
-Mọi request phải khớp chuỗi phiếu → dòng nguyên liệu → lần cân. Sai chuỗi hoặc ngoài phạm vi truy cập trả 404. Tạo/sửa/xóa lần cân và ảnh chỉ được phép sau khi ĐBCL (QA) ký, trước khi IPC ký và khi trạng thái chưa `approved`. Chưa có chữ ký QA trả 409 với thông báo cần ĐBCL ký trước khi nhập khối lượng. Dữ liệu phiếu và nguyên liệu vẫn khóa ngay sau chữ ký đầu tiên. Các thay đổi và kiểm tra khóa nằm trong cùng transaction, so khớp thời điểm ký QA và trạng thái IPC khi khóa phiếu cha để tránh ghi đồng thời với duyệt.
+Mọi request phải khớp chuỗi phiếu → dòng nguyên liệu → lần cân. Sai chuỗi hoặc ngoài phạm vi truy cập trả 404. Tạo/sửa/xóa lần cân và ảnh chỉ được phép sau khi ĐBCL (QA) ký, trước khi IPC ký và khi trạng thái chưa `approved`. Chưa có chữ ký QA trả 409 với thông báo cần ĐBCL ký trước khi nhập khối lượng. Dữ liệu phiếu và nguyên liệu vẫn thêm/sửa được sau chữ ký QA, chỉ khóa sau chữ ký IPC hoặc khi phiếu `approved`. Các thay đổi và kiểm tra khóa nằm trong cùng transaction, so khớp thời điểm ký QA và trạng thái IPC khi khóa phiếu cha để tránh ghi đồng thời với duyệt.
 
-Detail phiếu cân có cột **Thực tế** trên từng dòng nguyên liệu. Bấm dấu **+** để mở form nhập và lưu từng lần; hỗ trợ dấu phẩy/dấu chấm thập phân, tối đa 6 chữ số thập phân, cho phép số âm. Hiển thị từng lần cân và tổng khối lượng theo đơn vị; tổng cộng bằng số nguyên theo phần triệu để tránh sai số dấu phẩy động, không cộng lẫn các đơn vị khác nhau. `GET` danh sách nguyên liệu trả thêm `details`, ảnh và `weighedBy` để tải lịch sử cân cùng danh sách. Sau khi lưu, cập nhật lịch sử và tổng ngay. Chưa có chữ ký ĐBCL hiển thị thông báo và ẩn nút nhập; ký QA xong được nhập cân, IPC ký hoặc phiếu `approved` thì khóa nhập. Xem chi tiết các lần cân vẫn dùng được ở mọi trạng thái.
+Detail phiếu cân có cột **Thực tế** trên từng dòng nguyên liệu. Bấm dấu **+** để mở form nhập và lưu từng lần; hỗ trợ dấu phẩy/dấu chấm thập phân, tối đa 6 chữ số thập phân, cho phép số âm. Hiển thị từng lần cân và tổng khối lượng theo đơn vị; tổng cộng bằng số nguyên theo phần triệu để tránh sai số dấu phẩy động, không cộng lẫn các đơn vị khác nhau. `GET` danh sách nguyên liệu trả thêm `details`, ảnh và `weighedBy` để tải lịch sử cân cùng danh sách. Sau khi lưu, cập nhật lịch sử và tổng ngay. Chưa có chữ ký ĐBCL ẩn nút nhập; ký QA xong được nhập cân, IPC ký hoặc phiếu `approved` thì khóa nhập. Xem chi tiết các lần cân vẫn dùng được ở mọi trạng thái.
 
 ## Migration
 

@@ -89,7 +89,7 @@ export class ProductionOrderWeighingRecordsService {
         where: {
           id,
           status: record.status,
-          qa_staff_approved_at: null,
+          qa_staff_approved_at: record.qa_staff_approved_at,
           ipc_staff_approved_at: null,
         },
         data,
@@ -108,7 +108,7 @@ export class ProductionOrderWeighingRecordsService {
         where: {
           id,
           status: record.status,
-          qa_staff_approved_at: null,
+          qa_staff_approved_at: record.qa_staff_approved_at,
           ipc_staff_approved_at: null,
         },
         include: recordInclude,
@@ -176,7 +176,7 @@ export class ProductionOrderWeighingRecordsService {
         'IPC đã ký duyệt, không thể sửa hoặc xóa phiếu cân.',
       );
     }
-    if (record.status === 'approved' || record.qa_staff_approved_at) {
+    if (record.status === 'approved') {
       throw new ConflictException(
         'Approved weighing records cannot be edited or deleted',
       );

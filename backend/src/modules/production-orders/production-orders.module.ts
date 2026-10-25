@@ -1,4 +1,9 @@
-import { ProductionOrderWeighingRecordDetailsController, ProductionOrderWeighingDetailImagesController } from './production-order-weighing-record-details.controller';
+import { ProductionOrderWeighingRecordsGateway } from './production-order-weighing-records.gateway';
+import { ProductionOrderWeighingRecordsEventsInterceptor } from './production-order-weighing-records-events.interceptor';
+import {
+  ProductionOrderWeighingRecordDetailsController,
+  ProductionOrderWeighingDetailImagesController,
+} from './production-order-weighing-record-details.controller';
 import { ProductionOrderWeighingRecordDetailsService } from './production-order-weighing-record-details.service';
 import { ProductionOrderWeighingStageImportController } from './production-order-weighing-stage-import.controller';
 import { ProductionOrderWeighingStageImportService } from './production-order-weighing-stage-import.service';
@@ -133,6 +138,8 @@ import { EmailSettingsModule } from '../email-settings/email-settings.module';
     ProductionOrderWeighingRecordLinesService,
     ProductionOrderWeighingRecordDetailsService,
     ProductionOrderWeighingStageImportService,
+    ProductionOrderWeighingRecordsGateway,
+    ProductionOrderWeighingRecordsEventsInterceptor,
     ProductionOrderMixingRecordsGateway,
     ProductionOrderMixingRecordsEventsInterceptor,
     WarehouseReleaseExportService,

@@ -54,6 +54,7 @@ export default function WeighingRecordMaterials({
   onImportOpenChange,
   locked,
   weighingLocked,
+  onChanged,
   isEditing = false,
 }: {
   recordId: number;
@@ -61,6 +62,7 @@ export default function WeighingRecordMaterials({
   onImportOpenChange: (open: boolean) => void;
   locked: boolean;
   weighingLocked: boolean;
+  onChanged: () => Promise<unknown>;
   isEditing?: boolean;
 }) {
   const [selectedStage, setSelectedStage] = useState("");
@@ -99,6 +101,7 @@ export default function WeighingRecordMaterials({
       setSelectedStage("");
       toast.success(`Đã thêm ${imported.length} dòng hàng vào phiếu cân.`);
       void mutate().catch(() => undefined);
+      void onChanged().catch(() => undefined);
       void refreshStages().catch(() => undefined);
     } catch (error) {
       setSubmitError(
@@ -212,6 +215,7 @@ export default function WeighingRecordMaterials({
                                 { revalidate: false },
                               );
                               void mutate().catch(() => undefined);
+                              void onChanged().catch(() => undefined);
                             }}
                             onDeleted={async () => {
                               await mutate(
@@ -222,6 +226,7 @@ export default function WeighingRecordMaterials({
                                 { revalidate: false },
                               );
                               void mutate().catch(() => undefined);
+                              void onChanged().catch(() => undefined);
                               void refreshStages().catch(() => undefined);
                             }}
                           />
@@ -296,6 +301,7 @@ export default function WeighingRecordMaterials({
                             { revalidate: false },
                           );
                           void mutate().catch(() => undefined);
+                          void onChanged().catch(() => undefined);
                         }}
                       />
                     </td>
@@ -480,6 +486,7 @@ export default function WeighingRecordMaterials({
             { revalidate: false },
           );
           void mutate().catch(() => undefined);
+          void onChanged().catch(() => undefined);
           void refreshStages().catch(() => undefined);
         }}
       />

@@ -1,3 +1,4 @@
+import { ProductionOrderWeighingRecordsEventsInterceptor } from './production-order-weighing-records-events.interceptor';
 import {
   Body,
   Controller,
@@ -6,6 +7,7 @@ import {
   ParseIntPipe,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import { Permissions } from 'src/decorators/permissions.decorator';
@@ -24,6 +26,7 @@ class ImportWeighingLinesDto {
   line_numbers: number[];
 }
 
+@UseInterceptors(ProductionOrderWeighingRecordsEventsInterceptor)
 @UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('production-orders/weighing-records/:recordId')
 export class ProductionOrderWeighingStageImportController {

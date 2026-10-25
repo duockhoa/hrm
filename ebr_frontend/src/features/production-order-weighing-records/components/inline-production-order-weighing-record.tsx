@@ -310,10 +310,7 @@ export default function InlineProductionOrderWeighingRecord({
                         variant="destructive"
                         disabled={
                           record.status === "approved" ||
-                          Boolean(
-                            record.qa_staff_approved_at ||
-                            record.ipc_staff_approved_at,
-                          )
+                          Boolean(record.ipc_staff_approved_at)
                         }
                         onSelect={() => {
                           setDeleteError("");

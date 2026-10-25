@@ -1,3 +1,4 @@
+import { ProductionOrderWeighingRecordsGateway } from './production-order-weighing-records.gateway';
 import {
   ConflictException,
   ExecutionContext,
@@ -59,6 +60,10 @@ describe('Weighing detail HTTP API', () => {
         ProductionOrderWeighingDetailImagesController,
       ],
       providers: [
+        {
+          provide: ProductionOrderWeighingRecordsGateway,
+          useValue: { notifyMutation: jest.fn() },
+        },
         PermissionsGuard,
         {
           provide: ProductionOrderWeighingRecordDetailsService,

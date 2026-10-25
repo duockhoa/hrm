@@ -205,26 +205,27 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
     });
   });
 
-  it.each([
-    { status: 'approved' },
-    { qa_staff_approved_at: new Date() },
-    { ipc_staff_approved_at: new Date() },
-  ])('blocks every child mutation after approval %j', async (approval) => {
-    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
-      ...parent,
-      ...approval,
-    });
-    await expect(service.create(3, dto)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    await expect(
-      service.update(3, 7, { note: 'changed' }),
-    ).rejects.toBeInstanceOf(ConflictException);
-    await expect(service.delete(3, 7)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    expect(prisma.productionOrderWeighingRecords.update).not.toHaveBeenCalled();
-  });
+  it.each([{ status: 'approved' }, { ipc_staff_approved_at: new Date() }])(
+    'blocks every child mutation after approval %j',
+    async (approval) => {
+      prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+        ...parent,
+        ...approval,
+      });
+      await expect(service.create(3, dto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      await expect(
+        service.update(3, 7, { note: 'changed' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.delete(3, 7)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(
+        prisma.productionOrderWeighingRecords.update,
+      ).not.toHaveBeenCalled();
+    },
+  );
 
   it('rejects a signature racing a child mutation before writing the child', async () => {
     prisma.productionOrderWeighingRecords.update.mockRejectedValue(
@@ -327,7 +328,7 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it.each(['qa_staff_approved_at', 'ipc_staff_approved_at'])(
+  it.each(['ipc_staff_approved_at'])(
     'blocks stage imports after %s signing',
     async (signature) => {
       prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
@@ -342,4 +343,32 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
       ).not.toHaveBeenCalled();
     },
   );
+
+  it('allows adding, updating and importing materials after QA approval without clearing the signature', async () => {
+    const approvedAt = new Date();
+    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+      ...parent,
+      qa_staff_approved_at: approvedAt,
+    });
+    await service.create(3, dto);
+    await service.update(3, 7, { planned_quantity: '2' });
+    await service.importStage(3, 2, [dto]);
+    await service.importLines(3, [{ ...dto, source_line_number: 1 }]);
+    expect(prisma.productionOrderWeighingRecords.update).toHaveBeenCalledTimes(
+      4,
+    );
+    for (const [args] of prisma.productionOrderWeighingRecords.update.mock
+      .calls) {
+      expect(args.where.qa_staff_approved_at).toBe(approvedAt);
+      expect(args.where.ipc_staff_approved_at).toBeNull();
+      expect(args.data).not.toHaveProperty('qa_staff_approved_at');
+    }
+    expect(
+      prisma.productionOrderWeighingRecordLines.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { planned_quantity: new Prisma.Decimal(2) },
+      }),
+    );
+  });
 });

@@ -1,3 +1,4 @@
+import { ProductionOrderWeighingRecordsEventsInterceptor } from './production-order-weighing-records-events.interceptor';
 import {
   Body,
   Controller,
@@ -9,6 +10,7 @@ import {
   Post,
   Request,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -18,6 +20,7 @@ import { UpdateProductionOrderWeighingRecordDto } from './dto/update-production-
 import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 import { ProductionOrderWeighingRecordsService } from './production-order-weighing-records.service';
 
+@UseInterceptors(ProductionOrderWeighingRecordsEventsInterceptor)
 @UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('production-orders')
 export class ProductionOrderWeighingRecordsController {

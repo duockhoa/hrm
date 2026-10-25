@@ -1,6 +1,7 @@
 import type { ManagerOptions, Socket, SocketOptions } from "socket.io-client";
 
 type ConnectionOptions = {
+  eventPrefix?: string;
   recordId: string | number;
   createSocket: (options: Partial<ManagerOptions & SocketOptions>) => Socket;
   getAccessToken: () => string | null;
@@ -13,7 +14,7 @@ type ConnectionOptions = {
 
 // No interval: sync only on a change, an explicit refresh, or a ready event.
 export function createMixingRecordConnection(options: ConnectionOptions) {
-  const { recordId } = options;
+  const { recordId, eventPrefix = "mixing-record" } = options;
   let disposed = false;
   let refreshing = false;
   let refreshedSinceConnect = false;
@@ -61,14 +62,14 @@ export function createMixingRecordConnection(options: ConnectionOptions) {
     }
   };
 
-  socket.on("mixing-record:ready", (event: { recordId: number }) => {
+  socket.on(`${eventPrefix}:ready`, (event: { recordId: number }) => {
     if (String(event.recordId) !== String(recordId)) return;
     refreshedSinceConnect = false;
     options.onConnectionChange(true);
     scheduleSync();
   });
   socket.on(
-    "mixing-record:changed",
+    `${eventPrefix}:changed`,
     (event: { recordId: number; deleted?: boolean }) => {
       if (String(event.recordId) !== String(recordId)) return;
       if (event.deleted) options.onDeleted();

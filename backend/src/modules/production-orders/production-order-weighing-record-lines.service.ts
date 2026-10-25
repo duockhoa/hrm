@@ -198,7 +198,7 @@ export class ProductionOrderWeighingRecordLinesService {
               'IPC đã ký duyệt, không thể sửa nguyên liệu của phiếu cân.',
             );
           }
-          if (record.status === 'approved' || record.qa_staff_approved_at) {
+          if (record.status === 'approved') {
             throw new ConflictException(
               'Approved weighing records cannot be edited',
             );
@@ -209,7 +209,7 @@ export class ProductionOrderWeighingRecordLinesService {
             where: {
               id: recordId,
               status: record.status,
-              qa_staff_approved_at: null,
+              qa_staff_approved_at: record.qa_staff_approved_at,
               ipc_staff_approved_at: null,
             },
             data: { updated_at: new Date() },

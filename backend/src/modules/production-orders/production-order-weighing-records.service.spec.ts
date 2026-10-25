@@ -124,7 +124,7 @@ describe('ProductionOrderWeighingRecordsService', () => {
   });
 
   it.each([
-    { qa_staff_approved_at: new Date() },
+    { status: 'approved' },
     { ipc_staff_approved_at: new Date() },
     { qa_staff_approved_at: new Date(), ipc_staff_approved_at: new Date() },
   ])('blocks edits and deletion after approval %j', async (approval) => {
@@ -137,6 +137,26 @@ describe('ProductionOrderWeighingRecordsService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
     await expect(service.delete(1)).rejects.toBeInstanceOf(ConflictException);
     expect(prisma.productionOrderWeighingRecords.delete).not.toHaveBeenCalled();
+  });
+
+  it('allows editing after QA approval and keeps the signature in the write condition', async () => {
+    const approvedAt = new Date();
+    prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+      ...record,
+      qa_staff_approved_at: approvedAt,
+    });
+    await service.update(1, { description: 'changed' });
+    expect(prisma.productionOrderWeighingRecords.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 1,
+          status: 'draft',
+          qa_staff_approved_at: approvedAt,
+          ipc_staff_approved_at: null,
+        },
+        data: { description: 'changed' },
+      }),
+    );
   });
 
   it.each(

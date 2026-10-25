@@ -1,3 +1,4 @@
+import { ProductionOrderWeighingRecordsGateway } from './production-order-weighing-records.gateway';
 import {
   ExecutionContext,
   INestApplication,
@@ -23,6 +24,10 @@ describe('Weighing record line HTTP routes', () => {
     const module = await Test.createTestingModule({
       controllers: [ProductionOrderWeighingRecordLinesController],
       providers: [
+        {
+          provide: ProductionOrderWeighingRecordsGateway,
+          useValue: { notifyMutation: jest.fn() },
+        },
         PermissionsGuard,
         {
           provide: ProductionOrderWeighingRecordLinesService,
