@@ -13,6 +13,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as z from 'zod/v4';
 import { McpToolsService } from './mcp-tools.service';
+import {
+  McpWarehouseReleaseService,
+  warehouseReleaseReadSchema,
+} from './mcp-warehouse-release.service';
 import { stringArray } from '../mcp-oauth/oauth.config';
 import { ITEM_PERMISSIONS } from '../items/items.permissions';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from '../production-order-deviations/production-order-deviations.permissions';
@@ -54,7 +58,10 @@ export class McpService implements OnModuleDestroy {
   );
   private readonly nodeHandler = toNodeHandler(this.handler);
 
-  constructor(private readonly tools: McpToolsService) {}
+  constructor(
+    private readonly tools: McpToolsService,
+    private readonly warehouseRelease: McpWarehouseReleaseService,
+  ) {}
 
   handleRequest(request: Request, response: Response) {
     // Nest/Express has already parsed JSON; do not read the request stream again.
@@ -68,8 +75,9 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
+        'Phiếu xuất kho: dùng get_warehouse_release với production_order_id từ search_production_orders. Đây là dữ liệu ProductionOrderLines lấy trực tiếp từ SAP, có phân trang, giai đoạn và đơn vị tính; không phải phiếu cân. ' +
         'Phiếu cân: dùng search_weighing_records để tìm, get_weighing_records đọc theo ids (tối đa 10). sections.weighing_records trả ids và detail_tool. Lọc lô theo phiếu cân bằng presence.weighing_records, weighing_status, weighing_qa_status, weighing_ipc_status, weighing_has_weights; include/counts hỗ trợ weighing_records. Tổng cân tính cả số âm, tách mã nguyên liệu và đơn vị; ảnh chỉ trả tham chiếu. ' +
-        'Tra cứu EBR. Dùng search_production_orders tìm lệnh rồi get_production_order xem hồ sơ lô. Câu hỏi liệt kê lô theo giao nhận hồ sơ, PYCLM, có/chưa có phiếu hoặc trạng thái duyệt dùng bộ lọc search_production_orders; include lấy trạng thái và counts đếm nhóm phiếu cho từng lô trong trang. Thống kê nhiều lô dùng get_production_statistics; thống kê pH/thông số dùng analyze_production_parameters, chọn đúng source và parameter, không tải hàng loạt hồ sơ chi tiết để tự tính. Hai tool thống kê mặc định 30 ngày gần nhất, ngày bắt đầu lệnh, loại lô hủy; muốn toàn bộ thời gian phải all_time=true. Kết quả phân trang theo nhóm; kiểm tra pagination trước khi kết luận đủ nhóm. Thông số tách mã hàng, đơn vị, công đoạn và phiên bản, trung bình theo phép đo, không suy ra đạt chất lượng. Riêng phiếu pha chế/gia công chỉ có số lượng và ids trong sections.mixing_records; muốn đọc phiếu phải gọi get_mixing_records. Dùng search_mixing_records tìm phiếu theo mã hàng/mã lệnh/số lô/thông số/ngày/duyệt, sau đó get_mixing_records theo ids; view=results cho so sánh thông số gọn hơn, view=full để đọc cả phiếu. Mỗi lần đọc tối đa 10 phiếu. Hỏi đếm sai lệch dùng search_production_order_deviations mode=count, xem danh sách dùng mode=list; today=true theo ngày Việt Nam. Dùng search_items/get_item xem cấu hình sản phẩm hiện tại, không tự áp dụng cho lô cũ. Nhóm thiếu quyền có available=false, khác với dữ liệu rỗng. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Chỉ đọc dữ liệu cục bộ và tham chiếu ảnh/tệp.',
+        'Tra cứu EBR. Dùng search_production_orders tìm lệnh rồi get_production_order xem hồ sơ lô. Câu hỏi liệt kê lô theo giao nhận hồ sơ, PYCLM, có/chưa có phiếu hoặc trạng thái duyệt dùng bộ lọc search_production_orders; include lấy trạng thái và counts đếm nhóm phiếu cho từng lô trong trang. Thống kê nhiều lô dùng get_production_statistics; thống kê pH/thông số dùng analyze_production_parameters, chọn đúng source và parameter, không tải hàng loạt hồ sơ chi tiết để tự tính. Hai tool thống kê mặc định 30 ngày gần nhất, ngày bắt đầu lệnh, loại lô hủy; muốn toàn bộ thời gian phải all_time=true. Kết quả phân trang theo nhóm; kiểm tra pagination trước khi kết luận đủ nhóm. Thông số tách mã hàng, đơn vị, công đoạn và phiên bản, trung bình theo phép đo, không suy ra đạt chất lượng. Riêng phiếu pha chế/gia công chỉ có số lượng và ids trong sections.mixing_records; muốn đọc phiếu phải gọi get_mixing_records. Dùng search_mixing_records tìm phiếu theo mã hàng/mã lệnh/số lô/thông số/ngày/duyệt, sau đó get_mixing_records theo ids; view=results cho so sánh thông số gọn hơn, view=full để đọc cả phiếu. Mỗi lần đọc tối đa 10 phiếu. Hỏi đếm sai lệch dùng search_production_order_deviations mode=count, xem danh sách dùng mode=list; today=true theo ngày Việt Nam. Dùng search_items/get_item xem cấu hình sản phẩm hiện tại, không tự áp dụng cho lô cũ. Nhóm thiếu quyền có available=false, khác với dữ liệu rỗng. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Ngoại trừ phiếu xuất kho đọc từ SAP, các tool chỉ đọc dữ liệu cục bộ và tham chiếu ảnh/tệp.',
     });
 
     server.registerTool(
@@ -132,6 +140,23 @@ export class McpService implements OnModuleDestroy {
               id,
               stringArray(auth?.extra?.permissions),
             ),
+        ),
+    );
+
+    server.registerTool(
+      'get_warehouse_release',
+      {
+        description:
+          'Đọc dữ liệu PHIẾU XUẤT KHO của một lô sản xuất từ ProductionOrderLines (Productionorder_line) trên SAP Business One, cùng nguồn với phiếu xuất kho trên giao diện EBR. Dùng production_order_id từ search_production_orders. Trả nguyên các trường dòng SAP (mã/tên hàng, số lượng, kho, số lô nếu có), kèm ProductionOrdersStage và UnitOfMeasurement. Đây là dữ liệu phiếu xuất kho, không phải phiếu cân hoặc kết quả cân. PlannedQuantity là lượng yêu cầu; không tự kết luận đã xuất kho chỉ từ lượng kế hoạch. Có phân trang tối đa 100 dòng/lần; kiểm tra pagination.has_next_page. Truy vấn SAP trực tiếp, chỉ đọc, không tạo/sửa phiếu hay tải tệp.',
+        inputSchema: warehouseReleaseReadSchema,
+        annotations: { ...readOnlyAnnotations, openWorldHint: true },
+      },
+      (input) =>
+        this.executeTool(
+          'get_warehouse_release',
+          auth,
+          'production-orders.read',
+          () => this.warehouseRelease.getWarehouseRelease(input),
         ),
     );
 

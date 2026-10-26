@@ -5,6 +5,7 @@ import request from 'supertest';
 import type { Server } from 'node:http';
 import { PrismaService } from '../../prisma.service';
 import { McpModule } from './mcp.module';
+import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 import { OAuthService } from '../mcp-oauth/oauth.service';
 import { Prisma } from '@prisma/client';
 import { ProductionOrderLocalCompletenessService } from '../production-orders/production-order-local-completeness.service';
@@ -94,11 +95,17 @@ describe('MCP Streamable HTTP endpoint', () => {
     $transaction: jest.fn(),
   };
   const completeness = { findByProductionOrder: jest.fn() };
+  const sap = {
+    getProductionOrderById: jest.fn(),
+    getUnitOfMeasurements: jest.fn(),
+  };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [McpModule] })
       .overrideProvider(PrismaService)
       .useValue(prisma)
+      .overrideProvider(SapB1ServiceLayerClient)
+      .useValue(sap)
       .overrideProvider(OAuthService)
       .useValue(oauth)
       .overrideProvider(ProductionOrderLocalCompletenessService)
@@ -113,6 +120,8 @@ describe('MCP Streamable HTTP endpoint', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    sap.getProductionOrderById.mockReset();
+    sap.getUnitOfMeasurements.mockReset();
     prisma.userRoles.findMany.mockResolvedValue([
       { roles: { production_order_read_limit: null } },
     ]);
@@ -1478,12 +1487,164 @@ describe('MCP Streamable HTTP endpoint', () => {
     ).toEqual({ id: true });
   });
 
-  it('exposes exactly twelve read-only tools', async () => {
+  it('reads warehouse-release SAP lines with stage/unit references and pagination', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      id: 7,
+      item_code: 'BTP001',
+      lot_no: 'LOT',
+    });
+    sap.getProductionOrderById.mockResolvedValue({
+      ProductionOrderLines: [
+        {
+          LineNumber: 0,
+          ItemNo: 'NL001',
+          PlannedQuantity: '0.123456',
+          StageID: 0,
+          UoMEntry: 0,
+        },
+        {
+          LineNumber: 1,
+          ItemNo: 'NL002',
+          PlannedQuantity: 12,
+          IssuedQuantity: 5,
+          Warehouse: 'K01',
+          StageID: 4,
+          UoMEntry: 9,
+        },
+      ],
+      ProductionOrdersStages: [{ StageID: 0, Name: 'Cân' }],
+    });
+    sap.getUnitOfMeasurements.mockResolvedValue([
+      { AbsEntry: 0, Code: 'Gam', Name: 'Gam' },
+    ]);
+    const response = await rpc('tools/call', {
+      name: 'get_warehouse_release',
+      arguments: { production_order_id: 7, limit: 1 },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent).toMatchObject({
+      document_type: 'warehouse_release',
+      document_label: 'Phiếu xuất kho',
+      production_order: { id: 7 },
+      data: [
+        {
+          LineNumber: 0,
+          PlannedQuantity: '0.123456',
+          ProductionOrdersStage: { StageID: 0, Name: 'Cân' },
+          UnitOfMeasurement: { AbsEntry: 0, Code: 'Gam' },
+        },
+      ],
+      pagination: {
+        page: 1,
+        limit: 1,
+        total: 2,
+        total_pages: 2,
+        has_next_page: true,
+      },
+    });
+    const second = await rpc('tools/call', {
+      name: 'get_warehouse_release',
+      arguments: { production_order_id: 7, page: 2, limit: 1 },
+    }).expect(200);
+    expect(body(second).result.structuredContent).toMatchObject({
+      data: [
+        {
+          LineNumber: 1,
+          IssuedQuantity: 5,
+          Warehouse: 'K01',
+          ProductionOrdersStage: null,
+          UnitOfMeasurement: null,
+        },
+      ],
+      pagination: { has_next_page: false },
+    });
+    expect(sap.getProductionOrderById).toHaveBeenCalledWith(7);
+  });
+
+  it('returns an empty warehouse-release list when SAP has no lines', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    sap.getProductionOrderById.mockResolvedValue({});
+    sap.getUnitOfMeasurements.mockResolvedValue([]);
+    const response = await rpc('tools/call', {
+      name: 'get_warehouse_release',
+      arguments: { production_order_id: 7 },
+    }).expect(200);
+    expect(body(response).result.structuredContent).toMatchObject({
+      data: [],
+      pagination: { total: 0, has_next_page: false },
+    });
+  });
+
+  it('does not contact SAP for a missing or out-of-scope lot', async () => {
+    const response = await rpc('tools/call', {
+      name: 'get_warehouse_release',
+      arguments: { production_order_id: 7 },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(sap.getProductionOrderById).not.toHaveBeenCalled();
+    prisma.userRoles.findMany.mockResolvedValue([
+      { roles: { production_order_read_limit: 0 } },
+    ]);
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    const hidden = await rpc('tools/call', {
+      name: 'get_warehouse_release',
+      arguments: { production_order_id: 7 },
+    }).expect(200);
+    expect(body(hidden).result.isError).toBe(true);
+    expect(sap.getProductionOrderById).not.toHaveBeenCalled();
+  });
+
+  it('requires read permission before accessing warehouse-release data', async () => {
+    const auth = authenticated();
+    auth.auth.extra.permissions = ['production-orders.list'];
+    oauth.resolveMcpToken.mockResolvedValue(auth);
+    const response = await rpc('tools/call', {
+      name: 'get_warehouse_release',
+      arguments: { production_order_id: 7 },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(prisma.productionOrders.findUnique).not.toHaveBeenCalled();
+    expect(sap.getProductionOrderById).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { production_order_id: 0 },
+    { production_order_id: '7' },
+    { production_order_id: 7, limit: 101 },
+    { production_order_id: 7, page: 0 },
+    { production_order_id: 7, arbitrary: true },
+  ])('validates warehouse-release input %j', async (args) => {
+    const response = await rpc('tools/call', {
+      name: 'get_warehouse_release',
+      arguments: args,
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(sap.getProductionOrderById).not.toHaveBeenCalled();
+  });
+
+  it('does not expose SAP connection errors or credentials', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    sap.getProductionOrderById.mockRejectedValue(
+      new Error('SAP password=secret'),
+    );
+    sap.getUnitOfMeasurements.mockResolvedValue([]);
+    const response = await rpc('tools/call', {
+      name: 'get_warehouse_release',
+      arguments: { production_order_id: 7 },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(JSON.stringify(body(response).result)).not.toContain(
+      'password=secret',
+    );
+  });
+
+  it('exposes exactly thirteen read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
       'search_production_orders',
       'get_production_order',
+      'get_warehouse_release',
       'search_items',
       'get_item',
       'search_production_order_deviations',

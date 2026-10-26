@@ -35,13 +35,14 @@ SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/nod
 Chạy backend bằng `npm run start:dev` trong thư mục `backend`, rồi nhập URL trên
 vào client MCP. Không cần API key của nhà cung cấp AI để chạy module này.
 
-## Mười tool hiện có
+## Các tool hiện có
 
 | Tool                                 | Tham số                                                                                                                                       | Kết quả                                                      |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `get_server_info`                    | `{}`                                                                                                                                          | Thông tin server và kiểm tra kết nối                         |
 | `search_production_orders`           | Bộ lọc lệnh/ngày/giao nhận/PYCLM/nhóm phiếu/trạng thái, `include?`, `counts?`, `page?`, `limit?`                                              | Danh sách lệnh/lô và phân trang                              |
 | `get_production_order`               | `id`                                                                                                                                          | Toàn bộ hồ sơ lô từ dữ liệu cục bộ mà tài khoản có quyền đọc |
+| `get_warehouse_release`              | `production_order_id`, `page?`, `limit?` | Dữ liệu **phiếu xuất kho**, lấy từ SAP `ProductionOrderLines`, kèm giai đoạn và đơn vị tính |
 | `search_items`                       | `query?`, `item_code?`, `code_prefix?`, `page?`, `limit?`                                                                                     | Tìm sản phẩm theo mã/tên/mã DK, có phân trang                |
 | `get_item`                           | `item_code`                                                                                                                                   | Thông tin và cấu hình hiện tại của một sản phẩm              |
 | `search_production_order_deviations` | `mode?`, `today?`, `date_from?`, `date_to?`, `item_code?`, `lot_no?`, `production_order_id?`, `approval_status?`, `query?`, `page?`, `limit?` | Đếm hoặc tìm sai lệch trên nhiều lô                          |
@@ -571,7 +572,9 @@ Nhóm thiếu quyền không được truy vấn nội dung và trả
 Hai nhóm mẫu cần thêm quyền đọc tương ứng như mô tả ở trên. Sản phẩm không tồn
 tại hoặc đã xóa trả lỗi tool; đăng ký/thông số đã xóa không được trả nội dung.
 
-MCP chỉ đọc dữ liệu cục bộ; không có tool vật liệu hoặc kết nối SAP B1.
+Ngoại trừ `get_warehouse_release` đọc phiếu xuất kho trực tiếp từ SAP B1, các tool
+đọc dữ liệu cục bộ. Tool phiếu xuất kho dùng quyền `production-orders.read`, scope
+`mcp:read` và phạm vi lô của vai trò; kiểm tra trước khi gọi SAP.
 Ảnh/tệp trả metadata và tham chiếu, không tải nội dung. Thông tin người dùng chỉ
 gồm tên/username và ID ở các nhóm có ID. Không trả mật khẩu hoặc hồ sơ tài khoản.
 Có dữ liệu, kết quả đạt và đã duyệt xuất xưởng là các trạng thái khác nhau.
@@ -580,6 +583,30 @@ Lệnh không tồn tại hoặc lỗi truy vấn chính trả `isError=true`. L
 ghi log ở backend và được thay bằng thông báo chung trong kết quả tool.
 
 ## Mở rộng và kiểm thử
+
+### Đọc dữ liệu phiếu xuất kho
+
+Gọi `search_production_orders` để xác định ID lô, sau đó:
+
+```json
+{
+  "name": "get_warehouse_release",
+  "arguments": { "production_order_id": 3255, "page": 1, "limit": 100 }
+}
+```
+
+`ProductionOrderLines` (còn gọi `Productionorder_line`) chính là nguồn dữ liệu
+**phiếu xuất kho** đang dùng trên giao diện EBR. Tool trả `document_type:
+"warehouse_release"`, `document_label: "Phiếu xuất kho"`, nguồn SAP, thông tin
+lô, `data` gồm các trường dòng SAP nguyên bản và hai quan hệ
+`ProductionOrdersStage`, `UnitOfMeasurement`. Quan hệ không tìm thấy trả `null`.
+Giữ thứ tự dòng SAP và kiểu số lượng gốc; `PlannedQuantity` là lượng yêu cầu,
+không tự coi là lượng đã xuất thực tế. Tool không đọc nội dung phiếu cân.
+
+Phân trang mặc định 100 dòng, tối đa 100 dòng/lần. Khi
+`pagination.has_next_page=true`, gọi trang tiếp theo. Lô không tồn tại hoặc ngoài
+phạm vi trả lỗi trước khi truy vấn SAP; lỗi SAP trả thông báo chung, không trả
+thông tin kết nối. Tool chỉ đọc, không tạo/sửa hoặc xuất file phiếu.
 
 Thêm bảng chi tiết bằng một mục trong `mcp-record-sections.ts`, gồm quan hệ,
 quyền đọc, thứ tự và danh sách trường `select`. Không cần thêm tool mới.
