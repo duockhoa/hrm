@@ -62,6 +62,14 @@ Phiếu cân dùng quyền `production-orders.read`, scope OAuth `mcp:read` và 
 
 `get_production_order` bổ sung `sections.weighing_records` với `total`, `ids`, `detail_tool=get_weighing_records`. Khi đọc phiếu, `material_totals` cộng yêu cầu theo mã nguyên liệu và đơn vị, thực tế cộng mọi lần cân của các dòng thuộc nhóm, tách từng đơn vị và tính cả số âm. `actual_quantities=[]` là chưa cân, khác với đã cân có tổng bằng 0. Không quy đổi đơn vị hoặc suy ra đạt yêu cầu. `view=results` chỉ giữ dòng có lần cân nhưng tổng yêu cầu vẫn tính từ toàn bộ phiếu. Kết quả giữ thứ tự `ids`; `missing_ids` gồm ID không tồn tại hoặc ngoài phạm vi.
 
+Kết quả đọc có `document_type: "weighing_record"`, `document_label: "Phiếu cân"`
+và `source: "EBR / ProductionOrderWeighingRecords"` để nhận diện dữ liệu.
+Mỗi dòng nguyên liệu có thêm `lotCheck`: `is_correct` là đúng/sai số lô,
+`checked_by_id`, `checkedBy` và `checked_at` là người/thời điểm kiểm tra.
+`lotCheck: null` nghĩa là chưa kiểm tra, khác với `is_correct: false`.
+Thông tin phiếu cân được đọc từ EBR; phiếu xuất kho dùng tool riêng
+`get_warehouse_release` đọc `ProductionOrderLines` từ SAP.
+
 `search_production_orders` hỗ trợ `presence.weighing_records`, `include: ["weighing_records"]`, `counts: ["weighing_records"]` và `weighing_status`, `weighing_qa_status`, `weighing_ipc_status`, `weighing_has_weights`. QA/IPC dùng `approved|pending`, kiểm tra trên cùng phiếu. `weighing_has_weights=false` nghĩa là không có phiếu phù hợp bộ lọc đã ghi lần cân; có thể kết hợp presence để yêu cầu lô đã tạo phiếu. Count đếm số phiếu, không đếm số lần cân; count/presence áp dụng `weighing_status` nếu truyền, cờ QA/IPC là metadata riêng. Có dữ liệu hay có người duyệt không phải kết luận đạt chất lượng.
 
 Ví dụ tìm rồi đọc phiếu cân:
@@ -74,7 +82,7 @@ Ví dụ tìm rồi đọc phiếu cân:
 { "name": "get_weighing_records", "arguments": { "ids": [1, 2], "view": "full" } }
 ```
 
-Có mười hai tên tool được đăng ký. Phiếu cân và phiếu pha chế/gia công được tìm và đọc riêng;
+Có mười ba tên tool được đăng ký. Phiếu cân và phiếu pha chế/gia công được tìm và đọc riêng;
 `get_production_order` chỉ giữ số lượng/ID tham chiếu của nhóm này. Các nhóm sai
 lệch, checklist, kiểm tra, tổng kết, đóng gói, lấy mẫu và tài liệu tiếp tục nằm
 trong hồ sơ lô. Client đã kết nối trước đó cần làm mới danh sách tool.

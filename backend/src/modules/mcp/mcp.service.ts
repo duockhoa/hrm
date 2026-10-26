@@ -253,7 +253,7 @@ export class McpService implements OnModuleDestroy {
       'get_weighing_records',
       {
         description:
-          'Đọc phiếu cân đã lưu theo ids (1–10 ID khác nhau) từ search_weighing_records hoặc sections.weighing_records. Trả nguyên liệu, mã hàng/số lô/giai đoạn, lượng yêu cầu, từng lần cân kể cả số âm, ghi chú, người/thời điểm cân, tất cả tham chiếu ảnh và ký duyệt QA/IPC. material_totals cộng yêu cầu và thực tế theo mã nguyên liệu cùng đơn vị, không quy đổi đơn vị và không kết luận đạt. view=full gồm mọi dòng; view=results chỉ hiển thị dòng có lần cân, material_totals vẫn tính toàn bộ phiếu. Trả đúng thứ tự ids và missing_ids cho ID không tìm thấy hoặc ngoài phạm vi. Không tải nội dung ảnh/tệp.',
+          'Đọc dữ liệu PHIẾU CÂN đã lưu trong EBR theo ids (1–10 ID khác nhau) từ search_weighing_records hoặc sections.weighing_records. Đây là thông tin phiếu cân và các lần cân thực tế, tách biệt với phiếu xuất kho từ get_warehouse_release. Trả nguyên liệu, mã hàng/số lô/giai đoạn, lượng yêu cầu, từng lần cân kể cả số âm, ghi chú, người/thời điểm cân, tất cả tham chiếu ảnh và ký duyệt QA/IPC. lines.lotCheck trả kết quả kiểm tra số lô đúng/sai, người và thời điểm kiểm tra; null là chưa kiểm tra, không phải sai. material_totals cộng yêu cầu và thực tế theo mã nguyên liệu cùng đơn vị, không quy đổi đơn vị và không kết luận đạt. view=full gồm mọi dòng; view=results chỉ hiển thị dòng có lần cân, material_totals vẫn tính toàn bộ phiếu. Trả đúng thứ tự ids và missing_ids cho ID không tìm thấy hoặc ngoài phạm vi. Không tải nội dung ảnh/tệp.',
         inputSchema: weighingReadSchema,
         annotations: readOnlyAnnotations,
       },

@@ -88,6 +88,15 @@ export const weighingDetailSelect = {
       note: true,
       created_at: true,
       updated_at: true,
+      lotCheck: {
+        select: {
+          id: true,
+          is_correct: true,
+          checked_by_id: true,
+          checked_at: true,
+          checkedBy: { select: userSelect },
+        },
+      },
       details: {
         orderBy: { id: 'asc' },
         select: {

@@ -1358,6 +1358,9 @@ describe('MCP Streamable HTTP endpoint', () => {
       arguments: { ids: [3, 99, 1] },
     }).expect(200);
     const result = body(response).result.structuredContent as any;
+    expect(result.document_type).toBe('weighing_record');
+    expect(result.document_label).toBe('Phiếu cân');
+    expect(result.source).toBe('EBR / ProductionOrderWeighingRecords');
     expect(result.missing_ids).toEqual([99]);
     expect(result.data.map((row) => row.id)).toEqual([3, 1]);
     expect(result.data[1].material_totals).toEqual([
@@ -1385,6 +1388,67 @@ describe('MCP Streamable HTTP endpoint', () => {
       username: true,
     });
   });
+
+  it.each([true, false, null])(
+    'exports lot-check result %j with its checker and time',
+    async (isCorrect) => {
+      const checkedAt = new Date('2026-10-26T01:00:00Z');
+      const lotCheck =
+        isCorrect === null
+          ? null
+          : {
+              id: 9,
+              is_correct: isCorrect,
+              checked_by_id: 4,
+              checked_at: checkedAt,
+              checkedBy: { id: 4, name: 'Người kiểm tra', username: 'checker' },
+            };
+      prisma.productionOrderWeighingRecords.findMany.mockResolvedValue([
+        {
+          id: 1,
+          lines: [
+            {
+              id: 7,
+              item_code: 'NL001',
+              lot_no: 'LOT001',
+              planned_quantity: new Prisma.Decimal(1),
+              unit: 'Gam',
+              lotCheck,
+              details: [],
+            },
+          ],
+        },
+      ]);
+      const response = await rpc('tools/call', {
+        name: 'get_weighing_records',
+        arguments: { ids: [1] },
+      }).expect(200);
+      expect(body(response).result.isError).not.toBe(true);
+      expect(body(response).result.structuredContent).toMatchObject({
+        data: [
+          {
+            lines: [
+              {
+                lot_no: 'LOT001',
+                lotCheck: lotCheck
+                  ? { ...lotCheck, checked_at: checkedAt.toISOString() }
+                  : null,
+              },
+            ],
+          },
+        ],
+      });
+      const query =
+        prisma.productionOrderWeighingRecords.findMany.mock.calls[0][0];
+      expect(query.select.lines.select.lotCheck.select).toEqual({
+        id: true,
+        is_correct: true,
+        checked_by_id: true,
+        checked_at: true,
+        checkedBy: { select: { id: true, name: true, username: true } },
+      });
+    },
+  );
 
   it('returns only weighed lines in results view while keeping all required totals', async () => {
     prisma.productionOrderWeighingRecords.findMany.mockResolvedValue([

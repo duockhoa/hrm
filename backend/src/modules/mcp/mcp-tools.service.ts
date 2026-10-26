@@ -269,6 +269,9 @@ export class McpToolsService {
     });
     return {
       view: input.view,
+      document_type: 'weighing_record',
+      document_label: 'Phiếu cân',
+      source: 'EBR / ProductionOrderWeighingRecords',
       requested: input.ids.length,
       returned: data.length,
       missing_ids: input.ids.filter((id) => !byId.has(id)),
