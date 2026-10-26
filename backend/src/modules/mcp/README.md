@@ -67,6 +67,8 @@ và `source: "EBR / ProductionOrderWeighingRecords"` để nhận diện dữ li
 Mỗi dòng nguyên liệu có thêm `lotCheck`: `is_correct` là đúng/sai số lô,
 `checked_by_id`, `checkedBy` và `checked_at` là người/thời điểm kiểm tra.
 `lotCheck: null` nghĩa là chưa kiểm tra, khác với `is_correct: false`.
+`lotCheck.images` trả danh sách ảnh kiểm tra số lô với `id`, `image_path`, `created_at`;
+chỉ trả tham chiếu, không tải nội dung ảnh.
 Thông tin phiếu cân được đọc từ EBR; phiếu xuất kho dùng tool riêng
 `get_warehouse_release` đọc `ProductionOrderLines` từ SAP.
 

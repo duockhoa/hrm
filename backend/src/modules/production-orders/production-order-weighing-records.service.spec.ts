@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { productionOrderModelWhere } from 'src/access/production-order-scope.extension';
 import { ProductionOrderWeighingRecordsService } from './production-order-weighing-records.service';
+import * as lotCheckUpload from './production-order-weighing-record-lot-check-upload.config';
 
 describe('ProductionOrderWeighingRecordsService', () => {
   let service: ProductionOrderWeighingRecordsService;
@@ -36,6 +37,35 @@ describe('ProductionOrderWeighingRecordsService', () => {
     };
     service = new ProductionOrderWeighingRecordsService(
       prisma as PrismaService,
+    );
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('cleans lot-check photos after deleting the parent record without changing its response shape', async () => {
+    const remove = jest
+      .spyOn(
+        lotCheckUpload,
+        'removeProductionOrderWeighingRecordLotCheckImageByPath',
+      )
+      .mockResolvedValue(undefined);
+    prisma.productionOrderWeighingRecords.delete.mockResolvedValue({
+      ...record,
+      lines: [
+        {
+          lotCheck: {
+            images: [
+              {
+                image_path:
+                  '/production-orders/weighing-record-lot-checks/images/a.png',
+              },
+            ],
+          },
+        },
+      ],
+    });
+    expect(await service.delete(1)).toEqual(record);
+    expect(remove).toHaveBeenCalledWith(
+      '/production-orders/weighing-record-lot-checks/images/a.png',
     );
   });
 

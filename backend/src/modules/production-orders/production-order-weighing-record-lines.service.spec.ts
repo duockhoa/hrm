@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { productionOrderModelWhere } from 'src/access/production-order-scope.extension';
 import { ProductionOrderWeighingRecordLinesService } from './production-order-weighing-record-lines.service';
+import * as lotCheckUpload from './production-order-weighing-record-lot-check-upload.config';
 
 describe('ProductionOrderWeighingRecordLinesService', () => {
   let service: ProductionOrderWeighingRecordLinesService;
@@ -52,10 +53,16 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
         delete: jest.fn().mockResolvedValue({ id: 7 }),
       },
       productionOrderWeighingRecordLineChecks: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 1, images: [] }),
         deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
         upsert: jest
           .fn()
           .mockImplementation(async ({ create }) => ({ id: 1, ...create })),
+      },
+      productionOrderWeighingRecordLineCheckImages: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        delete: jest.fn(),
       },
     };
     prisma.$transaction = jest.fn(async (action) => action(prisma));
@@ -63,6 +70,7 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
       prisma as PrismaService,
     );
   });
+  afterEach(() => jest.restoreAllMocks());
 
   it('saves a decimal precisely and associates it with the URL parent', async () => {
     const result = await service.create(3, {
@@ -159,7 +167,7 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
       where: { production_order_weighing_record_id: 3 },
       orderBy: [{ item_code: 'asc' }, { id: 'asc' }],
       include: {
-        lotCheck: true,
+        lotCheck: { include: { images: { orderBy: { id: 'asc' } } } },
         details: {
           orderBy: { id: 'asc' },
           include: {
@@ -210,6 +218,132 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
     expect(
       prisma.productionOrderWeighingRecordLineChecks.upsert,
     ).not.toHaveBeenCalled();
+  });
+
+  it('creates multiple image children atomically and appends images on rechecking', async () => {
+    const files = [
+      { filename: 'a.png' },
+      { filename: 'b.png' },
+    ] as Express.Multer.File[];
+    await service.checkLot(
+      3,
+      7,
+      { lot_no: 'LOT', is_correct: false },
+      { id: 9 },
+      files,
+    );
+    const query =
+      prisma.productionOrderWeighingRecordLineChecks.upsert.mock.calls[0][0];
+    const images = {
+      create: [
+        {
+          image_path:
+            '/production-orders/weighing-record-lot-checks/images/a.png',
+        },
+        {
+          image_path:
+            '/production-orders/weighing-record-lot-checks/images/b.png',
+        },
+      ],
+    };
+    expect(query.create.images).toEqual(images);
+    expect(query.update.images).toEqual(images);
+    expect(query.include).toEqual({ images: { orderBy: { id: 'asc' } } });
+    expect(query.update.images).not.toHaveProperty('deleteMany');
+  });
+
+  it('rejects more than 20 images without starting a write', async () => {
+    await expect(
+      service.checkLot(
+        3,
+        7,
+        { lot_no: 'LOT', is_correct: true },
+        { id: 9 },
+        Array(21).fill({ filename: 'a.png' }),
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('removes obsolete lot-check image files after changing the lot', async () => {
+    const remove = jest
+      .spyOn(
+        lotCheckUpload,
+        'removeProductionOrderWeighingRecordLotCheckImageByPath',
+      )
+      .mockResolvedValue(undefined);
+    prisma.productionOrderWeighingRecordLineChecks.findUnique.mockResolvedValue(
+      { images: [{ image_path: '/old.png' }] },
+    );
+    await service.update(3, 7, { lot_no: 'NEW' });
+    expect(remove).toHaveBeenCalledWith('/old.png');
+  });
+
+  it('rejects deletion of an image outside the requested material line', async () => {
+    await expect(service.deleteLotCheckImage(3, 7, 8)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(
+      prisma.productionOrderWeighingRecordLineCheckImages.findFirst,
+    ).toHaveBeenCalledWith({
+      where: {
+        id: 8,
+        lotCheck: { production_order_weighing_record_line_id: 7 },
+      },
+    });
+    expect(
+      prisma.productionOrderWeighingRecordLineCheckImages.delete,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('deletes only the selected image and returns the remaining gallery', async () => {
+    const remove = jest
+      .spyOn(
+        lotCheckUpload,
+        'removeProductionOrderWeighingRecordLotCheckImageByPath',
+      )
+      .mockResolvedValue(undefined);
+    prisma.productionOrderWeighingRecordLineCheckImages.findFirst.mockResolvedValue(
+      { id: 8, image_path: '/saved.png' },
+    );
+    prisma.productionOrderWeighingRecordLineChecks.findUniqueOrThrow.mockResolvedValue(
+      { id: 1, images: [{ id: 9 }] },
+    );
+    expect(await service.deleteLotCheckImage(3, 7, 8)).toEqual({
+      id: 1,
+      images: [{ id: 9 }],
+    });
+    expect(
+      prisma.productionOrderWeighingRecordLineCheckImages.delete,
+    ).toHaveBeenCalledWith({ where: { id: 8 } });
+    expect(remove).toHaveBeenCalledWith('/saved.png');
+  });
+
+  it('does not resolve an image file when it is absent or hidden by scope', async () => {
+    const resolve = jest.spyOn(
+      lotCheckUpload,
+      'resolveProductionOrderWeighingRecordLotCheckImageFile',
+    );
+    await expect(
+      service.findLotCheckImage('hidden.png'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(resolve).not.toHaveBeenCalled();
+    expect(
+      productionOrderModelWhere(
+        'ProductionOrderWeighingRecordLineCheckImages',
+        [3],
+      ),
+    ).toEqual({
+      lotCheck: {
+        is: {
+          weighingRecordLine: {
+            is: {
+              weighingRecord: { is: { production_order_id: { in: [3] } } },
+            },
+          },
+        },
+      },
+    });
   });
 
   it('rejects a lot check for a line belonging to another record', async () => {
@@ -292,6 +426,9 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
       prisma.productionOrderWeighingRecordLines.delete,
     ).toHaveBeenCalledWith({
       where: { id: 7, production_order_weighing_record_id: 3 },
+      include: {
+        lotCheck: { include: { images: { orderBy: { id: 'asc' } } } },
+      },
     });
   });
 

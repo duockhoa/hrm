@@ -1446,6 +1446,10 @@ describe('MCP Streamable HTTP endpoint', () => {
         checked_by_id: true,
         checked_at: true,
         checkedBy: { select: { id: true, name: true, username: true } },
+        images: {
+          orderBy: { id: 'asc' },
+          select: { id: true, image_path: true, created_at: true },
+        },
       });
     },
   );

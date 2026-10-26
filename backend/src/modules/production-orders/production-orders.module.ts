@@ -7,7 +7,7 @@ import {
 import { ProductionOrderWeighingRecordDetailsService } from './production-order-weighing-record-details.service';
 import { ProductionOrderWeighingStageImportController } from './production-order-weighing-stage-import.controller';
 import { ProductionOrderWeighingStageImportService } from './production-order-weighing-stage-import.service';
-import { ProductionOrderWeighingRecordLinesController } from './production-order-weighing-record-lines.controller';
+import { ProductionOrderWeighingRecordLinesController, ProductionOrderWeighingLotCheckImagesController } from './production-order-weighing-record-lines.controller';
 import { ProductionOrderWeighingRecordLinesService } from './production-order-weighing-record-lines.service';
 import { ProductionOrderWeighingRecordsController } from './production-order-weighing-records.controller';
 import { ProductionOrderWeighingRecordsService } from './production-order-weighing-records.service';
@@ -86,6 +86,7 @@ import { EmailSettingsModule } from '../email-settings/email-settings.module';
     ProductionOrderMixingRecordsController,
     ProductionOrderWeighingRecordsController,
     ProductionOrderWeighingRecordLinesController,
+    ProductionOrderWeighingLotCheckImagesController,
     ProductionOrderWeighingRecordDetailsController,
     ProductionOrderWeighingDetailImagesController,
     ProductionOrderWeighingStageImportController,

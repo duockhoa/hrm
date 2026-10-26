@@ -9,9 +9,21 @@ import {
   Patch,
   Post,
   Request,
+  Query,
+  Res,
+  StreamableFile,
+  UploadedFiles,
+  UsePipes,
+  ValidationPipe,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { createReadStream } from 'fs';
+import type { Response } from 'express';
+import { productionOrderWeighingRecordLotCheckImageUploadOptions } from './production-order-weighing-record-lot-check-upload.config';
+import { WeighingDetailUploadCleanupInterceptor } from './production-order-weighing-detail-upload-cleanup.interceptor';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
@@ -64,13 +76,56 @@ export class ProductionOrderWeighingRecordLinesController {
   }
 
   @Patch(':lineId/lot-check')
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  )
+  @ApiConsumes('application/json', 'multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['lot_no', 'is_correct'],
+      properties: {
+        lot_no: { type: 'string' },
+        is_correct: { type: 'boolean' },
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          maxItems: 20,
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    new WeighingDetailUploadCleanupInterceptor(),
+    FilesInterceptor('images', 20, {
+      ...productionOrderWeighingRecordLotCheckImageUploadOptions,
+      limits: {
+        ...productionOrderWeighingRecordLotCheckImageUploadOptions.limits,
+        files: 20,
+      },
+    }),
+  )
   checkLot(
     @Param('recordId', ParseIntPipe) recordId: number,
     @Param('lineId', ParseIntPipe) lineId: number,
     @Body() dto: CheckWeighingRecordLotDto,
     @Request() req: { user: { id?: number | string | null } },
+    @UploadedFiles() files?: Express.Multer.File[],
   ) {
-    return this.service.checkLot(recordId, lineId, dto, req.user);
+    return this.service.checkLot(recordId, lineId, dto, req.user, files ?? []);
+  }
+
+  @Delete(':lineId/lot-check/images/:imageId')
+  deleteLotCheckImage(
+    @Param('recordId', ParseIntPipe) recordId: number,
+    @Param('lineId', ParseIntPipe) lineId: number,
+    @Param('imageId', ParseIntPipe) imageId: number,
+  ) {
+    return this.service.deleteLotCheckImage(recordId, lineId, imageId);
   }
 
   @Delete(':lineId')
@@ -80,5 +135,31 @@ export class ProductionOrderWeighingRecordLinesController {
     @Param('lineId', ParseIntPipe) lineId: number,
   ) {
     return this.service.delete(recordId, lineId);
+  }
+}
+
+@UseGuards(jwtAuthGuard)
+@Controller('production-orders/weighing-record-lot-checks/images')
+export class ProductionOrderWeighingLotCheckImagesController {
+  constructor(
+    private readonly service: ProductionOrderWeighingRecordLinesService,
+  ) {}
+
+  @Get(':filename')
+  async image(
+    @Param('filename') filename: string,
+    @Query('original') original: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const image = await this.service.findLotCheckImage(
+      filename,
+      original === 'true',
+    );
+    res.set({
+      'Content-Type': image.contentType,
+      'Content-Length': String(image.size),
+      'Cache-Control': 'private, no-store',
+    });
+    return new StreamableFile(createReadStream(image.filePath));
   }
 }

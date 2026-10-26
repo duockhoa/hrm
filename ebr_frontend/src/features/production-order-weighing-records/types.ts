@@ -61,6 +61,7 @@ export type WeighingRecordLotCheck = {
   is_correct: boolean;
   checked_by_id: number;
   checked_at: string;
+  images?: { id: number; image_path: string; created_at: string }[];
 };
 
 export type ProductionOrderWeighingRecordDetail = {

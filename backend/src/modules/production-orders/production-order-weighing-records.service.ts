@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderWeighingRecordDto } from './dto/create-production-order-weighing-record.dto';
 import { UpdateProductionOrderWeighingRecordDto } from './dto/update-production-order-weighing-record.dto';
+import { removeProductionOrderWeighingRecordLotCheckImageByPath } from './production-order-weighing-record-lot-check-upload.config';
 
 type AuthenticatedUser = { id?: number | string | null };
 const userSelect = { id: true, username: true, name: true };
@@ -104,15 +105,35 @@ export class ProductionOrderWeighingRecordsService {
     const record = await this.findById(id);
     this.ensureEditable(record);
     try {
-      return await this.prisma.productionOrderWeighingRecords.delete({
+      const deleted = await this.prisma.productionOrderWeighingRecords.delete({
         where: {
           id,
           status: record.status,
           qa_staff_approved_at: record.qa_staff_approved_at,
           ipc_staff_approved_at: null,
         },
-        include: recordInclude,
+        include: {
+          ...recordInclude,
+          lines: {
+            select: {
+              lotCheck: {
+                select: { images: { select: { image_path: true } } },
+              },
+            },
+          },
+        },
       });
+      const { lines, ...result } = deleted;
+      await Promise.all(
+        (lines ?? [])
+          .flatMap((line) => line.lotCheck?.images ?? [])
+          .map((image) =>
+            removeProductionOrderWeighingRecordLotCheckImageByPath(
+              image.image_path,
+            ).catch(() => undefined),
+          ),
+      );
+      return result;
     } catch (error) {
       this.handleWriteError(error);
     }

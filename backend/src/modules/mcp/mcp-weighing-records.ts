@@ -95,6 +95,10 @@ export const weighingDetailSelect = {
           checked_by_id: true,
           checked_at: true,
           checkedBy: { select: userSelect },
+          images: {
+            orderBy: { id: 'asc' },
+            select: { id: true, image_path: true, created_at: true },
+          },
         },
       },
       details: {

@@ -1140,9 +1140,21 @@ model ProductionOrderWeighingRecordLineChecks {
   checked_by_id Int
   checkedBy Users @relation("WeighingRecordLineChecker", fields: [checked_by_id], references: [id], onDelete: Restrict, map: "po_weighing_line_checks_user_fkey")
   checked_at DateTime @default(now())
+  images ProductionOrderWeighingRecordLineCheckImages[]
 
   @@index([checked_by_id], map: "po_weighing_line_checks_user_idx")
   @@map("production_order_weighing_record_line_checks")
+}
+
+model ProductionOrderWeighingRecordLineCheckImages {
+  id Int @id @default(autoincrement())
+  production_order_weighing_record_line_check_id Int
+  lotCheck ProductionOrderWeighingRecordLineChecks @relation(fields: [production_order_weighing_record_line_check_id], references: [id], onDelete: Cascade, map: "po_weighing_check_images_check_fkey")
+  image_path String @db.Text
+  created_at DateTime @default(now())
+
+  @@index([production_order_weighing_record_line_check_id, id], map: "po_weighing_check_images_check_idx")
+  @@map("production_order_weighing_record_line_check_images")
 }
 
 model ProductionOrderWeighingRecordDetails {

@@ -96,10 +96,35 @@ const productionOrderWeighingRecordsService = {
       );
     return response.data;
   },
-  async checkLot(recordId: number, lineId: number, lotNo: string, isCorrect: boolean) {
-    const response = await axiosClient.patch<WeighingRecordLotCheck>(
-      `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/lot-check`,
-      { lot_no: lotNo, is_correct: isCorrect },
+  async checkLot(
+    recordId: number,
+    lineId: number,
+    lotNo: string,
+    isCorrect: boolean,
+    images: File[] = [],
+  ) {
+    const url = `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/lot-check`;
+    if (images.length) {
+      const form = new FormData();
+      form.append("lot_no", lotNo);
+      form.append("is_correct", String(isCorrect));
+      for (const image of images) form.append("images", image);
+      const response = await axiosClient.patch<WeighingRecordLotCheck>(
+        url,
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return response.data;
+    }
+    const response = await axiosClient.patch<WeighingRecordLotCheck>(url, {
+      lot_no: lotNo,
+      is_correct: isCorrect,
+    });
+    return response.data;
+  },
+  async deleteLotCheckImage(recordId: number, lineId: number, imageId: number) {
+    const response = await axiosClient.delete<WeighingRecordLotCheck>(
+      `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/lot-check/images/${imageId}`,
     );
     return response.data;
   },

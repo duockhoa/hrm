@@ -9,6 +9,16 @@ import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderWeighingRecordLineDto } from './dto/create-production-order-weighing-record-line.dto';
 import { UpdateProductionOrderWeighingRecordLineDto } from './dto/update-production-order-weighing-record-line.dto';
 import { CheckWeighingRecordLotDto } from './dto/check-weighing-record-lot.dto';
+import {
+  getProductionOrderWeighingRecordLotCheckImagePath,
+  PRODUCTION_ORDER_WEIGHING_RECORD_LOT_CHECK_IMAGE_ROUTE,
+  removeProductionOrderWeighingRecordLotCheckImageByPath,
+  resolveProductionOrderWeighingRecordLotCheckImageFile,
+} from './production-order-weighing-record-lot-check-upload.config';
+
+const lotCheckInclude = {
+  images: { orderBy: { id: 'asc' } },
+} satisfies Prisma.ProductionOrderWeighingRecordLineChecksInclude;
 
 const fields = [
   'source_line_number',
@@ -36,7 +46,7 @@ export class ProductionOrderWeighingRecordLinesService {
       where: { production_order_weighing_record_id: recordId },
       orderBy: [{ item_code: 'asc' }, { id: 'asc' }],
       include: {
-        lotCheck: true,
+        lotCheck: { include: lotCheckInclude },
         details: {
           orderBy: { id: 'asc' },
           include: {
@@ -71,7 +81,8 @@ export class ProductionOrderWeighingRecordLinesService {
     dto: UpdateProductionOrderWeighingRecordLineDto,
   ) {
     const data = this.buildData(dto, false);
-    return this.write(recordId, async (tx) => {
+    const obsoleteImages: string[] = [];
+    const updated = await this.write(recordId, async (tx) => {
       const current = await this.line(tx, recordId, lineId);
       await tx.productionOrderWeighingRecordLines.update({
         where: { id: lineId, production_order_weighing_record_id: recordId },
@@ -81,15 +92,25 @@ export class ProductionOrderWeighingRecordLinesService {
         (data.lot_no !== undefined && data.lot_no !== current.lot_no) ||
         (data.item_code !== undefined && data.item_code !== current.item_code)
       ) {
+        const check =
+          await tx.productionOrderWeighingRecordLineChecks.findUnique({
+            where: { production_order_weighing_record_line_id: lineId },
+            include: lotCheckInclude,
+          });
+        obsoleteImages.push(
+          ...(check?.images ?? []).map((image) => image.image_path),
+        );
         await tx.productionOrderWeighingRecordLineChecks.deleteMany({
           where: { production_order_weighing_record_line_id: lineId },
         });
       }
       return tx.productionOrderWeighingRecordLines.findUniqueOrThrow({
         where: { id: lineId, production_order_weighing_record_id: recordId },
-        include: { lotCheck: true },
+        include: { lotCheck: { include: lotCheckInclude } },
       });
     });
+    await this.removeLotCheckImages(obsoleteImages);
+    return updated;
   }
 
   async checkLot(
@@ -97,7 +118,13 @@ export class ProductionOrderWeighingRecordLinesService {
     lineId: number,
     dto: CheckWeighingRecordLotDto,
     user: { id?: number | string | null },
+    files: Express.Multer.File[] = [],
   ) {
+    if (files.length > 20)
+      throw new BadRequestException('Mỗi lần tải lên tối đa 20 ảnh.');
+    const images = files.map((file) => ({
+      image_path: getProductionOrderWeighingRecordLotCheckImagePath(file)!,
+    }));
     const userId = Number(user?.id);
     if (!Number.isSafeInteger(userId) || userId <= 0)
       throw new BadRequestException('Invalid checking user');
@@ -130,8 +157,16 @@ export class ProductionOrderWeighingRecordLinesService {
       };
       return tx.productionOrderWeighingRecordLineChecks.upsert({
         where: { production_order_weighing_record_line_id: lineId },
-        create: { ...data, production_order_weighing_record_line_id: lineId },
-        update: data,
+        create: {
+          ...data,
+          production_order_weighing_record_line_id: lineId,
+          ...(images.length ? { images: { create: images } } : {}),
+        },
+        update: {
+          ...data,
+          ...(images.length ? { images: { create: images } } : {}),
+        },
+        include: lotCheckInclude,
       });
     });
   }
@@ -208,12 +243,75 @@ export class ProductionOrderWeighingRecordLinesService {
   }
 
   async delete(recordId: number, lineId: number) {
-    return this.write(recordId, async (tx) => {
+    const deleted = await this.write(recordId, async (tx) => {
       await this.line(tx, recordId, lineId);
       return tx.productionOrderWeighingRecordLines.delete({
         where: { id: lineId, production_order_weighing_record_id: recordId },
+        include: { lotCheck: { include: lotCheckInclude } },
       });
     });
+    await this.removeLotCheckImages(
+      (deleted.lotCheck?.images ?? []).map((image) => image.image_path),
+    );
+    return deleted;
+  }
+
+  async deleteLotCheckImage(recordId: number, lineId: number, imageId: number) {
+    const { updated, path } = await this.prisma.$transaction(async (tx) => {
+      await this.parent(tx, recordId);
+      await this.line(tx, recordId, lineId);
+      await tx.productionOrderWeighingRecordLines.update({
+        where: { id: lineId, production_order_weighing_record_id: recordId },
+        data: { updated_at: new Date() },
+      });
+      const image =
+        await tx.productionOrderWeighingRecordLineCheckImages.findFirst({
+          where: {
+            id: imageId,
+            lotCheck: { production_order_weighing_record_line_id: lineId },
+          },
+        });
+      if (!image) throw new NotFoundException('Lot check image not found');
+      await tx.productionOrderWeighingRecordLineCheckImages.delete({
+        where: { id: imageId },
+      });
+      const updated =
+        await tx.productionOrderWeighingRecordLineChecks.findUniqueOrThrow({
+          where: { production_order_weighing_record_line_id: lineId },
+          include: lotCheckInclude,
+        });
+      return { updated, path: image.image_path };
+    });
+    await this.removeLotCheckImages([path]);
+    return updated;
+  }
+
+  async findLotCheckImage(filename: string, original = false) {
+    const image =
+      await this.prisma.productionOrderWeighingRecordLineCheckImages.findFirst({
+        where: {
+          image_path: `${PRODUCTION_ORDER_WEIGHING_RECORD_LOT_CHECK_IMAGE_ROUTE}/${filename}`,
+        },
+        select: { id: true },
+      });
+    // Scope extension follows image -> lot check -> line -> record -> order.
+    if (!image) throw new NotFoundException('Lot check image not found');
+    const file = await resolveProductionOrderWeighingRecordLotCheckImageFile(
+      filename,
+      original,
+    );
+    if (!file) throw new NotFoundException('Lot check image not found');
+    return file;
+  }
+
+  private async removeLotCheckImages(paths: string[]) {
+    await Promise.all(
+      paths.map((path) =>
+        removeProductionOrderWeighingRecordLotCheckImageByPath(path).catch(
+          () => undefined,
+        ),
+      ),
+    );
   }
 
   private async parent(tx: Prisma.TransactionClient, id: number) {
@@ -238,7 +336,7 @@ export class ProductionOrderWeighingRecordLinesService {
   ) {
     const line = await tx.productionOrderWeighingRecordLines.findUnique({
       where: { id, production_order_weighing_record_id: recordId },
-      include: { lotCheck: true },
+      include: { lotCheck: { include: lotCheckInclude } },
     });
     if (!line) throw new NotFoundException('Weighing record line not found');
     return line;

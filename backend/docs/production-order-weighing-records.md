@@ -176,6 +176,25 @@ Yêu cầu đăng nhập, không yêu cầu permission riêng. Body:
 
 Giao diện bấm số lô để chọn Đúng/Sai; đúng hiển thị chữ xanh, sai hiển thị chữ đỏ, chưa kiểm tra giữ màu mặc định. Không hiển thị người kiểm tra trên giao diện.
 
+Form kiểm tra số lô hỗ trợ Chụp ảnh/Chọn ảnh giống nhập lần cân. PATCH nhận thêm
+`multipart/form-data`: `lot_no`, `is_correct` (`true` hoặc `false`) và nhiều tệp
+`images`. Tối đa 20 ảnh mỗi lần gửi, 20 MB/ảnh, định dạng JPG/PNG/WEBP/GIF.
+JSON cũ không có ảnh vẫn dùng được. Kết quả kiểm tra và ảnh mới lưu cùng transaction;
+kiểm tra lại nối thêm ảnh, giữ các ảnh đã lưu. Body không nhận đường dẫn ảnh hoặc ID người kiểm tra.
+
+Ảnh nằm trong bảng con `production_order_weighing_record_line_check_images`,
+liên kết tới kết quả kiểm tra qua `production_order_weighing_record_line_check_id`.
+Response và `lotCheck` trên danh sách dòng có `images` gồm ID, `image_path`, `created_at`.
+
+- Xóa ảnh: `DELETE /production-orders/weighing-records/:recordId/lines/:lineId/lot-check/images/:imageId`.
+- Xem ảnh: `GET /production-orders/weighing-record-lot-checks/images/:filename`;
+  mặc định thumbnail, thêm `?original=true` để lấy ảnh gốc.
+
+Các API này cần đăng nhập, không yêu cầu permission riêng và vẫn giới hạn phạm vi lô.
+Ảnh chỉ đọc được khi còn bản ghi liên kết trong phạm vi tài khoản. Khi đổi mã nguyên liệu,
+đổi số lô, xóa dòng hoặc xóa phiếu cân, ảnh kiểm tra liên quan bị xóa cascade và dọn tệp
+gốc/thumbnail. Request upload thất bại cũng dọn tệp đã tải, kể cả lỗi ID hoặc body.
+
 Migration `20261025040000_add_weighing_record_line_checks` tạo bảng `production_order_weighing_record_line_checks` với liên kết duy nhất tới dòng nguyên liệu, kết quả đúng/sai, người kiểm tra và thời điểm kiểm tra.
 
 ## Xuất PDF báo cáo lô
@@ -193,3 +212,5 @@ Biểu mẫu giữ bố cục frontend: mã BMDB005.01, thông tin sản phẩm,
 `prisma/migrations/20261024040000_add_weighing_record_lines/migration.sql` tạo bảng nguyên liệu cần cân, index và khóa ngoại xóa cascade theo phiếu cha.
 
 `prisma/migrations/20261025000000_add_weighing_record_details/migration.sql` tạo bảng từng lần cân thực tế và các khóa ngoại/index tương ứng.
+
+`prisma/migrations/20261026000000_add_weighing_lot_check_images/migration.sql` tạo bảng nhiều ảnh cho kết quả kiểm tra số lô.
