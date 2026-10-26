@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import useSWR from "swr";
 import { isAxiosError } from "axios";
-import { EllipsisVertical, Eye, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import AuthenticatedImage from "@/components/authenticated-image/authenticated-image";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,12 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { API_ROUTES } from "@/lib/api-routes";
 import service from "@/services/production-order-weighing-records.service";
 import type { ProductionOrderWeighingRecordLine } from "../types";
@@ -32,14 +25,17 @@ const formatTime = (value: string) => {
     : date.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 };
 
-export default function WeighingRecordDetailMenu({
+export default function WeighingRecordDetailsDialog({
   recordId,
   line,
+  open,
+  onOpenChange,
 }: {
   recordId: number;
   line: ProductionOrderWeighingRecordLine;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const {
     data: details,
     error,
@@ -65,28 +61,7 @@ export default function WeighingRecordDetailMenu({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="size-6 shrink-0 p-0 text-slate-700"
-            aria-label={`Chi tiết các lần cân của ${line.item_code}, dòng ${line.id}`}
-            title="Chi tiết các lần cân"
-          >
-            <EllipsisVertical className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="font-sans">
-          <DropdownMenuItem onSelect={() => setOpen(true)}>
-            <Eye className="size-4" />
-            Xem chi tiết
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden font-sans sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Chi tiết các lần cân</DialogTitle>
@@ -251,7 +226,7 @@ export default function WeighingRecordDetailMenu({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
             >
               Đóng
             </Button>

@@ -173,7 +173,7 @@ export function buildWeighingRecordsHtml(
       <tr><th>Người tạo:</th><td>${text(user(record.createdBy))}</td><th>Ngày tạo:</th><td>${text(timestamp(record.created_at))}</td></tr>
     </tbody></table>
     <h3 class="weighing-material-title">Danh sách nguyên liệu</h3>
-    <table class="weighing-content"><colgroup>${[9, 21, 12, 9, 9, 9, 12, 10, 9].map((width) => `<col style="width:${width}%">`).join('')}</colgroup>
+    <table class="weighing-content"><colgroup>${[9, 25, 12, 9, 9, 9, 12, 10, 5].map((width) => `<col style="width:${width}%">`).join('')}</colgroup>
       <thead><tr><th rowspan="2">Mã NL</th><th rowspan="2">Tên nguyên liệu</th><th rowspan="2">Số lô</th><th colspan="6">Số lượng/ Đơn vị</th></tr><tr>${['Yêu cầu', 'Tổng lượng YC', 'Tổng lượng TT', 'Thực tế', 'Tổng khối lượng', 'ĐVT'].map((label) => `<th>${label}</th>`).join('')}</tr></thead>
       <tbody>${rows || '<tr><td colspan="9" class="weighing-unit">Chưa có nguyên liệu trong phiếu cân.</td></tr>'}
         <tr class="weighing-summary"><td colspan="9"><strong>Ghi chú: </strong>${text(notes.join(', ') || '—')}</td></tr>

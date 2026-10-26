@@ -21,7 +21,6 @@ import WeighingRecordWeightCell, {
   WeighingRecordWeightTotal,
 } from "./weighing-record-weight-cell";
 import WeighingRecordMaterialMenu from "./weighing-record-material-menu";
-import WeighingRecordDetailMenu from "./weighing-record-detail-menu";
 import WeighingRecordManualImport from "./weighing-record-manual-import";
 import WeighingRecordLotCheckButton from "./weighing-record-lot-check";
 import {
@@ -182,14 +181,14 @@ export default function WeighingRecordMaterials({
           <table className="w-full table-fixed border-collapse border border-black text-[14px] leading-5 print:text-[12px] print:leading-4 [&_td]:[overflow-wrap:anywhere]">
             <colgroup>
               <col className="w-[9%]" />
-              <col className="w-[21%]" />
+              <col className="w-[25%]" />
               <col className="w-[12%]" />
               <col className="w-[9%]" />
               <col className="w-[9%]" />
               <col className="w-[9%]" />
               <col className="w-[12%]" />
               <col className="w-[10%]" />
-              <col className="w-[9%]" />
+              <col className="w-[5%]" />
             </colgroup>
             <thead>
               <tr>
@@ -390,16 +389,10 @@ export default function WeighingRecordMaterials({
                       />
                     </td>
                     <td className="border border-black px-1 py-1.5 text-right tabular-nums">
-                      <WeighingRecordWeightTotal line={line} />
+                      <WeighingRecordWeightTotal recordId={recordId} line={line} />
                     </td>
                     <td className="break-words border border-black px-1 py-1.5 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <span>{line.unit}</span>
-                        <WeighingRecordDetailMenu
-                          recordId={recordId}
-                          line={line}
-                        />
-                      </div>
+                      {line.unit}
                     </td>
                   </tr>
                 ),

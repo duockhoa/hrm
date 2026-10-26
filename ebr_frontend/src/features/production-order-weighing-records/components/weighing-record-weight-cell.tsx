@@ -21,12 +21,16 @@ import type {
   ProductionOrderWeighingRecordLine,
 } from "../types";
 import { formatWeight, normalizeWeight, sumWeights } from "../weight-utils";
+import WeighingRecordDetailsDialog from "./weighing-record-details-dialog";
 
 export function WeighingRecordWeightTotal({
+  recordId,
   line,
 }: {
+  recordId: number;
   line: ProductionOrderWeighingRecordLine;
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const details = line.details ?? [];
   if (!details.length) return <span className="text-slate-500">—</span>;
   const units = [...new Set(details.map((detail) => detail.unit))];
@@ -34,16 +38,30 @@ export function WeighingRecordWeightTotal({
     <>
       {units.map((unit) => (
         <p key={unit}>
-          {formatWeight(
-            sumWeights(
-              details
-                .filter((detail) => detail.unit === unit)
-                .map((detail) => detail.net_weight),
-            ),
-          )}
-          {unit !== line.unit || units.length > 1 ? ` ${unit}` : ""}
+          <button
+            type="button"
+            className="cursor-pointer rounded-sm underline decoration-dotted underline-offset-4 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 print:no-underline"
+            aria-label={`Xem chi tiết các lần cân của ${line.item_code}, đơn vị ${unit}`}
+            title="Xem chi tiết các lần cân"
+            onClick={() => setDetailsOpen(true)}
+          >
+            {formatWeight(
+              sumWeights(
+                details
+                  .filter((detail) => detail.unit === unit)
+                  .map((detail) => detail.net_weight),
+              ),
+            )}
+            {unit !== line.unit || units.length > 1 ? ` ${unit}` : ""}
+          </button>
         </p>
       ))}
+      <WeighingRecordDetailsDialog
+        recordId={recordId}
+        line={line}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
     </>
   );
 }
