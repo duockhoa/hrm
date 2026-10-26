@@ -8,6 +8,7 @@ export type ProductionOrderWeighingRecord = {
   id: number;
   production_order_id: number;
   description: string | null;
+  note: string | null;
   status: "draft" | "in_progress" | "completed" | "approved" | "cancelled";
   created_by_id: number;
   createdBy: WeighingRecordPerson;
@@ -23,6 +24,7 @@ export type ProductionOrderWeighingRecord = {
 
 export type CreateProductionOrderWeighingRecordPayload = {
   description?: string | null;
+  note?: string | null;
 };
 export type WeighingProductionOrder = {
   id?: string | number;

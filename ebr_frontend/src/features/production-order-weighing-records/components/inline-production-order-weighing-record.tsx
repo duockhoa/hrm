@@ -85,6 +85,8 @@ export default function InlineProductionOrderWeighingRecord({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [description, setDescription] = useState("");
+  const [note, setNote] = useState("");
+  const [editNote, setEditNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingRecord, setDeletingRecord] =
     useState<ProductionOrderWeighingRecord | null>(null);
@@ -123,6 +125,7 @@ export default function InlineProductionOrderWeighingRecord({
         await productionOrderWeighingRecordsService.updateDescription(
           editingRecord.id,
           editDescription.trim() || null,
+          editNote.trim() || null,
         );
       await mutate(
         (current) =>
@@ -137,10 +140,10 @@ export default function InlineProductionOrderWeighingRecord({
         { revalidate: false },
       );
       setEditingRecord(null);
-      toast.success("Đã cập nhật mô tả phiếu cân.");
+      toast.success("Đã cập nhật mô tả và ghi chú phiếu cân.");
       void mutate().catch(() => undefined);
     } catch (error) {
-      setEditError(errorMessage(error, "Không thể sửa mô tả phiếu cân."));
+      setEditError(errorMessage(error, "Không thể sửa mô tả và ghi chú phiếu cân."));
       void mutate().catch(() => undefined);
     } finally {
       editBusyRef.current = false;
@@ -157,6 +160,7 @@ export default function InlineProductionOrderWeighingRecord({
         productionOrderId,
         {
           description: description.trim() || null,
+          note: note.trim() || null,
         },
       );
       // Update the list immediately; a refresh failure must not suggest creation failed.
@@ -261,6 +265,7 @@ export default function InlineProductionOrderWeighingRecord({
               className="shrink-0 self-end bg-slate-900 text-white hover:bg-slate-800 sm:self-auto"
               onClick={() => {
                 setDescription("");
+                setNote("");
                 setIsCreateOpen(true);
               }}
             >
@@ -356,11 +361,12 @@ export default function InlineProductionOrderWeighingRecord({
                         onSelect={() => {
                           setEditingRecord(record);
                           setEditDescription(record.description ?? "");
+                          setEditNote(record.note ?? "");
                           setEditError("");
                         }}
                       >
                         <Edit2 className="size-4" />
-                        Sửa mô tả
+                        Sửa mô tả và ghi chú
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         variant="destructive"
@@ -407,9 +413,9 @@ export default function InlineProductionOrderWeighingRecord({
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Sửa mô tả phiếu cân</DialogTitle>
+            <DialogTitle>Sửa mô tả và ghi chú phiếu cân</DialogTitle>
             <DialogDescription>
-              Cập nhật mô tả phiếu cân của lệnh sản xuất này.
+              Cập nhật mô tả và ghi chú phiếu cân của lệnh sản xuất này.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={saveDescription} className="flex flex-col gap-4">
@@ -425,6 +431,19 @@ export default function InlineProductionOrderWeighingRecord({
               rows={4}
               disabled={isSavingDescription || editLocked}
               onChange={(event) => setEditDescription(event.target.value)}
+            />
+            <label
+              htmlFor="weighing-record-edit-note"
+              className="text-sm font-medium"
+            >
+              Ghi chú
+            </label>
+            <Textarea
+              id="weighing-record-edit-note"
+              value={editNote}
+              rows={3}
+              disabled={isSavingDescription || editLocked}
+              onChange={(event) => setEditNote(event.target.value)}
             />
             {editError ? (
               <p role="alert" className="text-sm text-red-600">
@@ -543,6 +562,22 @@ export default function InlineProductionOrderWeighingRecord({
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Nhập mô tả phiếu cân"
                 rows={4}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="weighing-record-note"
+                className="text-sm font-medium text-slate-800"
+              >
+                Ghi chú
+              </label>
+              <Textarea
+                id="weighing-record-note"
+                value={note}
+                disabled={isSubmitting}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Nhập ghi chú phiếu cân"
+                rows={3}
               />
             </div>
             <DialogFooter>

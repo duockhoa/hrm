@@ -16,6 +16,7 @@ const record = (id = 1, count = 4) =>
   ({
     id,
     description: 'Cân nguyên liệu <kiểm tra> & đối chiếu',
+    note: 'Ghi chú phiếu <kiểm tra>',
     created_at: at,
     createdBy: { name: 'Người tạo' },
     qa_staff_approved_at: at,
@@ -122,6 +123,10 @@ describe('Weighing record report', () => {
     ])
       expect(html).toContain(label);
     expect(html).toContain('&lt;kiểm tra&gt; &amp; đối chiếu');
+    expect(html).toContain('Ghi chú phiếu &lt;kiểm tra&gt;');
+    expect(html.indexOf('<strong>Ghi chú : </strong>')).toBeLessThan(
+      html.indexOf('<strong>Ghi chú: </strong>'),
+    );
     expect(html).not.toContain('checked_by_id');
     expect(html).not.toContain('<button');
   });

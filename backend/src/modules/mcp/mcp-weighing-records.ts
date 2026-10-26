@@ -61,6 +61,7 @@ export const weighingSummarySelect = {
   status: true,
   _count: { select: { lines: true } },
   description: true,
+  note: true,
   created_at: true,
   updated_at: true,
   qa_staff_approved_at: true,

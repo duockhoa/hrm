@@ -304,6 +304,7 @@ export default function ProductionOrderWeighingRecordDetail({
           </table>
           <WeighingRecordMaterials
             recordId={record.id}
+            note={record.note}
             isImportOpen={isImportOpen}
             onImportOpenChange={setIsImportOpen}
             locked={locked}

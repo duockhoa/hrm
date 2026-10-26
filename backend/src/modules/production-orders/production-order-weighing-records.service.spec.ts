@@ -72,13 +72,14 @@ describe('ProductionOrderWeighingRecordsService', () => {
   it('creates a header for the selected order using the authenticated creator', async () => {
     const result = await service.create(
       42,
-      { description: ' Can nguyen lieu ' },
+      { description: ' Can nguyen lieu ', note: ' Ghi chú phiếu cân ' },
       { id: '7' },
     );
     expect(result).toMatchObject({
       production_order_id: 42,
       created_by_id: 7,
       description: 'Can nguyen lieu',
+      note: 'Ghi chú phiếu cân',
     });
     expect(result).not.toHaveProperty('record_code');
   });
@@ -128,6 +129,8 @@ describe('ProductionOrderWeighingRecordsService', () => {
   it.each([
     { record_code: '' },
     { description: 3 },
+    { note: 3 },
+    { note: 'ạ'.repeat(21846) },
     { status: 'approved' },
     { status: null },
     {},
@@ -151,6 +154,23 @@ describe('ProductionOrderWeighingRecordsService', () => {
         },
       }),
     );
+  });
+
+  it('updates and clears the record note without overwriting description', async () => {
+    await service.update(1, { note: '  Ghi chú mới  ' });
+    expect(
+      prisma.productionOrderWeighingRecords.update,
+    ).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: { note: 'Ghi chú mới' } }),
+    );
+    for (const note of [null, '   ']) {
+      await service.update(1, { note });
+      expect(
+        prisma.productionOrderWeighingRecords.update,
+      ).toHaveBeenLastCalledWith(
+        expect.objectContaining({ data: { note: null } }),
+      );
+    }
   });
 
   it.each([

@@ -176,6 +176,7 @@ export function buildWeighingRecordsHtml(
     <table class="weighing-content"><colgroup>${[9, 25, 12, 9, 9, 9, 12, 10, 5].map((width) => `<col style="width:${width}%">`).join('')}</colgroup>
       <thead><tr><th rowspan="2">Mã NL</th><th rowspan="2">Tên nguyên liệu</th><th rowspan="2">Số lô</th><th colspan="6">Số lượng/ Đơn vị</th></tr><tr>${['Yêu cầu', 'Tổng lượng YC', 'Tổng lượng TT', 'Thực tế', 'Tổng khối lượng', 'ĐVT'].map((label) => `<th>${label}</th>`).join('')}</tr></thead>
       <tbody>${rows || '<tr><td colspan="9" class="weighing-unit">Chưa có nguyên liệu trong phiếu cân.</td></tr>'}
+        <tr class="weighing-summary"><td colspan="9"><strong>Ghi chú : </strong>${text(record.note || '—')}</td></tr>
         <tr class="weighing-summary"><td colspan="9"><strong>Ghi chú: </strong>${text(notes.join(', ') || '—')}</td></tr>
         <tr class="weighing-summary"><td colspan="9"><strong>Người cân: </strong>${text([...weighers].join(', ') || '—')}</td></tr>
         <tr class="weighing-approvals"><td colspan="9"><div class="weighing-approval-columns">${approval('Nhân viên ĐBCL', record.qa_staff_approved_at, record.qaStaffApprovedBy)}${approval('Nhân viên IPC', record.ipc_staff_approved_at, record.ipcStaffApprovedBy)}</div></td></tr>

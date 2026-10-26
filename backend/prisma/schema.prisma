@@ -1084,6 +1084,7 @@ model ProductionOrders {
 }
 
 model ProductionOrderWeighingRecords {
+  note                     String?          @db.Text
   id                       Int              @id @default(autoincrement())
   production_order_id      Int
   productionOrder          ProductionOrders @relation(fields: [production_order_id], references: [id], onDelete: Restrict, map: "po_weighing_records_order_id_fkey")

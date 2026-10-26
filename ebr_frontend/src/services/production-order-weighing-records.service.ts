@@ -34,10 +34,10 @@ const create = async (
 const productionOrderWeighingRecordsService = {
   fetchAllByProductionOrderId,
   create,
-  async updateDescription(recordId: number, description: string | null) {
+  async updateDescription(recordId: number, description: string | null, note?: string | null) {
     const response = await axiosClient.patch<ProductionOrderWeighingRecord>(
       API_ROUTES.productionOrders.weighingRecordDetail(recordId),
-      { description },
+      { description, ...(note !== undefined ? { note } : {}) },
     );
     return response.data;
   },

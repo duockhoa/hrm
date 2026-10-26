@@ -49,7 +49,7 @@ export class ProductionOrderWeighingRecordsService {
     user?: AuthenticatedUser,
   ) {
     const userId = this.userId(user);
-    this.validateBody(dto, ['description']);
+    this.validateBody(dto, ['description', 'note']);
     const description =
       dto.description === undefined ? null : this.description(dto.description);
     await this.ensureProductionOrder(productionOrderId);
@@ -58,6 +58,8 @@ export class ProductionOrderWeighingRecordsService {
         data: {
           production_order_id: productionOrderId,
           description,
+          note:
+            dto.note === undefined ? null : this.description(dto.note, 'note'),
           created_by_id: userId,
         },
         include: recordInclude,
@@ -68,10 +70,11 @@ export class ProductionOrderWeighingRecordsService {
   }
 
   async update(id: number, dto: UpdateProductionOrderWeighingRecordDto) {
-    this.validateBody(dto, ['description', 'status']);
+    this.validateBody(dto, ['description', 'note', 'status']);
     const data: Prisma.ProductionOrderWeighingRecordsUpdateInput = {};
     if (dto.description !== undefined)
       data.description = this.description(dto.description);
+    if (dto.note !== undefined) data.note = this.description(dto.note, 'note');
     if (dto.status !== undefined) {
       if (!editableStatuses.includes(dto.status)) {
         throw new BadRequestException(
@@ -230,13 +233,13 @@ export class ProductionOrderWeighingRecordsService {
     }
   }
 
-  private description(value: unknown) {
+  private description(value: unknown, field = 'description') {
     if (value === null) return null;
     if (typeof value !== 'string')
-      throw new BadRequestException('description must be a string or null');
+      throw new BadRequestException(`${field} must be a string or null`);
     const text = value.trim();
     if (Buffer.byteLength(text, 'utf8') > 65535)
-      throw new BadRequestException('description is too long');
+      throw new BadRequestException(`${field} is too long`);
     return text || null;
   }
 

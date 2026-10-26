@@ -62,6 +62,7 @@ const weightStatuses = {
 
 export default function WeighingRecordMaterials({
   recordId,
+  note,
   isImportOpen,
   onImportOpenChange,
   locked,
@@ -70,6 +71,7 @@ export default function WeighingRecordMaterials({
   isEditing = false,
 }: {
   recordId: number;
+  note: string | null;
   isImportOpen: boolean;
   onImportOpenChange: (open: boolean) => void;
   locked: boolean;
@@ -408,6 +410,10 @@ export default function WeighingRecordMaterials({
 
       {!isLoading && !error && lines ? (
         <div className="mt-4 space-y-2 text-[14px] leading-5 print:text-[12px] print:leading-4">
+          <p className="whitespace-pre-wrap break-words">
+            <span className="font-bold">Ghi chú : </span>
+            {note || "—"}
+          </p>
           <p className="whitespace-pre-wrap break-words">
             <span className="font-bold">Ghi chú: </span>
             {summary.notes || "—"}
