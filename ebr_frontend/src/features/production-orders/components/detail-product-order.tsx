@@ -3,7 +3,6 @@
 import Link from "next/link";
 import MissingMixingRecordNotice from "./temporary/missing-mixing-record-notice";
 import OpenFormButton from "@/components/button-open-form/button-open-form";
-import DispensedMaterialLabelForm from "@/components/form-dispensed-material-label/form-dispensed-material-label";
 import {
   isProductionOrderFeatureEnabled,
   type ProductionOrderFeatureConfig,
@@ -82,10 +81,8 @@ import { FormProductionOrderCylinderCalibration } from "@/features/production-or
 import { FormProductionOrderSamplingRecord } from "@/features/production-order-sampling-records";
 import { FormProductionOrderDisinfectantPreparation } from "@/features/production-order-disinfectant-preparations";
 import { FormProductionOrderAttachment } from "@/features/production-order-attachments";
-import SemiFinishedProductLabelForm from "@/components/form-semi-finished-product-label/form-semi-finished-product-label";
 import { FormAddProductionOrderDeviation } from "@/features/production-order-deviations";
 import FormCreateSamplingRequest from "@/components/form-create-sampling-request/form-create-sampling-request";
-import FormExportWarehouseRelease from "@/components/form-export-warehouse-release/form-export-warehouse-release";
 import FormExportWeighingTicket from "@/components/form-export-weighing-ticket/form-export-weighing-ticket";
 import { Button } from "@/components/ui/button";
 import {
@@ -110,7 +107,6 @@ import {
   FlaskConical,
   CookingPot,
   Filter,
-  FileDown,
   FileUp,
   Frown,
   Layers,
@@ -131,14 +127,13 @@ import {
   Settings2,
   Soup,
   SprayCan,
-  Tags,
   Tablets,
   ThermometerSun,
   Weight,
   Wheat,
 } from "lucide-react";
 import * as React from "react";
-import { FaFileExport, FaFileImport } from "react-icons/fa";
+import { FaFileExport } from "react-icons/fa";
 import { GiChipsBag } from "react-icons/gi";
 import { LuFileInput } from "react-icons/lu";
 import { toast } from "sonner";
@@ -180,32 +175,6 @@ const formatNumber = (value: number | string | null | undefined) => {
   }
 
   return numberValue.toLocaleString("vi-VN");
-};
-
-const getFileNameFromContentDisposition = (contentDisposition?: string) => {
-  if (!contentDisposition) {
-    return null;
-  }
-
-  const utf8FileName = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-  if (utf8FileName?.[1]) {
-    return decodeURIComponent(utf8FileName[1]);
-  }
-
-  const fileName = contentDisposition.match(/filename="?([^"]+)"?/i);
-  return fileName?.[1] ?? null;
-};
-
-const downloadBlob = (blob: Blob, fileName: string) => {
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(url);
 };
 
 const formatProductionOrderStatus = (
@@ -275,110 +244,6 @@ function ProductOrderDetailSkeleton() {
             <Skeleton className="h-5 flex-1" />
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function ExportBatchReportPDFButton({
-  productionOrderId,
-}: {
-  productionOrderId?: string | number | null;
-}) {
-  const [isExporting, setIsExporting] = React.useState(false);
-
-  const handleExport = async () => {
-    if (!productionOrderId) {
-      toast.error("Không tìm thấy mã lệnh sản xuất");
-      return;
-    }
-
-    try {
-      setIsExporting(true);
-      const response =
-        await productionOrdersService.exportProductionOrderBatchReportPDF(
-          productionOrderId,
-        );
-      const fileName =
-        getFileNameFromContentDisposition(
-          response.headers["content-disposition"],
-        ) ?? `batch-report-${productionOrderId}.pdf`;
-
-      downloadBlob(response.data, fileName);
-      toast.success("Xuất báo cáo lô thành công");
-    } catch {
-      toast.error("Xuất báo cáo lô thất bại");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  return (
-    <div className="inline-flex flex-col items-center p-0.5 md:p-1">
-      <button
-        type="button"
-        title="Xuất báo cáo"
-        disabled={isExporting}
-        onClick={handleExport}
-        className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-red-500 px-3 py-2 text-center text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
-      >
-        {isExporting ? <Loader2 className="animate-spin" /> : <FileDown />}
-      </button>
-      <div className="w-[68px] md:w-[90px]">
-        <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-          Xuất báo cáo
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ExportProductionOrderButton({
-  productionOrderId,
-}: {
-  productionOrderId?: string | number | null;
-}) {
-  const [isExporting, setIsExporting] = React.useState(false);
-
-  const handleExport = async () => {
-    if (!productionOrderId) {
-      toast.error("Không tìm thấy mã lệnh sản xuất");
-      return;
-    }
-
-    try {
-      setIsExporting(true);
-      const response =
-        await productionOrdersService.exportProductionOrder(productionOrderId);
-      const fileName =
-        getFileNameFromContentDisposition(
-          response.headers["content-disposition"],
-        ) ?? `production-order-${productionOrderId}.xlsx`;
-
-      downloadBlob(response.data, fileName);
-      toast.success("Xuất lệnh sản xuất thành công");
-    } catch {
-      toast.error("Xuất lệnh sản xuất thất bại");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  return (
-    <div className="inline-flex flex-col items-center p-0.5 md:p-1">
-      <button
-        type="button"
-        title="Xuất lệnh sản xuất"
-        disabled={isExporting}
-        onClick={handleExport}
-        className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-emerald-500 px-3 py-2 text-center text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
-      >
-        {isExporting ? <Loader2 className="animate-spin" /> : <FileDown />}
-      </button>
-      <div className="w-[68px] md:w-[90px]">
-        <p className="mt-1 text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-          Xuất lệnh sản xuất
-        </p>
       </div>
     </div>
   );
@@ -823,29 +688,6 @@ export default function ProductOrderDetail({
 
         <div className="grid w-full grid-cols-4 justify-items-center gap-x-1 gap-y-1 md:min-h-50 md:grid-cols-[repeat(auto-fill,minmax(90px,1fr))] md:gap-2">
           {isActionEnabled(
-            "export_production_order",
-            "production-orders.export",
-          ) && (
-            <ExportProductionOrderButton
-              productionOrderId={productionOrderId}
-            />
-          )}
-          {isActionEnabled(
-            "export_warehouse_release",
-            "production-orders.export-warehouse-release",
-          ) && (
-            <OpenFormButton
-              icon={<FaFileImport />}
-              name="Xuất PXK"
-              form={
-                <FormExportWarehouseRelease
-                  data={productOrder}
-                  productionOrderLines={productionOrderLines}
-                />
-              }
-            />
-          )}
-          {isActionEnabled(
             "export_weighing_ticket",
             "production-orders.export-weighing-ticket",
           ) && (
@@ -874,21 +716,6 @@ export default function ProductOrderDetail({
             productionOrderId={productionOrderId}
             featureConfig={featureConfig}
           />
-          {isActionEnabled(
-            "create_dispensed_material_label",
-            "production-orders.dispensed-material-labels.create",
-          ) && (
-            <OpenFormButton
-              icon={<Tags />}
-              name="Tạo nhãn cấp phát"
-              form={
-                <DispensedMaterialLabelForm
-                  data={productOrder}
-                  productionOrderLines={productionOrderLines}
-                />
-              }
-            />
-          )}
           {isActionEnabled("create_production_order_deviation") && (
             <OpenFormButton
               icon={<Frown />}
@@ -1816,20 +1643,6 @@ export default function ProductOrderDetail({
             />
           )}
           {isActionEnabled(
-            "create_semi_finished_product_label",
-            "production-orders.semi-finished-product-labels.create",
-          ) && (
-            <OpenFormButton
-              icon={<Tags />}
-              name="Tạo nhãn BTP"
-              form={
-                <SemiFinishedProductLabelForm
-                  productionOrderId={productionOrderId}
-                />
-              }
-            />
-          )}
-          {isActionEnabled(
             "create_sampling_request",
             "production-orders.sampling-requests.send",
           ) && (
@@ -1863,14 +1676,6 @@ export default function ProductOrderDetail({
                   productionOrderId={productionOrderId}
                 />
               }
-            />
-          )}
-          {isActionEnabled(
-            "export_production_order",
-            "production-orders.export",
-          ) && (
-            <ExportBatchReportPDFButton
-              productionOrderId={productionOrderId}
             />
           )}
         </div>

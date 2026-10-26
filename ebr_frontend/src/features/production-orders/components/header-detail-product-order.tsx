@@ -1,5 +1,6 @@
 "use client";
 
+import ProductionOrderDownloadMenu from "@/features/production-orders/components/production-order-download-menu";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import Link from "next/link";
@@ -31,6 +32,7 @@ export default function HeaderDetailProductOrder({ lot }: { lot: any }) {
 
       <div className="flex shrink-0 items-center gap-2">
         <EditProductionOrderDialog productionOrder={lot} />
+        <ProductionOrderDownloadMenu productionOrder={lot} />
         <Button
           type="button"
           variant="ghost"
