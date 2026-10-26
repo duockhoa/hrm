@@ -452,22 +452,24 @@ export default function DateCheckDetail({
               name="Thêm ảnh"
               form={<AddDateCheckImagesForm checkId={id} onSaved={refresh} />}
             />
-            <div className="inline-flex flex-col items-center p-0.5 md:p-1">
-              <button
-                type="button"
-                title="Duyệt"
-                disabled={isSubmitting}
-                onClick={() => handleApproval("approved")}
-                className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-green-500 px-3 py-2 text-center text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
-              >
-                <Check />
-              </button>
-              <div className="w-[82px] md:w-[90px]">
-                <p className="mt-1 text-center text-[13px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-                  Duyệt
-                </p>
+            {data.images && data.images.length > 0 ? (
+              <div className="inline-flex flex-col items-center p-0.5 md:p-1">
+                <button
+                  type="button"
+                  title="Duyệt"
+                  disabled={isSubmitting}
+                  onClick={() => handleApproval("approved")}
+                  className="flex h-9 w-9 items-center justify-center rounded-[9999px] bg-green-500 px-3 py-2 text-center text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60 md:h-10 md:w-10 md:px-4 [&_svg]:min-h-5 [&_svg]:min-w-5"
+                >
+                  <Check />
+                </button>
+                <div className="w-[82px] md:w-[90px]">
+                  <p className="mt-1 text-center text-[13px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+                    Duyệt
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </div>
       ) : null}
