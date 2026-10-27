@@ -35,15 +35,9 @@ import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { FEATURE_GROUPS, getFeatureKindOrder } from "../constants";
-import type {
-  Feature,
-  FeatureReference,
-  ItemFeatureConfigEntry,
-} from "../types";
+import type { Feature, ItemFeatureConfigEntry } from "../types";
 
 type ItemFeatureRow = {
-  source_actions: FeatureReference[];
-  target_sections: FeatureReference[];
   feature_id: number;
   key: string;
   kind: string;
@@ -77,8 +71,6 @@ const buildRows = (
       const config = configByFeatureId.get(feature.id);
 
       return {
-        source_actions: feature.source_actions ?? [],
-        target_sections: feature.target_sections ?? [],
         feature_id: feature.id,
         key: feature.key,
         kind: feature.kind,
@@ -155,7 +147,6 @@ const buildGroups = (rows: ItemFeatureRow[]): ItemFeatureGroup[] => {
 };
 
 type FeatureSettingsTableProps = {
-  allRows: ItemFeatureRow[];
   tableRows: ItemFeatureRow[];
   getDraftRow: (row: ItemFeatureRow) => ItemFeatureRow;
   savingFeatureId: number | null;
@@ -167,7 +158,6 @@ type FeatureSettingsTableProps = {
 };
 
 function FeatureSettingsTable({
-  allRows,
   tableRows,
   getDraftRow,
   savingFeatureId,
@@ -178,16 +168,16 @@ function FeatureSettingsTable({
   onSaveRow,
 }: FeatureSettingsTableProps) {
   return (
-    <Table>
+    <Table className="table-fixed">
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead>Tính năng</TableHead>
-          <TableHead className="w-28">Loại</TableHead>
-          <TableHead className="w-28 text-center">Trạng thái</TableHead>
-          <TableHead className="w-36 text-center">
+          <TableHead className="whitespace-normal">Tính năng</TableHead>
+          <TableHead className="w-24">Loại</TableHead>
+          <TableHead className="w-24 text-center">Trạng thái</TableHead>
+          <TableHead className="w-36 text-center whitespace-normal">
             Bắt buộc có dữ liệu
           </TableHead>
-          <TableHead className="w-32 text-right">Thứ tự</TableHead>
+          <TableHead className="w-28 text-right">Thứ tự</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -198,31 +188,8 @@ function FeatureSettingsTable({
 
           return (
             <TableRow key={row.feature_id}>
-              <TableCell>
+              <TableCell className="whitespace-normal break-words">
                 <div className="font-medium">{row.label}</div>
-                <div className="mt-1 text-xs text-gray-500">
-                  {(row.kind === "section"
-                    ? row.source_actions
-                    : row.target_sections
-                  )
-                    .map((entry) => entry.label)
-                    .join(", ")}
-                </div>
-                {row.kind === "section" &&
-                  draftRow.enabled &&
-                  row.source_actions.length > 0 &&
-                  !row.source_actions.some((action) => {
-                    const actionRow = allRows.find(
-                      (entry) => entry.feature_id === action.id,
-                    );
-                    return actionRow && getDraftRow(actionRow).enabled;
-                  }) && (
-                    <p className="mt-1 text-xs text-amber-700">
-                      Section đang bật nhưng tất cả action cung cấp dữ liệu
-                      đều tắt.
-                    </p>
-                  )}
-
                 <div className="mt-1 font-mono text-xs text-gray-500">
                   {row.key}
                 </div>
@@ -306,7 +273,6 @@ function FeatureSettingsTable({
 
 type FeatureSettingsGroupProps = {
   group: ItemFeatureGroup;
-  rows: ItemFeatureRow[];
   getDraftRow: (row: ItemFeatureRow) => ItemFeatureRow;
   savingFeatureId: number | null;
   disabled?: boolean;
@@ -317,7 +283,6 @@ type FeatureSettingsGroupProps = {
 };
 
 function FeatureSettingsGroup({
-  rows,
   group,
   getDraftRow,
   savingFeatureId,
@@ -333,7 +298,6 @@ function FeatureSettingsGroup({
         {group.name}
       </h3>
       <FeatureSettingsTable
-        allRows={rows}
         tableRows={group.rows}
         getDraftRow={getDraftRow}
         savingFeatureId={savingFeatureId}
@@ -627,7 +591,6 @@ export default function InlineItemFeatureSettings({
         ) : selectedRows.length > 0 ? (
           <section className="overflow-hidden rounded-md border">
             <FeatureSettingsTable
-              allRows={rows}
               tableRows={selectedRows}
               getDraftRow={getDraftRow}
               savingFeatureId={savingFeatureId}
@@ -676,7 +639,6 @@ export default function InlineItemFeatureSettings({
           <div className="space-y-5">
             {groups.map((group) => (
               <FeatureSettingsGroup
-                rows={rows}
                 key={group.name}
                 group={group}
                 getDraftRow={getDraftRow}
