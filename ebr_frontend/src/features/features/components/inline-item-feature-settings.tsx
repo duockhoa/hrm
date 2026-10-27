@@ -99,7 +99,11 @@ const buildRows = (
         return kindOrder;
       }
 
-      return first.order - second.order;
+      if (first.order !== second.order) {
+        return first.order - second.order;
+      }
+
+      return first.feature_id - second.feature_id;
     });
 };
 
@@ -150,6 +154,156 @@ const buildGroups = (rows: ItemFeatureRow[]): ItemFeatureGroup[] => {
   });
 };
 
+type FeatureSettingsTableProps = {
+  allRows: ItemFeatureRow[];
+  tableRows: ItemFeatureRow[];
+  getDraftRow: (row: ItemFeatureRow) => ItemFeatureRow;
+  savingFeatureId: number | null;
+  disabled?: boolean;
+  onToggleEnabled: (row: ItemFeatureRow, enabled: boolean) => void;
+  onToggleRequired: (row: ItemFeatureRow, required: boolean) => void;
+  onUpdateOrder: (row: ItemFeatureRow, order: number) => void;
+  onSaveRow: (row: ItemFeatureRow) => void;
+};
+
+function FeatureSettingsTable({
+  allRows,
+  tableRows,
+  getDraftRow,
+  savingFeatureId,
+  disabled = false,
+  onToggleEnabled,
+  onToggleRequired,
+  onUpdateOrder,
+  onSaveRow,
+}: FeatureSettingsTableProps) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead>Tính năng</TableHead>
+          <TableHead className="w-28">Loại</TableHead>
+          <TableHead className="w-28 text-center">Trạng thái</TableHead>
+          <TableHead className="w-36 text-center">
+            Bắt buộc có dữ liệu
+          </TableHead>
+          <TableHead className="w-32 text-right">Thứ tự</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {tableRows.map((row) => {
+          const draftRow = getDraftRow(row);
+          const isSaving = savingFeatureId === row.feature_id;
+          const isDisabled = disabled || isSaving;
+
+          return (
+            <TableRow key={row.feature_id}>
+              <TableCell>
+                <div className="font-medium">{row.label}</div>
+                <div className="mt-1 text-xs text-gray-500">
+                  {(row.kind === "section"
+                    ? row.source_actions
+                    : row.target_sections
+                  )
+                    .map((entry) => entry.label)
+                    .join(", ")}
+                </div>
+                {row.kind === "section" &&
+                  draftRow.enabled &&
+                  row.source_actions.length > 0 &&
+                  !row.source_actions.some((action) => {
+                    const actionRow = allRows.find(
+                      (entry) => entry.feature_id === action.id,
+                    );
+                    return actionRow && getDraftRow(actionRow).enabled;
+                  }) && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      Section đang bật nhưng tất cả action cung cấp dữ liệu
+                      đều tắt.
+                    </p>
+                  )}
+
+                <div className="mt-1 font-mono text-xs text-gray-500">
+                  {row.key}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline" className="capitalize">
+                  {row.kind}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-center">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-gray-300 accent-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  checked={draftRow.enabled}
+                  disabled={isDisabled}
+                  onChange={(event) =>
+                    onToggleEnabled(row, event.target.checked)
+                  }
+                  aria-label={`Bật tắt ${row.label}`}
+                />
+              </TableCell>
+              <TableCell className="text-center">
+                {row.kind === "section" ? (
+                  <input
+                    type="checkbox"
+                    className="size-4 rounded border-gray-300 accent-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    checked={draftRow.required}
+                    disabled={
+                      isDisabled ||
+                      !draftRow.enabled ||
+                      !row.supports_required
+                    }
+                    onChange={(event) =>
+                      onToggleRequired(row, event.target.checked)
+                    }
+                    aria-label={`Bắt buộc có dữ liệu cho ${row.label}`}
+                    title={
+                      !row.supports_required
+                        ? "Section này chưa có quy tắc kiểm tra dữ liệu"
+                        : !draftRow.enabled
+                          ? "Bật section trước khi đặt bắt buộc"
+                          : undefined
+                    }
+                  />
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <Input
+                  type="number"
+                  className="ml-auto w-24 text-right"
+                  value={draftRow.order}
+                  onChange={(event) => {
+                    if (!draftRow.enabled) {
+                      return;
+                    }
+                    onUpdateOrder(row, Number(event.target.value) || 0);
+                  }}
+                  onBlur={() => onSaveRow(row)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  disabled={isDisabled || !draftRow.enabled}
+                  title={
+                    !draftRow.enabled
+                      ? "Chỉ có thể đặt thứ tự khi tính năng đang bật"
+                      : undefined
+                  }
+                />
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+}
+
 type FeatureSettingsGroupProps = {
   group: ItemFeatureGroup;
   rows: ItemFeatureRow[];
@@ -178,116 +332,17 @@ function FeatureSettingsGroup({
       <h3 className="border-b bg-gray-50 px-4 py-3 font-semibold">
         {group.name}
       </h3>
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead>Tính năng</TableHead>
-            <TableHead className="w-28">Loại</TableHead>
-            <TableHead className="w-28 text-center">Trạng thái</TableHead>
-            <TableHead className="w-36 text-center">
-              Bắt buộc có dữ liệu
-            </TableHead>
-            <TableHead className="w-32 text-right">Thứ tự</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {group.rows.map((row) => {
-            const draftRow = getDraftRow(row);
-            const isSaving = savingFeatureId === row.feature_id;
-            const isDisabled = disabled || isSaving;
-
-            return (
-              <TableRow key={row.feature_id}>
-                <TableCell>
-                  <div className="font-medium">{row.label}</div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {(row.kind === "section"
-                      ? row.source_actions
-                      : row.target_sections
-                    )
-                      .map((entry) => entry.label)
-                      .join(", ")}
-                  </div>
-                  {row.kind === "section" &&
-                    draftRow.enabled &&
-                    row.source_actions.length > 0 &&
-                    !row.source_actions.some((action) => {
-                      const actionRow = rows.find(
-                        (entry) => entry.feature_id === action.id,
-                      );
-                      return actionRow && getDraftRow(actionRow).enabled;
-                    }) && (
-                      <p className="mt-1 text-xs text-amber-700">
-                        Section đang bật nhưng tất cả action cung cấp dữ liệu
-                        đều tắt.
-                      </p>
-                    )}
-
-                  <div className="mt-1 font-mono text-xs text-gray-500">
-                    {row.key}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="capitalize">
-                    {row.kind}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <input
-                    type="checkbox"
-                    className="size-4 rounded border-gray-300 accent-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-                    checked={draftRow.enabled}
-                    disabled={isDisabled}
-                    onChange={(event) =>
-                      onToggleEnabled(row, event.target.checked)
-                    }
-                    aria-label={`Bật tắt ${row.label}`}
-                  />
-                </TableCell>
-                <TableCell className="text-center">
-                  {row.kind === "section" ? (
-                    <input
-                      type="checkbox"
-                      className="size-4 rounded border-gray-300 accent-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-                      checked={draftRow.required}
-                      disabled={
-                        isDisabled ||
-                        !draftRow.enabled ||
-                        !row.supports_required
-                      }
-                      onChange={(event) =>
-                        onToggleRequired(row, event.target.checked)
-                      }
-                      aria-label={`Bắt buộc có dữ liệu cho ${row.label}`}
-                      title={
-                        !row.supports_required
-                          ? "Section này chưa có quy tắc kiểm tra dữ liệu"
-                          : !draftRow.enabled
-                            ? "Bật section trước khi đặt bắt buộc"
-                            : undefined
-                      }
-                    />
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    className="ml-auto w-24 text-right"
-                    value={draftRow.order}
-                    onChange={(event) =>
-                      onUpdateOrder(row, Number(event.target.value) || 0)
-                    }
-                    onBlur={() => onSaveRow(row)}
-                    disabled={isDisabled}
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <FeatureSettingsTable
+        allRows={rows}
+        tableRows={group.rows}
+        getDraftRow={getDraftRow}
+        savingFeatureId={savingFeatureId}
+        disabled={disabled}
+        onToggleEnabled={onToggleEnabled}
+        onToggleRequired={onToggleRequired}
+        onUpdateOrder={onUpdateOrder}
+        onSaveRow={onSaveRow}
+      />
     </section>
   );
 }
@@ -338,6 +393,10 @@ export default function InlineItemFeatureSettings({
   const rows = useMemo(
     () => buildRows(features, itemFeatureConfig?.features),
     [features, itemFeatureConfig?.features],
+  );
+  const selectedRows = useMemo(
+    () => rows.filter((row) => row.enabled),
+    [rows],
   );
   const groups = useMemo(() => buildGroups(rows), [rows]);
   const copySourceOptions = useMemo<CopySourceOption[]>(() => {
@@ -401,6 +460,10 @@ export default function InlineItemFeatureSettings({
 
     const draftRow = getDraftRow(row);
 
+    if (!draftRow.enabled) {
+      return;
+    }
+
     if (
       row.linked &&
       draftRow.order === row.order &&
@@ -452,7 +515,10 @@ export default function InlineItemFeatureSettings({
 
     const draftRow = getDraftRow(row);
     const nextRow = { ...draftRow, ...patch };
-    if (!nextRow.enabled) nextRow.required = false;
+    if (!nextRow.enabled) {
+      nextRow.required = false;
+      nextRow.order = row.order;
+    }
     setSavingFeatureId(row.feature_id);
     setDraftRows((current) => ({
       ...current,
@@ -466,21 +532,21 @@ export default function InlineItemFeatureSettings({
         await featuresService.updateItemFeature(itemCode, row.feature_id, {
           enabled: nextRow.enabled,
           required: nextRow.required,
-          order: draftRow.order,
+          order: nextRow.order,
         });
       } else {
         await featuresService.upsertItemFeature(itemCode, {
           feature_id: row.feature_id,
           enabled: nextRow.enabled,
           required: nextRow.required,
-          order: draftRow.order,
+          order: nextRow.order,
         });
       }
 
       await mutate();
       setDraftRows((current) => {
         const next = { ...current };
-        if (draftRow.order === row.order) {
+        if (nextRow.order === row.order) {
           delete next[row.feature_id];
         } else {
           next[row.feature_id] = {
@@ -543,36 +609,26 @@ export default function InlineItemFeatureSettings({
   const isLoading = isFeaturesLoading || isItemFeaturesLoading;
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Tính năng của mã hàng</h2>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isLoading || isCopying || savingFeatureId !== null}
-          onClick={() => setIsCopyDialogOpen(true)}
-        >
-          <Copy className="size-4" />
-          Sao chép từ mã hàng
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div
-              key={index}
-              className="h-10 animate-pulse rounded bg-gray-100"
-            />
-          ))}
+    <>
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Tính năng đã chọn</h2>
         </div>
-      ) : groups.length > 0 ? (
-        <div className="space-y-5">
-          {groups.map((group) => (
-            <FeatureSettingsGroup
-              rows={rows}
-              key={group.name}
-              group={group}
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-10 animate-pulse rounded bg-gray-100"
+              />
+            ))}
+          </div>
+        ) : selectedRows.length > 0 ? (
+          <section className="overflow-hidden rounded-md border">
+            <FeatureSettingsTable
+              allRows={rows}
+              tableRows={selectedRows}
               getDraftRow={getDraftRow}
               savingFeatureId={savingFeatureId}
               disabled={isCopying || savingFeatureId !== null}
@@ -585,136 +641,189 @@ export default function InlineItemFeatureSettings({
               onUpdateOrder={(row, order) => updateDraftRow(row, { order })}
               onSaveRow={handleSaveRow}
             />
-          ))}
-        </div>
-      ) : (
-        <div className="rounded border border-dashed p-6 text-center text-sm text-gray-500">
-          Chưa có tính năng nào trong danh mục.
-        </div>
-      )}
-
-      <Dialog
-        open={isCopyDialogOpen}
-        onOpenChange={(open) => {
-          if (isCopying) {
-            return;
-          }
-
-          if (open) {
-            setIsCopyDialogOpen(true);
-          } else {
-            closeCopyDialog();
-          }
-        }}
-      >
-        <DialogContent ref={copyDialogContentRef} className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Sao chép tính năng từ mã hàng khác</DialogTitle>
-            <DialogDescription>
-              Toàn bộ trạng thái, yêu cầu bắt buộc và thứ tự tính năng của mã
-              nguồn sẽ ghi đè cấu hình hiện tại của {itemCode}.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-2">
-            <Label>Mã hàng nguồn</Label>
-            <Combobox
-              autoHighlight
-              items={copySourceOptions}
-              value={selectedCopySource}
-              onValueChange={(option) => setCopySourceCode(option?.value ?? "")}
-              itemToStringLabel={(option) => option.label}
-              itemToStringValue={(option) => option.searchValue}
-              isItemEqualToValue={(option, selected) =>
-                option.value === selected.value
-              }
-            >
-              <ComboboxInput
-                className="w-full"
-                disabled={isCopying || isItemsLoading}
-                placeholder={
-                  isItemsLoading
-                    ? "Đang tải danh sách mã hàng..."
-                    : itemCodePrefix
-                      ? `Tìm mã ${itemCodePrefix} hoặc tên hàng hóa`
-                      : "Tìm theo mã hoặc tên hàng hóa"
-                }
-                showClear
-              />
-              <ComboboxContent portalContainer={copyDialogContentRef}>
-                <ComboboxEmpty>
-                  Không tìm thấy mã hàng cùng nhóm phù hợp.
-                </ComboboxEmpty>
-                <ComboboxList>
-                  {(option) => (
-                    <ComboboxItem key={option.value} value={option}>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">
-                          {option.item.item_code}
-                          {option.item.item_name
-                            ? ` - ${option.item.item_name}`
-                            : ""}
-                        </p>
-                        {option.item.dk_code ? (
-                          <p className="truncate text-xs text-muted-foreground">
-                            Số đăng ký: {option.item.dk_code}
-                          </p>
-                        ) : null}
-                      </div>
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-            {itemsError ? (
-              <p className="text-sm text-destructive">
-                {getErrorMessage(
-                  itemsError,
-                  "Không thể tải danh sách mã hàng.",
-                )}
-              </p>
-            ) : null}
+          </section>
+        ) : (
+          <div className="rounded border border-dashed p-6 text-center text-sm text-gray-500">
+            Chưa có tính năng nào được chọn.
           </div>
+        )}
+      </div>
 
-          {selectedCopySource ? (
-            <div className="rounded-md border bg-muted/40 p-3 text-sm">
-              <p className="font-medium">Nguồn: {selectedCopySource.label}</p>
-              <p className="mt-1 text-muted-foreground">
-                Cấu hình hiện tại của {itemCode} sẽ được thay thế bằng toàn bộ
-                tính năng từ mã hàng nguồn.
-              </p>
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Tính năng của mã hàng</h2>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoading || isCopying || savingFeatureId !== null}
+            onClick={() => setIsCopyDialogOpen(true)}
+          >
+            <Copy className="size-4" />
+            Sao chép từ mã hàng
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-10 animate-pulse rounded bg-gray-100"
+              />
+            ))}
+          </div>
+        ) : groups.length > 0 ? (
+          <div className="space-y-5">
+            {groups.map((group) => (
+              <FeatureSettingsGroup
+                rows={rows}
+                key={group.name}
+                group={group}
+                getDraftRow={getDraftRow}
+                savingFeatureId={savingFeatureId}
+                disabled={isCopying || savingFeatureId !== null}
+                onToggleEnabled={(row, enabled) =>
+                  handleToggleSetting(row, { enabled })
+                }
+                onToggleRequired={(row, required) =>
+                  handleToggleSetting(row, { required })
+                }
+                onUpdateOrder={(row, order) => updateDraftRow(row, { order })}
+                onSaveRow={handleSaveRow}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded border border-dashed p-6 text-center text-sm text-gray-500">
+            Chưa có tính năng nào trong danh mục.
+          </div>
+        )}
+
+        <Dialog
+          open={isCopyDialogOpen}
+          onOpenChange={(open) => {
+            if (isCopying) {
+              return;
+            }
+
+            if (open) {
+              setIsCopyDialogOpen(true);
+            } else {
+              closeCopyDialog();
+            }
+          }}
+        >
+          <DialogContent ref={copyDialogContentRef} className="sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Sao chép tính năng từ mã hàng khác</DialogTitle>
+              <DialogDescription>
+                Toàn bộ trạng thái, yêu cầu bắt buộc và thứ tự tính năng của mã
+                nguồn sẽ ghi đè cấu hình hiện tại của {itemCode}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Label>Mã hàng nguồn</Label>
+              <Combobox
+                autoHighlight
+                items={copySourceOptions}
+                value={selectedCopySource}
+                onValueChange={(option) =>
+                  setCopySourceCode(option?.value ?? "")
+                }
+                itemToStringLabel={(option) => option.label}
+                itemToStringValue={(option) => option.searchValue}
+                isItemEqualToValue={(option, selected) =>
+                  option.value === selected.value
+                }
+              >
+                <ComboboxInput
+                  className="w-full"
+                  disabled={isCopying || isItemsLoading}
+                  placeholder={
+                    isItemsLoading
+                      ? "Đang tải danh sách mã hàng..."
+                      : itemCodePrefix
+                        ? `Tìm mã ${itemCodePrefix} hoặc tên hàng hóa`
+                        : "Tìm theo mã hoặc tên hàng hóa"
+                  }
+                  showClear
+                />
+                <ComboboxContent portalContainer={copyDialogContentRef}>
+                  <ComboboxEmpty>
+                    Không tìm thấy mã hàng cùng nhóm phù hợp.
+                  </ComboboxEmpty>
+                  <ComboboxList>
+                    {(option) => (
+                      <ComboboxItem key={option.value} value={option}>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">
+                            {option.item.item_code}
+                            {option.item.item_name
+                              ? ` - ${option.item.item_name}`
+                              : ""}
+                          </p>
+                          {option.item.dk_code ? (
+                            <p className="truncate text-xs text-muted-foreground">
+                              Số đăng ký: {option.item.dk_code}
+                            </p>
+                          ) : null}
+                        </div>
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+              {itemsError ? (
+                <p className="text-sm text-destructive">
+                  {getErrorMessage(
+                    itemsError,
+                    "Không thể tải danh sách mã hàng.",
+                  )}
+                </p>
+              ) : null}
             </div>
-          ) : null}
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isCopying}
-              onClick={closeCopyDialog}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="button"
-              disabled={
-                isCopying ||
-                isItemsLoading ||
-                Boolean(itemsError) ||
-                !selectedCopySource
-              }
-              onClick={() => void handleCopyFeatures()}
-            >
-              {isCopying ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <Copy className="size-4" />
-              )}
-              {isCopying ? "Đang sao chép..." : "Sao chép và ghi đè"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            {selectedCopySource ? (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                <p className="font-medium">Nguồn: {selectedCopySource.label}</p>
+                <p className="mt-1 text-muted-foreground">
+                  Cấu hình hiện tại của {itemCode} sẽ được thay thế bằng toàn bộ
+                  tính năng từ mã hàng nguồn.
+                </p>
+              </div>
+            ) : null}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isCopying}
+                onClick={closeCopyDialog}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  isCopying ||
+                  isItemsLoading ||
+                  Boolean(itemsError) ||
+                  !selectedCopySource
+                }
+                onClick={() => void handleCopyFeatures()}
+              >
+                {isCopying ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Copy className="size-4" />
+                )}
+                {isCopying ? "Đang sao chép..." : "Sao chép và ghi đè"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 }
