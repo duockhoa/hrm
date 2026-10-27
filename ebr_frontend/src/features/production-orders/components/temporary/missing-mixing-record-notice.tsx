@@ -121,10 +121,10 @@ export default function MissingMixingRecordNotice({
   ]);
 
   const open = status === "open" && isEligibleDate;
-  const [remainingSeconds, setRemainingSeconds] = useState(5);
+  const [remainingSeconds, setRemainingSeconds] = useState(15);
   useEffect(() => {
     if (!open) return;
-    const unlockAt = Date.now() + 5000;
+    const unlockAt = Date.now() + 15000;
     const timer = window.setInterval(() => {
       const remaining = Math.max(0, Math.ceil((unlockAt - Date.now()) / 1000));
       setRemainingSeconds(remaining);
