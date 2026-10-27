@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { getActionsWithSectionData } from "@/features/features/production-order-action-data";
 import productOrdersService from "@/services/product-orders.service";
-import MissingMixingRecordNotice from "./temporary/missing-mixing-record-notice";
 import OpenFormButton from "@/components/button-open-form/button-open-form";
 import {
   isProductionOrderFeatureEnabled,
@@ -1652,19 +1651,6 @@ export default function ProductOrderDetail({
 
   return (
     <div className="flex w-full max-w-4xl flex-col gap-2 md:gap-4">
-      {String(productOrderItemCode ?? "").startsWith("BTP") &&
-      productionOrderId &&
-      ["boposreleased", "boppreleased", "released", "r"].includes(
-        String(productOrder.status ?? "")
-          .trim()
-          .toLowerCase(),
-      ) ? (
-        <MissingMixingRecordNotice
-          key={productionOrderId}
-          productionOrderId={productionOrderId}
-          creationDate={productOrder.creation_date ?? productOrder.created_at}
-        />
-      ) : null}
       <div className="flex flex-col gap-4 rounded border bg-white p-3 text-center shadow-md md:gap-8 md:p-4">
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center">
           <h1 className="break-words text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
