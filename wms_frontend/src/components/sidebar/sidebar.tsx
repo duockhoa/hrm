@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useMobile from "@/hooks/use-mobile";
 import { useSidebarStore } from "@/store/sidebar-store";
+import packageJson from "../../../package.json";
 
 function SidebarMenu({
   item,
@@ -59,7 +60,7 @@ export default function Sidebar({
           ))}
         </div>
         <div className="p-2 text-center text-sm text-gray-500">
-          version beta 1.0.0
+          Phiên bản {packageJson.version}
         </div>
       </div>
     </div>

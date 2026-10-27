@@ -116,6 +116,115 @@ describe('ProductionOrderCompletenessService', () => {
     });
   });
 
+  it('returns shared action data status for a linked optional section without changing required completeness', async () => {
+    features.findConfigByItemCode.mockResolvedValue(
+      buildItemFeatureConfig(itemCode, [
+        section('hygiene_checks', {
+          required: false,
+          source_actions: [
+            { id: 2, key: 'create_a', label: 'A', order: 0 },
+            { id: 3, key: 'create_b', label: 'B', order: 1 },
+          ],
+        }),
+      ]),
+    );
+    prisma.productionOrders.findUnique
+      .mockResolvedValueOnce({ item_code: itemCode })
+      .mockResolvedValueOnce({ _count: { hygieneChecks: 1 } });
+    const result = await service.findByProductionOrder(2031);
+    expect(result).toMatchObject({
+      required_count: 0,
+      completed_count: 0,
+      is_complete: true,
+      required_sections: [],
+    });
+    expect(result.action_sections).toEqual([
+      expect.objectContaining({
+        key: 'hygiene_checks',
+        status: 'has_data',
+        record_count: 1,
+        action_keys: ['create_a', 'create_b'],
+      }),
+    ]);
+    expect(prisma.productionOrders.findUnique).toHaveBeenLastCalledWith({
+      where: { id: 2031 },
+      select: { id: true, _count: { select: { hygieneChecks: true } } },
+    });
+  });
+
+  it('uses snapshot links and returns missing status after the last record is deleted', async () => {
+    const config = buildItemFeatureConfig(itemCode, [
+      section('hygiene_checks', {
+        required: false,
+        source_actions: [
+          { id: 2, key: 'snapshot_action', label: 'A', order: 0 },
+        ],
+      }),
+    ]);
+    const order = {
+      item_code: itemCode,
+      documentControl: {
+        feature_config_snapshot: createFeatureConfigSnapshot(
+          config,
+          new Date(),
+        ),
+      },
+    };
+    prisma.productionOrders.findUnique
+      .mockResolvedValueOnce(order)
+      .mockResolvedValueOnce({ _count: { hygieneChecks: 1 } })
+      .mockResolvedValueOnce(order)
+      .mockResolvedValueOnce({ _count: { hygieneChecks: 0 } });
+    expect(
+      (await service.findByProductionOrder(2031)).action_sections[0],
+    ).toMatchObject({ status: 'has_data', action_keys: ['snapshot_action'] });
+    expect(
+      (await service.findByProductionOrder(2031)).action_sections[0],
+    ).toMatchObject({
+      status: 'missing',
+      record_count: 0,
+      action_keys: ['snapshot_action'],
+    });
+    expect(features.findConfigByItemCode).not.toHaveBeenCalled();
+  });
+
+  it('does not infer action links for legacy snapshots', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      item_code: itemCode,
+      documentControl: {
+        feature_config_snapshot: {
+          version: 1,
+          item_code: itemCode,
+          features: [section('hygiene_checks', { required: false })],
+        },
+      },
+    });
+    expect((await service.findByProductionOrder(2031)).action_sections).toEqual(
+      [],
+    );
+    expect(features.findConfigByItemCode).not.toHaveBeenCalled();
+  });
+
+  it('keeps unsupported linked sections unavailable without marking mandatory data missing', async () => {
+    features.findConfigByItemCode.mockResolvedValue(
+      buildItemFeatureConfig(itemCode, [
+        section('unknown_section', {
+          required: false,
+          source_actions: [
+            { id: 2, key: 'create_unknown', label: 'A', order: 0 },
+          ],
+        }),
+      ]),
+    );
+    const result = await service.findByProductionOrder(2031);
+    expect(result.action_sections[0]).toMatchObject({
+      status: 'unavailable',
+      record_count: null,
+    });
+    expect(result.required_sections).toEqual([]);
+    expect(result.unavailable_sections).toEqual([]);
+  });
+
   it.each([0, 1])(
     'checks required weighing records using the owning order count (%i)',
     async (count) => {

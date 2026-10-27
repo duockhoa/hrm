@@ -22,7 +22,7 @@ async function bootstrap() {
   const swaggerDocumentConfig = new DocumentBuilder()
     .setTitle('EBR API')
     .setDescription('API documentation for the EBR backend')
-    .setVersion('1.0')
+    .setVersion('1.0.0')
     .addBearerAuth()
     .addSecurityRequirements('bearer')
     .build();

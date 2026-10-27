@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment } from "react";
+import { getActionsWithSectionData } from "@/features/features/production-order-action-data";
+import productOrdersService from "@/services/product-orders.service";
 import MissingMixingRecordNotice from "./temporary/missing-mixing-record-notice";
 import OpenFormButton from "@/components/button-open-form/button-open-form";
 import {
@@ -392,6 +393,18 @@ export default function ProductOrderDetail({
     summaryId: string | number,
   ) => void;
 }) {
+  const productionOrderId =
+    productOrder?.id ??
+    productOrder?.production_order_id ??
+    productOrder?.DocumentAbsoluteEntry;
+  // Share the live status cache refreshed by the completeness checklist on mutations.
+  const { data: completeness, error: completenessError } = useSWR(
+    productionOrderId != null
+      ? API_ROUTES.productionOrders.completeness(productionOrderId)
+      : null,
+    () =>
+      productOrdersService.fetchProductionOrderCompleteness(productionOrderId),
+  );
   const userId = useUserStore((state) => state.user?.id);
   const { data: permissions, error: permissionsError } = useSWR(
     userId ? [API_ROUTES.users.myPermissions, userId] : null,
@@ -408,10 +421,6 @@ export default function ProductOrderDetail({
   const registrationNumber = productOrder.pyclm?.isSent
     ? (productOrder.registrationNumber?.registration_number ?? "")
     : (productOrder.item?.registration?.registration_number ?? "");
-  const productionOrderId =
-    productOrder.id ??
-    productOrder.production_order_id ??
-    productOrder.DocumentAbsoluteEntry;
   const productionSpecification = productOrder.productionSpecificationSource
     ? productOrder.productionSpecification
     : (productOrder.item?.productionSpecification ?? null);
@@ -1637,6 +1646,9 @@ export default function ProductOrderDetail({
     featureConfig,
     actionEntries,
   );
+  const actionsWithData = getActionsWithSectionData(
+    completenessError ? undefined : completeness,
+  );
 
   return (
     <div className="flex w-full max-w-4xl flex-col gap-2 md:gap-4">
@@ -1667,9 +1679,28 @@ export default function ProductOrderDetail({
         </div>
 
         <div className="grid w-full grid-cols-4 justify-items-center gap-x-1 gap-y-1 md:min-h-50 md:grid-cols-[repeat(auto-fill,minmax(90px,1fr))] md:gap-2">
-          {orderedActions.map((action) => (
-            <Fragment key={action.keys[0]}>{action.node}</Fragment>
-          ))}
+          {orderedActions
+            .filter((action) => action.node)
+            .map((action) => {
+              const hasData = action.keys.some((key) =>
+                actionsWithData.has(key),
+              );
+              return (
+                <div
+                  key={action.keys[0]}
+                  data-has-data={hasData}
+                  title={hasData ? "Đã có dữ liệu" : undefined}
+                  className={
+                    hasData
+                      ? "[&>div>button]:bg-green-500 [&>div>button:hover]:bg-green-600"
+                      : undefined
+                  }
+                >
+                  {action.node}
+                  {hasData && <span className="sr-only">Đã có dữ liệu</span>}
+                </div>
+              );
+            })}
         </div>
       </div>
 

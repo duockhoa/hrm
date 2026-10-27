@@ -2181,6 +2181,8 @@ Cấu hình theo mã hàng và cấu hình lệnh sản xuất trả `source_act
 
 Snapshot cấu hình mới dùng `version: 2`, lưu cả liên kết và nhãn action tại thời điểm chốt. Snapshot `version: 1` vẫn đọc được, không suy luận liên kết từ danh mục hiện tại. Thay đổi danh mục không cập nhật liên kết trong snapshot đã chốt.
 
+`GET /production-orders/:id/completeness` trả thêm `action_sections`: trạng thái dữ liệu của các section có liên kết action (kể cả section không bắt buộc). Mỗi phần tử gồm `key`, `label`, `order`, `status`, `record_count`, `rule` và `action_keys`. Khi `status = "has_data"`, mọi nút trong `action_keys` được tô xanh lá; `missing` hoặc `unavailable` giữ màu mặc định. Danh sách liên kết lấy từ snapshot của lô nếu có. Các trường tổng hợp `required_count`, `completed_count`, `is_complete` và danh sách section bắt buộc vẫn chỉ tính section bắt buộc đang bật.
+
 ### Cấu trúc feature
 
 | Field           | Kiểu              | Bắt buộc   | Mô tả                                                                                                                         |

@@ -55,13 +55,25 @@ export class ProductionOrderLocalCompletenessService {
       ).values(),
     ).sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
 
-    // Count only required relations in one query. Do not load every section's
+    const linked = config.sections.filter(
+      (section) => (section.source_actions?.length ?? 0) > 0,
+    );
+    const checkedSections = Array.from(
+      new Map(
+        [...required, ...linked].map((section) => [
+          normalizeSectionKey(section.key),
+          { ...section, key: normalizeSectionKey(section.key) },
+        ]),
+      ).values(),
+    ).sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
+
+    // Count required and linked relations in one query. Do not load every section's
     // records, images, or signatures just to show the checklist.
     const countSelect: Partial<
       Record<keyof Prisma.ProductionOrdersCountOutputType, true>
     > = {};
     const select: Prisma.ProductionOrdersSelect = { id: true };
-    for (const section of required) {
+    for (const section of checkedSections) {
       const relation =
         SECTION_COUNT_RELATIONS[
           section.key as keyof typeof SECTION_COUNT_RELATIONS
@@ -92,7 +104,7 @@ export class ProductionOrderLocalCompletenessService {
     const relationCounts = counts?._count as Record<string, number> | undefined;
 
     const sections: SectionCompleteness[] = await Promise.all(
-      required.map(async (section) => {
+      checkedSections.map(async (section) => {
         const relation =
           SECTION_COUNT_RELATIONS[
             section.key as keyof typeof SECTION_COUNT_RELATIONS
@@ -133,20 +145,36 @@ export class ProductionOrderLocalCompletenessService {
       }),
     );
 
+    const requiredKeys = new Set(required.map((section) => section.key));
+    const requiredSections = sections.filter((section) =>
+      requiredKeys.has(section.key),
+    );
+    const actionSections = sections.flatMap((section) => {
+      const configured = checkedSections.find(
+        (entry) => entry.key === section.key,
+      );
+      const actionKeys =
+        configured?.source_actions?.map((action) => action.key) ?? [];
+      return actionKeys.length ? [{ ...section, action_keys: actionKeys }] : [];
+    });
+
     return {
       production_order_id: id,
       configuration_source: snapshot ? 'snapshot' : 'item',
       rule_version: 1,
-      required_count: sections.length,
-      completed_count: sections.filter(
+      action_sections: actionSections,
+      required_count: requiredSections.length,
+      completed_count: requiredSections.filter(
         (section) => section.status === 'has_data',
       ).length,
-      is_complete: sections.every((section) => section.status === 'has_data'),
-      required_sections: sections,
-      missing_sections: sections.filter(
+      is_complete: requiredSections.every(
+        (section) => section.status === 'has_data',
+      ),
+      required_sections: requiredSections,
+      missing_sections: requiredSections.filter(
         (section) => section.status === 'missing',
       ),
-      unavailable_sections: sections.filter(
+      unavailable_sections: requiredSections.filter(
         (section) => section.status === 'unavailable',
       ),
     };

@@ -8,6 +8,9 @@ export type ProductionOrderSectionCompleteness = {
 };
 
 export type ProductionOrderCompleteness = {
+  action_sections?: (ProductionOrderSectionCompleteness & {
+    action_keys: string[];
+  })[];
   production_order_id: number;
   configuration_source: "item" | "snapshot";
   rule_version: number;
