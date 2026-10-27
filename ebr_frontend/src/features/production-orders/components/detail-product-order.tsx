@@ -84,7 +84,6 @@ import { FormProductionOrderDisinfectantPreparation } from "@/features/productio
 import { FormProductionOrderAttachment } from "@/features/production-order-attachments";
 import { FormAddProductionOrderDeviation } from "@/features/production-order-deviations";
 import FormCreateSamplingRequest from "@/components/form-create-sampling-request/form-create-sampling-request";
-import FormExportWeighingTicket from "@/components/form-export-weighing-ticket/form-export-weighing-ticket";
 import { API_ROUTES } from "@/lib/api-routes";
 import useUserStore from "@/store/user.store";
 import userService from "@/services/user.service";
@@ -125,7 +124,6 @@ import {
   Wheat,
 } from "lucide-react";
 import * as React from "react";
-import { FaFileExport } from "react-icons/fa";
 import { GiChipsBag } from "react-icons/gi";
 import { LuFileInput } from "react-icons/lu";
 import useSWR from "swr";
@@ -358,7 +356,6 @@ function ProductionOrderDocumentControlStatus({
 
 export default function ProductOrderDetail({
   productOrder,
-  productionOrderLines,
   onOpenMaterialSummary,
   onOpenMixingRecord,
   onOpenWeighingRecord,
@@ -470,24 +467,6 @@ export default function ProductOrderDetail({
   );
 
   const actionEntries = [
-    {
-      keys: ["export_weighing_ticket"],
-      node: isActionEnabled(
-        "export_weighing_ticket",
-        "production-orders.export-weighing-ticket",
-      ) && (
-        <OpenFormButton
-          icon={<FaFileExport />}
-          name="Xuất phiếu cân"
-          form={
-            <FormExportWeighingTicket
-              data={productOrder}
-              productionOrderLines={productionOrderLines}
-            />
-          }
-        />
-      ),
-    },
     {
       keys: ["upload_production_guide"],
       node: isActionEnabled(

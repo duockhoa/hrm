@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, FileDown, Loader2, Tags } from "lucide-react";
-import { FaFileImport } from "react-icons/fa";
+import { FaFileExport, FaFileImport } from "react-icons/fa";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import FormExportWarehouseRelease from "@/components/form-export-warehouse-release/form-export-warehouse-release";
+import FormExportWeighingTicket from "@/components/form-export-weighing-ticket/form-export-weighing-ticket";
 import DispensedMaterialLabelForm from "@/components/form-dispensed-material-label/form-dispensed-material-label";
 import SemiFinishedProductLabelForm from "@/components/form-semi-finished-product-label/form-semi-finished-product-label";
 import { isProductionOrderFeatureEnabled } from "@/features/features";
@@ -58,6 +59,7 @@ export default function ProductionOrderDownloadMenu({
     () => userService.fetchMyPermissions(),
   );
   const [isWarehouseReleaseOpen, setIsWarehouseReleaseOpen] = useState(false);
+  const [isWeighingTicketOpen, setIsWeighingTicketOpen] = useState(false);
   const [isDispensedMaterialLabelOpen, setIsDispensedMaterialLabelOpen] =
     useState(false);
   const [isSemiFinishedProductLabelOpen, setIsSemiFinishedProductLabelOpen] =
@@ -85,6 +87,10 @@ export default function ProductionOrderDownloadMenu({
   const canExportWarehouseRelease = isActionEnabled(
     "export_warehouse_release",
     "production-orders.export-warehouse-release",
+  );
+  const canExportWeighingTicket = isActionEnabled(
+    "export_weighing_ticket",
+    "production-orders.export-weighing-ticket",
   );
   const canCreateDispensedMaterialLabel = isActionEnabled(
     "create_dispensed_material_label",
@@ -131,6 +137,7 @@ export default function ProductionOrderDownloadMenu({
   if (
     !canExportOrder &&
     !canExportWarehouseRelease &&
+    !canExportWeighingTicket &&
     !canCreateDispensedMaterialLabel &&
     !canCreateSemiFinishedProductLabel
   ) {
@@ -170,6 +177,12 @@ export default function ProductionOrderDownloadMenu({
               Xuất PXK
             </DropdownMenuItem>
           )}
+          {canExportWeighingTicket && (
+            <DropdownMenuItem onSelect={() => setIsWeighingTicketOpen(true)}>
+              <FaFileExport className="text-blue-500" />
+              Xuất phiếu cân
+            </DropdownMenuItem>
+          )}
           {canExportOrder && (
             <DropdownMenuItem onSelect={() => void handleExport("report")}>
               <FileDown className="text-red-500" />
@@ -194,6 +207,23 @@ export default function ProductionOrderDownloadMenu({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      <Dialog
+        modal={false}
+        open={isWeighingTicketOpen && canExportWeighingTicket}
+        onOpenChange={setIsWeighingTicketOpen}
+      >
+        <DialogContent className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Xuất phiếu cân</DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 overflow-y-auto pr-1">
+            <FormExportWeighingTicket
+              data={productionOrder}
+              onClose={() => setIsWeighingTicketOpen(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog
         modal={false}
         open={isWarehouseReleaseOpen && canExportWarehouseRelease}
