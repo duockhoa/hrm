@@ -1,5 +1,6 @@
 export { default as FeaturesPage } from "./components/features-page";
 export { default as InlineItemFeatureSettings } from "./components/inline-item-feature-settings";
+export { sortProductionOrderActions } from "./production-order-action-order";
 export {
   getEnabledProductionOrderFeatureKeys,
   isProductionOrderFeatureEnabled,
