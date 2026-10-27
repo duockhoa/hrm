@@ -8,6 +8,8 @@ const FEATURE_GROUPS = [
   { value: "Biểu mẫu chung", label: "Biểu mẫu chung" },
   { value: "Biểu mẫu Pha chế", label: "Biểu mẫu Pha chế" },
   { value: "Biểu mẫu hoàn thiện", label: "Biểu mẫu hoàn thiện" },
+  { value: "Nhóm phân liều", label: "Nhóm phân liều" },
+  { value: "Nhóm vệ sinh", label: "Nhóm vệ sinh" },
 ];
 
 const FEATURE_KIND_ORDER: Record<string, number> = {
