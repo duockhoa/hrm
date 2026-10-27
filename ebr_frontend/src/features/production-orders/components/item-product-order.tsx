@@ -1,6 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ProductionOrderFeatureConfig } from "@/features/features";
+import ProductionOrderDocumentControlActions from "./production-order-document-control-actions";
 
 type ProductOrder = {
+  id?: string | number | null;
+  production_order_id?: string | number | null;
+  DocumentAbsoluteEntry?: string | number | null;
+  featureConfig?: ProductionOrderFeatureConfig;
   lot_no?: string | number | null;
   item_code?: string | number | null;
   status?: string | number | null;
@@ -140,10 +146,12 @@ export default function ItemProductOrder({
   productOrder,
   onClick,
   isActive = false,
+  showDocumentControlActions = false,
 }: {
   productOrder: ProductOrder | null;
   onClick: () => void;
   isActive?: boolean;
+  showDocumentControlActions?: boolean;
 }) {
   const title =
     productOrder?.item?.item_name ??
@@ -218,6 +226,20 @@ export default function ItemProductOrder({
           </span>
         )}
       </div>
+      {showDocumentControlActions && productOrder ? (
+        <div className="shrink-0" onClick={(event) => event.stopPropagation()}>
+          <ProductionOrderDocumentControlActions
+            productionOrderId={
+              productOrder.id ??
+              productOrder.production_order_id ??
+              productOrder.DocumentAbsoluteEntry
+            }
+            featureConfig={productOrder.featureConfig}
+            variant="menu"
+            lotLabel={String(productOrder.lot_no ?? "")}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

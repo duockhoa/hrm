@@ -182,6 +182,7 @@ export default function FinishedProductProductionOrdersPage() {
                 <ItemProductOrder
                   key={lot.id}
                   productOrder={lot}
+                  showDocumentControlActions
                   isActive={activeLotId === String(lot.id)}
                   onClick={() => handleClick(lot.id)}
                 />
