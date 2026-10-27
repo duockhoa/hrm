@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { featuresService } from "@/services/index.service";
+import { isAxiosError } from "axios";
 import { Edit2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -36,6 +37,11 @@ import type { CreateFeaturePayload, Feature } from "../types";
 import FeatureFormDialog from "./feature-form-dialog";
 
 const getErrorMessage = (error: unknown, fallback: string) => {
+  if (isAxiosError<{ message?: string | string[] }>(error)) {
+    const message = error.response?.data?.message;
+    if (typeof message === "string" && message) return message;
+    if (Array.isArray(message) && message.length) return message.join("; ");
+  }
   if (error instanceof Error) {
     return error.message;
   }

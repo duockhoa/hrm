@@ -81,6 +81,8 @@ export default function FeatureFormDialog({
   );
   const [actionSearch, setActionSearch] = useState("");
   const availableActions = features.filter((entry) => entry.kind === "action");
+  const getOtherSection = (action: Feature) =>
+    action.target_sections?.find((section) => section.id !== feature?.id);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -117,33 +119,46 @@ export default function FeatureFormDialog({
                       .toLowerCase()
                       .includes(actionSearch.trim().toLowerCase()),
                   )
-                  .map((action) => (
-                    <label
-                      key={action.id}
-                      className="flex items-start gap-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={form.action_ids.includes(action.id)}
-                        onChange={(event) =>
-                          setForm((current) => ({
-                            ...current,
-                            action_ids: event.target.checked
-                              ? [...current.action_ids, action.id]
-                              : current.action_ids.filter(
-                                  (id) => id !== action.id,
-                                ),
-                          }))
-                        }
-                      />
-                      <span>
-                        {action.label}
-                        <span className="block text-xs text-gray-500">
-                          {action.key}
+                  .map((action) => {
+                    const otherSection = getOtherSection(action);
+                    return (
+                      <label
+                        key={action.id}
+                        className="flex items-start gap-2 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={form.action_ids.includes(action.id)}
+                          disabled={
+                            Boolean(otherSection) &&
+                            !form.action_ids.includes(action.id)
+                          }
+                          onChange={(event) =>
+                            setForm((current) => ({
+                              ...current,
+                              action_ids: event.target.checked
+                                ? [...current.action_ids, action.id]
+                                : current.action_ids.filter(
+                                    (id) => id !== action.id,
+                                  ),
+                            }))
+                          }
+                        />
+                        <span>
+                          {action.label}
+                          <span className="block text-xs text-gray-500">
+                            {action.key}
+                          </span>
+                          {otherSection && (
+                            <span className="block text-xs text-amber-700">
+                              Đã thuộc section: {otherSection.label}. Gỡ liên
+                              kết tại section đó trước khi chuyển.
+                            </span>
+                          )}
                         </span>
-                      </span>
-                    </label>
-                  ))}
+                      </label>
+                    );
+                  })}
                 {availableActions.length === 0 && (
                   <p className="text-sm text-gray-500">
                     Chưa có action trong danh mục.

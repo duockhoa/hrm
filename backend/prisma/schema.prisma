@@ -670,13 +670,12 @@ model Features {
 
 model FeatureSectionActions {
   section_id Int
-  action_id  Int
+  action_id  Int @unique(map: "feature_section_actions_action_id_key")
   order      Int @default(0)
   section    Features @relation("SectionSourceActions", fields: [section_id], references: [id], onDelete: Cascade)
   action     Features @relation("ActionTargetSections", fields: [action_id], references: [id], onDelete: Cascade)
 
   @@id([section_id, action_id])
-  @@index([action_id])
   @@map("feature_section_actions")
 }
 

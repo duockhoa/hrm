@@ -2175,7 +2175,7 @@ Tất cả API trong nhóm này cần `Auth: Bearer`. Các API `GET` không yêu
 
 `POST /features` và `PUT /features/:id` nhận thêm `action_ids: number[]` khi cấu hình section. Thứ tự ID là thứ tự hiển thị action. Ví dụ `PUT /features/10` với body `{"action_ids":[2,3]}` thay thế toàn bộ liên kết; `{"action_ids":[]}` gỡ toàn bộ; bỏ qua trường này giữ liên kết hiện tại.
 
-API đọc/tạo/cập nhật feature trả `source_actions` và `target_sections`. Mỗi phần tử chứa `id`, `key`, `label`; `source_actions` có thêm `order`. Một action được phép cung cấp dữ liệu cho nhiều section. API kiểm tra ID nguyên dương, không trùng, tồn tại và đúng loại `action`; chỉ `section` có danh sách nguồn khác rỗng. Không cho liên kết với chính mình hoặc đổi loại khi còn liên kết không hợp lệ. Xóa feature xóa các liên kết liên quan.
+API đọc/tạo/cập nhật feature trả `source_actions` và `target_sections`. Mỗi phần tử chứa `id`, `key`, `label`; `source_actions` có thêm `order`. Mỗi action chỉ thuộc tối đa một section; mỗi section có nhiều action. Database bảo vệ bằng `UNIQUE(action_id)`. API trả `409 Conflict` nếu action đang thuộc section khác; cần gỡ liên kết cũ trước khi chuyển. Action đã liên kết với section đang sửa vẫn được giữ và sắp xếp lại. API kiểm tra ID nguyên dương, không trùng, tồn tại và đúng loại `action`; chỉ `section` có danh sách nguồn khác rỗng. Không cho liên kết với chính mình hoặc đổi loại khi còn liên kết không hợp lệ. Xóa feature xóa các liên kết liên quan.
 
 Cấu hình theo mã hàng và cấu hình lệnh sản xuất trả `source_actions` trên mỗi entry. Bật/tắt section và action vẫn độc lập; liên kết mô tả nguồn dữ liệu và không thay đổi API tải dữ liệu của section hoặc quyền thao tác.
 

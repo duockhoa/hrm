@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { FeaturesService } from './features.service';
 
@@ -29,6 +30,7 @@ describe('FeaturesService', () => {
     items: {
       findFirst: jest.Mock;
     };
+    featureSectionActions: { findFirst: jest.Mock };
     $transaction: jest.Mock;
   };
 
@@ -53,6 +55,7 @@ describe('FeaturesService', () => {
       items: {
         findFirst: jest.fn(),
       },
+      featureSectionActions: { findFirst: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn(),
     };
     prismaService.$transaction.mockImplementation(
@@ -643,6 +646,87 @@ describe('FeaturesService', () => {
         expect.objectContaining({ data: { label: 'Updated' } }),
       );
     });
+
+    it('rejects assigning an owned action when creating another section', async () => {
+      prismaService.features.findUnique.mockResolvedValue(null);
+      prismaService.features.findMany.mockResolvedValue(actions);
+      prismaService.featureSectionActions.findFirst.mockResolvedValue({
+        action: { key: 'create_check' },
+        section: { label: 'Original section' },
+      });
+      await expect(
+        service.create({
+          key: 'new_section',
+          kind: 'section',
+          label: 'New',
+          action_ids: [2, 3],
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(prismaService.features.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects assigning an owned action when editing another section', async () => {
+      prismaService.features.findUnique.mockResolvedValue(section);
+      prismaService.features.findMany.mockResolvedValue([actions[0]]);
+      prismaService.featureSectionActions.findFirst.mockResolvedValue({
+        action: { key: 'create_check' },
+        section: { label: 'Original section' },
+      });
+      await expect(service.update(10, { action_ids: [2] })).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prismaService.features.update).not.toHaveBeenCalled();
+    });
+
+    it('allows keeping and reordering multiple actions owned by the section being edited', async () => {
+      prismaService.features.findUnique.mockResolvedValue(section);
+      prismaService.features.findMany.mockResolvedValue(actions);
+      prismaService.features.update.mockResolvedValue(section);
+      await service.update(10, { action_ids: [3, 2] });
+      expect(
+        prismaService.featureSectionActions.findFirst,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { action_id: { in: [3, 2] }, section_id: { not: 10 } },
+        }),
+      );
+      expect(prismaService.features.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            sourceActions: {
+              deleteMany: {},
+              create: [
+                { action_id: 3, order: 0 },
+                { action_id: 2, order: 1 },
+              ],
+            },
+          },
+        }),
+      );
+    });
+
+    it.each(['P2002', 'P2034'])(
+      'returns a conflict for concurrent link writes (%s)',
+      async (code) => {
+        prismaService.features.findUnique.mockResolvedValue(null);
+        prismaService.features.findMany.mockResolvedValue([actions[0]]);
+        prismaService.features.create.mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError('Concurrent write', {
+            code,
+            clientVersion: '6',
+            meta: { target: 'feature_section_actions_action_id_key' },
+          }),
+        );
+        await expect(
+          service.create({
+            key: 'new_section',
+            kind: 'section',
+            label: 'New',
+            action_ids: [2],
+          }),
+        ).rejects.toThrow(ConflictException);
+      },
+    );
 
     it('blocks changing the kind of an action referenced by a section', async () => {
       prismaService.features.findUnique.mockResolvedValue({

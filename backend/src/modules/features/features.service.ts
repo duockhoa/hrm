@@ -141,100 +141,105 @@ export class FeaturesService {
       throw new ConflictException('Feature key already exists');
     }
 
-    return this.prismaService.$transaction(
-      async (tx) => {
-        const actionIds = await this.validateActionIds(
-          createDto.action_ids,
-          data.kind,
-          tx,
-        );
-        const feature = await tx.features.create({
-          data: {
-            ...data,
-            ...(actionIds === undefined
-              ? {}
-              : {
-                  sourceActions: {
-                    create: actionIds.map((action_id, order) => ({
-                      action_id,
-                      order,
-                    })),
-                  },
-                }),
-          },
-          include: FEATURE_LINK_INCLUDE,
-        });
-        return { ...feature, ...featureLinks(feature) };
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+    return this.prismaService
+      .$transaction(
+        async (tx) => {
+          const actionIds = await this.validateActionIds(
+            createDto.action_ids,
+            data.kind,
+            tx,
+          );
+          const feature = await tx.features.create({
+            data: {
+              ...data,
+              ...(actionIds === undefined
+                ? {}
+                : {
+                    sourceActions: {
+                      create: actionIds.map((action_id, order) => ({
+                        action_id,
+                        order,
+                      })),
+                    },
+                  }),
+            },
+            include: FEATURE_LINK_INCLUDE,
+          });
+          return { ...feature, ...featureLinks(feature) };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      )
+      .catch((error: unknown) => this.handleFeatureWriteError(error));
   }
 
   async update(id: number, updateDto: UpdateFeatureDto) {
-    return this.prismaService.$transaction(
-      async (tx) => {
-        const existing = await tx.features.findUnique({
-          where: { id },
-          include: { itemFeatures: true, ...FEATURE_LINK_INCLUDE },
-        });
-        if (!existing) throw new NotFoundException('Feature not found');
-        const data = await this.buildUpdateFeatureData(id, updateDto, tx);
-        const nextKind =
-          typeof data.kind === 'string' ? data.kind : existing.kind;
-        const actionIds = await this.validateActionIds(
-          updateDto.action_ids,
-          nextKind,
-          tx,
-        );
-        if (actionIds?.includes(id)) {
-          throw new BadRequestException(
-            'A section cannot reference itself as a source action.',
+    return this.prismaService
+      .$transaction(
+        async (tx) => {
+          const existing = await tx.features.findUnique({
+            where: { id },
+            include: { itemFeatures: true, ...FEATURE_LINK_INCLUDE },
+          });
+          if (!existing) throw new NotFoundException('Feature not found');
+          const data = await this.buildUpdateFeatureData(id, updateDto, tx);
+          const nextKind =
+            typeof data.kind === 'string' ? data.kind : existing.kind;
+          const actionIds = await this.validateActionIds(
+            updateDto.action_ids,
+            nextKind,
+            tx,
+            id,
           );
-        }
-        if (
-          nextKind !== existing.kind &&
-          ((existing.sourceActions?.length &&
-            (actionIds === undefined || actionIds.length > 0)) ||
-            existing.targetSections?.length)
-        ) {
-          throw new BadRequestException(
-            'Remove section/action links before changing feature kind.',
-          );
-        }
-        if (existing.itemFeatures.some((setting) => setting.required)) {
-          const nextFeature = {
-            key: typeof data.key === 'string' ? data.key : existing.key,
-            kind: nextKind,
-          };
-          assertRequiredSection(
-            nextFeature,
-            true,
-            true,
-            supportsRequiredSection(nextFeature.key),
-          );
-        }
-        const feature = await tx.features.update({
-          where: { id },
-          data: {
-            ...data,
-            ...(actionIds === undefined
-              ? {}
-              : {
-                  sourceActions: {
-                    deleteMany: {},
-                    create: actionIds.map((action_id, order) => ({
-                      action_id,
-                      order,
-                    })),
-                  },
-                }),
-          },
-          include: FEATURE_LINK_INCLUDE,
-        });
-        return { ...feature, ...featureLinks(feature) };
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+          if (actionIds?.includes(id)) {
+            throw new BadRequestException(
+              'A section cannot reference itself as a source action.',
+            );
+          }
+          if (
+            nextKind !== existing.kind &&
+            ((existing.sourceActions?.length &&
+              (actionIds === undefined || actionIds.length > 0)) ||
+              existing.targetSections?.length)
+          ) {
+            throw new BadRequestException(
+              'Remove section/action links before changing feature kind.',
+            );
+          }
+          if (existing.itemFeatures.some((setting) => setting.required)) {
+            const nextFeature = {
+              key: typeof data.key === 'string' ? data.key : existing.key,
+              kind: nextKind,
+            };
+            assertRequiredSection(
+              nextFeature,
+              true,
+              true,
+              supportsRequiredSection(nextFeature.key),
+            );
+          }
+          const feature = await tx.features.update({
+            where: { id },
+            data: {
+              ...data,
+              ...(actionIds === undefined
+                ? {}
+                : {
+                    sourceActions: {
+                      deleteMany: {},
+                      create: actionIds.map((action_id, order) => ({
+                        action_id,
+                        order,
+                      })),
+                    },
+                  }),
+            },
+            include: FEATURE_LINK_INCLUDE,
+          });
+          return { ...feature, ...featureLinks(feature) };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      )
+      .catch((error: unknown) => this.handleFeatureWriteError(error));
   }
 
   async delete(id: number) {
@@ -506,6 +511,7 @@ export class FeaturesService {
     value: unknown,
     kind: string,
     tx: Prisma.TransactionClient,
+    sectionId?: number,
   ) {
     if (value === undefined) return undefined;
     if (
@@ -529,8 +535,52 @@ export class FeaturesService {
         throw new BadRequestException(
           'Source actions must exist and have kind action.',
         );
+      const existingLink = await tx.featureSectionActions.findFirst({
+        where: {
+          action_id: { in: ids },
+          ...(sectionId === undefined
+            ? {}
+            : { section_id: { not: sectionId } }),
+        },
+        include: {
+          action: { select: { key: true } },
+          section: { select: { label: true } },
+        },
+      });
+      if (existingLink) {
+        throw new ConflictException(
+          `Action "${existingLink.action.key}" đã thuộc section "${existingLink.section.label}". Hãy gỡ liên kết cũ trước khi chuyển section.`,
+        );
+      }
     }
     return ids;
+  }
+
+  private handleFeatureWriteError(error: unknown): never {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        const rawTarget = error.meta?.target;
+        const target =
+          typeof rawTarget === 'string'
+            ? rawTarget
+            : Array.isArray(rawTarget)
+              ? rawTarget
+                  .filter((part): part is string => typeof part === 'string')
+                  .join(',')
+              : '';
+        throw new ConflictException(
+          target.includes('action_id')
+            ? 'Action đã được liên kết với một section khác. Vui lòng tải lại danh mục tính năng.'
+            : 'Feature key already exists',
+        );
+      }
+      if (error.code === 'P2034') {
+        throw new ConflictException(
+          'Cấu hình vừa được thay đổi bởi thao tác khác. Vui lòng tải lại và thử lại.',
+        );
+      }
+    }
+    throw error;
   }
 
   private buildCreateFeatureData(
