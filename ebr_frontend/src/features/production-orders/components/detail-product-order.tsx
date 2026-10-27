@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import ProductionOrderDocumentControlActions from "./production-order-document-control-actions";
 import MissingMixingRecordNotice from "./temporary/missing-mixing-record-notice";
 import OpenFormButton from "@/components/button-open-form/button-open-form";
 import { isProductionOrderFeatureEnabled } from "@/features/features";
@@ -509,10 +508,6 @@ export default function ProductOrderDetail({
                 productionOrderId={productionOrderId}
               />
             )}
-          <ProductionOrderDocumentControlActions
-            productionOrderId={productionOrderId}
-            featureConfig={featureConfig}
-          />
           {isActionEnabled("create_production_order_deviation") && (
             <OpenFormButton
               icon={<Frown />}
