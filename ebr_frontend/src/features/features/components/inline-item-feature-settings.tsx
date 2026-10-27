@@ -241,7 +241,7 @@ function FeatureSettingsTable({
               <TableCell>
                 <Input
                   type="number"
-                  className="ml-auto w-24 text-right"
+                  className="ml-auto w-24 bg-white text-right"
                   value={draftRow.order}
                   onChange={(event) => {
                     if (!draftRow.enabled) {
@@ -574,9 +574,11 @@ export default function InlineItemFeatureSettings({
 
   return (
     <>
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl rounded border border-blue-200 bg-blue-50/70 p-4 shadow-md">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Tính năng đã chọn</h2>
+          <h2 className="text-lg font-semibold text-blue-900">
+            Tính năng đã chọn
+          </h2>
         </div>
 
         {isLoading ? (
@@ -584,12 +586,12 @@ export default function InlineItemFeatureSettings({
             {Array.from({ length: 3 }).map((_, index) => (
               <div
                 key={index}
-                className="h-10 animate-pulse rounded bg-gray-100"
+                className="h-10 animate-pulse rounded bg-blue-100/60"
               />
             ))}
           </div>
         ) : selectedRows.length > 0 ? (
-          <section className="overflow-hidden rounded-md border">
+          <section className="overflow-hidden rounded-md border border-blue-200 bg-blue-50/40">
             <FeatureSettingsTable
               tableRows={selectedRows}
               getDraftRow={getDraftRow}
@@ -606,7 +608,7 @@ export default function InlineItemFeatureSettings({
             />
           </section>
         ) : (
-          <div className="rounded border border-dashed p-6 text-center text-sm text-gray-500">
+          <div className="rounded border border-dashed border-blue-200 bg-blue-50/40 p-6 text-center text-sm text-blue-700/70">
             Chưa có tính năng nào được chọn.
           </div>
         )}
