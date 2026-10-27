@@ -1,4 +1,5 @@
 export class UpdateFeatureDto {
+  action_ids?: number[];
   key?: string;
   kind?: string;
   label?: string;

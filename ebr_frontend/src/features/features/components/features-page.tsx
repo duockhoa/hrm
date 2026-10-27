@@ -121,6 +121,7 @@ export default function FeaturesPage() {
           kind: payload.kind,
           group_name: payload.group_name,
           default_order: payload.default_order,
+          action_ids: payload.action_ids,
         });
         toast.success("Đã cập nhật tính năng.");
       } else {
@@ -222,6 +223,7 @@ export default function FeaturesPage() {
                 <TableHead>Tên hiển thị</TableHead>
                 <TableHead className="w-32">Loại</TableHead>
                 <TableHead className="w-48">Nhóm tính năng</TableHead>
+                <TableHead>Liên kết dữ liệu</TableHead>
                 <TableHead className="w-28 text-right">Thứ tự</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
@@ -230,7 +232,7 @@ export default function FeaturesPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <div className="h-8 animate-pulse rounded bg-gray-100" />
                     </TableCell>
                   </TableRow>
@@ -238,7 +240,9 @@ export default function FeaturesPage() {
               ) : filteredFeatures.length > 0 ? (
                 filteredFeatures.map((feature) => (
                   <TableRow key={feature.id}>
-                    <TableCell className="text-gray-500">{feature.id}</TableCell>
+                    <TableCell className="text-gray-500">
+                      {feature.id}
+                    </TableCell>
                     <TableCell className="font-mono text-xs">
                       {feature.key}
                     </TableCell>
@@ -250,6 +254,23 @@ export default function FeaturesPage() {
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {feature.group_name || "—"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <span className="text-xs text-gray-500">
+                        {feature.kind === "section"
+                          ? "Action cung cấp dữ liệu"
+                          : feature.kind === "action"
+                            ? "Dữ liệu hiển thị tại section"
+                            : ""}
+                      </span>
+                      {(feature.kind === "section"
+                        ? feature.source_actions
+                        : feature.target_sections
+                      )?.map((entry) => (
+                        <div key={entry.id} title={entry.key}>
+                          {entry.label}
+                        </div>
+                      ))}
                     </TableCell>
                     <TableCell className="text-right">
                       {feature.default_order}
@@ -279,7 +300,7 @@ export default function FeaturesPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     Chưa có tính năng phù hợp.
@@ -292,6 +313,7 @@ export default function FeaturesPage() {
       </div>
 
       <FeatureFormDialog
+        features={features ?? []}
         key={`${editingFeature?.id ?? "new"}-${isFormOpen ? "open" : "closed"}`}
         open={isFormOpen}
         feature={editingFeature}

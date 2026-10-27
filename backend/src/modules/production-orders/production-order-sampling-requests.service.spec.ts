@@ -251,11 +251,14 @@ describe('ProductionOrderSamplingRequestsService', () => {
       where: { production_order_id: 2031 },
       data: {
         feature_config_snapshot: {
-          version: 1,
+          version: 2,
           source: 'pyclm',
           captured_at: sentAt.toISOString(),
           item_code: 'TP00063',
-          features: config.features,
+          features: config.features.map((feature) => ({
+            ...feature,
+            source_actions: [],
+          })),
         },
       },
     });

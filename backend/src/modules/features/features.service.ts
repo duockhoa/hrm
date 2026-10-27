@@ -17,8 +17,48 @@ import {
 } from './item-feature-config';
 import { supportsRequiredSection } from '../production-orders/production-order-section-rules';
 
+const FEATURE_LINK_INCLUDE = {
+  sourceActions: {
+    include: { action: true },
+    orderBy: { order: 'asc' as const },
+  },
+  targetSections: {
+    include: { section: true },
+    orderBy: { section_id: 'asc' as const },
+  },
+} satisfies Prisma.FeaturesInclude;
+
+const linkedActions = (feature: {
+  sourceActions?: {
+    action: { id: number; key: string; label: string };
+    order: number;
+  }[];
+}) =>
+  feature.sourceActions?.map(({ action, order }) => ({
+    ...actionReference(action),
+    order,
+  }));
+const actionReference = (feature: {
+  id: number;
+  key: string;
+  label: string;
+}) => ({ id: feature.id, key: feature.key, label: feature.label });
+
+const featureLinks = (feature: {
+  sourceActions?: {
+    action: { id: number; key: string; label: string };
+    order: number;
+  }[];
+  targetSections?: { section: { id: number; key: string; label: string } }[];
+}) => ({
+  source_actions: linkedActions(feature) ?? [],
+  target_sections:
+    feature.targetSections?.map(({ section }) => actionReference(section)) ??
+    [],
+});
+
 const ITEM_FEATURE_INCLUDE = {
-  feature: true,
+  feature: { include: FEATURE_LINK_INCLUDE },
   item: true,
 } satisfies Prisma.ItemFeaturesInclude;
 
@@ -29,9 +69,15 @@ export class FeaturesService {
   async findAll() {
     const features = await this.prismaService.features.findMany({
       orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
+      include: FEATURE_LINK_INCLUDE,
     });
     return features.map((feature) => ({
       ...feature,
+      source_actions: linkedActions(feature) ?? [],
+      target_sections:
+        feature.targetSections?.map(({ section }) =>
+          actionReference(section),
+        ) ?? [],
       supports_required:
         feature.kind === 'section' && supportsRequiredSection(feature.key),
     }));
@@ -42,6 +88,7 @@ export class FeaturesService {
       where: { id },
       include: {
         itemFeatures: true,
+        ...FEATURE_LINK_INCLUDE,
       },
     });
 
@@ -49,7 +96,14 @@ export class FeaturesService {
       throw new NotFoundException('Feature not found');
     }
 
-    return feature;
+    return {
+      ...feature,
+      source_actions: linkedActions(feature) ?? [],
+      target_sections:
+        feature.targetSections?.map(({ section }) =>
+          actionReference(section),
+        ) ?? [],
+    };
   }
 
   async findByKey(key: string) {
@@ -58,6 +112,7 @@ export class FeaturesService {
       where: { key: normalizedKey },
       include: {
         itemFeatures: true,
+        ...FEATURE_LINK_INCLUDE,
       },
     });
 
@@ -65,7 +120,14 @@ export class FeaturesService {
       throw new NotFoundException('Feature not found');
     }
 
-    return feature;
+    return {
+      ...feature,
+      source_actions: linkedActions(feature) ?? [],
+      target_sections:
+        feature.targetSections?.map(({ section }) =>
+          actionReference(section),
+        ) ?? [],
+    };
   }
 
   async create(createDto: CreateFeatureDto) {
@@ -79,31 +141,100 @@ export class FeaturesService {
       throw new ConflictException('Feature key already exists');
     }
 
-    return this.prismaService.features.create({
-      data,
-    });
+    return this.prismaService.$transaction(
+      async (tx) => {
+        const actionIds = await this.validateActionIds(
+          createDto.action_ids,
+          data.kind,
+          tx,
+        );
+        const feature = await tx.features.create({
+          data: {
+            ...data,
+            ...(actionIds === undefined
+              ? {}
+              : {
+                  sourceActions: {
+                    create: actionIds.map((action_id, order) => ({
+                      action_id,
+                      order,
+                    })),
+                  },
+                }),
+          },
+          include: FEATURE_LINK_INCLUDE,
+        });
+        return { ...feature, ...featureLinks(feature) };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async update(id: number, updateDto: UpdateFeatureDto) {
-    const existing = await this.findById(id);
-    const data = await this.buildUpdateFeatureData(id, updateDto);
-    if (existing.itemFeatures.some((setting) => setting.required)) {
-      const nextFeature = {
-        key: typeof data.key === 'string' ? data.key : existing.key,
-        kind: typeof data.kind === 'string' ? data.kind : existing.kind,
-      };
-      assertRequiredSection(
-        nextFeature,
-        true,
-        true,
-        supportsRequiredSection(nextFeature.key),
-      );
-    }
-
-    return this.prismaService.features.update({
-      where: { id },
-      data,
-    });
+    return this.prismaService.$transaction(
+      async (tx) => {
+        const existing = await tx.features.findUnique({
+          where: { id },
+          include: { itemFeatures: true, ...FEATURE_LINK_INCLUDE },
+        });
+        if (!existing) throw new NotFoundException('Feature not found');
+        const data = await this.buildUpdateFeatureData(id, updateDto, tx);
+        const nextKind =
+          typeof data.kind === 'string' ? data.kind : existing.kind;
+        const actionIds = await this.validateActionIds(
+          updateDto.action_ids,
+          nextKind,
+          tx,
+        );
+        if (actionIds?.includes(id)) {
+          throw new BadRequestException(
+            'A section cannot reference itself as a source action.',
+          );
+        }
+        if (
+          nextKind !== existing.kind &&
+          ((existing.sourceActions?.length &&
+            (actionIds === undefined || actionIds.length > 0)) ||
+            existing.targetSections?.length)
+        ) {
+          throw new BadRequestException(
+            'Remove section/action links before changing feature kind.',
+          );
+        }
+        if (existing.itemFeatures.some((setting) => setting.required)) {
+          const nextFeature = {
+            key: typeof data.key === 'string' ? data.key : existing.key,
+            kind: nextKind,
+          };
+          assertRequiredSection(
+            nextFeature,
+            true,
+            true,
+            supportsRequiredSection(nextFeature.key),
+          );
+        }
+        const feature = await tx.features.update({
+          where: { id },
+          data: {
+            ...data,
+            ...(actionIds === undefined
+              ? {}
+              : {
+                  sourceActions: {
+                    deleteMany: {},
+                    create: actionIds.map((action_id, order) => ({
+                      action_id,
+                      order,
+                    })),
+                  },
+                }),
+          },
+          include: FEATURE_LINK_INCLUDE,
+        });
+        return { ...feature, ...featureLinks(feature) };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async delete(id: number) {
@@ -162,6 +293,7 @@ export class FeaturesService {
       order: itemFeature.order ?? itemFeature.feature.default_order,
       enabled: itemFeature.enabled,
       required: itemFeature.required ?? false,
+      source_actions: linkedActions(itemFeature.feature) ?? [],
     }));
 
     return buildItemFeatureConfig(normalizedItemCode, features);
@@ -250,6 +382,7 @@ export class FeaturesService {
           }),
           tx.features.findMany({
             orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
+            include: FEATURE_LINK_INCLUDE,
           }),
           tx.itemFeatures.findMany({
             where: { item_code: sourceItemCode },
@@ -279,6 +412,7 @@ export class FeaturesService {
           kind: feature.kind,
           label: feature.label,
           group_name: feature.group_name,
+          source_actions: linkedActions(feature) ?? [],
           order: sourceFeature?.order ?? feature.default_order,
           enabled: sourceFeature?.enabled ?? false,
           required: Boolean(
@@ -368,6 +502,37 @@ export class FeaturesService {
     });
   }
 
+  private async validateActionIds(
+    value: unknown,
+    kind: string,
+    tx: Prisma.TransactionClient,
+  ) {
+    if (value === undefined) return undefined;
+    if (
+      !Array.isArray(value) ||
+      value.some((id) => !Number.isSafeInteger(id) || id <= 0)
+    ) {
+      throw new BadRequestException(
+        'action_ids must be an array of positive integer IDs.',
+      );
+    }
+    const ids = value as number[];
+    if (new Set(ids).size !== ids.length)
+      throw new BadRequestException('Duplicate action IDs are not allowed.');
+    if (kind !== 'section' && ids.length > 0)
+      throw new BadRequestException('Only sections can have source actions.');
+    if (ids.length) {
+      const actions = await tx.features.findMany({
+        where: { id: { in: ids }, kind: 'action' },
+      });
+      if (actions.length !== ids.length)
+        throw new BadRequestException(
+          'Source actions must exist and have kind action.',
+        );
+    }
+    return ids;
+  }
+
   private buildCreateFeatureData(
     dto: CreateFeatureDto,
   ): Prisma.FeaturesUncheckedCreateInput {
@@ -384,12 +549,13 @@ export class FeaturesService {
   private async buildUpdateFeatureData(
     id: number,
     dto: UpdateFeatureDto,
+    client: Prisma.TransactionClient = this.prismaService,
   ): Promise<Prisma.FeaturesUncheckedUpdateInput> {
     const data: Prisma.FeaturesUncheckedUpdateInput = {};
 
     if (dto.key !== undefined) {
       const key = this.normalizeRequiredString(dto.key, 'key');
-      const existing = await this.prismaService.features.findUnique({
+      const existing = await client.features.findUnique({
         where: { key },
       });
 
@@ -420,7 +586,7 @@ export class FeaturesService {
         this.normalizeOptionalInt(dto.default_order, 'default_order') ?? 0;
     }
 
-    if (Object.keys(data).length === 0) {
+    if (Object.keys(data).length === 0 && dto.action_ids === undefined) {
       throw new BadRequestException('No update data provided');
     }
 

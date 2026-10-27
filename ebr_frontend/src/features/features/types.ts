@@ -1,5 +1,12 @@
 export type FeatureKind = "action" | "section" | "view" | string;
 
+export type FeatureReference = {
+  id: number;
+  key: string;
+  label: string;
+  order?: number;
+};
+
 export type Feature = {
   id: number;
   key: string;
@@ -8,11 +15,14 @@ export type Feature = {
   group_name: string | null;
   default_order: number;
   supports_required?: boolean;
+  source_actions?: FeatureReference[];
+  target_sections?: FeatureReference[];
   created_at?: string;
   updated_at?: string;
 };
 
 export type CreateFeaturePayload = {
+  action_ids?: number[];
   key: string;
   kind: string;
   label: string;
@@ -23,6 +33,7 @@ export type CreateFeaturePayload = {
 export type UpdateFeaturePayload = Partial<CreateFeaturePayload>;
 
 export type ItemFeatureConfigEntry = {
+  source_actions?: FeatureReference[];
   feature_id: number;
   key: string;
   kind: string;

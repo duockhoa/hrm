@@ -4,6 +4,13 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+export type FeatureSourceAction = {
+  id: number;
+  key: string;
+  label: string;
+  order: number;
+};
+
 export type ItemFeatureConfigEntry = {
   feature_id: number;
   key: string;
@@ -13,6 +20,7 @@ export type ItemFeatureConfigEntry = {
   order: number;
   enabled: boolean;
   required: boolean;
+  source_actions?: FeatureSourceAction[];
 };
 
 export const buildItemFeatureConfig = (
@@ -31,11 +39,14 @@ export const createFeatureConfigSnapshot = (
   config: ItemFeatureConfig,
   capturedAt: Date,
 ): Prisma.InputJsonObject => ({
-  version: 1,
+  version: 2,
   source: 'pyclm',
   captured_at: capturedAt.toISOString(),
   item_code: config.item_code,
-  features: config.features,
+  features: config.features.map((feature) => ({
+    ...feature,
+    source_actions: feature.source_actions ?? [],
+  })),
 });
 
 // A stored snapshot is authoritative. Never silently replace an unreadable
@@ -50,7 +61,7 @@ export const readFeatureConfigSnapshot = (
   if (
     typeof value !== 'object' ||
     Array.isArray(value) ||
-    value.version !== 1 ||
+    (value.version !== 1 && value.version !== 2) ||
     value.item_code !== itemCode ||
     !Array.isArray(value.features)
   ) {
@@ -77,6 +88,47 @@ export const readFeatureConfigSnapshot = (
         'Invalid production order feature snapshot entry',
       );
     }
+    let sourceActions: FeatureSourceAction[] | undefined;
+    if (value.version === 2) {
+      if (!Array.isArray(entry.source_actions)) {
+        throw new InternalServerErrorException(
+          'Invalid section action snapshot',
+        );
+      }
+      sourceActions = entry.source_actions.map((action) => {
+        if (
+          !action ||
+          typeof action !== 'object' ||
+          Array.isArray(action) ||
+          typeof action.id !== 'number' ||
+          !Number.isSafeInteger(action.id) ||
+          action.id <= 0 ||
+          typeof action.key !== 'string' ||
+          typeof action.label !== 'string' ||
+          typeof action.order !== 'number' ||
+          !Number.isSafeInteger(action.order)
+        ) {
+          throw new InternalServerErrorException(
+            'Invalid section action snapshot entry',
+          );
+        }
+        return {
+          id: action.id,
+          key: action.key,
+          label: action.label,
+          order: action.order,
+        };
+      });
+      if (
+        new Set(sourceActions.map((action) => action.id)).size !==
+          sourceActions.length ||
+        (entry.kind !== 'section' && sourceActions.length > 0)
+      ) {
+        throw new InternalServerErrorException(
+          'Invalid section action snapshot links',
+        );
+      }
+    }
     return {
       feature_id: entry.feature_id,
       key: entry.key,
@@ -86,13 +138,14 @@ export const readFeatureConfigSnapshot = (
       order: entry.order,
       enabled: entry.enabled,
       required: entry.required,
+      ...(sourceActions === undefined ? {} : { source_actions: sourceActions }),
     };
   });
 
   return {
     ...buildItemFeatureConfig(itemCode, features),
     snapshot: {
-      version: 1,
+      version: value.version,
       source: typeof value.source === 'string' ? value.source : 'issued',
     },
   };

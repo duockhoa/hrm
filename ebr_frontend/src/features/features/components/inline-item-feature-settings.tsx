@@ -35,9 +35,15 @@ import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { FEATURE_GROUPS, getFeatureKindOrder } from "../constants";
-import type { Feature, ItemFeatureConfigEntry } from "../types";
+import type {
+  Feature,
+  FeatureReference,
+  ItemFeatureConfigEntry,
+} from "../types";
 
 type ItemFeatureRow = {
+  source_actions: FeatureReference[];
+  target_sections: FeatureReference[];
   feature_id: number;
   key: string;
   kind: string;
@@ -71,6 +77,8 @@ const buildRows = (
       const config = configByFeatureId.get(feature.id);
 
       return {
+        source_actions: feature.source_actions ?? [],
+        target_sections: feature.target_sections ?? [],
         feature_id: feature.id,
         key: feature.key,
         kind: feature.kind,
@@ -144,6 +152,7 @@ const buildGroups = (rows: ItemFeatureRow[]): ItemFeatureGroup[] => {
 
 type FeatureSettingsGroupProps = {
   group: ItemFeatureGroup;
+  rows: ItemFeatureRow[];
   getDraftRow: (row: ItemFeatureRow) => ItemFeatureRow;
   savingFeatureId: number | null;
   disabled?: boolean;
@@ -154,6 +163,7 @@ type FeatureSettingsGroupProps = {
 };
 
 function FeatureSettingsGroup({
+  rows,
   group,
   getDraftRow,
   savingFeatureId,
@@ -190,6 +200,29 @@ function FeatureSettingsGroup({
               <TableRow key={row.feature_id}>
                 <TableCell>
                   <div className="font-medium">{row.label}</div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    {(row.kind === "section"
+                      ? row.source_actions
+                      : row.target_sections
+                    )
+                      .map((entry) => entry.label)
+                      .join(", ")}
+                  </div>
+                  {row.kind === "section" &&
+                    draftRow.enabled &&
+                    row.source_actions.length > 0 &&
+                    !row.source_actions.some((action) => {
+                      const actionRow = rows.find(
+                        (entry) => entry.feature_id === action.id,
+                      );
+                      return actionRow && getDraftRow(actionRow).enabled;
+                    }) && (
+                      <p className="mt-1 text-xs text-amber-700">
+                        Section đang bật nhưng tất cả action cung cấp dữ liệu
+                        đều tắt.
+                      </p>
+                    )}
+
                   <div className="mt-1 font-mono text-xs text-gray-500">
                     {row.key}
                   </div>
@@ -537,6 +570,7 @@ export default function InlineItemFeatureSettings({
         <div className="space-y-5">
           {groups.map((group) => (
             <FeatureSettingsGroup
+              rows={rows}
               key={group.name}
               group={group}
               getDraftRow={getDraftRow}

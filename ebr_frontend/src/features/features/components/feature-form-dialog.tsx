@@ -22,6 +22,7 @@ import { FEATURE_GROUPS, FEATURE_KINDS } from "../constants";
 import type { CreateFeaturePayload, Feature } from "../types";
 
 type FeatureFormState = {
+  action_ids: number[];
   key: string;
   kind: string;
   label: string;
@@ -30,6 +31,7 @@ type FeatureFormState = {
 };
 
 const emptyForm: FeatureFormState = {
+  action_ids: [],
   key: "",
   kind: "section",
   label: "",
@@ -38,6 +40,7 @@ const emptyForm: FeatureFormState = {
 };
 
 const createFormFromFeature = (feature: Feature): FeatureFormState => ({
+  action_ids: (feature.source_actions ?? []).map((action) => action.id),
   key: feature.key,
   kind: feature.kind,
   label: feature.label,
@@ -48,6 +51,7 @@ const createFormFromFeature = (feature: Feature): FeatureFormState => ({
 const normalizeFeatureForm = (
   form: FeatureFormState,
 ): CreateFeaturePayload => ({
+  action_ids: form.kind === "section" ? form.action_ids : [],
   key: form.key.trim(),
   kind: form.kind,
   label: form.label.trim(),
@@ -56,6 +60,7 @@ const normalizeFeatureForm = (
 });
 
 type FeatureFormDialogProps = {
+  features: Feature[];
   open: boolean;
   feature: Feature | null;
   isSubmitting: boolean;
@@ -64,6 +69,7 @@ type FeatureFormDialogProps = {
 };
 
 export default function FeatureFormDialog({
+  features,
   open,
   feature,
   isSubmitting,
@@ -73,6 +79,8 @@ export default function FeatureFormDialog({
   const [form, setForm] = useState<FeatureFormState>(
     feature ? createFormFromFeature(feature) : emptyForm,
   );
+  const [actionSearch, setActionSearch] = useState("");
+  const availableActions = features.filter((entry) => entry.kind === "action");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,7 +89,7 @@ export default function FeatureFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {feature ? "Cập nhật tính năng" : "Thêm tính năng"}
@@ -92,6 +100,105 @@ export default function FeatureFormDialog({
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
+          {form.kind === "section" && (
+            <fieldset className="space-y-2 rounded border p-3">
+              <legend className="px-1 text-sm font-medium">
+                Action cung cấp dữ liệu
+              </legend>
+              <Input
+                placeholder="Tìm action theo tên hoặc key"
+                value={actionSearch}
+                onChange={(event) => setActionSearch(event.target.value)}
+              />
+              <div className="max-h-44 space-y-2 overflow-y-auto">
+                {availableActions
+                  .filter((action) =>
+                    `${action.label} ${action.key}`
+                      .toLowerCase()
+                      .includes(actionSearch.trim().toLowerCase()),
+                  )
+                  .map((action) => (
+                    <label
+                      key={action.id}
+                      className="flex items-start gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.action_ids.includes(action.id)}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            action_ids: event.target.checked
+                              ? [...current.action_ids, action.id]
+                              : current.action_ids.filter(
+                                  (id) => id !== action.id,
+                                ),
+                          }))
+                        }
+                      />
+                      <span>
+                        {action.label}
+                        <span className="block text-xs text-gray-500">
+                          {action.key}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                {availableActions.length === 0 && (
+                  <p className="text-sm text-gray-500">
+                    Chưa có action trong danh mục.
+                  </p>
+                )}
+              </div>
+              {form.action_ids.length > 0 && (
+                <ol className="space-y-1 border-t pt-2 text-sm">
+                  {form.action_ids.map((id, index) => (
+                    <li key={id} className="flex items-center gap-2">
+                      <span className="flex-1">
+                        {index + 1}.{" "}
+                        {availableActions.find((action) => action.id === id)
+                          ?.label ?? `Action #${id}`}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={index === 0}
+                        aria-label={`Đưa action ${id} lên trước`}
+                        onClick={() =>
+                          setForm((current) => {
+                            const ids = [...current.action_ids];
+                            [ids[index - 1], ids[index]] = [
+                              ids[index],
+                              ids[index - 1],
+                            ];
+                            return { ...current, action_ids: ids };
+                          })
+                        }
+                      >
+                        Lên
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          setForm((current) => ({
+                            ...current,
+                            action_ids: current.action_ids.filter(
+                              (entry) => entry !== id,
+                            ),
+                          }))
+                        }
+                      >
+                        Gỡ
+                      </Button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </fieldset>
+          )}
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="feature-key">
               Key

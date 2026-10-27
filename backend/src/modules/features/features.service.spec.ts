@@ -55,8 +55,9 @@ describe('FeaturesService', () => {
       },
       $transaction: jest.fn(),
     };
-    prismaService.$transaction.mockImplementation((callback) =>
-      callback(prismaService),
+    prismaService.$transaction.mockImplementation(
+      (callback: (client: typeof prismaService) => unknown) =>
+        callback(prismaService),
     );
 
     const module: TestingModule = await Test.createTestingModule({
@@ -81,10 +82,16 @@ describe('FeaturesService', () => {
     prismaService.features.findMany.mockResolvedValue(features);
 
     await expect(service.findAll()).resolves.toEqual([
-      { ...features[0], supports_required: true },
+      {
+        ...features[0],
+        supports_required: true,
+        source_actions: [],
+        target_sections: [],
+      },
     ]);
     expect(prismaService.features.findMany).toHaveBeenCalledWith({
       orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
+      include: expect.any(Object),
     });
   });
 
@@ -107,8 +114,13 @@ describe('FeaturesService', () => {
         label: '  Nhiệt độ/độ ẩm  ',
         default_order: '10',
       }),
-    ).resolves.toBe(createdFeature);
+    ).resolves.toEqual({
+      ...createdFeature,
+      source_actions: [],
+      target_sections: [],
+    });
     expect(prismaService.features.create).toHaveBeenCalledWith({
+      include: expect.any(Object),
       data: {
         key: 'environment_checks',
         kind: 'section',
@@ -180,6 +192,7 @@ describe('FeaturesService', () => {
           order: 10,
           enabled: true,
           required: false,
+          source_actions: [],
         },
       ],
       sections: [
@@ -192,6 +205,7 @@ describe('FeaturesService', () => {
           order: 20,
           enabled: true,
           required: false,
+          source_actions: [],
         },
       ],
       features: [
@@ -204,6 +218,7 @@ describe('FeaturesService', () => {
           order: 10,
           enabled: true,
           required: false,
+          source_actions: [],
         },
         {
           feature_id: 2,
@@ -214,6 +229,7 @@ describe('FeaturesService', () => {
           order: 20,
           enabled: true,
           required: false,
+          source_actions: [],
         },
       ],
     });
@@ -322,6 +338,7 @@ describe('FeaturesService', () => {
           order: 10,
           enabled: true,
           required: false,
+          source_actions: [],
         },
       ],
       sections: [
@@ -334,6 +351,7 @@ describe('FeaturesService', () => {
           order: 30,
           enabled: false,
           required: false,
+          source_actions: [],
         },
       ],
       features: expect.any(Array),
@@ -516,5 +534,137 @@ describe('FeaturesService', () => {
         ]),
       }),
     );
+  });
+  describe('section source actions', () => {
+    const section = {
+      id: 10,
+      key: 'checks',
+      kind: 'section',
+      label: 'Checks',
+      itemFeatures: [],
+      sourceActions: [],
+      targetSections: [],
+    };
+    const actions = [
+      { id: 2, key: 'create_check', kind: 'action', label: 'Create check' },
+      { id: 3, key: 'import_check', kind: 'action', label: 'Import check' },
+    ];
+
+    it('creates ordered links atomically and returns source action references', async () => {
+      prismaService.features.findUnique.mockResolvedValue(null);
+      prismaService.features.findMany.mockResolvedValue(actions);
+      prismaService.features.create.mockResolvedValue({
+        ...section,
+        sourceActions: [
+          { action: actions[1], order: 0 },
+          { action: actions[0], order: 1 },
+        ],
+      });
+      const result = await service.create({
+        key: 'checks',
+        label: 'Checks',
+        kind: 'section',
+        action_ids: [3, 2],
+      });
+      expect(result.source_actions.map((action) => action.id)).toEqual([3, 2]);
+      expect(prismaService.features.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            sourceActions: {
+              create: [
+                { action_id: 3, order: 0 },
+                { action_id: 2, order: 1 },
+              ],
+            },
+          }),
+        }),
+      );
+    });
+
+    it.each([null, '2', [0], [-1], [1.5], ['2'], [2, 2]])(
+      'rejects invalid action_ids %p',
+      async (action_ids) => {
+        prismaService.features.findUnique.mockResolvedValue(null);
+        await expect(
+          service.create({
+            key: 'checks',
+            kind: 'section',
+            label: 'Checks',
+            action_ids: action_ids as number[],
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        expect(prismaService.features.create).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rejects missing or non-action targets', async () => {
+      prismaService.features.findUnique.mockResolvedValue(null);
+      prismaService.features.findMany.mockResolvedValue([]);
+      await expect(
+        service.create({
+          key: 'checks',
+          kind: 'section',
+          label: 'Checks',
+          action_ids: [2],
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects source actions on an action feature', async () => {
+      prismaService.features.findUnique.mockResolvedValue(null);
+      await expect(
+        service.create({
+          key: 'create_check',
+          kind: 'action',
+          label: 'Create',
+          action_ids: [2],
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('replaces links with an empty list without requiring other changes', async () => {
+      prismaService.features.findUnique.mockResolvedValue(section);
+      prismaService.features.update.mockResolvedValue(section);
+      await service.update(10, { action_ids: [] });
+      expect(prismaService.features.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            sourceActions: { deleteMany: {}, create: [] },
+          },
+        }),
+      );
+    });
+
+    it('preserves links when action_ids is omitted', async () => {
+      prismaService.features.findUnique.mockResolvedValue(section);
+      prismaService.features.update.mockResolvedValue(section);
+      await service.update(10, { label: 'Updated' });
+      expect(prismaService.features.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { label: 'Updated' } }),
+      );
+    });
+
+    it('blocks changing the kind of an action referenced by a section', async () => {
+      prismaService.features.findUnique.mockResolvedValue({
+        ...actions[0],
+        itemFeatures: [],
+        sourceActions: [],
+        targetSections: [{ section }],
+      });
+      await expect(
+        service.update(2, { kind: 'section' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prismaService.features.update).not.toHaveBeenCalled();
+    });
+
+    it('blocks changing a linked section kind unless links are removed', async () => {
+      prismaService.features.findUnique.mockResolvedValue({
+        ...section,
+        sourceActions: [{ action: actions[0], order: 0 }],
+      });
+      await expect(
+        service.update(10, { kind: 'action' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
   });
 });

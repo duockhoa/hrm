@@ -662,8 +662,22 @@ model Features {
   created_at    DateTime       @default(now())
   updated_at    DateTime       @default(now()) @updatedAt
   itemFeatures  ItemFeatures[]
+  sourceActions FeatureSectionActions[] @relation("SectionSourceActions")
+  targetSections FeatureSectionActions[] @relation("ActionTargetSections")
 
   @@map("features")
+}
+
+model FeatureSectionActions {
+  section_id Int
+  action_id  Int
+  order      Int @default(0)
+  section    Features @relation("SectionSourceActions", fields: [section_id], references: [id], onDelete: Cascade)
+  action     Features @relation("ActionTargetSections", fields: [action_id], references: [id], onDelete: Cascade)
+
+  @@id([section_id, action_id])
+  @@index([action_id])
+  @@map("feature_section_actions")
 }
 
 model Applications {
