@@ -28,7 +28,6 @@ const FRONTEND_ALWAYS_ENABLED_KEYS: Record<
 > = {
   action: new Set([
     "export_warehouse_release",
-    "export_weighing_ticket",
     "export_production_order",
     "export_date_print",
     "create_semi_finished_product_label",
