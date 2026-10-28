@@ -180,7 +180,9 @@ export default function ItemProductOrder({
         {!productOrder ? (
           <Skeleton className="mb-2 h-4 w-40" />
         ) : (
-          <p className="truncate text-sm font-bold text-gray-900">{title}</p>
+          <p className="line-clamp-2 break-words text-sm font-bold text-gray-900">
+            {title}
+          </p>
         )}
 
         {!productOrder ? (
