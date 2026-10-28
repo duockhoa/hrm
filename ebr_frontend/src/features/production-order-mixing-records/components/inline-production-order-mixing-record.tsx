@@ -68,6 +68,35 @@ const formatBatchSize = (value: number | string | null) => {
     : String(value);
 };
 
+function MixingRecordStatus({ record }: { record: ProductionOrderMixingRecord }) {
+  const status = record.ipc_staff_approved_at
+    ? {
+        label: "Hoàn thành",
+        description: "Nhân viên IPC đã ký duyệt",
+        className: "bg-green-50 text-green-700 ring-green-200",
+      }
+    : record.qa_staff_approved_at
+      ? {
+          label: "Phát hành",
+          description: "Nhân viên ĐBCL đã ký duyệt",
+          className: "bg-blue-50 text-blue-700 ring-blue-200",
+        }
+      : {
+          label: "Nháp",
+          description: "Chưa ký duyệt",
+          className: "bg-slate-100 text-slate-600 ring-slate-200",
+        };
+
+  return (
+    <span
+      title={status.description}
+      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${status.className}`}
+    >
+      {status.label}
+    </span>
+  );
+}
+
 export default function InlineProductionOrderMixingRecord({
   productionOrder,
   embedded = false,
@@ -300,6 +329,7 @@ export default function InlineProductionOrderMixingRecord({
                     </div>
                   </div>
                   <div className="shrink-0 text-right text-sm">
+                    <MixingRecordStatus record={record} />
                     <p className="font-medium text-slate-800">
                       {formatBatchSize(getRecordBatchSize(record))}{" "}
                       {getRecordUnit(record)}
