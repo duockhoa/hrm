@@ -589,6 +589,15 @@ export default function InlineItemFeatureSettings({
           <h2 className="text-lg font-semibold text-blue-900">
             Tính năng đã chọn
           </h2>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoading || isCopying || savingFeatureId !== null}
+            onClick={() => setIsCopyDialogOpen(true)}
+          >
+            <Copy className="size-4" />
+            Sao chép từ mã hàng
+          </Button>
         </div>
 
         <p className="mb-4 text-sm text-gray-600">
