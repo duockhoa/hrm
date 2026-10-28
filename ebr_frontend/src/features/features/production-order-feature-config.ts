@@ -27,11 +27,7 @@ const FRONTEND_ALWAYS_ENABLED_KEYS: Record<
   Set<string>
 > = {
   action: new Set([
-    "export_warehouse_release",
-    "export_production_order",
     "export_date_print",
-    "create_semi_finished_product_label",
-    "create_dispensed_material_label",
     "create_equipment_monitoring_record",
     "create_sampling_request",
     "create_sampling_record",

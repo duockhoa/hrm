@@ -22,7 +22,6 @@ import FormExportWarehouseRelease from "@/components/form-export-warehouse-relea
 import FormExportWeighingTicket from "@/components/form-export-weighing-ticket/form-export-weighing-ticket";
 import DispensedMaterialLabelForm from "@/components/form-dispensed-material-label/form-dispensed-material-label";
 import SemiFinishedProductLabelForm from "@/components/form-semi-finished-product-label/form-semi-finished-product-label";
-import { isProductionOrderFeatureEnabled } from "@/features/features";
 import { API_ROUTES } from "@/lib/api-routes";
 import productionOrdersService from "@/services/product-orders.service";
 import userService from "@/services/user.service";
@@ -69,35 +68,23 @@ export default function ProductionOrderDownloadMenu({
     productionOrder?.id ??
     productionOrder?.production_order_id ??
     productionOrder?.DocumentAbsoluteEntry;
-  const isActionEnabled = (key: string, permissionKey: string) =>
+  const hasPermission = (permissionKey: string) =>
     Boolean(
       productionOrder &&
-        isProductionOrderFeatureEnabled(
-          productionOrder.featureConfig,
-          "action",
-          key,
-        ) &&
         !permissionsError &&
         permissions?.permissionKeys.includes(permissionKey),
     );
-  const canExportOrder = isActionEnabled(
-    "export_production_order",
-    "production-orders.export",
-  );
-  const canExportWarehouseRelease = isActionEnabled(
-    "export_warehouse_release",
+  const canExportOrder = hasPermission("production-orders.export");
+  const canExportWarehouseRelease = hasPermission(
     "production-orders.export-warehouse-release",
   );
-  const canExportWeighingTicket = isActionEnabled(
-    "export_weighing_ticket",
+  const canExportWeighingTicket = hasPermission(
     "production-orders.export-weighing-ticket",
   );
-  const canCreateDispensedMaterialLabel = isActionEnabled(
-    "create_dispensed_material_label",
+  const canCreateDispensedMaterialLabel = hasPermission(
     "production-orders.dispensed-material-labels.create",
   );
-  const canCreateSemiFinishedProductLabel = isActionEnabled(
-    "create_semi_finished_product_label",
+  const canCreateSemiFinishedProductLabel = hasPermission(
     "production-orders.semi-finished-product-labels.create",
   );
 
