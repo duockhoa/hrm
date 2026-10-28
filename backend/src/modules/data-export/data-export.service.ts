@@ -163,6 +163,13 @@ const SEMI_FINISHED_PRODUCT_SUMMARY_EXPORT_INCLUDE = {
   productionOrder: {
     select: {
       ...POST_SECONDARY_PACKAGING_PRODUCTION_ORDER_SELECT,
+      vialInspectionChecks: {
+        select: {
+          fiber_vial_count: true,
+          particulate_count: true,
+          damaged_count: true,
+        },
+      },
       registrationNumber: {
         select: {
           id: true,
@@ -799,6 +806,7 @@ export class DataExportService {
           hygieneChecks,
           deviations,
           samplingRecords,
+          vialInspectionChecks,
           ...productionOrderData
         } = productionOrder;
 
@@ -806,6 +814,18 @@ export class DataExportService {
           ...summary,
           productionOrder: {
             ...productionOrderData,
+            total_fiber_vial_count: vialInspectionChecks.reduce(
+              (total, { fiber_vial_count }) => total + fiber_vial_count,
+              0,
+            ),
+            total_particulate_count: vialInspectionChecks.reduce(
+              (total, { particulate_count }) => total + particulate_count,
+              0,
+            ),
+            total_damaged_count: vialInspectionChecks.reduce(
+              (total, { damaged_count }) => total + damaged_count,
+              0,
+            ),
             first_hygiene_check_at: hygieneChecks[0]?.created_at ?? null,
             deviation_contents: deviations
               .map(({ deviation_content }) => deviation_content.trim())

@@ -138,22 +138,24 @@ function xuatTongKetBanThanhPham() {
       po.change_content || "", // AD: Nội dung thay đổi
       po.total_sampling_quantity ?? "", // AE: Tổng số lượng mẫu lấy
       formatDateTime(po.first_hygiene_check_at), // AF: Thời điểm kiểm tra vệ sinh
-      "", // AG: Để trống
+      po.total_fiber_vial_count ?? "", // AG: Tổng số sợi
+      po.total_particulate_count ?? "", // AH: Tổng số lọ vẩn
+      po.total_damaged_count ?? "", // AI: Tổng số lọ hỏng
     ];
   });
 
-  // Giữ header dòng 1; chỉ xoá và ghi dữ liệu từ dòng 2, cột A:AG.
+  // Giữ header dòng 1; chỉ xoá và ghi dữ liệu từ dòng 2, cột A:AI.
   const oldRowCount = sheet.getLastRow() - 1;
 
   if (oldRowCount > 0) {
-    sheet.getRange(2, 1, oldRowCount, 33).clearContent();
+    sheet.getRange(2, 1, oldRowCount, 35).clearContent();
   }
 
   if (output.length > 0) {
     // Cột E giữ định dạng text để không mất số 0 đầu số lô.
     sheet.getRange(2, 5, output.length, 1).setNumberFormat("@");
 
-    // Ghi dữ liệu A:AG.
-    sheet.getRange(2, 1, output.length, 33).setValues(output);
+    // Ghi dữ liệu A:AI.
+    sheet.getRange(2, 1, output.length, 35).setValues(output);
   }
 }

@@ -819,6 +819,10 @@ describe('DataExportService', () => {
               { deviation_content: 'Sai lệch thứ hai' },
             ],
             samplingRecords: [{ quantity: 2.5 }, { quantity: 1.5 }],
+            vialInspectionChecks: [
+              { fiber_vial_count: 2, particulate_count: 3, damaged_count: 4 },
+              { fiber_vial_count: 5, particulate_count: 7, damaged_count: 9 },
+            ],
             samplingRequests: [
               {
                 id: 12,
@@ -874,6 +878,9 @@ describe('DataExportService', () => {
             first_hygiene_check_at: new Date('2026-01-02T08:30:00.000Z'),
             deviation_contents: 'Sai lệch thứ nhất, Sai lệch thứ hai',
             total_sampling_quantity: 4,
+            total_fiber_vial_count: 7,
+            total_particulate_count: 10,
+            total_damaged_count: 13,
             samplingRequests: [
               expect.objectContaining({
                 status: 'sent',
@@ -913,6 +920,34 @@ describe('DataExportService', () => {
         }),
       }),
     );
+  });
+
+  it('exports zero vial inspection totals when no inspections exist', async () => {
+    prisma.$transaction.mockResolvedValue([
+      1,
+      [
+        {
+          id: 16,
+          productionOrder: {
+            hygieneChecks: [],
+            deviations: [],
+            samplingRecords: [],
+            vialInspectionChecks: [],
+          },
+        },
+      ],
+    ]);
+
+    const result = await service.exportSemiFinishedProductSummaries({
+      page: 1,
+      limit: 500,
+    });
+
+    expect(result.data[0].productionOrder).toMatchObject({
+      total_fiber_vial_count: 0,
+      total_particulate_count: 0,
+      total_damaged_count: 0,
+    });
   });
 
   it('merges net and gross weight checks into one paginated dataset', async () => {
