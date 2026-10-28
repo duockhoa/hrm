@@ -83,7 +83,6 @@ export default function MixingRecordNoteInput({
       <MixingRecordEntryAttribution
         person={parameter.noteRecordedBy}
         at={parameter.note_recorded_at}
-        label="Người ghi chú"
       />
     </div>
   );

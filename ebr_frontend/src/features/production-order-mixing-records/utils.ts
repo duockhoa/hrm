@@ -1,4 +1,5 @@
 import type { MixingActivityTemplateCreator } from "@/features/mixing-activity-templates/types";
+import { format } from "date-fns";
 import type {
   ProductionOrderMixingRecord,
   ProductionOrderMixingRecordParameter,
@@ -63,7 +64,7 @@ export const getPersonLabel = (
 export const formatRecordDateTime = (value?: string | null) => {
   if (!value) return "";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("vi-VN");
+  return Number.isNaN(date.getTime()) ? value : format(date, "HH:mm dd/MM/yy");
 };
 
 export const getRecordTemplate = (record: ProductionOrderMixingRecord) =>

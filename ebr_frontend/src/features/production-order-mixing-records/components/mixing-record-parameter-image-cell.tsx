@@ -8,7 +8,6 @@ import { Camera, Eye, Loader2, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ProductionOrderMixingRecordParameter } from "../types";
-import MixingRecordEntryAttribution from "./mixing-record-entry-attribution";
 
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = [
@@ -148,12 +147,6 @@ export default function MixingRecordParameterImageCell({
           </Button>
         )}
       </div>
-
-      <MixingRecordEntryAttribution
-        person={parameter.imageUploadedBy}
-        at={parameter.image_uploaded_at}
-        label="Người tải ảnh"
-      />
 
       {viewerSrc && isViewerOpen ? (
         <ImagePreviewDialog
