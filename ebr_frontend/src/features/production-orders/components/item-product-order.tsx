@@ -210,9 +210,12 @@ export default function ItemProductOrder({
         ) : null}
 
         {!productOrder ? (
-          <Skeleton className="mt-2 h-5 w-24" />
+          <Skeleton className="mt-2 ml-auto h-5 w-16 rounded-full" />
         ) : (
           <span
+            role="img"
+            aria-label={pyclmSent ? "Đã gửi PYCLM" : "Chưa gửi PYCLM"}
+            title={pyclmSent ? "Đã gửi PYCLM" : "Chưa gửi PYCLM"}
             className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${
               pyclmSent
                 ? "bg-green-50 text-green-700 ring-green-200"
@@ -220,11 +223,12 @@ export default function ItemProductOrder({
             }`}
           >
             <span
+              aria-hidden="true"
               className={`size-2 rounded-full ${
                 pyclmSent ? "bg-green-600" : "bg-red-600"
               }`}
             />
-            {pyclmSent ? "Đã gửi PYCLM" : "Chưa gửi PYCLM"}
+            PYCLM
           </span>
         )}
       </div>
