@@ -391,7 +391,11 @@ export default function WeighingRecordMaterials({
                       />
                     </td>
                     <td className="border border-black px-1 py-1.5 text-right tabular-nums">
-                      <WeighingRecordWeightTotal recordId={recordId} line={line} />
+                      <WeighingRecordWeightTotal
+                        recordId={recordId}
+                        line={line}
+                        locked={weighingLocked}
+                      />
                     </td>
                     <td className="break-words border border-black px-1 py-1.5 text-center">
                       {line.unit}

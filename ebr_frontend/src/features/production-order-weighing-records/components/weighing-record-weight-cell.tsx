@@ -26,9 +26,11 @@ import WeighingRecordDetailsDialog from "./weighing-record-details-dialog";
 export function WeighingRecordWeightTotal({
   recordId,
   line,
+  locked,
 }: {
   recordId: number;
   line: ProductionOrderWeighingRecordLine;
+  locked: boolean;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const details = line.details ?? [];
@@ -59,6 +61,7 @@ export function WeighingRecordWeightTotal({
       <WeighingRecordDetailsDialog
         recordId={recordId}
         line={line}
+        locked={locked}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
       />

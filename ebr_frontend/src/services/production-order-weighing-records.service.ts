@@ -34,7 +34,11 @@ const create = async (
 const productionOrderWeighingRecordsService = {
   fetchAllByProductionOrderId,
   create,
-  async updateDescription(recordId: number, description: string | null, note?: string | null) {
+  async updateDescription(
+    recordId: number,
+    description: string | null,
+    note?: string | null,
+  ) {
     const response = await axiosClient.patch<ProductionOrderWeighingRecord>(
       API_ROUTES.productionOrders.weighingRecordDetail(recordId),
       { description, ...(note !== undefined ? { note } : {}) },
@@ -150,6 +154,19 @@ const productionOrderWeighingRecordsService = {
       await axiosClient.post<ProductionOrderWeighingRecordDetail>(
         `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/details`,
         { net_weight: netWeight, note: options?.note ?? null },
+      );
+    return response.data;
+  },
+  async updateWeighingDetail(
+    recordId: number,
+    lineId: number,
+    detailId: number,
+    payload: { net_weight?: string; note?: string | null },
+  ) {
+    const response =
+      await axiosClient.patch<ProductionOrderWeighingRecordDetail>(
+        `${API_ROUTES.productionOrders.weighingRecordDetail(recordId)}/lines/${lineId}/details/${detailId}`,
+        payload,
       );
     return response.data;
   },
