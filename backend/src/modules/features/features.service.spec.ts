@@ -87,7 +87,7 @@ describe('FeaturesService', () => {
     await expect(service.findAll()).resolves.toEqual([
       {
         ...features[0],
-        supports_required: true,
+        supports_required: false,
         source_actions: [],
         target_sections: [],
       },
@@ -183,6 +183,24 @@ describe('FeaturesService', () => {
       },
     ]);
 
+    const action = {
+      id: 1,
+      key: 'create_environment_check',
+      label: 'Nhập nhiệt độ/độ ẩm',
+    };
+    const source_actions = [{ ...action, order: 0 }];
+    prismaService.features.findMany.mockResolvedValue([
+      { ...action, kind: 'action', group_name: null, default_order: 10 },
+      {
+        id: 2,
+        key: 'environment_checks',
+        label: 'Nhiệt độ/độ ẩm',
+        kind: 'section',
+        group_name: null,
+        default_order: 10,
+        sourceActions: [{ action, order: 0 }],
+      },
+    ]);
     await expect(service.findConfigByItemCode('TP00001')).resolves.toEqual({
       item_code: 'TP00001',
       actions: [
@@ -208,7 +226,7 @@ describe('FeaturesService', () => {
           order: 20,
           enabled: true,
           required: false,
-          source_actions: [],
+          source_actions,
         },
       ],
       features: [
@@ -232,7 +250,7 @@ describe('FeaturesService', () => {
           order: 20,
           enabled: true,
           required: false,
-          source_actions: [],
+          source_actions,
         },
       ],
     });
@@ -240,10 +258,52 @@ describe('FeaturesService', () => {
       expect.objectContaining({
         where: {
           item_code: 'TP00001',
-          enabled: true,
         },
       }),
     );
+  });
+
+  it('includes sections without item settings when their linked action is enabled', async () => {
+    const action = {
+      id: 1,
+      key: 'create_environment_check',
+      kind: 'action',
+      label: 'Nhập nhiệt độ/độ ẩm',
+      group_name: null,
+      default_order: 10,
+    };
+    const section = {
+      id: 2,
+      key: 'environment_checks',
+      kind: 'section',
+      label: 'Nhiệt độ/độ ẩm',
+      group_name: null,
+      default_order: 20,
+      sourceActions: [{ action, order: 0 }],
+    };
+    prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
+    prismaService.features.findMany.mockResolvedValue([action, section]);
+    prismaService.itemFeatures.findMany.mockResolvedValue([
+      { feature_id: 1, enabled: true, required: false, order: null },
+    ]);
+    const config = await service.findConfigByItemCode('TP00001');
+    expect(config.sections).toEqual([
+      expect.objectContaining({
+        key: 'environment_checks',
+        enabled: true,
+        required: false,
+      }),
+    ]);
+    prismaService.itemFeatures.findMany.mockResolvedValue([
+      { feature_id: 1, enabled: false, required: false, order: null },
+    ]);
+    expect((await service.findConfigByItemCode('TP00001')).sections).toEqual(
+      [],
+    );
+    expect(
+      (await service.findConfigByItemCode('TP00001', 'true')).sections[0]
+        .enabled,
+    ).toBe(false);
   });
 
   it('upserts an item feature by feature key', async () => {
@@ -424,14 +484,14 @@ describe('FeaturesService', () => {
     expect(prismaService.itemFeatures.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({ enabled: true, required: false }),
-        update: { enabled: true },
+        update: { enabled: true, required: false },
       }),
     );
   });
 
   it.each([
     ['action', 'create_environment_check'],
-    ['section', 'unregistered_section'],
+    ['view', 'unregistered_view'],
   ])('rejects required on unsupported %s %s', async (kind, key) => {
     prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
     prismaService.features.findUnique.mockResolvedValue({ id: 2, key, kind });
@@ -445,7 +505,7 @@ describe('FeaturesService', () => {
     expect(prismaService.itemFeatures.upsert).not.toHaveBeenCalled();
   });
 
-  it('requires a disabled section to be enabled before setting required', async () => {
+  it('stores section preferences independently of its old enabled flag', async () => {
     prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
     prismaService.features.findUnique.mockResolvedValue({
       id: 2,
@@ -456,12 +516,13 @@ describe('FeaturesService', () => {
       enabled: false,
       required: false,
     });
-    await expect(
-      service.upsertItemFeature('TP00001', {
-        feature_id: 2,
-        required: true,
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    await service.upsertItemFeature('TP00001', {
+      feature_id: 2,
+      required: true,
+    });
+    expect(prismaService.itemFeatures.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { enabled: true, required: false } }),
+    );
   });
 
   it('clears required when the section is disabled', async () => {
@@ -483,8 +544,9 @@ describe('FeaturesService', () => {
     prismaService.items.findFirst.mockResolvedValue({ item_code: 'TP00001' });
     prismaService.features.findUnique.mockResolvedValue({
       id: 2,
-      key: 'environment_checks',
-      kind: 'section',
+      key: 'create_environment_check',
+      kind: 'action',
+      targetSections: [{ section: { key: 'environment_checks' } }],
     });
     prismaService.itemFeatures.findUnique.mockResolvedValue({
       enabled: true,
@@ -508,6 +570,16 @@ describe('FeaturesService', () => {
         label: 'Nhiệt độ/độ ẩm',
         group_name: null,
         default_order: 10,
+        sourceActions: [
+          {
+            action: {
+              id: 3,
+              key: 'create_environment_check',
+              label: 'Nhập nhiệt độ/độ ẩm',
+            },
+            order: 0,
+          },
+        ],
       },
       {
         id: 2,
@@ -517,9 +589,19 @@ describe('FeaturesService', () => {
         group_name: null,
         default_order: 20,
       },
+      {
+        id: 3,
+        key: 'create_environment_check',
+        label: 'Nhập nhiệt độ/độ ẩm',
+        kind: 'action',
+        group_name: null,
+        default_order: 0,
+        targetSections: [{ section: { key: 'environment_checks' } }],
+      },
     ]);
     prismaService.itemFeatures.findMany.mockResolvedValue([
       { feature_id: 1, enabled: true, required: true },
+      { feature_id: 3, enabled: true, required: true },
     ]);
     const config = await service.copyItemFeatureConfig('TP00002', {
       source_item_code: 'TP00001',

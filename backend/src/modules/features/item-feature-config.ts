@@ -23,6 +23,38 @@ export type ItemFeatureConfigEntry = {
   source_actions?: FeatureSourceAction[];
 };
 
+// Only current item settings use this rule. Historical snapshots retain the
+// enabled/required flags captured when the batch configuration was frozen.
+export const deriveSectionActivation = (
+  features: ItemFeatureConfigEntry[],
+): ItemFeatureConfigEntry[] => {
+  const enabledActions = new Set(
+    features
+      .filter((feature) => feature.kind === 'action' && feature.enabled)
+      .map((feature) => feature.key),
+  );
+  const requiredActions = new Set(
+    features
+      .filter(
+        (feature) =>
+          feature.kind === 'action' && feature.enabled && feature.required,
+      )
+      .map((feature) => feature.key),
+  );
+  return features.map((feature) => {
+    if (feature.kind !== 'section') return feature;
+    const enabled =
+      feature.key === 'production_order_lines' ||
+      (feature.source_actions ?? []).some((action) =>
+        enabledActions.has(action.key),
+      );
+    const required = (feature.source_actions ?? []).some((action) =>
+      requiredActions.has(action.key),
+    );
+    return { ...feature, enabled, required: enabled && required };
+  });
+};
+
 export const buildItemFeatureConfig = (
   item_code: string,
   features: ItemFeatureConfigEntry[],
@@ -34,6 +66,58 @@ export const buildItemFeatureConfig = (
 });
 
 export type ItemFeatureConfig = ReturnType<typeof buildItemFeatureConfig>;
+
+export const buildCurrentItemFeatureConfig = (
+  itemCode: string,
+  catalog: {
+    id: number;
+    key: string;
+    kind: string;
+    label: string;
+    group_name: string | null;
+    default_order: number;
+    sourceActions?: {
+      action: { id: number; key: string; label: string };
+      order: number;
+    }[];
+  }[],
+  settings: {
+    feature_id: number;
+    order: number | null;
+    enabled: boolean;
+    required: boolean;
+  }[],
+  includeDisabled = false,
+) => {
+  const byId = new Map(settings.map((entry) => [entry.feature_id, entry]));
+  const features = deriveSectionActivation(
+    catalog.map((feature) => {
+      const setting = byId.get(feature.id);
+      return {
+        feature_id: feature.id,
+        key: feature.key,
+        kind: feature.kind,
+        label: feature.label,
+        group_name: feature.group_name,
+        order: setting?.order ?? feature.default_order,
+        enabled: setting?.enabled ?? false,
+        required: setting?.required ?? false,
+        source_actions: (feature.sourceActions ?? []).map(
+          ({ action, order }) => ({
+            id: action.id,
+            key: action.key,
+            label: action.label,
+            order,
+          }),
+        ),
+      };
+    }),
+  ).sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
+  return buildItemFeatureConfig(
+    itemCode,
+    features.filter((feature) => includeDisabled || feature.enabled),
+  );
+};
 
 export const createFeatureConfigSnapshot = (
   config: ItemFeatureConfig,

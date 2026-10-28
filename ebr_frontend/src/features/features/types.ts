@@ -54,7 +54,7 @@ export type ItemFeatureConfig = {
 export type UpsertItemFeaturePayload = {
   feature_id?: number;
   feature_key?: string;
-  enabled: boolean;
+  enabled?: boolean;
   required?: boolean;
   order: number;
 };

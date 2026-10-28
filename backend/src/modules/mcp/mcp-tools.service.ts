@@ -33,7 +33,7 @@ import {
   decodeOrderSearchMetadata,
   type OrderSearchInput,
 } from './mcp-order-search';
-import { buildItemFeatureConfig } from '../features/item-feature-config';
+import { buildCurrentItemFeatureConfig } from '../features/item-feature-config';
 import { MIXING_ACTIVITY_TEMPLATE_PERMISSIONS } from '../items/mixing-activity-templates.permissions';
 import { DATE_PRINT_TEMPLATE_PERMISSIONS } from '../items/date-print-templates.permissions';
 import {
@@ -514,20 +514,19 @@ export class McpToolsService {
     } = item;
     const { deleted_at: _deletedAt, ...specification } =
       productionSpecification ?? {};
-    const config = buildItemFeatureConfig(
+    const catalog = await this.prisma.features.findMany({
+      include: {
+        sourceActions: {
+          include: { action: { select: { id: true, key: true, label: true } } },
+          orderBy: { order: 'asc' },
+        },
+      },
+    });
+    const config = buildCurrentItemFeatureConfig(
       itemCode,
-      (itemFeatures ?? [])
-        .map((row) => ({
-          feature_id: row.feature_id,
-          key: row.feature.key,
-          kind: row.feature.kind,
-          label: row.feature.label,
-          group_name: row.feature.group_name,
-          order: row.order ?? row.feature.default_order,
-          enabled: row.enabled,
-          required: row.required,
-        }))
-        .sort((a, b) => a.order - b.order || a.key.localeCompare(b.key)),
+      catalog,
+      itemFeatures ?? [],
+      true,
     );
     return {
       data: {

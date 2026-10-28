@@ -48,6 +48,7 @@ type ItemFeatureRow = {
   required: boolean;
   supports_required: boolean;
   linked: boolean;
+  source_actions: string[];
 };
 
 const getErrorMessage = (error: unknown, fallback: string) => {
@@ -81,6 +82,9 @@ const buildRows = (
         required: config?.required ?? false,
         supports_required: feature.supports_required ?? false,
         linked: Boolean(config),
+        source_actions: (feature.source_actions ?? []).map(
+          (action) => action.label,
+        ),
       };
     })
     .sort((first, second) => {
@@ -200,27 +204,40 @@ function FeatureSettingsTable({
                 </Badge>
               </TableCell>
               <TableCell className="text-center">
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border-gray-300 accent-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  checked={draftRow.enabled}
-                  disabled={isDisabled}
-                  onChange={(event) =>
-                    onToggleEnabled(row, event.target.checked)
-                  }
-                  aria-label={`Bật tắt ${row.label}`}
-                />
+                {row.kind === "section" ? (
+                  <Badge
+                    variant={draftRow.enabled ? "secondary" : "outline"}
+                    title={
+                      row.key === "production_order_lines"
+                        ? "Luôn hiển thị"
+                        : row.source_actions.length
+                          ? `Theo action: ${row.source_actions.join(", ")}`
+                          : "Chưa liên kết action"
+                    }
+                  >
+                    {draftRow.enabled ? "Đang bật" : "Đang tắt"}
+                  </Badge>
+                ) : (
+                  <input
+                    type="checkbox"
+                    className="size-4 rounded border-gray-300 accent-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    checked={draftRow.enabled}
+                    disabled={isDisabled}
+                    onChange={(event) =>
+                      onToggleEnabled(row, event.target.checked)
+                    }
+                    aria-label={`Bật tắt ${row.label}`}
+                  />
+                )}
               </TableCell>
               <TableCell className="text-center">
-                {row.kind === "section" ? (
+                {row.kind === "action" ? (
                   <input
                     type="checkbox"
                     className="size-4 rounded border-gray-300 accent-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
                     checked={draftRow.required}
                     disabled={
-                      isDisabled ||
-                      !draftRow.enabled ||
-                      !row.supports_required
+                      isDisabled || !draftRow.enabled || !row.supports_required
                     }
                     onChange={(event) =>
                       onToggleRequired(row, event.target.checked)
@@ -228,9 +245,9 @@ function FeatureSettingsTable({
                     aria-label={`Bắt buộc có dữ liệu cho ${row.label}`}
                     title={
                       !row.supports_required
-                        ? "Section này chưa có quy tắc kiểm tra dữ liệu"
+                        ? "Action chưa liên kết với section có quy tắc kiểm tra dữ liệu"
                         : !draftRow.enabled
-                          ? "Bật section trước khi đặt bắt buộc"
+                          ? "Bật action trước khi đặt bắt buộc"
                           : undefined
                     }
                   />
@@ -355,13 +372,13 @@ export default function InlineItemFeatureSettings({
   );
 
   const rows = useMemo(
-    () => buildRows(features, itemFeatureConfig?.features),
+    () =>
+      buildRows(features, itemFeatureConfig?.features).filter(
+        (row) => row.kind !== "section",
+      ),
     [features, itemFeatureConfig?.features],
   );
-  const selectedRows = useMemo(
-    () => rows.filter((row) => row.enabled),
-    [rows],
-  );
+  const selectedRows = useMemo(() => rows.filter((row) => row.enabled), [rows]);
   const groups = useMemo(() => buildGroups(rows), [rows]);
   const copySourceOptions = useMemo<CopySourceOption[]>(() => {
     const normalizedCurrentItemCode = itemCode?.trim().toLocaleLowerCase();
@@ -402,7 +419,16 @@ export default function InlineItemFeatureSettings({
   }, [itemCode, itemCodePrefix, items]);
   const selectedCopySource =
     copySourceOptions.find((option) => option.value === copySourceCode) ?? null;
-  const getDraftRow = (row: ItemFeatureRow) => draftRows[row.feature_id] ?? row;
+  const getDraftRow = (row: ItemFeatureRow) => {
+    const draft = draftRows[row.feature_id] ?? row;
+    return row.kind === "section"
+      ? {
+          ...draft,
+          enabled: row.enabled,
+          required: row.enabled && draft.required,
+        }
+      : draft;
+  };
 
   const updateDraftRow = (
     row: ItemFeatureRow,
@@ -440,20 +466,12 @@ export default function InlineItemFeatureSettings({
     setSavingFeatureId(row.feature_id);
 
     try {
-      if (row.linked) {
-        await featuresService.updateItemFeature(itemCode, row.feature_id, {
-          enabled: draftRow.enabled,
-          required: draftRow.required,
-          order: draftRow.order,
-        });
-      } else {
-        await featuresService.upsertItemFeature(itemCode, {
-          feature_id: row.feature_id,
-          enabled: draftRow.enabled,
-          required: draftRow.required,
-          order: draftRow.order,
-        });
-      }
+      await featuresService.upsertItemFeature(itemCode, {
+        feature_id: row.feature_id,
+        ...(row.kind === "section" ? {} : { enabled: draftRow.enabled }),
+        required: draftRow.required,
+        order: draftRow.order,
+      });
 
       await mutate();
       setDraftRows((current) => {
@@ -492,20 +510,12 @@ export default function InlineItemFeatureSettings({
     }));
 
     try {
-      if (row.linked) {
-        await featuresService.updateItemFeature(itemCode, row.feature_id, {
-          enabled: nextRow.enabled,
-          required: nextRow.required,
-          order: nextRow.order,
-        });
-      } else {
-        await featuresService.upsertItemFeature(itemCode, {
-          feature_id: row.feature_id,
-          enabled: nextRow.enabled,
-          required: nextRow.required,
-          order: nextRow.order,
-        });
-      }
+      await featuresService.upsertItemFeature(itemCode, {
+        feature_id: row.feature_id,
+        ...(row.kind === "section" ? {} : { enabled: nextRow.enabled }),
+        required: nextRow.required,
+        order: nextRow.order,
+      });
 
       await mutate();
       setDraftRows((current) => {
@@ -580,6 +590,12 @@ export default function InlineItemFeatureSettings({
             Tính năng đã chọn
           </h2>
         </div>
+
+        <p className="mb-4 text-sm text-gray-600">
+          Chọn bật action để sử dụng. Section tự bật khi có ít nhất một action
+          liên kết đang bật. Action bắt buộc thì section liên kết cũng bắt buộc
+          có dữ liệu. Dòng lệnh sản xuất luôn hiển thị.
+        </p>
 
         {isLoading ? (
           <div className="space-y-3">

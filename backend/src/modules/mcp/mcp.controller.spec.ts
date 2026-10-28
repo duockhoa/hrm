@@ -87,6 +87,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     productionOrderWeighingRecords: { count: jest.fn(), findMany: jest.fn() },
     productionOrderDeviations: { count: jest.fn(), findMany: jest.fn() },
     items: { count: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
+    features: { findMany: jest.fn() },
     productionOrders: {
       count: jest.fn(),
       findMany: jest.fn(),
@@ -136,6 +137,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     prisma.items.count.mockResolvedValue(0);
     prisma.items.findMany.mockResolvedValue([]);
     prisma.items.findFirst.mockResolvedValue(null);
+    prisma.features.findMany.mockResolvedValue([]);
     oauth.resolveMcpToken.mockResolvedValue(authenticated());
     prisma.productionOrders.count.mockResolvedValue(0);
     prisma.productionOrders.findMany.mockResolvedValue([]);
@@ -715,6 +717,26 @@ describe('MCP Streamable HTTP endpoint', () => {
         },
       ],
     });
+    prisma.features.findMany.mockResolvedValue([
+      {
+        id: 1,
+        key: 'mixing_records',
+        kind: 'section',
+        label: 'Pha chế',
+        group_name: null,
+        default_order: 10,
+        sourceActions: [],
+      },
+      {
+        id: 2,
+        key: 'date_checks',
+        kind: 'section',
+        label: 'In date',
+        group_name: null,
+        default_order: 20,
+        sourceActions: [],
+      },
+    ]);
     const response = await rpc('tools/call', {
       name: 'get_item',
       arguments: { item_code: ' TP001 ' },
@@ -734,7 +756,7 @@ describe('MCP Streamable HTTP endpoint', () => {
         item_code: 'TP001',
         sections: [
           { key: 'date_checks', enabled: false, required: false, order: 5 },
-          { key: 'mixing_records', enabled: true, required: true, order: 10 },
+          { key: 'mixing_records', enabled: false, required: false, order: 10 },
         ],
       },
       equipment: {

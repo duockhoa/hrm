@@ -19,7 +19,7 @@ const FRONTEND_DEFAULT_ENABLED_KEYS: Record<
   Set<string>
 > = {
   action: new Set([""]),
-  section: new Set(["production_order_lines"]),
+  section: new Set([]),
 };
 
 const FRONTEND_ALWAYS_ENABLED_KEYS: Record<
@@ -36,7 +36,7 @@ const FRONTEND_ALWAYS_ENABLED_KEYS: Record<
     "receive_warehouse_release",
     "receive_test_certificate",
   ]),
-  section: new Set([]),
+  section: new Set(["production_order_lines"]),
 };
 
 const FEATURE_KEY_ALIASES: Record<string, string> = {

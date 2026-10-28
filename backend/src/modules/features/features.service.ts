@@ -14,6 +14,8 @@ import { UpdateItemFeatureDto } from './dto/update-item-feature.dto';
 import {
   assertRequiredSection,
   buildItemFeatureConfig,
+  buildCurrentItemFeatureConfig,
+  deriveSectionActivation,
 } from './item-feature-config';
 import { supportsRequiredSection } from '../production-orders/production-order-section-rules';
 
@@ -79,7 +81,10 @@ export class FeaturesService {
           actionReference(section),
         ) ?? [],
       supports_required:
-        feature.kind === 'section' && supportsRequiredSection(feature.key),
+        feature.kind === 'action' &&
+        (feature.targetSections ?? []).some(({ section }) =>
+          supportsRequiredSection(section.key),
+        ),
     }));
   }
 
@@ -210,12 +215,20 @@ export class FeaturesService {
               key: typeof data.key === 'string' ? data.key : existing.key,
               kind: nextKind,
             };
-            assertRequiredSection(
-              nextFeature,
-              true,
-              true,
-              supportsRequiredSection(nextFeature.key),
-            );
+            if (nextFeature.kind === 'action') {
+              this.assertRequiredAction(
+                nextFeature,
+                true,
+                existing.targetSections ?? [],
+              );
+            } else {
+              assertRequiredSection(
+                nextFeature,
+                true,
+                true,
+                supportsRequiredSection(nextFeature.key),
+              );
+            }
           }
           const feature = await tx.features.update({
             where: { id },
@@ -280,28 +293,25 @@ export class FeaturesService {
     includeDisabled?: string,
     client: Prisma.TransactionClient = this.prismaService,
   ) {
-    const itemFeatures = await this.findByItemCode(
-      item_code,
-      includeDisabled,
-      client,
-    );
+    const itemFeatures = await this.findByItemCode(item_code, 'true', client);
     const normalizedItemCode = this.normalizeRequiredString(
       item_code,
       'item_code',
     );
-    const features = itemFeatures.map((itemFeature) => ({
-      feature_id: itemFeature.feature_id,
-      key: itemFeature.feature.key,
-      kind: itemFeature.feature.kind,
-      label: itemFeature.feature.label,
-      group_name: itemFeature.feature.group_name,
-      order: itemFeature.order ?? itemFeature.feature.default_order,
-      enabled: itemFeature.enabled,
-      required: itemFeature.required ?? false,
-      source_actions: linkedActions(itemFeature.feature) ?? [],
-    }));
+    const catalog = await client.features.findMany({
+      include: FEATURE_LINK_INCLUDE,
+      orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
+    });
+    const shouldIncludeDisabled =
+      this.normalizeOptionalBoolean(includeDisabled, 'includeDisabled') ??
+      false;
 
-    return buildItemFeatureConfig(normalizedItemCode, features);
+    return buildCurrentItemFeatureConfig(
+      normalizedItemCode,
+      catalog,
+      itemFeatures,
+      shouldIncludeDisabled,
+    );
   }
 
   async upsertItemFeature(item_code: string, createDto: CreateItemFeatureDto) {
@@ -311,6 +321,10 @@ export class FeaturesService {
     );
     await this.ensureItemExists(normalizedItemCode);
     const feature = await this.findFeatureFromDto(createDto);
+    // Section rows store only order/required preferences; activation is derived
+    // from the linked actions when the configuration is read.
+    if (feature.kind === 'section')
+      createDto = { ...createDto, enabled: true, required: false };
     const updateData = this.buildItemFeatureUpdateData(createDto, true);
     const createData = this.buildItemFeatureCreateData(createDto);
     if (updateData.required === true) {
@@ -325,12 +339,7 @@ export class FeaturesService {
       const enabled = (updateData.enabled ??
         existing?.enabled ??
         true) as boolean;
-      assertRequiredSection(
-        feature,
-        enabled,
-        true,
-        supportsRequiredSection(feature.key),
-      );
+      this.assertRequiredAction(feature, enabled, feature.targetSections ?? []);
       // Write enabled together with required to preserve the invariant even
       // when another request toggles the section concurrently.
       updateData.enabled = enabled;
@@ -408,26 +417,30 @@ export class FeaturesService {
           itemFeature,
         ]),
       );
-      const copiedFeatures = features.map((feature) => {
-        const sourceFeature = sourceFeatureById.get(feature.id);
+      const copiedFeatures = deriveSectionActivation(
+        features.map((feature) => {
+          const sourceFeature = sourceFeatureById.get(feature.id);
 
-        return {
-          feature_id: feature.id,
-          key: feature.key,
-          kind: feature.kind,
-          label: feature.label,
-          group_name: feature.group_name,
-          source_actions: linkedActions(feature) ?? [],
-          order: sourceFeature?.order ?? feature.default_order,
-          enabled: sourceFeature?.enabled ?? false,
-          required: Boolean(
-            sourceFeature?.required &&
-            sourceFeature.enabled &&
-            feature.kind === 'section' &&
-            supportsRequiredSection(feature.key),
-          ),
-        };
-      });
+          return {
+            feature_id: feature.id,
+            key: feature.key,
+            kind: feature.kind,
+            label: feature.label,
+            group_name: feature.group_name,
+            source_actions: linkedActions(feature) ?? [],
+            order: sourceFeature?.order ?? feature.default_order,
+            enabled: sourceFeature?.enabled ?? false,
+            required: Boolean(
+              sourceFeature?.required &&
+              sourceFeature.enabled &&
+              feature.kind === 'action' &&
+              (feature.targetSections ?? []).some(({ section }) =>
+                supportsRequiredSection(section.key),
+              ),
+            ),
+          };
+        }),
+      );
 
       await tx.itemFeatures.deleteMany({
         where: { item_code: targetItemCode },
@@ -464,16 +477,14 @@ export class FeaturesService {
       normalizedItemCode,
       feature_id,
     );
+    const feature = await this.findById(feature_id);
+    if (feature.kind === 'section' && Object.keys(updateDto).length > 0) {
+      updateDto = { ...updateDto, enabled: true, required: false };
+    }
     const data = this.buildItemFeatureUpdateData(updateDto, false);
     if (data.required === true) {
       const enabled = (data.enabled ?? existing.enabled) as boolean;
-      const feature = await this.findById(feature_id);
-      assertRequiredSection(
-        feature,
-        enabled,
-        true,
-        supportsRequiredSection(feature.key),
-      );
+      this.assertRequiredAction(feature, enabled, feature.targetSections ?? []);
       data.enabled = enabled;
     }
 
@@ -505,6 +516,25 @@ export class FeaturesService {
       },
       include: ITEM_FEATURE_INCLUDE,
     });
+  }
+
+  private assertRequiredAction(
+    feature: { kind: string },
+    enabled: boolean,
+    links: { section: { key: string } }[],
+  ) {
+    if (
+      feature.kind !== 'action' ||
+      !links.some(({ section }) => supportsRequiredSection(section.key))
+    ) {
+      throw new BadRequestException(
+        'Chỉ action liên kết với section có quy tắc kiểm tra dữ liệu mới được đặt bắt buộc.',
+      );
+    }
+    if (!enabled)
+      throw new BadRequestException(
+        'Phải bật action trước khi đặt bắt buộc có dữ liệu.',
+      );
   }
 
   private async validateActionIds(
@@ -682,7 +712,7 @@ export class FeaturesService {
     if (data.enabled === false) {
       if (data.required === true) {
         throw new BadRequestException(
-          'Phải bật section trước khi đặt bắt buộc có dữ liệu.',
+          'Phải bật action trước khi đặt bắt buộc có dữ liệu.',
         );
       }
       data.required = false;
@@ -707,6 +737,7 @@ export class FeaturesService {
       const featureId = this.normalizeRequiredInt(rawFeatureId, 'feature_id');
       const feature = await this.prismaService.features.findUnique({
         where: { id: featureId },
+        include: FEATURE_LINK_INCLUDE,
       });
 
       if (!feature) {
@@ -723,6 +754,7 @@ export class FeaturesService {
       );
       const feature = await this.prismaService.features.findUnique({
         where: { key: featureKey },
+        include: FEATURE_LINK_INCLUDE,
       });
 
       if (!feature) {
