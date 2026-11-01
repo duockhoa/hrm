@@ -236,7 +236,7 @@ export default function InlineProductionOrderWeighingRecord({
                 <h2
                   className={
                     embedded
-                      ? "text-lg font-semibold"
+                      ? "text-sm font-semibold"
                       : "text-2xl font-bold leading-tight text-blue-500 md:text-3xl"
                   }
                 >

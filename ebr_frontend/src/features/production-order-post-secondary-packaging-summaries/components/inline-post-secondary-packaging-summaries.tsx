@@ -100,7 +100,7 @@ export default function InlinePostSecondaryPackagingSummaries({
         <div className="mb-4 flex items-center gap-3">
           <h2
             id="post-secondary-packaging-summaries-title"
-            className="text-lg font-semibold"
+            className="text-sm font-semibold"
           >
             Tổng kết BTP hoàn thiện
           </h2>

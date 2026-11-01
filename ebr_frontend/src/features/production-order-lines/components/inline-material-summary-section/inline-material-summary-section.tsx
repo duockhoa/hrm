@@ -43,7 +43,7 @@ export default function InlineMaterialSummarySection({
     return (
       <div className="w-full max-w-4xl min-w-0 overflow-hidden rounded border bg-white p-4 shadow-md">
         <div className="mb-4 flex items-center gap-3">
-          <h2 className="text-lg font-semibold">Thông tin vật liệu</h2>
+          <h2 className="text-sm font-semibold">Thông tin vật liệu</h2>
         </div>
         <div className="rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không thể tải tổng kết vật liệu.

@@ -50,7 +50,7 @@ export default function InlineProductionOrderLines({
   return (
     <div className="w-full max-w-4xl min-w-0 overflow-hidden rounded border bg-white p-4 shadow-md">
       <div className="mb-4 flex items-center gap-3">
-        <h2 className="text-lg font-semibold">Thông tin dòng lệnh sản xuất</h2>
+        <h2 className="text-sm font-semibold">Thông tin dòng lệnh sản xuất</h2>
         <span className="rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700">
           {data.length}
         </span>

@@ -1669,7 +1669,7 @@ export default function ProductOrderDetail({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded border bg-white p-3 text-center shadow-md md:gap-4 md:p-4">
+      <div className="flex flex-col gap-3 rounded border bg-white p-3 text-center text-sm shadow-md md:gap-4 md:p-4">
         <FieldDisplay
           lable="Mã lệnh sản xuất"
           value={productOrder.production_order_code}

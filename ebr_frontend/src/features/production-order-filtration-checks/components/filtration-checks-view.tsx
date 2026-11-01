@@ -61,7 +61,7 @@ export default function FiltrationChecksView({
         </Dialog>
       ) : null}
       {embedded ? (
-        <div className="mb-4 mt-4 flex items-center gap-3"><h2 className="text-lg font-semibold">Theo dõi quá trình lọc</h2>{data ? <span className="rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700">{data.length}</span> : null}</div>
+        <div className="mb-4 mt-4 flex items-center gap-3"><h2 className="text-sm font-semibold">Theo dõi quá trình lọc</h2>{data ? <span className="rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700">{data.length}</span> : null}</div>
       ) : <div className="mt-4" />}
       {isLoading ? <div className="space-y-3">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-16 w-full" />)}</div> : null}
       {error ? <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">Không thể tải dữ liệu theo dõi quá trình lọc.</div> : null}

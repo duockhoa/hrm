@@ -133,7 +133,7 @@ export default function SteamSterilizationChecksView({
       )}
       {embedded ? (
         <div className="mb-4 mt-4 flex items-center gap-3">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-sm font-semibold">
             Theo dõi quá trình tiệt trùng
           </h2>
           {data && (

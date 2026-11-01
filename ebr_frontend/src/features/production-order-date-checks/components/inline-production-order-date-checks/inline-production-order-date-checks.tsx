@@ -78,7 +78,7 @@ export default function InlineProductionOrderDateChecks({
     >
       {!compact ? (
         <div className="mb-4 flex items-center gap-3">
-          <h2 className="text-lg font-semibold">Kiểm tra date</h2>
+          <h2 className="text-sm font-semibold">Kiểm tra date</h2>
           <span className="rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700">
             {data.length}
           </span>

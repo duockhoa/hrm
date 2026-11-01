@@ -65,7 +65,7 @@ export default function InlineProductionOrderAttachments({
     >
       {!compact ? (
         <div className="mb-4 mt-4 flex items-center gap-3">
-          <h2 className="text-lg font-semibold">Hình ảnh đính kèm</h2>
+          <h2 className="text-sm font-semibold">Hình ảnh đính kèm</h2>
           {data ? (
             <span className="rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700">
               {data.length}
