@@ -12,6 +12,7 @@ import useSWR from "swr";
 import UserDetail from "@/components/users/detail-user";
 import UserRolesInline from "@/components/users/inline-user-roles";
 import UserApplicationsInline from "@/components/users/inline-user-applications";
+import UserNetworkPolicy from "@/components/users/user-network-policy";
 import { userService } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
 export default function DetailUserPage() {
@@ -44,6 +45,7 @@ export default function DetailUserPage() {
           <DetailUserHeader user={data} />
           <div className="flex flex-col items-center gap-4 mt-4 rounded">
             <UserDetail user={data} />
+            {data?.id && <UserNetworkPolicy user={data} />}
             {data?.id && <UserRolesInline userId={Number(data.id)} />}
             {data?.id && <UserApplicationsInline userId={Number(data.id)} />}
           </div>

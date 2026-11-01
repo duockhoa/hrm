@@ -81,6 +81,13 @@ const data = [
     url: "/email-settings",
     permission: "email-settings.manage",
   },
+  {
+    id: "network-access",
+    name: "IP truy cập",
+    icon: <MdAdminPanelSettings />,
+    url: "/network-access",
+    permission: "users.update",
+  },
 ];
 
 export default function MainLayout({

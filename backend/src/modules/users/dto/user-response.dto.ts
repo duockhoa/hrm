@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UserResponseDto {
+  @ApiProperty({ enum: ['OPEN', 'IP_ALLOWLIST'], default: 'OPEN' })
+  network_policy_code!: string;
   @ApiProperty({ example: 1 })
   id!: number;
 

@@ -45,6 +45,15 @@ export class UsersService {
     return this.prisma.users.findMany();
   }
 
+  async assignNetworkPolicy(id: number, code: 'OPEN' | 'IP_ALLOWLIST') {
+    await this.ensureUserExists(id);
+    return this.prisma.users.update({
+      where: { id },
+      data: { network_policy_code: code },
+      select: { id: true, network_policy_code: true },
+    });
+  }
+
   async findAllWithDeleted() {
     return this.prisma.users.findMany({
       withDeleted: true,

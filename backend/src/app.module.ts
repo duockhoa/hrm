@@ -42,6 +42,7 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { WarehouseReceiptItemsModule } from './modules/warehouse-receipt-items/warehouse-receipt-items.module';
 import { WarehouseTemperatureHumidityChecksModule } from './modules/warehouse-temperature-humidity-checks/warehouse-temperature-humidity-checks.module';
 import { McpModule } from './modules/mcp/mcp.module';
+import { NetworkPoliciesModule } from './modules/network-policies/network-policies.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { McpModule } from './modules/mcp/mcp.module';
     WarehouseReceiptItemsModule,
     WarehouseTemperatureHumidityChecksModule,
     McpModule,
+    NetworkPoliciesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

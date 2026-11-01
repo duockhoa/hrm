@@ -29,6 +29,8 @@ model AuditLogs {
 }
 
 model Users {
+  network_policy_code String @default("OPEN") @db.VarChar(20)
+  networkPolicy NetworkPolicies @relation(fields: [network_policy_code], references: [code], onDelete: Restrict, onUpdate: Cascade)
   weighingRecordDetails ProductionOrderWeighingRecordDetails[] @relation("WeighingRecordDetailWeigher")
   weighingRecordLineChecks ProductionOrderWeighingRecordLineChecks[] @relation("WeighingRecordLineChecker")
   oauthGrants OAuthGrants[]
@@ -149,6 +151,29 @@ model Users {
 
   @@index([department], map: "users_department_fkey")
   @@map("users")
+}
+
+model NetworkPolicies {
+  id Int @id @default(autoincrement())
+  code String @unique @db.VarChar(20)
+  name String @db.VarChar(100)
+  users Users[]
+  ranges NetworkPolicyRanges[]
+
+  @@map("network_policies")
+}
+
+model NetworkPolicyRanges {
+  id Int @id @default(autoincrement())
+  policy_code String @default("IP_ALLOWLIST") @db.VarChar(20)
+  name String @db.VarChar(100)
+  cidr String @db.VarChar(50)
+  created_at DateTime @default(now()) @db.DateTime(3)
+  updated_at DateTime @default(now()) @updatedAt @db.DateTime(3)
+  policy NetworkPolicies @relation(fields: [policy_code], references: [code], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([policy_code, cidr])
+  @@map("network_policy_ranges")
 }
 
 model EmailTypes {

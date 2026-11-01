@@ -45,6 +45,7 @@ import {
   UserResponseDto,
 } from './dto/user-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { AssignNetworkPolicyDto } from '../network-policies/network-policies.dto';
 
 @UseGuards(jwtAuthGuard, PermissionsGuard)
 @Controller('users')
@@ -172,6 +173,13 @@ export class UsersController {
     @Body() body: SyncUserApplicationsDto,
   ) {
     return this.usersService.syncApplications(id, body.applicationIds);
+  }
+
+  @Put(':id/network-policy')
+  @Permissions(USER_PERMISSIONS.UPDATE)
+  @ApiOperation({ summary: 'Gán chính sách mạng cho user (chỉ lưu cấu hình)' })
+  assignNetworkPolicy(@Param('id', ParseIntPipe) id: number, @Body() dto: AssignNetworkPolicyDto) {
+    return this.usersService.assignNetworkPolicy(id, dto.code);
   }
 
   @Get(':id')
