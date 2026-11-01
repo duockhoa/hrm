@@ -95,4 +95,12 @@ describe('Trusted client IP resolution', () => {
     expect(() => createProxyTrust('true')).toThrow();
     expect(() => createProxyTrust('1')).toThrow();
   });
+  it('resolves different devices behind a local proxy without trusting remote callers', () => {
+    process.env.TRUSTED_PROXY_CIDRS = '127.0.0.1/32,::1/128';
+    expect(getClientIp(req('::1', '113.160.133.209'))).toBe('113.160.133.209');
+    expect(getClientIp(req('127.0.0.1', '2001:db8::10'))).toBe('2001:db8::10');
+    expect(getClientIp(req('::ffff:127.0.0.1', '192.0.2.25'))).toBe('192.0.2.25');
+    expect(getClientIp(req('198.51.100.10', '113.160.133.209'))).toBe('198.51.100.10');
+    expect(getClientIp(req('::1'))).toBe('::1');
+  });
 });

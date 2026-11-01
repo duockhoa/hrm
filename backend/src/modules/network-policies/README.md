@@ -40,5 +40,18 @@ phải ghi đè header do client gửi; các proxy sau đó phải chuyển ti�
 `X-Forwarded-For`. Backend duyệt chuỗi từ proxy gần nhất và dừng tại hop đầu tiên
 không đáng tin cậy. Header gửi trực tiếp từ client không được tin cậy.
 
+Nếu proxy/tunnel kết nối vào backend bằng `localhost`, dùng:
+
+```dotenv
+TRUSTED_PROXY_CIDRS=127.0.0.1/32,::1/128
+```
+
+Nếu bỏ trống biến này, backend sẽ ghi IP kết nối local (`::1` hoặc `127.0.0.1`)
+thay vì IP chuyển tiếp. Cần đặt biến trong môi trường của backend thực sự đang
+chạy và khởi động lại tiến trình/container sau khi sửa. Các bản ghi lịch sử đã
+lưu `::1` không tự đổi lại IP thật. Nếu vẫn nhận `::1` sau khi khai báo, kiểm tra
+proxy có gửi `X-Forwarded-For` chứa IP người dùng hay không; cấu hình tin cậy
+không thể khôi phục IP khi proxy không chuyển tiếp nó.
+
 Trước khi gán `IP_ALLOWLIST`, kiểm tra cả đường IPv4, IPv6 và đường truyền dự
 phòng tại nhà máy. Không cần migration bổ sung cho bước áp dụng kiểm tra mạng.
