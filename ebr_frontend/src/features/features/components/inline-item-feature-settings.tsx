@@ -600,12 +600,6 @@ export default function InlineItemFeatureSettings({
           </Button>
         </div>
 
-        <p className="mb-4 text-sm text-gray-600">
-          Chọn bật action để sử dụng. Section tự bật khi có ít nhất một action
-          liên kết đang bật. Action bắt buộc thì section liên kết cũng bắt buộc
-          có dữ liệu. Dòng lệnh sản xuất luôn hiển thị.
-        </p>
-
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, index) => (
