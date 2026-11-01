@@ -73,7 +73,7 @@ export class NetworkPoliciesService {
       throw new ForbiddenException({
         statusCode: 403,
         code: 'IP_ACCESS_DENIED',
-        message: 'Bạn cần kết nối mạng nhà máy để truy cập hồ sơ lô sản xuất.',
+        message: 'Bạn cần kết nối mạng nhà máy để truy cập chức năng này.',
       });
     };
     if (policyCode !== 'IP_ALLOWLIST' || !ip || !isIP(ip)) return deny();

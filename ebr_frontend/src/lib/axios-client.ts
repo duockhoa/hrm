@@ -95,7 +95,7 @@ axiosClient.interceptors.response.use(
       (error.response.data as { code?: string })?.code === "IP_ACCESS_DENIED"
     ) {
       toast.error(
-        "Bạn cần kết nối mạng nhà máy để truy cập hồ sơ lô sản xuất.",
+        "Bạn cần kết nối mạng nhà máy để truy cập chức năng này.",
         { id: "ip-access-denied" },
       );
       return Promise.reject(error);

@@ -23,6 +23,7 @@ import type { Response } from 'express';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import {
   datePrintTemplateImageUploadOptions,
   getDatePrintTemplateImagePath,
@@ -54,7 +55,7 @@ import { MixingActivityTemplateStageStepParametersService } from './mixing-activ
 import { ItemsService } from './items.service';
 import { ITEM_PERMISSIONS } from './items.permissions';
 
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller('items')
 export class ItemsController {
   constructor(

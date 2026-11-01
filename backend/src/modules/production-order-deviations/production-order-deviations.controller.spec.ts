@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { ProductionOrderDeviationsController } from './production-order-deviations.controller';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from './production-order-deviations.permissions';
@@ -33,7 +34,10 @@ describe('ProductionOrderDeviationsController', () => {
           useValue: productionOrderDeviationsService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(NetworkPolicyGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<ProductionOrderDeviationsController>(
       ProductionOrderDeviationsController,

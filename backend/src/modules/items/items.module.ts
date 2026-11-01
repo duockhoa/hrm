@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NetworkPoliciesModule } from '../network-policies/network-policies.module';
 import { ItemsService } from './items.service';
 import { ItemsController } from './items.controller';
 import { RolesGuard } from 'src/guards/roles.guard';
@@ -12,6 +13,7 @@ import { MixingActivityTemplateStageStepsService } from './mixing-activity-templ
 import { MixingActivityTemplateStageStepParametersService } from './mixing-activity-template-stage-step-parameters.service';
 
 @Module({
+  imports: [NetworkPoliciesModule],
   controllers: [ItemsController],
   providers: [
     ItemsService,

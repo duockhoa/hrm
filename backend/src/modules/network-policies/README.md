@@ -3,7 +3,14 @@
 Toàn bộ 8 controller của `ProductionOrdersModule` dùng `NetworkPolicyGuard`
 sau xác thực và kiểm tra quyền hiện có. Bao gồm danh sách, chi tiết, ghi dữ liệu,
 duyệt, xuất/tải file, ảnh, cân và pha chế. Kết nối realtime cân và pha chế cũng
-được kiểm tra khi xác thực kết nối. Các module khác, login và refresh token
+được kiểm tra khi xác thực kết nối.
+
+Toàn bộ API của `ItemsModule` cũng dùng cùng guard, bao gồm danh mục sản phẩm,
+thiết bị sản phẩm, mẫu in date, mẫu pha chế và các API con hoặc ảnh liên quan.
+Toàn bộ API của `ProductionOrderDeviationsModule` cũng được kiểm tra, gồm danh
+sách sai lệch, lọc theo lệnh sản xuất, chi tiết, ảnh, tạo, cập nhật và xóa.
+User `IP_ALLOWLIST` phải khớp cùng danh sách IP dùng chung cho cả ba module.
+Các module khác, login và refresh token
 không bị giới hạn mạng.
 
 - `OPEN`: bỏ qua điều kiện IP; vẫn phải có quyền thao tác.

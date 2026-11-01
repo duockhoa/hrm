@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { ItemEquipmentService } from './item-equipment.service';
 import { DATE_PRINT_TEMPLATE_PERMISSIONS } from './date-print-templates.permissions';
@@ -173,7 +174,10 @@ describe('ItemsController', () => {
           useValue: mixingActivityTemplateStageStepParametersService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(NetworkPolicyGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<ItemsController>(ItemsController);
   });

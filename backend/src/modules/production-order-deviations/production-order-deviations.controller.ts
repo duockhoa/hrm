@@ -21,6 +21,7 @@ import { createReadStream } from 'fs';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import type { Response } from 'express';
 import { CreateProductionOrderDeviationDto } from './dto/create-production-order-deviation.dto';
 import { UpdateProductionOrderDeviationDto } from './dto/update-production-order-deviation.dto';
@@ -45,7 +46,7 @@ const getUploadedDeviationImages = (
   ...(uploadedFiles?.deviation_image ?? []),
 ];
 
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller('production-order-deviations')
 export class ProductionOrderDeviationsController {
   constructor(
