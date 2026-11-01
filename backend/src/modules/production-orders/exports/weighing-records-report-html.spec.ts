@@ -90,11 +90,11 @@ async function htmlFor(
 
 describe('Weighing record report', () => {
   afterEach(() => jest.restoreAllMocks());
-  it('includes each saved form immediately after mixing and before deviations', async () => {
+  it('includes each saved form after warehouse release and before deviations', async () => {
     const html = await htmlFor([record(), record(2)]);
     expect(
       html.indexOf('data-action-key="view_weighing_record"'),
-    ).toBeGreaterThan(html.indexOf('data-action-key="view_mixing_record"'));
+    ).toBeGreaterThan(html.indexOf('warehouse-release-page"'));
     expect(html.indexOf('data-action-key="view_weighing_record"')).toBeLessThan(
       html.indexOf('Thông tin sai lệch'),
     );
