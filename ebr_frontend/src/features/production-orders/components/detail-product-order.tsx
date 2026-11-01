@@ -250,7 +250,7 @@ function SamplingRequestStatus({
 
   return (
     <div className="flex w-full justify-start gap-3 md:gap-4">
-      <div className="m-0.5 w-[170px] shrink-0 pr-1 text-left font-semibold text-gray-600 wrap-anywhere md:m-1 md:w-[220px] md:pr-2">
+      <div className="m-0.5 w-[var(--field-label-width,170px)] shrink-0 pr-1 text-left font-semibold text-gray-600 wrap-anywhere md:m-1 md:w-[var(--field-label-width,220px)] md:pr-2">
         Gửi PYCLM
       </div>
       <div className="min-w-0 flex-1 text-left text-gray-800">
@@ -323,28 +323,28 @@ function ProductionOrderDocumentControlStatus({
   return (
     <>
       <FieldDisplay
-        lable="Cấp hồ sơ lô giấy"
+        lable="Cấp HSL giấy"
         value={getDocumentControlStatusText(
           documentControl?.batch_record_issued_at,
           documentControl?.batchRecordIssuedBy,
         )}
       />
       <FieldDisplay
-        lable="Nhận hồ sơ lô giấy"
+        lable="Nhận HSL giấy"
         value={getDocumentControlStatusText(
           documentControl?.batch_record_received_at,
           documentControl?.batchRecordReceivedBy,
         )}
       />
       <FieldDisplay
-        lable="Nhận phiếu xuất kho"
+        lable="Nhận PXK"
         value={getDocumentControlStatusText(
           documentControl?.warehouse_release_received_at,
           documentControl?.warehouseReleaseReceivedBy,
         )}
       />
       <FieldDisplay
-        lable="Nhận phiếu kiểm nghiệm"
+        lable="Nhận PKN"
         value={getDocumentControlStatusText(
           documentControl?.test_certificate_received_at,
           documentControl?.testCertificateReceivedBy,
@@ -1669,7 +1669,7 @@ export default function ProductOrderDetail({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded border bg-white p-3 text-center text-sm shadow-md md:gap-4 md:p-4">
+      <div className="flex flex-col gap-3 rounded border bg-white p-3 text-center text-sm shadow-md md:gap-4 md:p-4 [--field-label-width:140px] md:[--field-label-width:170px]">
         <FieldDisplay
           lable="Mã lệnh sản xuất"
           value={productOrder.production_order_code}

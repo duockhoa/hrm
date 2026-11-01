@@ -96,7 +96,7 @@ export default function ProductionGuideStatus({
 
   return (
     <div className="flex w-full justify-start gap-3 md:gap-4">
-      <div className="m-0.5 w-[170px] shrink-0 pr-1 text-left font-semibold text-gray-600 wrap-anywhere md:m-1 md:w-[220px] md:pr-2">
+      <div className="m-0.5 w-[var(--field-label-width,170px)] shrink-0 pr-1 text-left font-semibold text-gray-600 wrap-anywhere md:m-1 md:w-[var(--field-label-width,220px)] md:pr-2">
         Hướng dẫn sản xuất
       </div>
       <div className="min-w-0 flex-1 text-left text-gray-800">
