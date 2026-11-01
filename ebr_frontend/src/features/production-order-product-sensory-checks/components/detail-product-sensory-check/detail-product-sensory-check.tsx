@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageUp, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import useSWR, { mutate as mutateGlobal } from "swr";
@@ -30,14 +30,13 @@ import {
   getUserLabel,
 } from "../../utils";
 import FormEditProductionOrderProductSensoryCheck from "../form-edit-production-order-product-sensory-check/form-edit-production-order-product-sensory-check";
-import AddProductSensoryCheckImagesForm from "../add-product-sensory-check-images-form/add-product-sensory-check-images-form";
 
 const getErrorMessage = (error: any, fallback: string) =>
   error?.response?.data?.message ?? error?.message ?? fallback;
 
 function ProductSensoryCheckDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <Skeleton className="h-9 w-56" />
       <Skeleton className="mx-auto mt-4 h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
@@ -119,7 +118,6 @@ export default function ProductSensoryCheckDetail({
     () => productionOrdersService.fetchProductSensoryCheckById(id),
   );
   const [isEditing, setIsEditing] = useState(false);
-  const [isAddingImages, setIsAddingImages] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingImageId, setDeletingImageId] = useState<
     string | number | null
@@ -176,8 +174,8 @@ export default function ProductSensoryCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Kiểm tra cảm quan sản phẩm" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Kiểm tra cảm quan sản phẩm" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy phiếu kiểm tra cảm quan sản phẩm.
         </div>
@@ -190,22 +188,13 @@ export default function ProductSensoryCheckDetail({
   }
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Kiểm tra cảm quan sản phẩm #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         actions={
           <>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setIsAddingImages(true)}
-              title="Thêm ảnh"
-              variant="outline"
-            >
-              <ImageUp className="size-4" />
-              Thêm ảnh
-            </Button>
             <Button
               type="button"
               size="sm"
@@ -243,24 +232,6 @@ export default function ProductSensoryCheckDetail({
             productionOrderId={data.production_order_id ?? ""}
             data={data}
             onClose={() => setIsEditing(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        modal={false}
-        open={isAddingImages}
-        onOpenChange={setIsAddingImages}
-      >
-        <DialogContent className="md:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle>Thêm ảnh kiểm tra cảm quan sản phẩm</DialogTitle>
-          </DialogHeader>
-          <AddProductSensoryCheckImagesForm
-            checkId={data.id ?? id}
-            existingImageCount={data.images?.length ?? 0}
-            onSaved={refresh}
-            onClose={() => setIsAddingImages(false)}
           />
         </DialogContent>
       </Dialog>

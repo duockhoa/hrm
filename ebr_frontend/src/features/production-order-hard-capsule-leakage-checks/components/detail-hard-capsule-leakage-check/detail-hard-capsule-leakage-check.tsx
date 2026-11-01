@@ -33,7 +33,7 @@ const getErrorMessage = (error: any, fallback: string) =>
 
 function HardCapsuleLeakageCheckDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <Skeleton className="h-9 w-56" />
       <Skeleton className="mx-auto mt-4 h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
@@ -95,8 +95,9 @@ export default function HardCapsuleLeakageCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
         <DetailPanelHeader
+          compactTitle
           title="Độ rò rỉ viên nang cứng"
           onClose={onClose}
         />
@@ -112,8 +113,9 @@ export default function HardCapsuleLeakageCheckDetail({
   }
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Độ rò rỉ viên nang cứng #${data.id}`}
         subtitle={formatDateTime(data.checked_at)}
         actions={

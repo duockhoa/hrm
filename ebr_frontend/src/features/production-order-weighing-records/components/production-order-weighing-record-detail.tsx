@@ -125,7 +125,7 @@ export default function ProductionOrderWeighingRecordDetail({
     productionOrder.unit?.trim() || productionOrder.item?.unit?.trim() || "";
 
   return (
-    <section className="w-full max-w-4xl overflow-hidden rounded border bg-white shadow-md">
+    <section className="w-full max-w-4xl overflow-hidden rounded border bg-white shadow-md text-sm">
       <div className="flex items-start gap-2 border-b p-4">
         <Button
           type="button"
@@ -139,10 +139,10 @@ export default function ProductionOrderWeighingRecordDetail({
           <ArrowLeft className="size-5" />
         </Button>
         <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
+          <h2 className="text-xl font-bold leading-tight text-blue-500">
             Chi tiết phiếu cân
           </h2>
-          <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
+          <p className="mt-2 break-words text-sm font-medium text-gray-600">
             {itemCode}
             {itemName ? ` - ${itemName}` : ""}
             {lotNumber ? ` - Lô ${lotNumber}` : ""}

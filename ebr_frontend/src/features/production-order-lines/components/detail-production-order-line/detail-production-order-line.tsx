@@ -55,7 +55,7 @@ const getRemainingQuantity = (line: ProductionOrderLine) => {
 
 function ProductionOrderLineDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <Skeleton className="h-9 w-64" />
       <Skeleton className="mx-auto mt-4 h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
@@ -89,8 +89,9 @@ export default function ProductionOrderLineDetail({
 
   if (!parsedId || error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
         <DetailPanelHeader
+          compactTitle
           title="Dòng lệnh sản xuất"
           onClose={onClose}
         />
@@ -109,8 +110,9 @@ export default function ProductionOrderLineDetail({
 
   if (!line) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
         <DetailPanelHeader
+          compactTitle
           title="Dòng lệnh sản xuất"
           subtitle={`Mã lệnh sản xuất ${parsedId.productionOrderId}`}
           onClose={onClose}
@@ -131,8 +133,9 @@ export default function ProductionOrderLineDetail({
   });
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Dòng lệnh sản xuất #${parsedId.lineIndex + 1}`}
         subtitle={line.ItemName ? formatText(line.ItemName) : undefined}
         onClose={onClose}
@@ -172,7 +175,7 @@ export default function ProductionOrderLineDetail({
 
         {additionalFields.length > 0 ? (
           <div className="mt-2 border-t border-gray-200 pt-4">
-            <h2 className="mb-3 text-left text-base font-semibold text-gray-700">
+            <h2 className="mb-3 text-left text-sm font-semibold text-gray-700">
               Thông tin bổ sung
             </h2>
             <div className="flex flex-col gap-4">

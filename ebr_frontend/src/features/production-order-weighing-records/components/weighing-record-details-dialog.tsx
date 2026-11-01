@@ -161,9 +161,9 @@ export default function WeighingRecordDetailsDialog({
           onOpenChange(next);
         }}
       >
-        <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden font-sans sm:max-w-5xl">
+        <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden font-sans text-sm sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Chi tiết các lần cân</DialogTitle>
+            <DialogTitle className="text-xl">Chi tiết các lần cân</DialogTitle>
             <DialogDescription>
               {line.item_code} — {line.item_name}
               {line.lot_no ? ` · Lô ${line.lot_no}` : ""}

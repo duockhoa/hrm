@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageUp, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
@@ -22,7 +22,6 @@ import type {
   ProductionOrderVolumeCheck,
   VolumeCheckImage,
 } from "../../types";
-import AddVolumeCheckImagesForm from "../add-volume-check-images-form/add-volume-check-images-form";
 import EditVolumeCheck from "../edit-volume-check/edit-volume-check";
 import {
   formatDateTime,
@@ -103,7 +102,7 @@ function VolumeCheckImageCard({
 
 function VolumeCheckDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <Skeleton className="h-9 w-40" />
       <Skeleton className="mx-auto mt-4 h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
@@ -131,7 +130,6 @@ export default function VolumeCheckDetail({
     () => productionOrdersService.fetchVolumeCheckById(id),
   );
   const [isEditing, setIsEditing] = useState(false);
-  const [isAddingImages, setIsAddingImages] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingImageId, setDeletingImageId] = useState<
     string | number | null
@@ -192,8 +190,8 @@ export default function VolumeCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Kiểm tra thể tích" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Kiểm tra thể tích" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy bản ghi kiểm tra thể tích.
         </div>
@@ -206,20 +204,13 @@ export default function VolumeCheckDetail({
   }
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Kiểm tra thể tích #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         actions={
           <>
-            <Button
-              size="sm"
-              type="button"
-              variant="outline"
-              onClick={() => setIsAddingImages(true)}
-            >
-              <ImageUp className="size-4" /> Thêm ảnh
-            </Button>
             <Button size="sm" type="button" onClick={() => setIsEditing(true)}>
               <Pencil className="size-4" /> Sửa
             </Button>
@@ -248,24 +239,6 @@ export default function VolumeCheckDetail({
             data={data}
             onCancel={() => setIsEditing(false)}
             onSaved={() => setIsEditing(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        modal={false}
-        open={isAddingImages}
-        onOpenChange={setIsAddingImages}
-      >
-        <DialogContent className="md:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle>Thêm ảnh kiểm tra thể tích</DialogTitle>
-          </DialogHeader>
-          <AddVolumeCheckImagesForm
-            checkId={data.id ?? id}
-            existingImageCount={data.images?.length ?? 0}
-            onSaved={refresh}
-            onClose={() => setIsAddingImages(false)}
           />
         </DialogContent>
       </Dialog>

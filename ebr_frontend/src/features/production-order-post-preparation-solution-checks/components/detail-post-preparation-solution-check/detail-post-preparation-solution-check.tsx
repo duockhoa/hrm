@@ -29,7 +29,7 @@ import FormProductionOrderPostPreparationSolutionCheck from "../form-production-
 
 function PostPreparationSolutionCheckDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <Skeleton className="h-9 w-52" />
       <Skeleton className="mx-auto mt-4 h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
@@ -116,8 +116,8 @@ export default function PostPreparationSolutionCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Dịch sau pha chế" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Dịch sau pha chế" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy bản ghi kiểm tra dịch sau pha chế.
         </div>
@@ -130,8 +130,9 @@ export default function PostPreparationSolutionCheckDetail({
   }
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Dịch sau pha chế #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         actions={

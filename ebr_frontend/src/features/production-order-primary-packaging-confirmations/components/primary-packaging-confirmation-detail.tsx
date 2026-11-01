@@ -15,7 +15,7 @@ import {
 
 function PrimaryPackagingConfirmationDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
       <Skeleton className="h-9 w-64" />
       <div className="mt-4 space-y-3">
         {Array.from({ length: 9 }).map((_, index) => (
@@ -43,8 +43,9 @@ export default function PrimaryPackagingConfirmationDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
         <DetailPanelHeader
+          compactTitle
           title="Xác nhận trước đóng gói bao bì cấp 1"
           onClose={onClose}
         />
@@ -60,8 +61,9 @@ export default function PrimaryPackagingConfirmationDetail({
   }
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Xác nhận trước đóng gói bao bì cấp 1 #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         onClose={onClose}

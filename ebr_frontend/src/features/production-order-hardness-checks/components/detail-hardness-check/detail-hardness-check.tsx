@@ -32,7 +32,7 @@ const getErrorMessage = (error: any, fallback: string) =>
 
 function HardnessCheckDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <Skeleton className="h-9 w-48" />
       <Skeleton className="mx-auto mt-4 h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
@@ -89,8 +89,8 @@ export default function HardnessCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Kiểm tra độ cứng" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Kiểm tra độ cứng" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy bản ghi kiểm tra độ cứng.
         </div>
@@ -103,8 +103,9 @@ export default function HardnessCheckDetail({
   }
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Kiểm tra độ cứng #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         actions={

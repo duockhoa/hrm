@@ -160,8 +160,8 @@ export default function SteamSterilizationCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Chi tiết tiệt trùng" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Chi tiết tiệt trùng" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy bản ghi tiệt trùng.
         </div>
@@ -171,7 +171,7 @@ export default function SteamSterilizationCheckDetail({
 
   if (!data) {
     return (
-      <div className="w-full max-w-4xl space-y-3 rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl space-y-3 rounded border bg-white p-4 shadow-md text-sm">
         <Skeleton className="h-9 w-56" />
         {Array.from({ length: 7 }).map((_, index) => (
           <Skeleton key={index} className="h-8 w-full" />
@@ -181,8 +181,9 @@ export default function SteamSterilizationCheckDetail({
   }
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Chi tiết tiệt trùng #${data.id}`}
         subtitle={dateTime(data.checked_at)}
         actions={
@@ -227,7 +228,7 @@ export default function SteamSterilizationCheckDetail({
         />
         <FieldDisplay lable="Người nhập" value={userLabel(data.createdBy)} />
         <div className="border-t pt-4 text-left">
-          <h2 className="mb-3 text-lg font-semibold">Hình ảnh tiệt trùng</h2>
+          <h2 className="mb-3 text-sm font-semibold">Hình ảnh tiệt trùng</h2>
           <div className="space-y-4">
             {imageFields.map((image) => (
               <div key={image.name} className="space-y-2">

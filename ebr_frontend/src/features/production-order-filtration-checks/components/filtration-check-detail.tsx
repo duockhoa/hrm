@@ -226,11 +226,11 @@ export default function FiltrationCheckDetail({
   };
 
   if (error) {
-    return <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md"><DetailPanelHeader title="Chi tiết kiểm tra quá trình lọc" onClose={onClose} /><div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">Không tìm thấy bản ghi kiểm tra quá trình lọc.</div></div>;
+    return <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm"><DetailPanelHeader compactTitle title="Chi tiết kiểm tra quá trình lọc" onClose={onClose} /><div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">Không tìm thấy bản ghi kiểm tra quá trình lọc.</div></div>;
   }
 
   if (!data) {
-    return <div className="w-full max-w-4xl space-y-3 rounded border bg-white p-4 shadow-md">{Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-8 w-full" />)}</div>;
+    return <div className="w-full max-w-4xl space-y-3 rounded border bg-white p-4 shadow-md text-sm">{Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-8 w-full" />)}</div>;
   }
 
   const detailFieldEntries: Array<[string, unknown]> = [
@@ -268,8 +268,9 @@ export default function FiltrationCheckDetail({
   );
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Chi tiết kiểm tra quá trình lọc #${data.id}`}
         subtitle={formatDateTime(data.filtering_started_at)}
         actions={

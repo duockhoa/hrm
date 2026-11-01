@@ -111,8 +111,8 @@ export default function MaterialProcessSummaryDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Tổng kết chiết cao" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Tổng kết chiết cao" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy tổng kết chiết cao.
         </div>
@@ -130,8 +130,9 @@ export default function MaterialProcessSummaryDetail({
       : "Tổng kết chiết cao";
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`${summaryTitle} #${data.id}`}
         onClose={onClose}
         actions={

@@ -8,17 +8,21 @@ export default function DetailPanelHeader({
   actions,
   onClose,
   showCloseButton = true,
+  compactTitle = false,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   onClose: () => void;
   showCloseButton?: boolean;
+  compactTitle?: boolean;
 }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-gray-200 pb-4 text-left">
       <div className="min-w-0">
-        <h1 className="break-words text-2xl font-bold text-blue-500 md:text-3xl">
+        <h1
+          className={`break-words font-bold text-blue-500 ${compactTitle ? "text-xl" : "text-2xl md:text-3xl"}`}
+        >
           {title}
         </h1>
         {subtitle ? (

@@ -449,8 +449,8 @@ export default function ProductionOrderAttachmentDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Hình ảnh đính kèm" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Hình ảnh đính kèm" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy record đính kèm.
         </div>
@@ -460,7 +460,7 @@ export default function ProductionOrderAttachmentDetail({
 
   if (!data) {
     return (
-      <div className="w-full max-w-4xl space-y-4 rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl space-y-4 rounded border bg-white p-4 shadow-md text-sm">
         <Skeleton className="h-9 w-52" />
         <Skeleton className="h-28 w-full" />
         <Skeleton className="h-44 w-full" />
@@ -469,8 +469,9 @@ export default function ProductionOrderAttachmentDetail({
   }
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Hình ảnh đính kèm #${data.id}`}
         subtitle={formatDateTime(data.entered_at ?? data.created_at)}
         actions={

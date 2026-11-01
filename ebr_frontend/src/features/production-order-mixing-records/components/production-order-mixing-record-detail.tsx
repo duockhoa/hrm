@@ -116,7 +116,7 @@ export default function ProductionOrderMixingRecordDetail({
 
   if (!record && isLoading) {
     return (
-      <section className="flex min-h-56 w-full max-w-4xl items-center justify-center rounded border bg-white shadow-md">
+      <section className="flex min-h-56 w-full max-w-4xl items-center justify-center rounded border bg-white shadow-md text-sm">
         <Loader2 className="size-7 animate-spin text-blue-500" />
       </section>
     );
@@ -124,7 +124,7 @@ export default function ProductionOrderMixingRecordDetail({
 
   if (!record) {
     return (
-      <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <section className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
         <Button type="button" variant="ghost" onClick={onClose}>
           <ArrowLeft className="size-5" />
           Quay lại
@@ -184,7 +184,7 @@ export default function ProductionOrderMixingRecordDetail({
   };
 
   return (
-    <section className="w-full max-w-4xl overflow-hidden rounded border bg-white shadow-md">
+    <section className="w-full max-w-4xl overflow-hidden rounded border bg-white shadow-md text-sm">
       {!connected ? (
         <div className="flex items-center justify-between gap-2 border-b bg-amber-50 px-4 py-2 text-sm text-amber-800">
           <span>Chưa kết nối cập nhật trực tiếp.</span>
@@ -205,14 +205,14 @@ export default function ProductionOrderMixingRecordDetail({
         </Button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold leading-tight text-blue-500 md:text-3xl">
+            <h2 className="text-xl font-bold leading-tight text-blue-500">
               Chi tiết phiếu pha chế
             </h2>
             {isValidating ? (
               <Loader2 className="size-4 shrink-0 animate-spin text-blue-400" />
             ) : null}
           </div>
-          <p className="mt-2 break-words text-sm font-medium text-gray-600 md:text-base">
+          <p className="mt-2 break-words text-sm font-medium text-gray-600">
             {itemCode}
             {itemName ? ` - ${itemName}` : ""}
             {lotNumber ? ` - Lô ${lotNumber}` : ""}

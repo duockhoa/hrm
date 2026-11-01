@@ -64,7 +64,7 @@ const getStatusClassName = (status: string | null | undefined) => {
 
 function DateCheckDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <Skeleton className="h-9 w-36" />
       <Skeleton className="mx-auto mt-4 h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
@@ -361,8 +361,9 @@ export default function DateCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
         <DetailPanelHeader
+          compactTitle
           title="Kiểm tra date"
           onClose={onClose}
           showCloseButton={showCloseButton}
@@ -405,11 +406,12 @@ export default function DateCheckDetail({
   const usesExternalActions = externalActionsContainer !== undefined;
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       {usesExternalActions && externalActionsContainer
         ? createPortal(detailActions, externalActionsContainer)
         : null}
       <DetailPanelHeader
+        compactTitle
         title={`Kiểm tra date #${data.id}`}
         subtitle={formatDateTime(data.checked_at)}
         actions={usesExternalActions ? undefined : detailActions}

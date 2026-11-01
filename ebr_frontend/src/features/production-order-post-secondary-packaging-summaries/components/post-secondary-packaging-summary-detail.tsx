@@ -97,9 +97,9 @@ function PendingItemsSection({
   const title = isProcess ? "Chờ xử lý" : "Chờ hủy";
 
   return (
-    <section className="overflow-hidden rounded border bg-white shadow-sm">
+    <section className="overflow-hidden rounded border bg-white text-sm shadow-sm">
       <div className="flex items-center gap-2 border-b px-4 py-3">
-        <h2 className="text-left text-lg font-semibold text-gray-800">
+        <h2 className="text-left text-sm font-semibold text-gray-800">
           {title}
         </h2>
         <span className="rounded-full bg-gray-200 px-2.5 py-0.5 text-sm font-semibold text-gray-700">
@@ -245,8 +245,8 @@ export default function PostSecondaryPackagingSummaryDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded-lg border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Tổng kết BTP hoàn thiện" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded-lg border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Tổng kết BTP hoàn thiện" onClose={onClose} />
         <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700">
           Không tìm thấy tổng kết BTP hoàn thiện.
         </div>
@@ -256,7 +256,7 @@ export default function PostSecondaryPackagingSummaryDetail({
 
   if (!data) {
     return (
-      <div className="w-full max-w-4xl space-y-3 rounded-lg border bg-white p-4">
+      <div className="w-full max-w-4xl space-y-3 rounded-lg border bg-white p-4 text-sm">
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-32 w-full" />
@@ -276,8 +276,9 @@ export default function PostSecondaryPackagingSummaryDetail({
     semiFinishedOrder?.production_order_code ?? semiFinishedOrder?.id ?? "—";
 
   return (
-    <div className="w-full max-w-4xl rounded-lg border bg-white p-4 shadow-md">
+    <div className="w-full max-w-4xl rounded-lg border bg-white p-4 shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Tổng kết BTP hoàn thiện #${data.id}`}
         onClose={onClose}
         actions={

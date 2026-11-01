@@ -33,7 +33,7 @@ const getErrorMessage = (error: any, fallback: string) =>
 
 function DetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
       <Skeleton className="h-9 w-48" />
       <div className="mt-6 space-y-4">
         {Array.from({ length: 8 }).map((_, index) => (
@@ -87,8 +87,8 @@ export default function LineClearanceCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Dọn quang dây chuyền" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Dọn quang dây chuyền" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy hạng mục dọn quang dây chuyền.
         </div>
@@ -100,8 +100,9 @@ export default function LineClearanceCheckDetail({
   const previousOrder = getPreviousProductionOrderInfo(data, productionOrders);
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Dọn quang dây chuyền #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         actions={

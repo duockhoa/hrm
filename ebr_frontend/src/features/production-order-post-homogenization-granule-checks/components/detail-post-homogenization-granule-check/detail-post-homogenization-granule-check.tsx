@@ -29,7 +29,7 @@ import {
 
 function PostHomogenizationGranuleCheckDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <Skeleton className="h-9 w-52" />
       <Skeleton className="mx-auto mt-4 h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
@@ -116,8 +116,8 @@ export default function PostHomogenizationGranuleCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Cốm sau đồng nhất" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Cốm sau đồng nhất" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không tìm thấy bản ghi kiểm tra cốm sau đồng nhất.
         </div>
@@ -132,8 +132,9 @@ export default function PostHomogenizationGranuleCheckDetail({
   const densityUnit = data.density_unit || "g/ml";
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Cốm sau đồng nhất #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         actions={

@@ -10,7 +10,7 @@ import type { ProductionOrderLine } from "../../utils";
 
 function ProductionOrderLinesDetailSkeleton() {
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
       <Skeleton className="h-9 w-64" />
       <div className="mt-4 space-y-3">
         {Array.from({ length: 6 }).map((_, index) => (
@@ -38,8 +38,8 @@ export default function ProductionOrderLinesDetail({
 
   if (productionOrderLinesError) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
-        <DetailPanelHeader title="Tổng kết vật liệu" onClose={onClose} />
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
+        <DetailPanelHeader compactTitle title="Tổng kết vật liệu" onClose={onClose} />
         <div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">
           Không thể tải thông tin dòng lệnh sản xuất.
         </div>
@@ -52,9 +52,10 @@ export default function ProductionOrderLinesDetail({
   }
 
   return (
-    <div className="flex w-full max-w-4xl flex-col gap-4">
+    <div className="flex w-full max-w-4xl flex-col gap-4 text-sm">
       <div className="rounded border bg-white p-4 shadow-md">
         <DetailPanelHeader
+          compactTitle
           title="Tổng kết vật liệu"
           subtitle={`Mã lệnh sản xuất ${id}`}
           onClose={onClose}

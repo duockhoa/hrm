@@ -210,8 +210,9 @@ export default function PreSecondaryPackagingCheckDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
         <DetailPanelHeader
+          compactTitle
           title="Kiểm tra BTP trước đóng gói"
           onClose={onClose}
         />
@@ -224,7 +225,7 @@ export default function PreSecondaryPackagingCheckDetail({
 
   if (!data) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
         <Skeleton className="h-9 w-72" />
         <Skeleton className="mt-6 h-80 w-full" />
       </div>
@@ -234,8 +235,9 @@ export default function PreSecondaryPackagingCheckDetail({
   const imageCount = data.images?.length ?? 0;
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Kiểm tra BTP trước đóng gói #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         actions={

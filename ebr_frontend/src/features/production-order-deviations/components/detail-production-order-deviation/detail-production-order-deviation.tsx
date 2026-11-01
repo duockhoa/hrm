@@ -812,8 +812,9 @@ export default function ProductionOrderDeviationDetail({
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
+      <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
         <DetailPanelHeader
+          compactTitle
           title="Sai lệch"
           onClose={onClose}
           showCloseButton={showCloseButton}
@@ -853,11 +854,12 @@ export default function ProductionOrderDeviationDetail({
   const usesExternalActions = externalActionsContainer !== undefined;
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       {usesExternalActions && externalActionsContainer
         ? createPortal(detailActions, externalActionsContainer)
         : null}
       <DetailPanelHeader
+        compactTitle
         title={`Sai lệch #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         actions={usesExternalActions ? undefined : detailActions}

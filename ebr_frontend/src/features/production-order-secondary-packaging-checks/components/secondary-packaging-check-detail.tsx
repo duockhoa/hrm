@@ -19,7 +19,7 @@ const getErrorMessage = (error: any, fallback: string) =>
   error?.response?.data?.message ?? error?.message ?? fallback;
 
 function DetailSkeleton() {
-  return <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md"><Skeleton className="h-9 w-56" /><div className="mt-6 space-y-4">{Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-6 w-full" />)}</div></div>;
+  return <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm"><Skeleton className="h-9 w-56" /><div className="mt-6 space-y-4">{Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-6 w-full" />)}</div></div>;
 }
 
 export default function SecondaryPackagingCheckDetail({ id, onClose }: { id: string | number; onClose: () => void }) {
@@ -50,13 +50,14 @@ export default function SecondaryPackagingCheckDetail({ id, onClose }: { id: str
   };
 
   if (error) {
-    return <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md"><DetailPanelHeader title="Kiểm tra bao bì cấp 2" onClose={onClose} /><div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">Không tìm thấy hạng mục kiểm tra.</div></div>;
+    return <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm"><DetailPanelHeader compactTitle title="Kiểm tra bao bì cấp 2" onClose={onClose} /><div className="mt-4 rounded border border-dashed p-6 text-center text-sm text-gray-500">Không tìm thấy hạng mục kiểm tra.</div></div>;
   }
   if (!data) return <DetailSkeleton />;
 
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        compactTitle
         title={`Kiểm tra bao bì cấp 2 #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
         actions={<><Button size="sm" type="button" onClick={() => setIsEditing(true)}><Pencil className="size-4" /> Sửa</Button><Button size="sm" type="button" variant="destructive" onClick={() => setIsDeleteConfirmOpen(true)}><Trash2 className="size-4" /> Xóa</Button></>}
