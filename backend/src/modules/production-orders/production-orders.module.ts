@@ -72,9 +72,11 @@ import { ProductionOrderMixingRecordsService } from './production-order-mixing-r
 import { ProductionOrderMixingRecordsController } from './production-order-mixing-records.controller';
 import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.module';
 import { EmailSettingsModule } from '../email-settings/email-settings.module';
+import { NetworkPoliciesModule } from '../network-policies/network-policies.module';
 
 @Module({
   imports: [
+    NetworkPoliciesModule,
     EmailSettingsModule,
     FeaturesModule,
     SapB1ConnectorModule,

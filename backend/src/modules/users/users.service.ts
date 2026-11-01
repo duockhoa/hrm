@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { compareSync, hash } from 'bcrypt';
 import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventNames } from 'src/event.interface';
 import { EmailService } from '../email/email.service';
@@ -101,7 +102,7 @@ export class UsersService {
     return user;
   }
 
-  async updateUser(id: number, updateUserDto: Partial<CreateUserDto>) {
+  async updateUser(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.prisma.users.findUnique({ where: { id } });
     if (!user) {
       return null;

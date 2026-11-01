@@ -1,5 +1,6 @@
 // lib/axios-proxy.ts (Server-side)
 import axios, { AxiosError } from "axios";
+import { toast } from "sonner";
 import { notifyProductionOrderDataChanged } from "./production-order-data-events";
 import {
   clearTokenCache,
@@ -89,6 +90,16 @@ axiosClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
+    if (
+      error.response?.status === 403 &&
+      (error.response.data as { code?: string })?.code === "IP_ACCESS_DENIED"
+    ) {
+      toast.error(
+        "Bạn cần kết nối mạng nhà máy để truy cập hồ sơ lô sản xuất.",
+        { id: "ip-access-denied" },
+      );
+      return Promise.reject(error);
+    }
     const originalRequest = error.config as typeof error.config & {
       _retry?: boolean;
     };

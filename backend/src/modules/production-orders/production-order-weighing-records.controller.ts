@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ProductionOrderWeighingRecordsEventsInterceptor } from './production-order-weighing-records-events.interceptor';
 import {
   Body,
@@ -21,7 +22,7 @@ import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 import { ProductionOrderWeighingRecordsService } from './production-order-weighing-records.service';
 
 @UseInterceptors(ProductionOrderWeighingRecordsEventsInterceptor)
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller('production-orders')
 export class ProductionOrderWeighingRecordsController {
   constructor(

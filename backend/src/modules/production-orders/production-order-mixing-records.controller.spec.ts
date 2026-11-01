@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ProductionOrderMixingRecordsGateway } from './production-order-mixing-records.gateway';
 import { RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA } from '@nestjs/common/constants';
@@ -21,7 +22,9 @@ describe('ProductionOrderMixingRecordsController permissions', () => {
           useValue: {},
         },
       ],
-    }).compile();
+    }).overrideGuard(NetworkPolicyGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<ProductionOrderMixingRecordsController>(
       ProductionOrderMixingRecordsController,

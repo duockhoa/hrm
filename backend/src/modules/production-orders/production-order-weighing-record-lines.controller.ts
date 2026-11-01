@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ProductionOrderWeighingRecordsEventsInterceptor } from './production-order-weighing-records-events.interceptor';
 import {
   Body,
@@ -34,7 +35,7 @@ import { ProductionOrderWeighingRecordLinesService } from './production-order-we
 import { CheckWeighingRecordLotDto } from './dto/check-weighing-record-lot.dto';
 
 @UseInterceptors(ProductionOrderWeighingRecordsEventsInterceptor)
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller('production-orders/weighing-records/:recordId/lines')
 export class ProductionOrderWeighingRecordLinesController {
   constructor(
@@ -138,7 +139,7 @@ export class ProductionOrderWeighingRecordLinesController {
   }
 }
 
-@UseGuards(jwtAuthGuard)
+@UseGuards(jwtAuthGuard, NetworkPolicyGuard)
 @Controller('production-orders/weighing-record-lot-checks/images')
 export class ProductionOrderWeighingLotCheckImagesController {
   constructor(

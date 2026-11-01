@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ProductionOrderMixingRecordsEventsInterceptor } from './production-order-mixing-records-events.interceptor';
 import {
   BadRequestException,
@@ -42,7 +43,7 @@ import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 import { ProductionOrderMixingRecordsService } from './production-order-mixing-records.service';
 
 @UseInterceptors(ProductionOrderMixingRecordsEventsInterceptor)
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller('production-orders')
 export class ProductionOrderMixingRecordsController {
   constructor(

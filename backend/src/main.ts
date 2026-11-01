@@ -6,11 +6,13 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ensureProductionOrderDeviationUploadDir } from './modules/production-order-deviations/production-order-deviation-upload.config';
 import { enrichOpenApiDocument } from './swagger/enrich-openapi-document';
+import { createProxyTrust } from './modules/network-policies/client-ip';
 
 async function bootstrap() {
   ensureProductionOrderDeviationUploadDir();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.set('trust proxy', createProxyTrust());
   app.enableCors({
     exposedHeaders: [
       'Content-Disposition',

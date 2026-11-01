@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ApiOperation, ApiProduces, ApiOkResponse } from '@nestjs/swagger';
 import {
   BadRequestException,
@@ -396,7 +397,7 @@ const encodeContentDispositionFilename = (filename: string) =>
     (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller('production-orders')
 export class ProductionOrdersController {
   constructor(

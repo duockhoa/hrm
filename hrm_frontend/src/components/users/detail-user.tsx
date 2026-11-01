@@ -7,7 +7,7 @@ function UserDetailSkeleton() {
       <Skeleton className="mx-auto h-10 w-3/4" />
       <div className="my-4 border-t border-gray-300" />
       <div className="mt-4 space-y-3">
-        {Array.from({ length: 7 }).map((_, index) => (
+        {Array.from({ length: 8 }).map((_, index) => (
           <div key={index} className="flex w-full justify-start gap-4">
             <Skeleton className="m-1 h-5 min-w-[150px] max-w-[200px]" />
             <Skeleton className="h-5 flex-1" />
@@ -37,6 +37,14 @@ export default function UserDetail({ user }: { user: any }) {
         <FieldDisplay lable="Số điện thoại" value={user?.phone} />
         <FieldDisplay lable="Ngày sinh" value={user?.dateOfBirth} />
         <FieldDisplay lable="Ngày bắt đầu làm việc" value={user?.startDate} />
+        <FieldDisplay
+          lable="Chính sách truy cập mạng"
+          value={
+            user?.network_policy_code === "IP_ALLOWLIST"
+              ? "Theo IP (IP_ALLOWLIST)"
+              : "Mở (OPEN)"
+          }
+        />
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { NetworkPoliciesService } from '../network-policies/network-policies.service';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
@@ -87,6 +88,10 @@ describe('Weighing record REST + socket integration', () => {
     process.env.JWT_SECRET = 'weighing-record-test-secret';
     const module = await Test.createTestingModule({
       providers: [
+        {
+          provide: NetworkPoliciesService,
+          useValue: { assertAllowed: jest.fn().mockResolvedValue(undefined) },
+        },
         ProductionOrderWeighingRecordsGateway,
         ProductionOrderWeighingRecordsEventsInterceptor,
         { provide: JwtService, useValue: jwt },
@@ -107,6 +112,16 @@ describe('Weighing record REST + socket integration', () => {
     await app.close();
     if (originalSecret === undefined) delete process.env.JWT_SECRET;
     else process.env.JWT_SECRET = originalSecret;
+  });
+
+  it('rejects a subscription denied by the network policy', async () => {
+    const policies = app.get(NetworkPoliciesService);
+    (policies.assertAllowed as jest.Mock).mockRejectedValueOnce(new Error('denied'));
+    const socket = connect(token(), 1);
+    const rejected = event<{ data: { code: string } }>(socket, 'connect_error');
+    socket.connect();
+    expect((await rejected).data.code).toBe('IP_ACCESS_DENIED');
+    expect(socket.connected).toBe(false);
   });
 
   it.each([

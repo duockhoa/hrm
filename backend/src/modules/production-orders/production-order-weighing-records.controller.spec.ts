@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ProductionOrderWeighingRecordsGateway } from './production-order-weighing-records.gateway';
 import {
   ExecutionContext,
@@ -45,6 +46,8 @@ describe('Weighing record HTTP routes', () => {
           return true;
         },
       })
+      .overrideGuard(NetworkPolicyGuard)
+      .useValue({ canActivate: () => true })
       .compile();
     app = module.createNestApplication();
     await app.init();

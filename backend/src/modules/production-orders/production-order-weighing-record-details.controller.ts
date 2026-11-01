@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ProductionOrderWeighingRecordsEventsInterceptor } from './production-order-weighing-records-events.interceptor';
 import { WeighingDetailUploadCleanupInterceptor } from './production-order-weighing-detail-upload-cleanup.interceptor';
 import {
@@ -39,7 +40,7 @@ import { productionOrderWeighingRecordDetailImageUploadOptions } from './product
 type UserRequest = { user: { id?: number | string | null } };
 
 @UseInterceptors(ProductionOrderWeighingRecordsEventsInterceptor)
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller(
   'production-orders/weighing-records/:recordId/lines/:lineId/details',
 )
@@ -234,7 +235,7 @@ export class ProductionOrderWeighingRecordDetailsController {
   }
 }
 
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller('production-orders/weighing-record-details/images')
 export class ProductionOrderWeighingDetailImagesController {
   constructor(

@@ -1,10 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { isIP } from 'node:net';
+import { BlockList, isIP } from 'node:net';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { NetworkRangeDto } from './network-policies.dto';
@@ -62,6 +63,39 @@ export function normalizeNetwork(value: string): string {
 @Injectable()
 export class NetworkPoliciesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async assertAllowed(
+    policyCode: string | undefined,
+    ip: string | undefined,
+  ): Promise<void> {
+    if (policyCode === 'OPEN') return;
+    const deny = () => {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'IP_ACCESS_DENIED',
+        message: 'Bạn cần kết nối mạng nhà máy để truy cập hồ sơ lô sản xuất.',
+      });
+    };
+    if (policyCode !== 'IP_ALLOWLIST' || !ip || !isIP(ip)) return deny();
+    const ranges = await this.prisma.networkPolicyRanges.findMany({
+      where: { policy_code: 'IP_ALLOWLIST' },
+      select: { cidr: true },
+    });
+    const allowed = new BlockList();
+    for (const range of ranges) {
+      try {
+        const [address, prefix] = normalizeNetwork(range.cidr).split('/');
+        allowed.addSubnet(
+          address,
+          Number(prefix),
+          isIP(address) === 4 ? 'ipv4' : 'ipv6',
+        );
+      } catch {
+        return deny();
+      }
+    }
+    if (!allowed.check(ip, isIP(ip) === 4 ? 'ipv4' : 'ipv6')) deny();
+  }
 
   list() {
     return this.prisma.networkPolicies.findMany({ orderBy: { id: 'asc' } });

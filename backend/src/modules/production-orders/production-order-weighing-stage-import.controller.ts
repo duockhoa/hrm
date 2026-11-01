@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ProductionOrderWeighingRecordsEventsInterceptor } from './production-order-weighing-records-events.interceptor';
 import {
   Body,
@@ -27,7 +28,7 @@ class ImportWeighingLinesDto {
 }
 
 @UseInterceptors(ProductionOrderWeighingRecordsEventsInterceptor)
-@UseGuards(jwtAuthGuard, PermissionsGuard)
+@UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller('production-orders/weighing-records/:recordId')
 export class ProductionOrderWeighingStageImportController {
   constructor(

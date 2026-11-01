@@ -1,3 +1,5 @@
+import { NetworkPoliciesService } from '../network-policies/network-policies.service';
+import { getClientIp } from '../network-policies/client-ip';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -29,6 +31,7 @@ export class ProductionOrderWeighingRecordsGateway
     private readonly jwt: JwtService,
     private readonly users: UsersService,
     private readonly prisma: PrismaService,
+    private readonly networkPolicies: NetworkPoliciesService,
   ) {}
 
   afterInit(server: Namespace) {
@@ -82,6 +85,11 @@ export class ProductionOrderWeighingRecordsGateway
       throw socketError('RECORD_NOT_FOUND');
     const user = await this.users.findById(userId);
     if (!user) throw socketError('AUTH_INVALID');
+    try {
+      await this.networkPolicies.assertAllowed(user.network_policy_code, getClientIp(socket.request));
+    } catch {
+      throw socketError('IP_ACCESS_DENIED');
+    }
     const canRead = user.userRoles.some((role) =>
       role.roles.rolePermissions.some(
         (permission) =>

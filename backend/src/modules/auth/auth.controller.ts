@@ -8,6 +8,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { getClientIp } from '../network-policies/client-ip';
 import { UsersService } from '../users/users.service';
 import { UseGuards } from '@nestjs/common';
 import { LocalAuthGuard } from 'src/guards/local-auth.guard';
@@ -171,7 +172,7 @@ export class AuthController {
   })
   async login(@Request() request) {
     const token = await this.authService.login(request.user, {
-      ipAddress: this.getClientIp(request),
+      ipAddress: getClientIp(request),
       userAgent: request.headers['user-agent'],
     });
     if (!token) {
@@ -181,12 +182,4 @@ export class AuthController {
     return token;
   }
 
-  private getClientIp(request: any): string | undefined {
-    const forwardedFor = request.headers['x-forwarded-for'];
-    if (typeof forwardedFor === 'string') {
-      return forwardedFor.split(',')[0].trim() || undefined;
-    }
-
-    return request.ip || request.socket?.remoteAddress;
-  }
 }

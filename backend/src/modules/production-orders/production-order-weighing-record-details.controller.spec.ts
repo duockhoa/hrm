@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ProductionOrderWeighingRecordsGateway } from './production-order-weighing-records.gateway';
 import {
   ConflictException,
@@ -80,6 +81,8 @@ describe('Weighing detail HTTP API', () => {
           return true;
         },
       })
+      .overrideGuard(NetworkPolicyGuard)
+      .useValue({ canActivate: () => true })
       .compile();
     app = module.createNestApplication();
     await app.init();

@@ -1,3 +1,4 @@
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RequestMethod, StreamableFile } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
@@ -878,7 +879,9 @@ describe('ProductionOrdersController', () => {
           useValue: productionOrderAttachmentsService,
         },
       ],
-    }).compile();
+    }).overrideGuard(NetworkPolicyGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<ProductionOrdersController>(
       ProductionOrdersController,

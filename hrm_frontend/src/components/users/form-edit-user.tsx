@@ -1,6 +1,6 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Input } from "../ui/input";
 import useDepartmentStore from "@/store/department.store";
-import axiosClient from "@/lib/axios-client";
-import useUserStore from "@/store/user.store";
 import { userService } from "@/services/index.service";
 import { mutate } from "swr";
 import { API_ROUTES } from "@/lib/api-routes";
@@ -51,6 +49,7 @@ export default function EditUserForm({
 
     email: z.string().email("Invalid email address"),
     position: z.string().optional(),
+    network_policy_code: z.enum(["OPEN", "IP_ALLOWLIST"]),
   });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -60,13 +59,13 @@ export default function EditUserForm({
       name: user?.name || "",
       email: user?.email || "",
       position: user?.position || "",
+      network_policy_code: user?.network_policy_code ?? "OPEN",
     },
   });
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      // Simulate API call
-      const response = await userService.updateUser(user?.id || "", data);
+      await userService.updateUser(user?.id || "", data);
       toast.success("User updated successfully!");
       mutate("/users/" + user?.id);
       mutate(API_ROUTES.users.base);
@@ -168,8 +167,37 @@ export default function EditUserForm({
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="network_policy_code"
+            render={({ field }) => (
+              <FormItem className="mb-4">
+                <FormLabel>Chính sách truy cập mạng</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  disabled={form.formState.isSubmitting}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Chọn chính sách mạng" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="OPEN">Mở (OPEN)</SelectItem>
+                    <SelectItem value="IP_ALLOWLIST">
+                      Theo IP (IP_ALLOWLIST)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <div className="flex justify-end mt-4">
-            <Button type="submit">Lưu</Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              Lưu
+            </Button>
             <Button
               type="button"
               variant="outline"
