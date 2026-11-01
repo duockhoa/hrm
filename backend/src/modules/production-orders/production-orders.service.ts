@@ -158,6 +158,47 @@ const productionOrderFindInclude = {
   },
 } satisfies Prisma.ProductionOrdersInclude;
 
+// List consumers need lot metadata and status, not the full batch record.
+const productionOrderListSelect = {
+  id: true,
+  item_code: true,
+  description: true,
+  production_order_code: true,
+  lot_no: true,
+  status: true,
+  planned_quatity: true,
+  unit: true,
+  creation_date: true,
+  start_date: true,
+  date_manufacture: true,
+  expire_date: true,
+  item: { select: { item_code: true, item_name: true, unit: true } },
+  documentControl: {
+    select: {
+      batch_record_issued_at: true,
+      batch_record_received_at: true,
+      warehouse_release_received_at: true,
+      test_certificate_received_at: true,
+    },
+  },
+  samplingRequests: {
+    ...productionOrderSamplingRequestInclude,
+    select: { status: true },
+  },
+} satisfies Prisma.ProductionOrdersSelect;
+
+type ProductionOrderListRow = Prisma.ProductionOrdersGetPayload<{
+  select: typeof productionOrderListSelect;
+}>;
+
+const toProductionOrderListItem = ({
+  samplingRequests,
+  ...lot
+}: ProductionOrderListRow) => ({
+  ...lot,
+  pyclm: { isSent: samplingRequests[0]?.status === 'sent' },
+});
+
 const getStageIdFilterInput = (
   options?: ExportProductionOrderLinesDto,
 ): ProductionOrderStageIdFilter | number | string | undefined => {
@@ -256,14 +297,14 @@ export class ProductionOrdersService {
             startsWith: 'TP',
           },
         },
-        include: productionOrderFindInclude,
+        select: productionOrderListSelect,
         orderBy: {
           id: 'desc',
         },
       },
     );
 
-    return this.addPyclmInfoToList(productionOrders);
+    return productionOrders.map(toProductionOrderListItem);
   }
 
   async findSemiFinishedProducts() {
@@ -276,14 +317,14 @@ export class ProductionOrdersService {
             },
           },
         },
-        include: productionOrderFindInclude,
+        select: productionOrderListSelect,
         orderBy: {
           id: 'desc',
         },
       },
     );
 
-    return this.addPyclmInfoToList(productionOrders);
+    return productionOrders.map(toProductionOrderListItem);
   }
 
   async findProductionOrderById(id: number) {

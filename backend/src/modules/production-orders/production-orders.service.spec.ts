@@ -252,93 +252,63 @@ describe('ProductionOrdersService', () => {
     });
   });
 
-  it('returns production orders with TP item codes', async () => {
-    const productionOrders = [
-      { id: 2031, item_code: 'TP00001', samplingRequests: [] },
-    ];
-    prismaService.productionOrders.findMany.mockResolvedValue(productionOrders);
-
-    await expect(service.findFinishedProducts()).resolves.toEqual([
-      {
-        ...productionOrders[0],
-        productionSpecification: null,
-        productionSpecificationSource: 'item',
-        productionSpecificationCapturedAt: null,
-        pyclm: {
-          isSent: false,
-          status: null,
-          googleDocUrl: null,
-          sentAt: null,
-          location: null,
-          sender: null,
-          latestSamplingRequest: null,
-        },
+  it.each([
+    ['finished', 'TP00001', { startsWith: 'TP' }],
+    ['semi-finished', 'BTP00001', { not: { startsWith: 'TP' } }],
+  ])('returns a compact %s list without losing list/report fields', async (kind, itemCode, itemFilter) => {
+    const lot = {
+      id: 2031,
+      item_code: itemCode,
+      description: 'Product description',
+      production_order_code: 'ORDER-2031',
+      lot_no: 'LOT-2031',
+      status: 'boposReleased',
+      planned_quatity: 20000,
+      unit: 'Box',
+      creation_date: new Date('2026-10-01'),
+      start_date: new Date('2026-10-02'),
+      date_manufacture: '2026-10-03',
+      expire_date: '2029-10-03',
+      item: { item_code: itemCode, item_name: 'Product name', unit: 'Box' },
+      documentControl: {
+        batch_record_issued_at: new Date('2026-10-01'),
+        batch_record_received_at: null,
+        warehouse_release_received_at: null,
+        test_certificate_received_at: null,
       },
+    };
+    prismaService.productionOrders.findMany.mockResolvedValue([
+      { ...lot, samplingRequests: [{ status: 'sent' }] },
+      { ...lot, id: 2030, documentControl: null, samplingRequests: [] },
+      { ...lot, id: 2029, samplingRequests: [{ status: 'pending' }] },
     ]);
-    expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith({
-      where: {
-        item_code: {
-          startsWith: 'TP',
-        },
-      },
-      include: expectedProductionOrderFindInclude,
-      orderBy: {
-        id: 'desc',
-      },
+
+    const result = await (kind === 'finished'
+      ? service.findFinishedProducts()
+      : service.findSemiFinishedProducts());
+
+    expect(result).toEqual([
+      { ...lot, pyclm: { isSent: true } },
+      { ...lot, id: 2030, documentControl: null, pyclm: { isSent: false } },
+      { ...lot, id: 2029, pyclm: { isSent: false } },
+    ]);
+    const query = prismaService.productionOrders.findMany.mock.calls[0][0];
+    expect(query.where).toEqual({ item_code: itemFilter });
+    expect(query.orderBy).toEqual({ id: 'desc' });
+    expect(query).not.toHaveProperty('include');
+    expect(query).not.toHaveProperty('take');
+    expect(query).not.toHaveProperty('skip');
+    expect(Object.keys(query.select).sort()).toEqual([
+      ...Object.keys(lot), 'samplingRequests',
+    ].sort());
+    expect(query.select.item).toEqual({
+      select: { item_code: true, item_name: true, unit: true },
     });
-  });
-
-  it('returns production orders without TP item codes', async () => {
-    const productionOrders = [
-      { id: 2031, item_code: 'BTP00001', samplingRequests: [] },
-      { id: 2032, item_code: 'NVL00001', samplingRequests: [] },
-    ];
-    prismaService.productionOrders.findMany.mockResolvedValue(productionOrders);
-
-    await expect(service.findSemiFinishedProducts()).resolves.toEqual([
-      {
-        ...productionOrders[0],
-        productionSpecification: null,
-        productionSpecificationSource: 'item',
-        productionSpecificationCapturedAt: null,
-        pyclm: {
-          isSent: false,
-          status: null,
-          googleDocUrl: null,
-          sentAt: null,
-          location: null,
-          sender: null,
-          latestSamplingRequest: null,
-        },
-      },
-      {
-        ...productionOrders[1],
-        productionSpecification: null,
-        productionSpecificationSource: 'item',
-        productionSpecificationCapturedAt: null,
-        pyclm: {
-          isSent: false,
-          status: null,
-          googleDocUrl: null,
-          sentAt: null,
-          location: null,
-          sender: null,
-          latestSamplingRequest: null,
-        },
-      },
-    ]);
-    expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith({
-      where: {
-        item_code: {
-          not: {
-            startsWith: 'TP',
-          },
-        },
-      },
-      include: expectedProductionOrderFindInclude,
-      orderBy: {
-        id: 'desc',
-      },
+    expect(query.select.documentControl).toEqual({
+      select: Object.fromEntries(Object.keys(lot.documentControl).map((key) => [key, true])),
+    });
+    expect(query.select.samplingRequests).toEqual({
+      orderBy: { sent_at: 'desc' }, take: 1, select: { status: true },
     });
   });
 

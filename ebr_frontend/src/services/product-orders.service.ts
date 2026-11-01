@@ -15,7 +15,10 @@ import type {
   UpdateProductionOrderAttachmentPayload,
 } from "@/features/production-order-attachments/types";
 import { API_ROUTES } from "@/lib/api-routes";
-import type { ProductionOrderCompleteness } from "@/features/production-orders/types";
+import type {
+  ProductionOrderCompleteness,
+  ProductionOrderListItem,
+} from "@/features/production-orders/types";
 
 const fetchProductionOrders = async () => {
   const response = await axiosClient.get(API_ROUTES.productionOrders.base);
@@ -23,14 +26,14 @@ const fetchProductionOrders = async () => {
 };
 
 const fetchFinishedProducts = async () => {
-  const response = await axiosClient.get(
+  const response = await axiosClient.get<ProductionOrderListItem[]>(
     API_ROUTES.productionOrders.finishedProducts,
   );
   return response.data;
 };
 
 const fetchSemiFinishedProducts = async () => {
-  const response = await axiosClient.get(
+  const response = await axiosClient.get<ProductionOrderListItem[]>(
     API_ROUTES.productionOrders.semiFinishedProducts,
   );
   return response.data;
