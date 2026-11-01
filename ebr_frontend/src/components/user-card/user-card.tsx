@@ -104,12 +104,6 @@ export default function UserCard({ user, variant = "default" }: UserCardProps) {
             Cài đặt
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => router.push("/personal-email-settings")}
-          >
-            <Mail className="mr-2 h-4 w-4" />
-            Cá nhân hoá email
-          </DropdownMenuItem>
-          <DropdownMenuItem
             onClick={() => {
               router.push("/profile");
             }}
@@ -131,6 +125,12 @@ export default function UserCard({ user, variant = "default" }: UserCardProps) {
             Tất cả ứng dụng
           </DropdownMenuItem>
 
+          <DropdownMenuItem
+            onClick={() => router.push("/personal-email-settings")}
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            Cài đặt email
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={async () => {
               await logout();

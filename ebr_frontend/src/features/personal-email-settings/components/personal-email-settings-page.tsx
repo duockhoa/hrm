@@ -92,7 +92,7 @@ function PersonalEmailWorkspace({ userId }: { userId: number }) {
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-auto rounded-lg bg-white p-3 shadow-md lg:overflow-hidden">
       <div className="flex shrink-0 items-start justify-between gap-3 border-b pb-3">
         <div>
-          <h1 className="text-xl font-semibold">Cá nhân hoá email</h1>
+          <h1 className="text-xl font-semibold">Cài đặt email</h1>
           <p className="mt-1 text-sm text-gray-500">
             Thiết lập người nhận email riêng cho từng loại email.
           </p>
