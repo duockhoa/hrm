@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: "Quản lý phiên bản",
 };
 
-const currentVersionChanges = [
+const version112Changes = [
   "Bổ sung trang quản lý phiên bản và liên kết từ sidebar; hiển thị thông tin ứng dụng, lịch sử thay đổi và người phụ trách.",
   "Cập nhật thông báo lỗi và nhãn trên phiếu theo dõi In Date và biểu mẫu xuất dữ liệu in Date.",
   "Điều chỉnh thứ tự báo cáo hồ sơ lô: hồ sơ pha chế được đặt sau phiếu xuất kho.",
@@ -94,13 +94,24 @@ export default function VersionsPage() {
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell className="font-medium">{packageJson.version}</TableCell>
+                <TableCell className="font-medium">1.1.3</TableCell>
+                <TableCell>
+                  <time dateTime="2026-11-02">02/11/2026</time>
+                </TableCell>
+                <TableCell className="min-w-72 max-w-xl whitespace-normal">
+                  Bổ sung liên kết “api reference” bên cạnh Privacy trên trang
+                  About, mở tài liệu API trong tab mới.
+                </TableCell>
+                <VersionResponsibleCells />
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">1.1.2</TableCell>
                 <TableCell>
                   <time dateTime="2026-11-02">02/11/2026</time>
                 </TableCell>
                 <TableCell className="min-w-72 max-w-xl whitespace-normal">
                   <ul className="list-disc space-y-1 pl-4">
-                    {currentVersionChanges.map((change) => (
+                    {version112Changes.map((change) => (
                       <li key={change}>{change}</li>
                     ))}
                   </ul>

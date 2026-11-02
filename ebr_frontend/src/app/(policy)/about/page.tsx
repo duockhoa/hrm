@@ -59,6 +59,15 @@ export default function AboutPage() {
             Privacy
           </Link>
           <span>·</span>
+          <a
+            className="hover:text-blue-600 hover:underline"
+            href="https://docs.dkpharma.io.vn/api-docs"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            api reference
+          </a>
+          <span>·</span>
           <span>Version {appVersion}</span>
         </footer>
       </div>
