@@ -69,7 +69,7 @@ export default function FormExportDatePrint({
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       toast.success(onPdfGenerated
-        ? "Đã tạo PDF và đính kèm vào form tải nội dung date yêu cầu."
+        ? "Đã tạo PDF và đính kèm vào phiếu yêu cầu in date."
         : "Đã xuất phiếu theo dõi in date.");
       onClose?.();
     } catch (error: unknown) {

@@ -4,7 +4,6 @@ import * as React from "react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -41,7 +40,6 @@ export default function FormProductionOrderDateCheck({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [templateOpen, setTemplateOpen] = React.useState(false);
   const [isGenerating, setIsGenerating] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dateChecksKey = productionOrderId
     ? API_ROUTES.productionOrders.dateChecks(productionOrderId)
     : null;
@@ -49,7 +47,6 @@ export default function FormProductionOrderDateCheck({
   const resetForm = () => {
     setPackageType("goi");
     setRequestFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -67,7 +64,7 @@ export default function FormProductionOrderDateCheck({
     }
 
     if (!requestFile) {
-      toast.error("Vui lòng đính kèm file yêu cầu in date.");
+      toast.error("Vui lòng tạo phiếu in date từ mẫu trước khi lưu.");
       return;
     }
 
@@ -107,7 +104,7 @@ export default function FormProductionOrderDateCheck({
       >
         <div className="space-y-4">
           <p className="text-center text-xl font-semibold uppercase text-gray-900">
-            Tải nội dung date yêu cầu
+            Tạo nội dung date yêu cầu
           </p>
 
           <div className="space-y-2">
@@ -131,21 +128,8 @@ export default function FormProductionOrderDateCheck({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date-check-request-file">
-              File yêu cầu in date (bắt buộc)
-            </Label>
+            <Label>Phiếu yêu cầu in date (bắt buộc)</Label>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                ref={fileInputRef}
-                className="min-w-0 flex-1"
-                id="date-check-request-file"
-                type="file"
-                aria-required="true"
-                disabled={isSubmitting}
-                onChange={(event) =>
-                  setRequestFile(event.target.files?.[0] ?? null)
-                }
-              />
               <Dialog
                 open={templateOpen}
                 onOpenChange={(open) => {
@@ -171,14 +155,7 @@ export default function FormProductionOrderDateCheck({
                   <FormExportDatePrint
                     productionOrderId={productionOrderId}
                     onExportingChange={setIsGenerating}
-                    onPdfGenerated={(file) => {
-                      setRequestFile(file);
-                      if (fileInputRef.current) {
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(file);
-                        fileInputRef.current.files = dataTransfer.files;
-                      }
-                    }}
+                    onPdfGenerated={setRequestFile}
                     onClose={() => setTemplateOpen(false)}
                   />
                 </DialogContent>
@@ -186,7 +163,7 @@ export default function FormProductionOrderDateCheck({
             </div>
             {requestFile && (
               <p className="break-words text-sm text-muted-foreground" role="status">
-                File đính kèm: {requestFile.name}
+                Phiếu đã tạo từ mẫu: {requestFile.name}
               </p>
             )}
           </div>
@@ -196,12 +173,15 @@ export default function FormProductionOrderDateCheck({
           <Button
             type="button"
             variant="outline"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isGenerating || templateOpen}
             onClick={resetForm}
           >
             Đặt lại
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            disabled={!requestFile || isSubmitting || isGenerating || templateOpen}
+          >
             {isSubmitting ? "Đang lưu..." : "Lưu"}
           </Button>
         </div>
