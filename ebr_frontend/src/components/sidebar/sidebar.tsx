@@ -49,6 +49,9 @@ export default function Sidebar({
   data: any[];
   isMobile: boolean;
 }) {
+  const pathname = usePathname();
+  const { closeSidebar } = useSidebarStore();
+
   return (
     <div
       className={` border-r border-gray-200 h-full min-h-0 shrink-0 overflow-y-auto ${isMobile && !isOpen ? "w-0" : isOpen ? "w-64" : "w-20"} transition-all duration-300 ease-in-out`}
@@ -59,9 +62,19 @@ export default function Sidebar({
             <SidebarMenu key={item.id} item={item} isOpen={isOpen} />
           ))}
         </div>
-        <div className="p-2 text-center text-sm text-gray-500">
+        <Link
+          href="/versions"
+          onClick={() => isMobile && closeSidebar()}
+          aria-current={pathname === "/versions" ? "page" : undefined}
+          title="Quản lý phiên bản"
+          className={`m-2 rounded-md p-2 text-center text-sm transition-colors hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600 ${
+            pathname === "/versions"
+              ? "bg-blue-100 text-blue-700"
+              : "text-gray-500"
+          }`}
+        >
           Phiên bản {packageJson.version}
-        </div>
+        </Link>
       </div>
     </div>
   );
