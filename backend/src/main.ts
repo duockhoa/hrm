@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createServer } from 'node:http';
+import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -12,6 +13,10 @@ async function bootstrap() {
   ensureProductionOrderDeviationUploadDir();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useStaticAssets(join(__dirname, 'swagger', 'assets'), {
+    prefix: '/api-docs-assets/',
+    index: false,
+  });
   app.set('trust proxy', createProxyTrust());
   app.enableCors({
     exposedHeaders: [
@@ -34,6 +39,32 @@ async function bootstrap() {
     }),
   );
   SwaggerModule.setup('api-docs', app, swaggerDocument, {
+    customSiteTitle: 'DK Pharma — API Reference',
+    customfavIcon: '/api-docs-assets/favicon.ico',
+    customCss: `
+      .swagger-ui .topbar { background: #fff; border-bottom: 1px solid #e5e7eb; }
+      .swagger-ui .topbar .link { max-width: 200px; }
+      .swagger-ui .topbar .link img { width: 200px; height: 48px; object-fit: contain; }
+    `,
+    customJsStr: `
+      (() => {
+        const observer = new MutationObserver(updateLogo);
+        function updateLogo() {
+          const link = document.querySelector('.swagger-ui .topbar .link');
+          if (!link) return;
+          observer.disconnect();
+          const logo = document.createElement('img');
+          logo.src = '/api-docs-assets/logo.png';
+          logo.alt = 'DK Pharma';
+          link.replaceChildren(logo);
+          link.setAttribute('href', '/api-docs');
+          link.setAttribute('aria-label', 'DK Pharma API Reference');
+          link.removeAttribute('target');
+        }
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        updateLogo();
+      })();
+    `,
     jsonDocumentUrl: 'api-docs-json',
     yamlDocumentUrl: 'api-docs-yaml',
     swaggerOptions: {
