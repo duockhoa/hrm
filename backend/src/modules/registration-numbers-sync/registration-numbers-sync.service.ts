@@ -39,7 +39,10 @@ export class RegistrationNumbersSyncService {
     payload: unknown,
   ): ScbRegistrationNumberRecord[] {
     if (Array.isArray(payload)) {
-      return payload;
+      return payload.filter(
+        (record: unknown): record is ScbRegistrationNumberRecord =>
+          this.isObject(record),
+      );
     }
 
     if (!this.isObject(payload)) {
@@ -48,11 +51,17 @@ export class RegistrationNumbersSyncService {
 
     const responseData = payload.data;
     if (Array.isArray(responseData)) {
-      return responseData;
+      return responseData.filter(
+        (record: unknown): record is ScbRegistrationNumberRecord =>
+          this.isObject(record),
+      );
     }
 
     if (this.isObject(responseData) && Array.isArray(responseData.data)) {
-      return responseData.data;
+      return responseData.data.filter(
+        (record: unknown): record is ScbRegistrationNumberRecord =>
+          this.isObject(record),
+      );
     }
 
     return [];
@@ -80,52 +89,65 @@ export class RegistrationNumbersSyncService {
         response.data,
       );
 
+      // SCB may have several products sharing a registration number. Group
+      // before writing so source order and source IDs cannot change local IDs.
+      const grouped = new Map<string, Set<string>>();
       for (const registrationNumber of registrationNumbers) {
+        const id = Number(registrationNumber.id);
+        const registration_number =
+          typeof registrationNumber.ma_ho_so === 'string'
+            ? registrationNumber.ma_ho_so.trim()
+            : '';
+        const product_name =
+          typeof registrationNumber.ten_san_pham === 'string'
+            ? registrationNumber.ten_san_pham.trim() || null
+            : null;
+
+        if (!Number.isInteger(id) || id <= 0 || !registration_number) {
+          this.logger.warn(
+            `Skipped SCB registration number with invalid id or ma_ho_so: ${JSON.stringify(
+              registrationNumber,
+            )}`,
+          );
+          continue;
+        }
+
+        const names = grouped.get(registration_number) ?? new Set<string>();
+        if (product_name) names.add(product_name);
+        grouped.set(registration_number, names);
+      }
+
+      for (const [registration_number, names] of grouped) {
         try {
-          const id = Number(registrationNumber.id);
-          const registration_number =
-            typeof registrationNumber.ma_ho_so === 'string'
-              ? registrationNumber.ma_ho_so.trim()
-              : '';
-          const product_name =
-            typeof registrationNumber.ten_san_pham === 'string'
-              ? registrationNumber.ten_san_pham.trim() || null
-              : null;
-
-          if (!Number.isInteger(id) || id <= 0 || !registration_number) {
-            this.logger.warn(
-              `Skipped SCB registration number with invalid id or ma_ho_so: ${JSON.stringify(
-                registrationNumber,
-              )}`,
-            );
-            continue;
-          }
-
+          const product_name = [...names].sort().join('; ') || null;
           const existingRegistrationNumber =
             await this.prismaService.registrationNumbers.findUnique({
               where: { registration_number },
-              select: { id: true },
+              select: { product_name: true, deleted_at: true },
             });
 
           if (existingRegistrationNumber) {
+            if (
+              existingRegistrationNumber.product_name === product_name &&
+              existingRegistrationNumber.deleted_at === null
+            ) {
+              continue;
+            }
             await this.prismaService.registrationNumbers.update({
               where: { registration_number },
               data: {
-                id,
                 product_name,
                 deleted_at: null,
               },
             });
           } else {
             await this.prismaService.registrationNumbers.upsert({
-              where: { id },
+              where: { registration_number },
               update: {
-                registration_number,
                 product_name,
                 deleted_at: null,
               },
               create: {
-                id,
                 registration_number,
                 product_name,
               },

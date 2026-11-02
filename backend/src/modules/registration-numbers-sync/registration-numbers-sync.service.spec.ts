@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method -- Jest assertions inspect mocked methods without invoking them. */
 import { Test, TestingModule } from '@nestjs/testing';
 import axios from 'axios';
 import { PrismaService } from 'src/prisma.service';
@@ -6,7 +7,7 @@ import { RegistrationNumbersSyncService } from './registration-numbers-sync.serv
 
 jest.mock('axios');
 
-const mockedAxiosGet = axios.get as jest.MockedFunction<typeof axios.get>;
+const mockedAxios = jest.mocked(axios);
 
 describe('RegistrationNumbersSyncService', () => {
   let service: RegistrationNumbersSyncService;
@@ -24,7 +25,7 @@ describe('RegistrationNumbersSyncService', () => {
   const originalEnv = process.env;
 
   beforeEach(async () => {
-    mockedAxiosGet.mockReset();
+    mockedAxios.get.mockReset();
     process.env = { ...originalEnv };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -69,7 +70,7 @@ describe('RegistrationNumbersSyncService', () => {
     process.env.SCB_REGISTRATION_NUMBERS_API_URL =
       'https://scb.example.test/api/ho-so';
     authService.getAccessToken.mockResolvedValue('scb-token');
-    mockedAxiosGet.mockResolvedValue({
+    mockedAxios.get.mockResolvedValue({
       data: {
         success: true,
         data: {
@@ -100,7 +101,7 @@ describe('RegistrationNumbersSyncService', () => {
 
     await service.handleCronSyncRegistrationNumbers();
 
-    expect(mockedAxiosGet).toHaveBeenCalledWith(
+    expect(mockedAxios.get).toHaveBeenCalledWith(
       'https://scb.example.test/api/ho-so',
       {
         params: {
@@ -119,15 +120,13 @@ describe('RegistrationNumbersSyncService', () => {
       1,
       {
         where: {
-          id: 583,
+          registration_number: '723/26/CBMP-PT',
         },
         update: {
-          registration_number: '723/26/CBMP-PT',
           product_name: 'Muối kiềm',
           deleted_at: null,
         },
         create: {
-          id: 583,
           registration_number: '723/26/CBMP-PT',
           product_name: 'Muối kiềm',
         },
@@ -137,15 +136,13 @@ describe('RegistrationNumbersSyncService', () => {
       2,
       {
         where: {
-          id: 584,
+          registration_number: '724/26/CBMP-PT',
         },
         update: {
-          registration_number: '724/26/CBMP-PT',
           product_name: 'Viên nang mềm',
           deleted_at: null,
         },
         create: {
-          id: 584,
           registration_number: '724/26/CBMP-PT',
           product_name: 'Viên nang mềm',
         },
@@ -153,11 +150,11 @@ describe('RegistrationNumbersSyncService', () => {
     );
   });
 
-  it('updates existing registration number when local id is different', async () => {
+  it('updates product information without replacing the local id', async () => {
     process.env.SCB_REGISTRATION_NUMBERS_API_URL =
       'https://scb.example.test/api/ho-so';
     authService.getAccessToken.mockResolvedValue('scb-token');
-    mockedAxiosGet.mockResolvedValue({
+    mockedAxios.get.mockResolvedValue({
       data: {
         data: {
           data: [
@@ -182,12 +179,87 @@ describe('RegistrationNumbersSyncService', () => {
         registration_number: '723/26/CBMP-PT',
       },
       data: {
-        id: 583,
         product_name: 'Muối kiềm',
         deleted_at: null,
       },
     });
     expect(prismaService.registrationNumbers.upsert).not.toHaveBeenCalled();
+  });
+
+  it('groups shared numbers and remains unchanged across repeated, reordered syncs', async () => {
+    process.env.SCB_REGISTRATION_NUMBERS_API_URL =
+      'https://scb.example.test/api/ho-so';
+    authService.getAccessToken.mockResolvedValue('scb-token');
+    const records = [
+      { id: 410, ma_ho_so: 'REG-1', ten_san_pham: 'Sản phẩm B' },
+      { id: 574, ma_ho_so: ' REG-1 ', ten_san_pham: ' Sản phẩm A ' },
+      { id: 575, ma_ho_so: 'REG-1', ten_san_pham: 'Sản phẩm A' },
+      { id: 576, ma_ho_so: 'REG-1', ten_san_pham: null },
+    ];
+    mockedAxios.get.mockResolvedValue({ data: records });
+    const local = { id: 410, product_name: 'Sản phẩm B', deleted_at: null };
+    prismaService.registrationNumbers.findUnique.mockImplementation(() => ({
+      ...local,
+    }));
+    prismaService.registrationNumbers.update.mockImplementation(({ data }) => {
+      Object.assign(local, data);
+      return { ...local };
+    });
+
+    await service.handleCronSyncRegistrationNumbers();
+    mockedAxios.get.mockResolvedValue({ data: [...records].reverse() });
+    await service.handleCronSyncRegistrationNumbers();
+    await service.handleCronSyncRegistrationNumbers();
+
+    expect(local).toEqual({
+      id: 410,
+      product_name: 'Sản phẩm A; Sản phẩm B',
+      deleted_at: null,
+    });
+    expect(prismaService.registrationNumbers.update).toHaveBeenCalledTimes(1);
+    expect(prismaService.registrationNumbers.upsert).not.toHaveBeenCalled();
+  });
+
+  it('creates one local registration for shared source numbers without copying source IDs', async () => {
+    process.env.SCB_REGISTRATION_NUMBERS_API_URL =
+      'https://scb.example.test/api/ho-so';
+    authService.getAccessToken.mockResolvedValue('scb-token');
+    mockedAxios.get.mockResolvedValue({
+      data: [
+        { id: 410, ma_ho_so: 'REG-1', ten_san_pham: 'B' },
+        { id: 574, ma_ho_so: 'REG-1', ten_san_pham: 'A' },
+      ],
+    });
+    prismaService.registrationNumbers.findUnique.mockResolvedValue(null);
+
+    await service.handleCronSyncRegistrationNumbers();
+
+    expect(prismaService.registrationNumbers.upsert).toHaveBeenCalledTimes(1);
+    expect(prismaService.registrationNumbers.upsert).toHaveBeenCalledWith({
+      where: { registration_number: 'REG-1' },
+      create: { registration_number: 'REG-1', product_name: 'A; B' },
+      update: { product_name: 'A; B', deleted_at: null },
+    });
+  });
+
+  it('restores a deleted registration while preserving its local ID', async () => {
+    process.env.SCB_REGISTRATION_NUMBERS_API_URL =
+      'https://scb.example.test/api/ho-so';
+    authService.getAccessToken.mockResolvedValue('scb-token');
+    mockedAxios.get.mockResolvedValue({
+      data: [{ id: 574, ma_ho_so: 'REG-1', ten_san_pham: null }],
+    });
+    prismaService.registrationNumbers.findUnique.mockResolvedValue({
+      product_name: null,
+      deleted_at: new Date('2026-10-30'),
+    });
+
+    await service.handleCronSyncRegistrationNumbers();
+
+    expect(prismaService.registrationNumbers.update).toHaveBeenCalledWith({
+      where: { registration_number: 'REG-1' },
+      data: { product_name: null, deleted_at: null },
+    });
   });
 
   it('skips registration numbers sync when access token cannot be fetched', async () => {
@@ -197,7 +269,7 @@ describe('RegistrationNumbersSyncService', () => {
 
     await service.handleCronSyncRegistrationNumbers();
 
-    expect(mockedAxiosGet).not.toHaveBeenCalled();
+    expect(mockedAxios.get).not.toHaveBeenCalled();
     expect(prismaService.registrationNumbers.upsert).not.toHaveBeenCalled();
   });
 
@@ -206,7 +278,7 @@ describe('RegistrationNumbersSyncService', () => {
 
     await service.handleCronSyncRegistrationNumbers();
 
-    expect(mockedAxiosGet).not.toHaveBeenCalled();
+    expect(mockedAxios.get).not.toHaveBeenCalled();
     expect(prismaService.registrationNumbers.upsert).not.toHaveBeenCalled();
   });
 
@@ -216,7 +288,7 @@ describe('RegistrationNumbersSyncService', () => {
     authService.getAccessToken
       .mockResolvedValueOnce('expired-token')
       .mockResolvedValueOnce('fresh-token');
-    mockedAxiosGet
+    mockedAxios.get
       .mockRejectedValueOnce({
         isAxiosError: true,
         response: {
@@ -236,7 +308,7 @@ describe('RegistrationNumbersSyncService', () => {
     expect(authService.clearAccessToken).toHaveBeenCalledTimes(1);
     expect(authService.getAccessToken).toHaveBeenNthCalledWith(1);
     expect(authService.getAccessToken).toHaveBeenNthCalledWith(2, true);
-    expect(mockedAxiosGet).toHaveBeenNthCalledWith(
+    expect(mockedAxios.get).toHaveBeenNthCalledWith(
       2,
       'https://scb.example.test/api/ho-so',
       {
