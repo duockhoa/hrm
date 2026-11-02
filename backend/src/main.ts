@@ -27,8 +27,10 @@ async function bootstrap() {
   });
 
   const swaggerDocumentConfig = new DocumentBuilder()
-    .setTitle('EBR API')
-    .setDescription('API documentation for the EBR backend')
+    .setTitle('DKPHARMA APP API')
+    .setDescription(
+      'Tài liệu API cho ứng dụng DKPHARMA APP. Liên hệ: tel:0965155761 .',
+    )
     .setVersion('1.0.0')
     .addBearerAuth()
     .addSecurityRequirements('bearer')
