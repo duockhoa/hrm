@@ -1,7 +1,7 @@
 "use client";
 
 import productionOrderMixingRecordsService from "@/services/production-order-mixing-records.service";
-import { Check, Loader2 } from "lucide-react";
+import { CalendarDays, Check, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ProductionOrderMixingRecordParameter } from "../types";
@@ -70,11 +70,18 @@ const toDateTimeResultValue = (value: string): string | null | undefined => {
   return date.toISOString();
 };
 
+const toDateTimeDisplayValue = (value: string) => {
+  if (!value) return "";
+  const [date, time] = value.split("T");
+  const [year, month, day] = date.split("-");
+  return `${day}/${month}/${year} ${time}`;
+};
+
 const toInputValue = (parameter: ProductionOrderMixingRecordParameter) => {
   const value = parameter.result_value;
   if (value === null || value === undefined) return "";
   if (parameter.data_type === "datetime") {
-    return toDateTimeInputValue(value);
+    return toDateTimeDisplayValue(toDateTimeInputValue(value));
   }
   return String(value);
 };
@@ -221,13 +228,15 @@ export default function MixingRecordResultInput({
   return (
     <div className="flex min-h-10 items-stretch">
       {parameter.data_type === "text" ||
-      parameter.data_type === "select" ? (
+      parameter.data_type === "select" ||
+      parameter.data_type === "datetime" ? (
         <textarea
           ref={textareaRef}
           rows={1}
           value={draft}
           disabled={disabled || isSaving}
-          placeholder="Nhập kết quả"
+          placeholder={parameter.data_type === "datetime" ? "DD/MM/YYYY HH:mm" : "Nhập kết quả"}
+          aria-label={parameter.data_type === "datetime" ? `${parameter.parameter_name} (DD/MM/YYYY HH:mm)` : undefined}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={() => {
             void saveDraft();
@@ -245,11 +254,9 @@ export default function MixingRecordResultInput({
           type={
             parameter.data_type === "date"
               ? "date"
-              : parameter.data_type === "datetime"
-                ? "datetime-local"
-                : "number"
+              : "number"
           }
-          step={parameter.data_type === "datetime" ? "60" : parameter.data_type === "number" ? "1" : "any"}
+          step={parameter.data_type === "number" ? "1" : "any"}
           value={draft}
           disabled={disabled || isSaving}
           placeholder="Nhập kết quả"
@@ -263,6 +270,30 @@ export default function MixingRecordResultInput({
           className={`${sharedClassName} min-h-10`}
         />
       )}
+      {parameter.data_type === "datetime" ? (
+        <label className="relative flex w-7 shrink-0 items-center justify-center self-start py-2 text-blue-600 focus-within:bg-blue-50/50 focus-within:outline focus-within:outline-blue-600">
+          <CalendarDays className="size-4" aria-hidden="true" />
+          <input
+            type="datetime-local"
+            step="60"
+            value={draft ? toDateTimeInputValue(draft) : ""}
+            disabled={disabled || isSaving}
+            aria-label={`Chọn ngày giờ cho ${parameter.parameter_name}`}
+            title="Chọn ngày giờ"
+            onClick={(event) => event.currentTarget.showPicker?.()}
+            onChange={(event) => {
+              setDraft(toDateTimeDisplayValue(event.target.value));
+            }}
+            onBlur={() => {
+              void saveDraft();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-default"
+          />
+        </label>
+      ) : null}
       {isSaving ? (
         <span className="flex shrink-0 items-center px-1">
           <Loader2 className="size-4 animate-spin text-blue-600" />
