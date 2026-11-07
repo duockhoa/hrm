@@ -26,6 +26,7 @@ import {
   CONNECTION_HISTORY_URL,
   fetchConnectionHistory,
   type ConnectionSession,
+  type ConnectionStatus,
 } from "@/features/connection-history/connection-history.service";
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
@@ -85,6 +86,7 @@ function reason(session: ConnectionSession) {
 
 export default function ConnectionHistoryPage() {
   const [page, setPage] = useState(1);
+  const [status, setStatus] = useState<ConnectionStatus>();
   const {
     data: permissions,
     error: permissionsError,
@@ -92,12 +94,13 @@ export default function ConnectionHistoryPage() {
   } = useSWR(API_ROUTES.users.myPermissions, userService.fetchMyPermissions);
   const canRead = permissions?.permissionKeys.includes("users.list");
   const { data, error, isLoading } = useSWR(
-    canRead ? [CONNECTION_HISTORY_URL, page] : null,
-    () => fetchConnectionHistory(page),
+    canRead ? [CONNECTION_HISTORY_URL, page, status] : null,
+    () => fetchConnectionHistory(page, status),
     {
       refreshInterval: 15_000,
       revalidateOnFocus: true,
       shouldRetryOnError: false,
+      keepPreviousData: true,
       onSuccess(result) {
         const lastPage = Math.max(1, result.meta.total_pages);
         if (page > lastPage) setPage(lastPage);
@@ -160,22 +163,33 @@ export default function ConnectionHistoryPage() {
             },
           ] as const
         ).map(({ key, title, icon: Icon, color }) => (
-          <div
+          <button
             key={key}
-            className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm"
+            type="button"
+            aria-label={title}
+            aria-pressed={status === key}
+            onClick={() => {
+              setPage(1);
+              setStatus((current) => (current === key ? undefined : key));
+            }}
+            className={`flex cursor-pointer items-center justify-between rounded-lg border px-5 py-4 text-left shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+              status === key
+                ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50"
+            }`}
           >
-            <div>
-              <p className="text-sm text-gray-500">{title}</p>
-              <p className="mt-1 text-2xl font-semibold text-gray-900">
+            <span>
+              <span className="block text-sm text-gray-500">{title}</span>
+              <span className="mt-1 block text-2xl font-semibold text-gray-900">
                 {!error && data
                   ? data.summary[key].toLocaleString("vi-VN")
                   : "—"}
-              </p>
-            </div>
+              </span>
+            </span>
             <span className={`rounded-lg p-3 ${color}`}>
               <Icon className="size-5" />
             </span>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -224,7 +238,9 @@ export default function ConnectionHistoryPage() {
                     colSpan={10}
                     className="py-12 text-center text-gray-500"
                   >
-                    Chưa có lịch sử kết nối.
+                    {status
+                      ? "Chưa có phiên kết nối thuộc trạng thái này."
+                      : "Chưa có lịch sử kết nối."}
                   </TableCell>
                 </TableRow>
               ) : (

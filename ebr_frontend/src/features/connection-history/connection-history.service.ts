@@ -27,13 +27,17 @@ export type ConnectionHistoryResponse = {
   summary: { connected: number; reconnecting: number; ended: number };
 };
 
-export async function fetchConnectionHistory(page: number) {
+export async function fetchConnectionHistory(
+  page: number,
+  status?: ConnectionStatus,
+) {
   const response = await axiosClient.get<ConnectionHistoryResponse>(
     CONNECTION_HISTORY_URL,
     {
       params: {
         page,
         limit: 20,
+        status,
       },
     },
   );

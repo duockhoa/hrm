@@ -49,9 +49,6 @@ export default function VersionsPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <h2 className="font-semibold">Thông tin cơ bản</h2>
-        </CardHeader>
         <CardContent>
           <dl className="grid gap-6 text-sm sm:grid-cols-2">
             <div>
