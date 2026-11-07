@@ -14,6 +14,7 @@ import { API_ROUTES } from "@/lib/api-routes";
 import { userService } from "@/services/index.service";
 import useUserStore from "@/store/user.store";
 import packageJson from "../../../package.json";
+import EbrPresence from "@/features/connection-history/ebr-presence";
 
 const REQUIRED_APPLICATION_KEY = "hsl";
 const ALL_APPLICATIONS_URL = process.env.NEXT_PUBLIC_ALL_APPLICATIONS_URL;
@@ -146,5 +147,10 @@ export default function ApplicationAccessGuard({
     );
   }
 
-  return children;
+  return (
+    <>
+      <EbrPresence />
+      {children}
+    </>
+  );
 }

@@ -8,6 +8,7 @@ import { API_ROUTES } from "@/lib/api-routes";
 import { usersService } from "@/services/index.service";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useUsersStore from "@/store/users.store";
+import { userService } from "@/services/index.service";
 import {
   Boxes,
   CalendarCheck,
@@ -24,6 +25,7 @@ import {
   PackageSearch,
   TriangleAlert,
   Wrench,
+  Unplug,
 } from "lucide-react";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
@@ -115,6 +117,12 @@ const data = [
     url: "/reports",
   },
   {
+    id: "connection-history",
+    name: "Lịch sử kết nối",
+    icon: <Unplug className="size-5 shrink-0" />,
+    url: "/connection-history",
+  },
+  {
     id: "11",
     name: "About",
     icon: <Info className="size-5 shrink-0" />,
@@ -138,6 +146,13 @@ export default function MainLayout({
   }, [isMobile]);
 
   const { setUsers, setIsLoading } = useUsersStore();
+  const { data: myPermissions } = useSWR(
+    API_ROUTES.users.myPermissions,
+    userService.fetchMyPermissions,
+  );
+  const menuData = data.filter((item) =>
+    item.id !== "connection-history" || myPermissions?.permissionKeys.includes("users.list"),
+  );
   const {
     data: users,
     error,
@@ -159,7 +174,7 @@ export default function MainLayout({
       <div className="flex h-dvh flex-col overflow-hidden">
         <Header />
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <Sidebar isOpen={isOpen} data={data} isMobile={isMobile} />
+          <Sidebar isOpen={isOpen} data={menuData} isMobile={isMobile} />
           <div
             className={`relative min-h-0 min-w-0 flex-1 bg-blue-50 p-2 ${isReportsPage ? "overflow-hidden" : "overflow-auto"}`}
           >

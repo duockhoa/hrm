@@ -1,0 +1,318 @@
+"use client";
+
+import { useState } from "react";
+import useSWR from "swr";
+import { isAxiosError } from "axios";
+import {
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Unplug,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { API_ROUTES } from "@/lib/api-routes";
+import { userService } from "@/services/index.service";
+import {
+  CONNECTION_HISTORY_URL,
+  fetchConnectionHistory,
+  type ConnectionSession,
+} from "@/features/connection-history/connection-history.service";
+
+const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+const formatDate = (value: string | null) =>
+  value ? dateFormatter.format(new Date(value)) : "—";
+const statusInfo = {
+  connected: {
+    label: "Đang kết nối",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  reconnecting: {
+    label: "Chờ kết nối lại",
+    className: "border-amber-200 bg-amber-50 text-amber-700",
+  },
+  ended: {
+    label: "Đã kết thúc",
+    className: "border-slate-200 bg-slate-100 text-slate-600",
+  },
+};
+function duration(session: ConnectionSession) {
+  const end =
+    session.ended_at ??
+    (session.status === "connected"
+      ? null
+      : (session.disconnected_at ?? session.last_seen_at));
+  const seconds = Math.max(
+    0,
+    Math.floor(
+      ((end ? new Date(end).getTime() : Date.now()) -
+        new Date(session.connected_at).getTime()) /
+        1000,
+    ),
+  );
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return hours
+    ? `${hours} giờ ${minutes} phút`
+    : minutes
+      ? `${minutes} phút`
+      : `${seconds} giây`;
+}
+function reason(session: ConnectionSession) {
+  if (session.end_reason === "logout") return "Đăng xuất";
+  if (session.end_reason === "connection_lost") return "Mất kết nối";
+  if (session.status === "connected") return "—";
+  if (session.disconnect_reason === "auth_expired") return "Làm mới xác thực";
+  return "Kết nối bị gián đoạn";
+}
+
+export default function ConnectionHistoryPage() {
+  const [page, setPage] = useState(1);
+  const {
+    data: permissions,
+    error: permissionsError,
+    mutate: retryPermissions,
+  } = useSWR(API_ROUTES.users.myPermissions, userService.fetchMyPermissions);
+  const canRead = permissions?.permissionKeys.includes("users.list");
+  const { data, error, isLoading } = useSWR(
+    canRead ? [CONNECTION_HISTORY_URL, page] : null,
+    () => fetchConnectionHistory(page),
+    {
+      refreshInterval: 15_000,
+      revalidateOnFocus: true,
+      shouldRetryOnError: false,
+      onSuccess(result) {
+        const lastPage = Math.max(1, result.meta.total_pages);
+        if (page > lastPage) setPage(lastPage);
+      },
+    },
+  );
+
+  if (permissionsError)
+    return (
+      <div
+        role="alert"
+        className="rounded-lg bg-white p-6 text-sm text-red-600"
+      >
+        Không thể kiểm tra quyền xem lịch sử kết nối.
+        <Button
+          variant="outline"
+          className="ml-3"
+          onClick={() => void retryPermissions()}
+        >
+          Thử lại
+        </Button>
+      </div>
+    );
+  if (!permissions)
+    return (
+      <p className="p-4 text-sm text-gray-500">Đang tải quyền truy cập...</p>
+    );
+  if (!canRead)
+    return (
+      <div
+        role="alert"
+        className="rounded-lg bg-white p-6 text-sm text-gray-600"
+      >
+        Bạn chưa có quyền xem lịch sử kết nối. Vui lòng liên hệ quản trị viên.
+      </div>
+    );
+
+  return (
+    <div className="flex min-h-full flex-col gap-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        {(
+          [
+            {
+              key: "connected",
+              title: "Đang kết nối",
+              icon: Activity,
+              color: "text-emerald-600 bg-emerald-50",
+            },
+            {
+              key: "reconnecting",
+              title: "Chờ kết nối lại",
+              icon: Clock3,
+              color: "text-amber-600 bg-amber-50",
+            },
+            {
+              key: "ended",
+              title: "Đã kết thúc",
+              icon: Unplug,
+              color: "text-slate-600 bg-slate-100",
+            },
+          ] as const
+        ).map(({ key, title, icon: Icon, color }) => (
+          <div
+            key={key}
+            className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm"
+          >
+            <div>
+              <p className="text-sm text-gray-500">{title}</p>
+              <p className="mt-1 text-2xl font-semibold text-gray-900">
+                {!error && data
+                  ? data.summary[key].toLocaleString("vi-VN")
+                  : "—"}
+              </p>
+            </div>
+            <span className={`rounded-lg p-3 ${color}`}>
+              <Icon className="size-5" />
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-1 flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[1350px]">
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="pl-4">Phiên / Người dùng</TableHead>
+                <TableHead>Mở EBR lúc</TableHead>
+                <TableHead>Lần cuối kết nối</TableHead>
+                <TableHead>Ngắt / Kết thúc lúc</TableHead>
+                <TableHead>Thời lượng phiên</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead>Lý do</TableHead>
+                <TableHead>Số lần kết nối</TableHead>
+                <TableHead>Địa chỉ IP</TableHead>
+                <TableHead>Thiết bị / Trình duyệt</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={10}
+                    className="py-12 text-center text-gray-500"
+                  >
+                    Đang tải lịch sử kết nối...
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={10}
+                    className="py-12 text-center text-red-600"
+                    role="alert"
+                  >
+                    {isAxiosError(error) && error.response?.status === 403
+                      ? "Bạn chưa có quyền xem lịch sử kết nối."
+                      : "Không thể tải lịch sử kết nối. Vui lòng thử lại sau."}
+                  </TableCell>
+                </TableRow>
+              ) : !data?.data.length ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={10}
+                    className="py-12 text-center text-gray-500"
+                  >
+                    Chưa có lịch sử kết nối.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data.data.map((session) => (
+                  <TableRow key={session.id}>
+                    <TableCell className="pl-4">
+                      <div className="font-medium text-gray-900">
+                        {session.user.name || session.user.username}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        #{session.id} · {session.user.username}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {formatDate(session.connected_at)}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {formatDate(session.last_seen_at)}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div>
+                        {formatDate(
+                          session.ended_at ?? session.disconnected_at,
+                        )}
+                      </div>
+                      {session.end_reason === "connection_lost" && (
+                        <span className="text-gray-400">Ước tính</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {duration(session)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={statusInfo[session.status].className}
+                      >
+                        <span className="size-1.5 rounded-full bg-current" />
+                        {statusInfo[session.status].label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-gray-600">
+                      {reason(session)}
+                    </TableCell>
+                    <TableCell className="text-center text-sm">
+                      {session.connection_count}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {session.ip_address || "—"}
+                    </TableCell>
+                    <TableCell
+                      className="max-w-56 truncate text-xs text-gray-500"
+                      title={session.user_agent ?? undefined}
+                    >
+                      {session.user_agent || "—"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || isLoading}
+              onClick={() => setPage((current) => current - 1)}
+            >
+              <ChevronLeft />
+              Trước
+            </Button>
+            <span>
+              Trang {page}/{Math.max(1, data?.meta.total_pages ?? 1)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!data || page >= data.meta.total_pages || isLoading}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Sau
+              <ChevronRight />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

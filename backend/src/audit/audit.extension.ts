@@ -8,6 +8,7 @@ const excludedModels = new Set([
   'Tokens',
   'PasswordResetOTPs',
   'UserLoginSessions',
+  'UserEbrSessions',
   'Notifications',
 ]);
 const sensitiveField = /password|token|secret|otp|hash|session_key|api_key/i;

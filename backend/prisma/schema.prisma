@@ -145,6 +145,7 @@ model Users {
   inspectedProductionOrderFiltrationChecks              ProductionOrderFiltrationChecks[]                               @relation("ProductionOrderFiltrationCheckInspector")
   userApplications                                      UserApplications[]
   loginSessions                                         UserLoginSessions[]
+  ebrSessions                                           UserEbrSessions[]
   receivedNotifications                                 Notifications[]                                                 @relation("NotificationRecipient")
   createdNotifications                                  Notifications[]                                                 @relation("NotificationActor")
   emailRecipientSettings                                EmailUserRecipients[]
@@ -338,6 +339,30 @@ model UserLoginSessions {
   @@index([user_id, logout_at], map: "user_login_sessions_open_session_idx")
   @@index([token_id], map: "user_login_sessions_token_id_idx")
   @@map("user_login_sessions")
+}
+
+model UserEbrSessions {
+  id                  Int       @id @default(autoincrement())
+  user_id             Int
+  client_session_id   String    @db.Char(36)
+  active_key          String?   @unique @db.VarChar(80)
+  connection_key      String    @db.Char(36)
+  socket_id           String    @db.VarChar(64)
+  connected_at        DateTime  @default(now())
+  last_seen_at        DateTime  @default(now())
+  disconnected_at     DateTime?
+  ended_at            DateTime?
+  disconnect_reason   String?   @db.VarChar(100)
+  end_reason          String?   @db.VarChar(30)
+  connection_count    Int       @default(1)
+  ip_address          String?   @db.VarChar(45)
+  user_agent          String?   @db.VarChar(1000)
+  user                Users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, connected_at], map: "user_ebr_sessions_user_connected_idx")
+  @@index([connected_at, id], map: "user_ebr_sessions_connected_idx")
+  @@index([ended_at, disconnected_at, last_seen_at], map: "user_ebr_sessions_stale_idx")
+  @@map("user_ebr_sessions")
 }
 
 model Notifications {

@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { logout } from "@/services/auth.service";
 import { useTokens } from "@/store/token.store";
 import axiosClient from "@/lib/axios-client";
+import { endEbrPresenceOnLogout } from "@/features/connection-history/ebr-presence";
 
 type UseLogoutOptions = {
   redirectTo?: string;
@@ -24,6 +25,7 @@ export const useLogout = (options: UseLogoutOptions = {}) => {
   const router = useRouter();
 
   const handleLogout = async () => {
+    await endEbrPresenceOnLogout();
     await deleteRefreshToken();
     await logout();
     clearTokens();

@@ -18,6 +18,7 @@ const protectedPaths = [
   "/semi-finished-products",
   "/raw-materials",
   "/reports",
+  "/connection-history",
   "/label",
   "/profile",
   "/setting",
