@@ -22,6 +22,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import useSWR, { mutate as mutateGlobal } from "swr";
 import FormEditFinishedProductSummary from "../form-edit-finished-product-summary/form-edit-finished-product-summary";
+import EditHistoryButton from "@/features/edit-history/edit-history-button";
+
+const summaryHistoryFields = {
+  package_count: { label: "Số kiện", type: "number" },
+  boxes_per_package: { label: "Số hộp trên kiện", type: "number" },
+  loose_box_count: { label: "Số hộp lẻ", type: "number" },
+  note: { label: "Ghi chú", type: "text" },
+} as const;
 
 type FinishedProductSummaryUser = {
   id?: number | string;
@@ -299,6 +307,12 @@ export default function FinishedProductSummaryDetail({
         subtitle={formatDateTime(data.created_at)}
         actions={
           <>
+            <EditHistoryButton
+              key={id}
+              historyUrl={API_ROUTES.productionOrders.finishedProductSummaryHistory(id)}
+              title={`Tổng kết thành phẩm #${data.id}${productionOrder?.lot_no ? ` · Lô ${productionOrder.lot_no}` : ""}`}
+              fields={summaryHistoryFields}
+            />
             <Button size="sm" type="button" onClick={() => setIsEditing(true)}>
               <Pencil className="size-4" /> Sửa
             </Button>

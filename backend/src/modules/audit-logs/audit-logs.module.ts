@@ -6,5 +6,6 @@ import { AuditLogsService } from './audit-logs.service';
 @Module({
   controllers: [AuditLogsController],
   providers: [AuditLogsService, PrismaService],
+  exports: [AuditLogsService],
 })
 export class AuditLogsModule {}

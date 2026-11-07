@@ -8,6 +8,7 @@ describe('auditExtension', () => {
   const client = {
     filterCatalogs: { findUnique },
     users: { findUnique },
+    productionOrderFinishedProductSummaries: { findUnique },
     auditLogs: { create: createLog },
     $extends: jest.fn((extension) => extension),
   };
@@ -85,6 +86,51 @@ describe('auditExtension', () => {
     });
 
     expect(createLog).not.toHaveBeenCalled();
+  });
+
+  it('records summary before/after counts, actor, and the trimmed reason', async () => {
+    findUnique.mockResolvedValueOnce({
+      id: 7,
+      package_count: 166,
+      boxes_per_package: 30,
+      loose_box_count: 3,
+      note: null,
+    });
+    await auditContext.run(
+      {
+        requestId: 'summary-edit',
+        request: {
+          user: { id: 3, name: 'Nguyễn Thị Gấm' },
+          body: { reason: '  Điều chỉnh theo kiểm đếm  ' },
+        },
+      },
+      () =>
+        auditOperation({
+          model: 'ProductionOrderFinishedProductSummaries',
+          operation: 'update',
+          args: { where: { id: 7 }, data: { package_count: 167 } },
+          query: async () => ({
+            id: 7,
+            package_count: 167,
+            boxes_per_package: 30,
+            loose_box_count: 3,
+            note: null,
+          }),
+        }),
+    );
+
+    expect(createLog).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entity_type: 'production_order_finished_product_summaries',
+        entity_id: 7n,
+        action: 'UPDATE',
+        old_values: { package_count: 166 },
+        new_values: { package_count: 167 },
+        actor_id: 3n,
+        actor_name: 'Nguyễn Thị Gấm',
+        reason: 'Điều chỉnh theo kiểm đếm',
+      }),
+    });
   });
 
   it('redacts credentials from creation logs', async () => {

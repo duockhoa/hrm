@@ -8,6 +8,8 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
 import { UpdateProductionOrderFinishedProductSummaryDto } from './dto/update-production-order-finished-product-summary.dto';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { GetAuditLogPageDto } from '../audit-logs/dto/get-audit-log-page.dto';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -86,7 +88,21 @@ const finishedProductSummaryListInclude = {
 
 @Injectable()
 export class ProductionOrderFinishedProductSummariesService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly auditLogsService: AuditLogsService,
+  ) {}
+
+  async findHistory(summaryId: number, query: GetAuditLogPageDto) {
+    // This scoped lookup must succeed before reading the shared audit table.
+    await this.ensureSummaryExists(summaryId);
+    return this.auditLogsService.findAll({
+      entity_type: 'production_order_finished_product_summaries',
+      entity_id: String(summaryId),
+      page: query.page,
+      limit: query.limit,
+    });
+  }
 
   async findAll() {
     const summaries =
@@ -212,6 +228,14 @@ export class ProductionOrderFinishedProductSummariesService {
     dto: UpdateProductionOrderFinishedProductSummaryDto,
   ) {
     await this.ensureSummaryExists(summaryId);
+
+    if (dto?.reason !== undefined && dto.reason !== null) {
+      if (typeof dto.reason !== 'string' || dto.reason.length > 2000) {
+        throw new BadRequestException(
+          'Lý do chỉnh sửa phải là chuỗi tối đa 2000 ký tự',
+        );
+      }
+    }
 
     return this.prismaService.productionOrderFinishedProductSummaries.update({
       where: {

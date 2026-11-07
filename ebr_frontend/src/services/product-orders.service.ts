@@ -361,7 +361,7 @@ type CreateFinishedProductSummaryPayload = {
 };
 
 type UpdateFinishedProductSummaryPayload =
-  Partial<CreateFinishedProductSummaryPayload>;
+  Partial<CreateFinishedProductSummaryPayload> & { reason?: string | null };
 
 type SemiFinishedProductSummaryPayload = {
   stage?: string | null;

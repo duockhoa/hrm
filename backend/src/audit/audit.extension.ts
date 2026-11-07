@@ -164,7 +164,10 @@ export const auditExtension = Prisma.defineExtension((client) =>
                     ? BigInt(actorId)
                     : undefined,
                 actor_name: actorName?.slice(0, 255),
-                reason: typeof reason === 'string' ? reason : undefined,
+                reason:
+                  typeof reason === 'string'
+                    ? reason.trim() || undefined
+                    : undefined,
                 request_id: context?.requestId,
                 ip_address: request?.ip?.slice(0, 45),
                 user_agent: request?.headers?.['user-agent'],

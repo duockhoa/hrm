@@ -4,6 +4,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -27,6 +28,12 @@ export class GetAuditLogsDto {
   @IsString()
   @MaxLength(100)
   entity_type?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[1-9]\d*$/)
+  @MaxLength(19)
+  entity_id?: string;
 
   @IsOptional()
   @IsIn(['CREATE', 'UPDATE', 'DELETE'])

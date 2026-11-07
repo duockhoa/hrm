@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { GetAuditLogsDto } from './dto/get-audit-logs.dto';
@@ -11,10 +11,21 @@ export class AuditLogsService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const keyword = query.keyword?.trim();
+    let entityId: bigint | undefined;
+    if (query.entity_id !== undefined) {
+      if (!/^[1-9]\d{0,18}$/.test(query.entity_id)) {
+        throw new BadRequestException('Invalid entity_id');
+      }
+      entityId = BigInt(query.entity_id);
+      if (entityId > 9223372036854775807n) {
+        throw new BadRequestException('Invalid entity_id');
+      }
+    }
     const where: Prisma.AuditLogsWhereInput = {
       ...(query.entity_type?.trim() && {
         entity_type: query.entity_type.trim(),
       }),
+      ...(entityId !== undefined && { entity_id: entityId }),
       ...(query.action && { action: query.action }),
       ...(keyword && {
         OR: [

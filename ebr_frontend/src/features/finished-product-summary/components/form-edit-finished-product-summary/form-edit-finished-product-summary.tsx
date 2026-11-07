@@ -31,6 +31,7 @@ const formSchema = z.object({
   boxes_per_package: nonNegativeIntegerText("Số hộp trên kiện"),
   loose_box_count: nonNegativeIntegerText("Số hộp lẻ"),
   note: z.string(),
+  reason: z.string().trim().max(2000, "Lý do chỉnh sửa tối đa 2000 ký tự"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -66,6 +67,7 @@ export default function FormEditFinishedProductSummary({
     boxes_per_package: toTextValue(data.boxes_per_package),
     loose_box_count: toTextValue(data.loose_box_count),
     note: data.note ?? "",
+    reason: "",
   };
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -93,6 +95,7 @@ export default function FormEditFinishedProductSummary({
       boxes_per_package?: number;
       loose_box_count?: number;
       note?: string | null;
+      reason?: string;
     } = {};
     const numberFields = [
       "package_count",
@@ -115,6 +118,10 @@ export default function FormEditFinishedProductSummary({
     if (Object.keys(payload).length === 0) {
       toast.error("Vui lòng thay đổi ít nhất một trường.");
       return;
+    }
+
+    if (values.reason.trim()) {
+      payload.reason = values.reason.trim();
     }
 
     try {
@@ -185,6 +192,25 @@ export default function FormEditFinishedProductSummary({
               <FormLabel>Ghi chú</FormLabel>
               <FormControl>
                 <Textarea disabled={form.formState.isSubmitting} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="reason"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Lý do chỉnh sửa (không bắt buộc)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Ví dụ: Điều chỉnh theo kiểm đếm thực tế"
+                  maxLength={2000}
+                  disabled={form.formState.isSubmitting}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

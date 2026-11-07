@@ -271,6 +271,8 @@ const PRODUCTION_ORDERS = {
     `/production-orders/${id}/finished-product-summaries`,
   finishedProductSummaryDetail: (summaryId: string | number) =>
     `/production-orders/finished-product-summaries/${summaryId}`,
+  finishedProductSummaryHistory: (summaryId: string | number) =>
+    `/production-orders/finished-product-summaries/${summaryId}/history`,
   semiFinishedProductSummaries: (id: string | number) =>
     `/production-orders/${id}/semi-finished-product-summaries`,
   semiFinishedProductSummaryDetail: (summaryId: string | number) =>

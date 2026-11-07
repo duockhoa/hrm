@@ -6,9 +6,11 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 describe('ProductionOrderFinishedProductSummariesService', () => {
   let service: ProductionOrderFinishedProductSummariesService;
+  const auditLogsService = { findAll: jest.fn() };
   let prismaService: {
     productionOrders: {
       findUnique: jest.Mock;
@@ -23,6 +25,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
   };
 
   beforeEach(async () => {
+    auditLogsService.findAll.mockReset();
     prismaService = {
       productionOrders: {
         findUnique: jest.fn(),
@@ -39,6 +42,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProductionOrderFinishedProductSummariesService,
+        { provide: AuditLogsService, useValue: auditLogsService },
         {
           provide: PrismaService,
           useValue: prismaService,
@@ -50,6 +54,73 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       ProductionOrderFinishedProductSummariesService,
     );
   });
+
+  it('checks access to the summary before reading only its audit logs', async () => {
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      { id: 7 },
+    );
+    const history = {
+      data: [],
+      meta: { page: 2, limit: 20, total: 0, total_pages: 0 },
+    };
+    auditLogsService.findAll.mockResolvedValue(history);
+
+    await expect(service.findHistory(7, { page: 2, limit: 20 })).resolves.toBe(
+      history,
+    );
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.findUnique,
+    ).toHaveBeenCalledWith({
+      where: { id: 7 },
+      select: { id: true },
+    });
+    expect(auditLogsService.findAll).toHaveBeenCalledWith({
+      entity_type: 'production_order_finished_product_summaries',
+      entity_id: '7',
+      page: 2,
+      limit: 20,
+    });
+  });
+
+  it('does not expose audit logs when the summary is missing or outside the user scope', async () => {
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      null,
+    );
+    await expect(service.findHistory(7, {})).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(auditLogsService.findAll).not.toHaveBeenCalled();
+  });
+
+  it('keeps the edit reason out of the summary table', async () => {
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      { id: 7 },
+    );
+    await service.update(7, {
+      package_count: 12,
+      reason: 'Điều chỉnh theo kiểm đếm',
+    });
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { package_count: 12 } }),
+    );
+  });
+
+  it.each([123, 'x'.repeat(2001)])(
+    'rejects an invalid edit reason before writing: %s',
+    async (reason) => {
+      prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+        { id: 7 },
+      );
+      await expect(
+        service.update(7, { package_count: 12, reason: reason as string }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(
+        prismaService.productionOrderFinishedProductSummaries.update,
+      ).not.toHaveBeenCalled();
+    },
+  );
 
   it('gets finished product summaries for a production order', async () => {
     const summaries = [{ id: 1, production_order_id: 2031 }];
@@ -271,9 +342,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     });
     expect(
       prismaService.productionOrderFinishedProductSummaries.update,
-    ).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { note: null } }),
-    );
+    ).toHaveBeenCalledWith(expect.objectContaining({ data: { note: null } }));
   });
 
   it('rejects an empty finished product summary update', async () => {
