@@ -32,6 +32,7 @@ async function bootstrap() {
       'Tài liệu API cho ứng dụng DKPHARMA APP. Liên hệ: tel:0965155761 .',
     )
     .setVersion('1.0.0')
+    .addServer(process.env.SWAGGER_API_URL?.trim() || '/')
     .addBearerAuth()
     .addSecurityRequirements('bearer')
     .build();

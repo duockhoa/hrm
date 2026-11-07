@@ -25,7 +25,15 @@ Khi backend đang chạy, Swagger UI được phục vụ tại:
 http://localhost:50000/api-docs
 ```
 
-Có thể thay đổi port bằng biến môi trường `SWAGGER_PORT`. Swagger dùng chung API handler với backend, nên các request thử nghiệm trong giao diện được gửi tới cùng port `50000`.
+Có thể thay đổi port của trang tài liệu bằng biến môi trường `SWAGGER_PORT`.
+
+URL API dùng khi bấm **Try it out / Execute** được cấu hình trong `backend/.env`:
+
+```dotenv
+SWAGGER_API_URL=http://localhost:3012
+```
+
+Khi triển khai, đặt `SWAGGER_API_URL` thành URL API mà trình duyệt truy cập được (ví dụ `https://api.example.com`), bao gồm tiền tố đường dẫn nếu có, không thêm `/api-docs`. Nếu để trống hoặc không khai báo, Swagger gửi request tới cùng origin với trang tài liệu. Khởi động lại backend sau khi đổi cấu hình.
 
 ## Quy Ước Chung
 
