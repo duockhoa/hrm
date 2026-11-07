@@ -139,29 +139,19 @@ export default function ExportWeighingTicket({
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const [weighingTicketResponse, materialCheckResponse] =
-        await Promise.all([
-          productionOrdersService.exportWeighingTicket(
-            values.id,
-            values.stage,
-          ),
-          productionOrdersService.exportPostWeighingMaterialCheck(
-            values.id,
-            values.stage,
-          ),
-        ]);
-      const weighingTicketFileName =
-        getFileNameFromContentDisposition(
-          weighingTicketResponse.headers["content-disposition"],
-        ) ?? `weighing-ticket-${values.id}.xlsx`;
+      // Temporarily export only the material check; keep the weighing ticket API for later.
+      const materialCheckResponse =
+        await productionOrdersService.exportPostWeighingMaterialCheck(
+          values.id,
+          values.stage,
+        );
       const materialCheckFileName =
         getFileNameFromContentDisposition(
           materialCheckResponse.headers["content-disposition"],
         ) ?? `post-weighing-material-check-${values.id}.xlsx`;
 
-      downloadBlob(weighingTicketResponse.data, weighingTicketFileName);
       downloadBlob(materialCheckResponse.data, materialCheckFileName);
-      toast.success("Xuất phiếu cân và phiếu kiểm tra thành công");
+      toast.success("Xuất phiếu kiểm tra nguyên liệu sau cân thành công");
       form.reset();
       onClose?.();
     } catch {
@@ -182,7 +172,7 @@ export default function ExportWeighingTicket({
           className="flex flex-col gap-4"
         >
           <p className="text-center text-xl font-semibold uppercase text-gray-900">
-            Xuất phiếu cân
+            Xuất phiếu kiểm tra nguyên liệu sau cân
           </p>
           {isLoadingLines && <p>Đang tải danh sách giai đoạn...</p>}
           {linesError && (
