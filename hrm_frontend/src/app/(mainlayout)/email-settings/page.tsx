@@ -4,6 +4,7 @@ import EmailListHeader from "@/components/email-settings/header-email-list";
 import { splitEmails } from "@/components/email-settings/email-settings-utils";
 import useEmailSettings from "@/components/email-settings/use-email-settings";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/ui/list-skeleton";
 import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
 import {
   restoreScrollableChainPosition,
@@ -44,27 +45,22 @@ export default function EmailSettingsPage() {
   return (
     <div
       ref={ref}
+      aria-busy={isLoading}
       className="flex h-full min-h-0 flex-col overflow-auto rounded-lg bg-white shadow-md"
     >
-      {canManage && (
+      {isLoading && !canManage ? (
+        <div aria-hidden="true" className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white p-2">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-9 w-28 rounded-md" />
+        </div>
+      ) : canManage && (
         <div className="sticky top-0 z-10 bg-white p-2">
           <EmailListHeader />
         </div>
       )}
       <div className="flex flex-1 flex-col gap-2 p-2 pt-0">
         {isLoading ? (
-          Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-3 border-b border-gray-200 p-3"
-            >
-              <Skeleton className="size-10 rounded-md" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-4 w-56 max-w-full" />
-              </div>
-            </div>
-          ))
+          <ListSkeleton label="Đang tải email mặc định..." />
         ) : error ? (
           <p role="alert" className="p-4 text-sm text-red-600">
             Không thể tải cấu hình email.

@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ListSkeleton } from "@/components/ui/list-skeleton";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -96,18 +97,18 @@ export default function NetworkAccessPage() {
     setFormOpen(true);
   }
 
-  if (permissionsLoading) return <p className="p-4">Đang tải...</p>;
+  const showSkeleton = permissionsLoading || isLoading;
   if (permissionError)
     return (
       <p role="alert" className="p-4">
         Không tải được quyền truy cập.
       </p>
     );
-  if (!canEdit)
+  if (!permissionsLoading && !canEdit)
     return <p className="p-4">Bạn không có quyền quản lý IP truy cập.</p>;
 
   return (
-    <div className="flex flex-col bg-white h-[100%] rounded-lg shadow-md overflow-auto">
+    <div className="flex flex-col bg-white h-[100%] rounded-lg shadow-md overflow-auto" aria-busy={showSkeleton}>
       <div className="w-full sticky top-0 z-10 bg-white p-2">
         <div className="w-full flex justify-between border-b border-gray-200 pb-2 bg-white">
           <div className="flex items-center gap-2">
@@ -116,7 +117,7 @@ export default function NetworkAccessPage() {
           </div>
           <Button
             className="cursor-pointer"
-            disabled={busy}
+            disabled={busy || showSkeleton}
             onClick={() => {
               reset();
               setFormOpen(true);
@@ -135,10 +136,8 @@ export default function NetworkAccessPage() {
               Thử lại
             </Button>
           </div>
-        ) : isLoading ? (
-          <p className="p-4 text-center text-sm text-gray-500">
-            Đang tải IP...
-          </p>
+        ) : showSkeleton ? (
+          <ListSkeleton label="Đang tải IP truy cập..." roundIcon />
         ) : ranges?.length ? (
           ranges.map((range) => (
             <div

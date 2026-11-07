@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TableSkeleton, TablePaginationSkeleton } from "@/components/ui/table-skeleton";
 import {
   Select,
   SelectContent,
@@ -93,7 +94,7 @@ export default function LoginHistoryPage() {
   const meta = data?.meta;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md" aria-busy={isLoading}>
       <div className="shrink-0 border-b border-gray-200 px-4 py-3">
         <h1 className="text-xl font-semibold text-gray-900">
           Lịch sử đăng nhập
@@ -200,11 +201,18 @@ export default function LoginHistoryPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-gray-500">
-                  Đang tải lịch sử đăng nhập...
-                </TableCell>
-              </TableRow>
+              <TableSkeleton
+                label="Đang tải lịch sử đăng nhập..."
+                columns={[
+                  { className: "w-8" },
+                  { className: "w-32", secondaryClassName: "w-44" },
+                  { className: "w-36" },
+                  { className: "w-36" },
+                  { className: "h-5 w-28 rounded-full" },
+                  { className: "w-24" },
+                  { className: "w-56" },
+                ]}
+              />
             ) : error ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-red-600">
@@ -254,7 +262,7 @@ export default function LoginHistoryPage() {
         </Table>
       </div>
 
-      {meta && meta.total_pages > 1 && (
+      {isLoading ? <TablePaginationSkeleton showTotal /> : meta && meta.total_pages > 1 && (
         <div className="flex shrink-0 items-center justify-between border-t border-gray-200 px-4 py-3">
           <span className="text-sm text-gray-500">
             {meta.total} phiên đăng nhập

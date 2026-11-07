@@ -3,6 +3,7 @@
 import useEmailSettings from "@/components/email-settings/use-email-settings";
 import DefaultEmailRecipientsSection from "@/components/email-settings/default-email-recipients-section";
 import { splitEmails } from "@/components/email-settings/email-settings-utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -67,28 +68,62 @@ function EmailDetail({ emailType }: { emailType: EmailTypeWithDefaults }) {
   );
 }
 
+function EmailDetailSkeleton() {
+  return (
+    <div aria-busy="true">
+      <span role="status" className="sr-only">Đang tải cấu hình email...</span>
+      <div aria-hidden="true">
+        <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+          <Skeleton className="h-5 w-44 max-w-full" />
+          <Skeleton className="size-8 shrink-0 rounded-md" />
+        </div>
+        <div className="mx-auto mt-6 w-full max-w-3xl">
+          <Skeleton className="mb-5 h-7 w-64 max-w-full" />
+          <div className="divide-y divide-gray-200 rounded-md border border-gray-200">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={index} className="grid gap-2 p-4 sm:grid-cols-[180px_minmax(0,1fr)]">
+                <Skeleton className="h-5 w-28 max-w-full" />
+                <Skeleton className="h-5 w-40 max-w-full" />
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 rounded-md border border-gray-200">
+            <div className="flex items-center justify-between gap-3 border-b border-gray-200 p-4">
+              <Skeleton className="h-5 w-48 max-w-full" />
+              <Skeleton className="h-8 w-24 shrink-0 rounded-md" />
+            </div>
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="flex items-center gap-4 border-b border-gray-100 p-4 last:border-0">
+                <Skeleton className="h-4 w-6 shrink-0" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-6 w-16 shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EmailDetailPage() {
   const { id } = useParams<{ id: string }>();
   const isMobile = useMobile();
   const { emailTypes, canManage, isLoading, error } = useEmailSettings();
-  if (isLoading)
-    return (
-      <p className="p-4 text-sm text-gray-500">Đang tải cấu hình email...</p>
-    );
   if (error)
     return (
       <p role="alert" className="p-4 text-sm text-red-600">
         Không thể tải cấu hình email.
       </p>
     );
-  if (!canManage)
+  if (!isLoading && !canManage)
     return (
       <p className="p-4 text-sm text-gray-500">
         Bạn chưa có quyền quản lý email.
       </p>
     );
   const emailType = emailTypes.find((type) => String(type.id) === id);
-  if (!emailType)
+  if (!isLoading && !emailType)
     return (
       <div className="p-4">
         <p className="mb-3 text-sm text-gray-500">Không tìm thấy loại email.</p>
@@ -114,7 +149,11 @@ export default function EmailDetailPage() {
           defaultSize={isMobile ? "100%" : "65%"}
           className="min-w-0 overflow-auto p-4"
         >
-          <EmailDetail key={emailType.id} emailType={emailType} />
+          {isLoading ? (
+            <EmailDetailSkeleton />
+          ) : emailType ? (
+            <EmailDetail key={emailType.id} emailType={emailType} />
+          ) : null}
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

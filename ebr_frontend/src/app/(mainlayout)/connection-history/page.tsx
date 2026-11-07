@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { isAxiosError } from "axios";
 import {
@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -77,9 +76,9 @@ function duration(session: ConnectionSession) {
       ? `${minutes} phút`
       : `${seconds} giây`;
 }
-function ConnectionHistoryTableSkeleton() {
-  return Array.from({ length: 8 }, (_, index) => (
-    <TableRow key={index} aria-hidden="true">
+function ConnectionHistoryTableSkeleton({ rows }: { rows: number }) {
+  return Array.from({ length: rows }, (_, index) => (
+    <TableRow key={index} aria-hidden="true" className="h-16">
       <TableCell className="pl-4">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="mt-1 h-3 w-24" />
@@ -111,6 +110,32 @@ function ConnectionHistoryTableSkeleton() {
 export default function ConnectionHistoryPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ConnectionStatus>();
+  const [pageSize, setPageSize] = useState(1);
+  const tableViewportRef = useRef<HTMLDivElement>(null);
+  const tableHeaderRef = useRef<HTMLTableSectionElement>(null);
+
+  useEffect(() => {
+    const viewport = tableViewportRef.current;
+    const header = tableHeaderRef.current;
+    if (!viewport || !header) return;
+
+    let currentRows = 1;
+    const updatePageSize = () => {
+      const rows = Math.max(
+        1,
+        Math.min(100, Math.floor((viewport.clientHeight - header.offsetHeight) / 64)),
+      );
+      if (currentRows === rows) return;
+      currentRows = rows;
+      setPage(1);
+      setPageSize(rows);
+    };
+    const observer = new ResizeObserver(updatePageSize);
+    observer.observe(viewport);
+    observer.observe(header);
+    updatePageSize();
+    return () => observer.disconnect();
+  }, []);
   const {
     data: permissions,
     error: permissionsError,
@@ -118,8 +143,8 @@ export default function ConnectionHistoryPage() {
   } = useSWR(API_ROUTES.users.myPermissions, userService.fetchMyPermissions);
   const canRead = permissions?.permissionKeys.includes("users.list");
   const { data, error, isLoading } = useSWR(
-    canRead ? [CONNECTION_HISTORY_URL, page, status] : null,
-    () => fetchConnectionHistory(page, status),
+    canRead ? [CONNECTION_HISTORY_URL, page, status, pageSize] : null,
+    () => fetchConnectionHistory(page, status, pageSize),
     {
       refreshInterval: 15_000,
       revalidateOnFocus: true,
@@ -160,13 +185,13 @@ export default function ConnectionHistoryPage() {
     );
 
   return (
-    <div className="flex min-h-full flex-col gap-4" aria-busy={showSkeleton}>
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-hidden" aria-busy={showSkeleton}>
       {showSkeleton && (
         <span role="status" className="sr-only">
           Đang tải lịch sử kết nối...
         </span>
       )}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid shrink-0 grid-cols-3 gap-2 sm:gap-3">
         {(
           [
             {
@@ -199,7 +224,7 @@ export default function ConnectionHistoryPage() {
               setPage(1);
               setStatus((current) => (current === key ? undefined : key));
             }}
-            className={`flex cursor-pointer items-center justify-between rounded-lg border px-5 py-4 text-left shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+            className={`flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg border px-2 py-3 text-left shadow-sm transition-colors sm:px-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
               status === key
                 ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
                 : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50"
@@ -215,17 +240,22 @@ export default function ConnectionHistoryPage() {
                   : "—"}
               </div>
             </div>
-            <span className={`rounded-lg p-3 ${color}`}>
+            <span className={`hidden shrink-0 rounded-lg p-3 sm:block ${color}`}>
               <Icon className="size-5" />
             </span>
           </button>
         ))}
       </div>
 
-      <div className="flex flex-1 flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <Table className="min-w-[1200px]">
-            <TableHeader className="bg-gray-50">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div ref={tableViewportRef} className="min-h-0 flex-1 overflow-hidden">
+          <table className="w-full table-fixed text-sm [&_th]:whitespace-normal [&_th]:break-words [&_td]:truncate [&_td>div]:truncate [&_[data-slot=skeleton]]:max-w-full">
+            <colgroup>
+              {[16, 11, 11, 11, 9, 13, 7, 10, 12].map((width, index) => (
+                <col key={index} style={{ width: `${width}%` }} />
+              ))}
+            </colgroup>
+            <TableHeader ref={tableHeaderRef} className="bg-gray-50">
               <TableRow>
                 <TableHead className="pl-4">Phiên / Người dùng</TableHead>
                 <TableHead>Mở EBR lúc</TableHead>
@@ -240,7 +270,7 @@ export default function ConnectionHistoryPage() {
             </TableHeader>
             <TableBody>
               {showSkeleton ? (
-                <ConnectionHistoryTableSkeleton />
+                <ConnectionHistoryTableSkeleton rows={pageSize} />
               ) : error ? (
                 <TableRow>
                   <TableCell
@@ -266,33 +296,34 @@ export default function ConnectionHistoryPage() {
                 </TableRow>
               ) : (
                 data.data.map((session) => (
-                  <TableRow key={session.id}>
+                  <TableRow key={session.id} className="h-16">
                     <TableCell className="pl-4">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900" title={session.user.name || session.user.username}>
                         {session.user.name || session.user.username}
                       </div>
                       <div className="mt-1 text-xs text-gray-500">
                         #{session.id} · {session.user.username}
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-xs" title={formatDate(session.connected_at)}>
                       {formatDate(session.connected_at)}
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-xs" title={formatDate(session.last_seen_at)}>
                       {formatDate(session.last_seen_at)}
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-xs" title={formatDate(session.ended_at ?? session.disconnected_at)}>
                       {formatDate(
                         session.ended_at ?? session.disconnected_at,
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm" title={duration(session)}>
                       {duration(session)}
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={statusInfo[session.status].className}
+                        className={`max-w-full overflow-hidden ${statusInfo[session.status].className}`}
+                        title={statusInfo[session.status].label}
                       >
                         <span className="size-1.5 rounded-full bg-current" />
                         {statusInfo[session.status].label}
@@ -301,7 +332,7 @@ export default function ConnectionHistoryPage() {
                     <TableCell className="text-center text-sm">
                       {session.connection_count}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="font-mono text-xs" title={session.ip_address ?? undefined}>
                       {session.ip_address || "—"}
                     </TableCell>
                     <TableCell
@@ -314,9 +345,9 @@ export default function ConnectionHistoryPage() {
                 ))
               )}
             </TableBody>
-          </Table>
+          </table>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"

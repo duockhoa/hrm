@@ -3,6 +3,7 @@
 import PermissionListHeader from "@/components/permissions/header-permission-list";
 import AddPermissionForm from "@/components/permissions/form-add-permission";
 import { Badge } from "@/components/ui/badge";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import {
   Dialog,
   DialogContent,
@@ -96,7 +97,7 @@ export default function PermissionsPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md" aria-busy={isLoading}>
       <div className="shrink-0 p-2">
         <PermissionListHeader />
         <Dialog
@@ -137,11 +138,16 @@ export default function PermissionsPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-gray-500">
-                  Đang tải quyền...
-                </TableCell>
-              </TableRow>
+              <TableSkeleton
+                label="Đang tải quyền..."
+                columns={[
+                  { className: "w-8" },
+                  { className: "w-40" },
+                  { className: "w-64" },
+                  { className: "h-5 w-10 rounded-full" },
+                  { className: "ml-auto w-12" },
+                ]}
+              />
             ) : filteredPermissions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-gray-500">

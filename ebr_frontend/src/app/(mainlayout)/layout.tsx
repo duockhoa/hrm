@@ -137,6 +137,7 @@ export default function MainLayout({
 }>) {
   const pathname = usePathname();
   const isReportsPage = pathname === "/reports" || pathname.startsWith("/reports/");
+  const isConnectionHistoryPage = pathname === "/connection-history";
   const { isOpen, toggleSidebar } = useSidebarStore();
   const isMobile = useMobile();
   useEffect(() => {
@@ -176,7 +177,7 @@ export default function MainLayout({
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar isOpen={isOpen} data={menuData} isMobile={isMobile} />
           <div
-            className={`relative min-h-0 min-w-0 flex-1 bg-blue-50 p-2 ${isReportsPage ? "overflow-hidden" : "overflow-auto"}`}
+            className={`relative min-h-0 min-w-0 flex-1 bg-blue-50 p-2 ${isReportsPage || isConnectionHistoryPage ? "overflow-hidden" : "overflow-auto"}`}
           >
             {children}
           </div>

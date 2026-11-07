@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TableSkeleton, TablePaginationSkeleton } from "@/components/ui/table-skeleton";
 import {
   Select,
   SelectContent,
@@ -95,7 +96,7 @@ export default function AuditLogsPage() {
   const forbidden = axios.isAxiosError(error) && error.response?.status === 403;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white shadow-md" aria-busy={isLoading}>
       <form
         className="grid shrink-0 gap-3 border-b border-gray-200 p-4 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_220px_180px_auto]"
         onSubmit={(event) => {
@@ -184,9 +185,19 @@ export default function AuditLogsPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8}>Đang tải lịch sử thay đổi...</TableCell>
-              </TableRow>
+              <TableSkeleton
+                label="Đang tải lịch sử thay đổi..."
+                columns={[
+                  { className: "w-36" },
+                  { className: "w-32", secondaryClassName: "w-16" },
+                  { className: "w-24" },
+                  { className: "w-32", secondaryClassName: "w-16" },
+                  { className: "h-5 w-20 rounded-full" },
+                  { className: "h-20 w-48 rounded-md" },
+                  { className: "h-20 w-48 rounded-md" },
+                  { className: "w-40" },
+                ]}
+              />
             ) : error ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-red-600">
@@ -243,7 +254,7 @@ export default function AuditLogsPage() {
         </Table>
       </div>
 
-      {meta && meta.total_pages > 1 && (
+      {isLoading ? <TablePaginationSkeleton /> : meta && meta.total_pages > 1 && (
         <div className="flex shrink-0 justify-end border-t border-gray-200 px-4 py-3">
           <div className="flex items-center gap-2">
             <Button
