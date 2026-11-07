@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -76,6 +77,37 @@ function duration(session: ConnectionSession) {
       ? `${minutes} phút`
       : `${seconds} giây`;
 }
+function ConnectionHistoryTableSkeleton() {
+  return Array.from({ length: 8 }, (_, index) => (
+    <TableRow key={index} aria-hidden="true">
+      <TableCell className="pl-4">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="mt-1 h-3 w-24" />
+      </TableCell>
+      {Array.from({ length: 3 }, (_, cellIndex) => (
+        <TableCell key={cellIndex}>
+          <Skeleton className="h-3 w-32" />
+        </TableCell>
+      ))}
+      <TableCell>
+        <Skeleton className="h-4 w-20" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-28 rounded-full" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="mx-auto h-4 w-8" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-24" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-44" />
+      </TableCell>
+    </TableRow>
+  ));
+}
+
 export default function ConnectionHistoryPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ConnectionStatus>();
@@ -99,6 +131,7 @@ export default function ConnectionHistoryPage() {
       },
     },
   );
+  const showSkeleton = !permissions || isLoading;
 
   if (permissionsError)
     return (
@@ -116,11 +149,7 @@ export default function ConnectionHistoryPage() {
         </Button>
       </div>
     );
-  if (!permissions)
-    return (
-      <p className="p-4 text-sm text-gray-500">Đang tải quyền truy cập...</p>
-    );
-  if (!canRead)
+  if (permissions && !canRead)
     return (
       <div
         role="alert"
@@ -131,7 +160,12 @@ export default function ConnectionHistoryPage() {
     );
 
   return (
-    <div className="flex min-h-full flex-col gap-4">
+    <div className="flex min-h-full flex-col gap-4" aria-busy={showSkeleton}>
+      {showSkeleton && (
+        <span role="status" className="sr-only">
+          Đang tải lịch sử kết nối...
+        </span>
+      )}
       <div className="grid gap-3 sm:grid-cols-3">
         {(
           [
@@ -160,6 +194,7 @@ export default function ConnectionHistoryPage() {
             type="button"
             aria-label={title}
             aria-pressed={status === key}
+            disabled={!permissions}
             onClick={() => {
               setPage(1);
               setStatus((current) => (current === key ? undefined : key));
@@ -170,14 +205,16 @@ export default function ConnectionHistoryPage() {
                 : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50"
             }`}
           >
-            <span>
+            <div>
               <span className="block text-sm text-gray-500">{title}</span>
-              <span className="mt-1 block text-2xl font-semibold text-gray-900">
-                {!error && data
+              <div className="mt-1 text-2xl font-semibold text-gray-900">
+                {showSkeleton && !data ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : !error && data
                   ? data.summary[key].toLocaleString("vi-VN")
                   : "—"}
-              </span>
-            </span>
+              </div>
+            </div>
             <span className={`rounded-lg p-3 ${color}`}>
               <Icon className="size-5" />
             </span>
@@ -202,15 +239,8 @@ export default function ConnectionHistoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    className="py-12 text-center text-gray-500"
-                  >
-                    Đang tải lịch sử kết nối...
-                  </TableCell>
-                </TableRow>
+              {showSkeleton ? (
+                <ConnectionHistoryTableSkeleton />
               ) : error ? (
                 <TableRow>
                   <TableCell
@@ -291,19 +321,23 @@ export default function ConnectionHistoryPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={page <= 1 || isLoading}
+              disabled={page <= 1 || showSkeleton}
               onClick={() => setPage((current) => current - 1)}
             >
               <ChevronLeft />
               Trước
             </Button>
-            <span>
-              Trang {page}/{Math.max(1, data?.meta.total_pages ?? 1)}
-            </span>
+            {showSkeleton && !data ? (
+              <Skeleton className="h-4 w-20" />
+            ) : (
+              <span>
+                Trang {page}/{Math.max(1, data?.meta.total_pages ?? 1)}
+              </span>
+            )}
             <Button
               variant="outline"
               size="sm"
-              disabled={!data || page >= data.meta.total_pages || isLoading}
+              disabled={!data || page >= data.meta.total_pages || showSkeleton}
               onClick={() => setPage((current) => current + 1)}
             >
               Sau
