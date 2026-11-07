@@ -76,14 +76,6 @@ function duration(session: ConnectionSession) {
       ? `${minutes} phút`
       : `${seconds} giây`;
 }
-function reason(session: ConnectionSession) {
-  if (session.end_reason === "logout") return "Đăng xuất";
-  if (session.end_reason === "connection_lost") return "Mất kết nối";
-  if (session.status === "connected") return "—";
-  if (session.disconnect_reason === "auth_expired") return "Làm mới xác thực";
-  return "Kết nối bị gián đoạn";
-}
-
 export default function ConnectionHistoryPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ConnectionStatus>();
@@ -195,7 +187,7 @@ export default function ConnectionHistoryPage() {
 
       <div className="flex flex-1 flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <Table className="min-w-[1350px]">
+          <Table className="min-w-[1200px]">
             <TableHeader className="bg-gray-50">
               <TableRow>
                 <TableHead className="pl-4">Phiên / Người dùng</TableHead>
@@ -204,7 +196,6 @@ export default function ConnectionHistoryPage() {
                 <TableHead>Ngắt / Kết thúc lúc</TableHead>
                 <TableHead>Thời lượng phiên</TableHead>
                 <TableHead>Trạng thái</TableHead>
-                <TableHead>Lý do</TableHead>
                 <TableHead>Số lần kết nối</TableHead>
                 <TableHead>Địa chỉ IP</TableHead>
                 <TableHead>Thiết bị / Trình duyệt</TableHead>
@@ -214,7 +205,7 @@ export default function ConnectionHistoryPage() {
               {isLoading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={9}
                     className="py-12 text-center text-gray-500"
                   >
                     Đang tải lịch sử kết nối...
@@ -223,7 +214,7 @@ export default function ConnectionHistoryPage() {
               ) : error ? (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={9}
                     className="py-12 text-center text-red-600"
                     role="alert"
                   >
@@ -235,7 +226,7 @@ export default function ConnectionHistoryPage() {
               ) : !data?.data.length ? (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={9}
                     className="py-12 text-center text-gray-500"
                   >
                     {status
@@ -261,13 +252,8 @@ export default function ConnectionHistoryPage() {
                       {formatDate(session.last_seen_at)}
                     </TableCell>
                     <TableCell className="text-xs">
-                      <div>
-                        {formatDate(
-                          session.ended_at ?? session.disconnected_at,
-                        )}
-                      </div>
-                      {session.end_reason === "connection_lost" && (
-                        <span className="text-gray-400">Ước tính</span>
+                      {formatDate(
+                        session.ended_at ?? session.disconnected_at,
                       )}
                     </TableCell>
                     <TableCell className="text-sm">
@@ -281,9 +267,6 @@ export default function ConnectionHistoryPage() {
                         <span className="size-1.5 rounded-full bg-current" />
                         {statusInfo[session.status].label}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-gray-600">
-                      {reason(session)}
                     </TableCell>
                     <TableCell className="text-center text-sm">
                       {session.connection_count}
