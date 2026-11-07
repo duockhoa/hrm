@@ -89,6 +89,7 @@ export default function VialInspectionSummaryDetail({
         compactTitle
         title="Tổng kết soi lọ"
         subtitle={`Lệnh sản xuất #${id}`}
+        history={{ resource: "vial-inspection-check", id, scope: "production-order" }}
         onClose={onClose}
       />
 

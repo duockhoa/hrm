@@ -1,6 +1,7 @@
 "use client";
 
 import ProductionOrderDownloadMenu from "@/features/production-orders/components/production-order-download-menu";
+import ProductionOrderHistoryButton from "@/features/edit-history/production-order-history-button";
 import { Button } from "@/components/ui/button";
 import EditProductionOrderDialog from "@/features/production-orders/components/edit-production-order-dialog";
 import { X } from "lucide-react";
@@ -30,6 +31,7 @@ export default function HeaderDetailFinishedProductLot({ lot }: { lot: any }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        <ProductionOrderHistoryButton resource="production-order" id={lot?.id} title={`Lệnh sản xuất ${title}`} />
         <EditProductionOrderDialog productionOrder={lot} />
         <ProductionOrderDownloadMenu productionOrder={lot} />
         <Button

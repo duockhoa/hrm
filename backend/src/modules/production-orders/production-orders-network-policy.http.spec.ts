@@ -12,6 +12,7 @@ import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { PrismaService } from 'src/prisma.service';
 import { NetworkPoliciesService } from '../network-policies/network-policies.service';
 import { ProductionOrdersModule } from './production-orders.module';
+import { ProductionOrderHistoryController } from './production-order-history.controller';
 import { ProductionOrderWeighingRecordsController } from './production-order-weighing-records.controller';
 import { ProductionOrderWeighingRecordsService } from './production-order-weighing-records.service';
 import { ProductionOrderWeighingRecordsEventsInterceptor } from './production-order-weighing-records-events.interceptor';
@@ -22,7 +23,7 @@ describe('Production Order network policy coverage', () => {
       MODULE_METADATA.CONTROLLERS,
       ProductionOrdersModule,
     );
-    expect(controllers).toHaveLength(8);
+    expect(controllers).toContain(ProductionOrderHistoryController);
     for (const controller of controllers) {
       const guards = Reflect.getMetadata(GUARDS_METADATA, controller);
       expect(guards).toContain(NetworkPolicyGuard);

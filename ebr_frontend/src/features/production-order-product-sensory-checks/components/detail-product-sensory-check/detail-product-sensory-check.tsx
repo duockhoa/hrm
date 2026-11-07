@@ -190,6 +190,7 @@ export default function ProductSensoryCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "product-sensory-check", id: data.id }}
         compactTitle
         title={`Kiểm tra cảm quan sản phẩm #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

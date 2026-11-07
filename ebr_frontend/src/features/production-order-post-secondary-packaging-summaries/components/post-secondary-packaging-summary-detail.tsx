@@ -278,6 +278,7 @@ export default function PostSecondaryPackagingSummaryDetail({
   return (
     <div className="w-full max-w-4xl rounded-lg border bg-white p-4 shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "post-secondary-packaging-summary", id: data.id }}
         compactTitle
         title={`Tổng kết BTP hoàn thiện #${data.id}`}
         onClose={onClose}

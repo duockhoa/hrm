@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { API_ROUTES } from "@/lib/api-routes";
 import productionOrdersService from "@/services/product-orders.service";
+import ProductionOrderHistoryButton from "@/features/edit-history/production-order-history-button";
 import FormMaterialSummary from "../form-material-summary/form-material-summary";
 import InlineMaterialSummary from "../inline-material-summary/inline-material-summary";
 import {
@@ -73,8 +74,9 @@ export default function InlineMaterialSummarySection({
         }}
       >
         <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto md:max-w-[760px]">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Tổng kết vật liệu</DialogTitle>
+          <DialogHeader className="flex-row items-center justify-between pr-8">
+            <DialogTitle>Tổng kết vật liệu</DialogTitle>
+            <ProductionOrderHistoryButton resource="material-summary" id={selectedSummary?.id} title={`Tổng kết vật liệu ${selectedLine?.ItemNo ?? ""}`} />
           </DialogHeader>
           {selectedLine ? (
             <FormMaterialSummary

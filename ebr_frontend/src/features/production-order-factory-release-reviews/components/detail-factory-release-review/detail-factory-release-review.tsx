@@ -119,6 +119,7 @@ export default function FactoryReleaseReviewDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "factory-release-review", id: data.id }}
         compactTitle
         title={`Xét duyệt xuất xưởng #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

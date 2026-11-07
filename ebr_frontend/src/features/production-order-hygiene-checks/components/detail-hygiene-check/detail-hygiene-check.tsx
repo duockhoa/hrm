@@ -98,6 +98,7 @@ export default function HygieneCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "hygiene-check", id: data.id }}
         compactTitle
         title={`Kiểm tra vệ sinh #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

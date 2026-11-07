@@ -859,6 +859,7 @@ export default function ProductionOrderDeviationDetail({
         ? createPortal(detailActions, externalActionsContainer)
         : null}
       <DetailPanelHeader
+        history={{ resource: "production-order-deviation", id: data.id }}
         compactTitle
         title={`Sai lệch #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

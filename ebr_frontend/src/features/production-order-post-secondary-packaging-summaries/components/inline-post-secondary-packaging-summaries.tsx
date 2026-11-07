@@ -85,6 +85,7 @@ export default function InlinePostSecondaryPackagingSummaries({
       {!embedded && onClose ? (
         <DetailPanelHeader
           title="Tổng kết BTP hoàn thiện"
+        history={{ resource: "post-secondary-packaging-summary", id, scope: "production-order" }}
           subtitle={`Lệnh sản xuất #${id}`}
           actions={
             <Button type="button" size="sm" onClick={() => setIsCreating(true)}>

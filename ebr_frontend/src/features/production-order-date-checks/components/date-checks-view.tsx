@@ -46,6 +46,7 @@ export default function DateChecksView({
     <div className="w-full max-w-4xl min-w-0 rounded border bg-white p-4 shadow-md">
       <DetailPanelHeader
         title="Theo dõi In Date"
+        history={{ resource: "date-check", id, scope: "production-order" }}
         subtitle={`Lệnh sản xuất #${id}`}
         actions={
           <Button type="button" size="sm" onClick={() => setIsAddOpen(true)}>

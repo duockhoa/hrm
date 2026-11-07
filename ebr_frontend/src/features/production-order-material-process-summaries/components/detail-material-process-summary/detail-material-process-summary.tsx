@@ -132,6 +132,7 @@ export default function MaterialProcessSummaryDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "material-process-summary", id: data.id }}
         compactTitle
         title={`${summaryTitle} #${data.id}`}
         onClose={onClose}

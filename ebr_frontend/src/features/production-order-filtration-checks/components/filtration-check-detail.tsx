@@ -270,6 +270,7 @@ export default function FiltrationCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "filtration-check", id: data.id }}
         compactTitle
         title={`Chi tiết kiểm tra quá trình lọc #${data.id}`}
         subtitle={formatDateTime(data.filtering_started_at)}

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { GetAuditLogsDto } from './dto/get-audit-logs.dto';
+import { GetAuditLogPageDto } from './dto/get-audit-log-page.dto';
 
 @Injectable()
 export class AuditLogsService {
@@ -37,6 +38,53 @@ export class AuditLogsService {
       }),
     };
 
+    return this.findMatching(where, page, limit);
+  }
+
+  async findForEntities(
+    entities: { entityType: string; ids: number[] }[],
+    query: GetAuditLogPageDto,
+  ) {
+    const scopes = entities
+      .filter((entity) => entity.ids.length > 0)
+      .map((entity) => ({
+        entity_type: entity.entityType,
+        entity_id: { in: entity.ids.map((id) => BigInt(id)) },
+      }));
+    return this.findMatching(
+      { OR: scopes },
+      query.page ?? 1,
+      query.limit ?? 20,
+    );
+  }
+
+  async findHistoricalEntityIds(
+    entityType: string,
+    foreignKey: string,
+    parentIds: number[],
+  ) {
+    if (!parentIds.length) return [];
+    const logs = await this.prisma.auditLogs.findMany({
+      where: {
+        entity_type: entityType,
+        OR: parentIds.flatMap((id) => [
+          { old_values: { path: `$.${foreignKey}`, equals: id } },
+          { new_values: { path: `$.${foreignKey}`, equals: id } },
+        ]),
+      },
+      select: { entity_id: true },
+      distinct: ['entity_id'],
+    });
+    return logs
+      .map((log) => Number(log.entity_id))
+      .filter((id) => Number.isSafeInteger(id) && id > 0 && id <= 2147483647);
+  }
+
+  private async findMatching(
+    where: Prisma.AuditLogsWhereInput,
+    page: number,
+    limit: number,
+  ) {
     const [logs, total] = await this.prisma.$transaction([
       this.prisma.auditLogs.findMany({
         where,

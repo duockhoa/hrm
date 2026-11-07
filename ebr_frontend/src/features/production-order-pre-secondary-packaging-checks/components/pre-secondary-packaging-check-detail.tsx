@@ -237,6 +237,7 @@ export default function PreSecondaryPackagingCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "pre-secondary-packaging-check", id: data.id }}
         compactTitle
         title={`Kiểm tra BTP trước đóng gói #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

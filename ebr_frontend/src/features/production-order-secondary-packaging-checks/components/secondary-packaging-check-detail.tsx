@@ -57,6 +57,7 @@ export default function SecondaryPackagingCheckDetail({ id, onClose }: { id: str
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "secondary-packaging-check", id: data.id }}
         compactTitle
         title={`Kiểm tra bao bì cấp 2 #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

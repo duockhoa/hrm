@@ -91,6 +91,16 @@ export default function VersionsPage() {
             </TableHeader>
             <TableBody>
               <TableRow>
+                <TableCell className="font-medium">1.3.2</TableCell>
+                <TableCell>
+                  <time dateTime="2026-11-07">07/11/2026</time>
+                </TableCell>
+                <TableCell className="min-w-72 max-w-xl whitespace-normal">
+                  Bổ sung audit trail trên từng bản ghi.
+                </TableCell>
+                <VersionResponsibleCells />
+              </TableRow>
+              <TableRow>
                 <TableCell className="font-medium">1.2.1</TableCell>
                 <TableCell>
                   <time dateTime="2026-11-07">07/11/2026</time>

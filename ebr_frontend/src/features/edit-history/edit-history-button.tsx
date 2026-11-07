@@ -49,9 +49,11 @@ function HistoryValue({ children }: { children: string }) {
 function HistoryEntry({
   entry,
   fields,
+  entityLabels,
 }: {
   entry: EditHistoryEntry;
   fields: EditHistoryFields;
+  entityLabels?: Record<string, string>;
 }) {
   const changes = getHistoryChanges(entry, fields);
   return (
@@ -72,6 +74,12 @@ function HistoryEntry({
           {actionLabels[entry.action] ?? "Thay đổi dữ liệu"}
         </span>
       </div>
+
+      {entityLabels ? (
+        <p className="mt-2 text-xs text-gray-500">
+          {entityLabels[entry.entity_type] ?? "Bản ghi"} #{entry.entity_id}
+        </p>
+      ) : null}
 
       {changes.length > 0 ? (
         <table className="mt-3 w-full table-fixed border-collapse text-left text-sm">
@@ -143,9 +151,11 @@ function HistoryEntry({
 function HistoryList({
   historyUrl,
   fields,
+  entityLabels,
 }: {
   historyUrl: string;
   fields: EditHistoryFields;
+  entityLabels?: Record<string, string>;
 }) {
   const userId = useUserStore((state) => state.user?.id);
   const { data, error, size, setSize, isLoading, isValidating, mutate } =
@@ -227,7 +237,12 @@ function HistoryList({
       {!accessDenied && entries.length > 0 ? (
         <ol className="space-y-4">
           {entries.map((entry) => (
-            <HistoryEntry key={entry.id} entry={entry} fields={fields} />
+            <HistoryEntry
+              key={entry.id}
+              entry={entry}
+              fields={fields}
+              entityLabels={entityLabels}
+            />
           ))}
         </ol>
       ) : null}
@@ -252,10 +267,12 @@ export default function EditHistoryButton({
   historyUrl,
   title,
   fields,
+  entityLabels,
 }: {
   historyUrl: string;
   title: string;
   fields: EditHistoryFields;
+  entityLabels?: Record<string, string>;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -300,6 +317,7 @@ export default function EditHistoryButton({
             key={historyUrl}
             historyUrl={historyUrl}
             fields={fields}
+            entityLabels={entityLabels}
           />
         ) : null}
       </DialogContent>

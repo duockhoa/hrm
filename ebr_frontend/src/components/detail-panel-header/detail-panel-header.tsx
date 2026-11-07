@@ -1,6 +1,11 @@
+"use client";
+
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import ProductionOrderHistoryButton, {
+  type ProductionOrderHistorySelection,
+} from "@/features/edit-history/production-order-history-button";
 
 export default function DetailPanelHeader({
   title,
@@ -9,6 +14,7 @@ export default function DetailPanelHeader({
   onClose,
   showCloseButton = true,
   compactTitle = false,
+  history,
 }: {
   title: string;
   subtitle?: string;
@@ -16,6 +22,7 @@ export default function DetailPanelHeader({
   onClose: () => void;
   showCloseButton?: boolean;
   compactTitle?: boolean;
+  history?: ProductionOrderHistorySelection;
 }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-gray-200 pb-4 text-left">
@@ -30,6 +37,9 @@ export default function DetailPanelHeader({
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {history ? (
+          <ProductionOrderHistoryButton {...history} title={title} />
+        ) : null}
         {actions}
         {showCloseButton ? (
           <Button

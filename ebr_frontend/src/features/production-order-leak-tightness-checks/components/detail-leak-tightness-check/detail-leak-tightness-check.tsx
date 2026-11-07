@@ -107,6 +107,7 @@ export default function LeakTightnessCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "leak-tightness-check", id: data.id }}
         compactTitle
         title={`Kiểm tra độ kín gói cốm #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

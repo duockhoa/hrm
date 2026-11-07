@@ -74,6 +74,8 @@ import { SapB1ConnectorModule } from '../sap-b1-connector/sap-b1-connector.modul
 import { EmailSettingsModule } from '../email-settings/email-settings.module';
 import { NetworkPoliciesModule } from '../network-policies/network-policies.module';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module';
+import { ProductionOrderHistoryController } from './production-order-history.controller';
+import { ProductionOrderHistoryService } from './production-order-history.service';
 
 @Module({
   imports: [
@@ -86,6 +88,7 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
     JwtModule.register({}),
   ],
   controllers: [
+    ProductionOrderHistoryController,
     ProductionOrdersController,
     ProductionOrderMixingRecordsController,
     ProductionOrderWeighingRecordsController,
@@ -96,6 +99,7 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
     ProductionOrderWeighingStageImportController,
   ],
   providers: [
+    ProductionOrderHistoryService,
     ProductionOrdersService,
     ProductionOrderCompletenessService,
     ProductionOrderSamplingRequestsService,

@@ -18,7 +18,7 @@ export type EditHistoryPage = {
 
 export type EditHistoryField = {
   label: string;
-  type?: "number" | "text";
+  type?: "number" | "text" | "date" | "boolean" | "json";
 };
 
 export type EditHistoryFields = Record<string, EditHistoryField>;

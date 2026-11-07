@@ -77,6 +77,7 @@ export default function TabletThicknessCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "tablet-thickness-check", id: data.id }}
         compactTitle
         title={`Kiểm tra độ dày viên nén #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

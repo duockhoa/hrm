@@ -651,6 +651,7 @@ function EquipmentMonitoringRecordDetailView({
     <div className="w-full max-w-4xl rounded-md bg-white p-4 shadow-md">
       <DetailPanelHeader
         title="Chi tiết thông số thiết bị"
+        history={record && !error && !isLoading ? { resource: "equipment-monitoring-record", id: recordId } : undefined}
         subtitle={record ? getEquipmentLabel(record) : ""}
         actions={
           record && !error && !isLoading ? (

@@ -1,5 +1,7 @@
 "use client";
 
+import ProductionOrderHistoryButton from "@/features/edit-history/production-order-history-button";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -218,6 +220,7 @@ export default function ProductionOrderMixingRecordDetail({
             {lotNumber ? ` - Lô ${lotNumber}` : ""}
           </p>
         </div>
+        <ProductionOrderHistoryButton resource="mixing-record" id={record.id} title={`Phiếu pha chế #${record.id}`} />
         {!isQaStaffApproved ? (
           <div className="flex shrink-0 items-center gap-2">
             <Button

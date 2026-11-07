@@ -183,6 +183,7 @@ export default function SteamSterilizationCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "steam-sterilization-check", id: data.id }}
         compactTitle
         title={`Chi tiết tiệt trùng #${data.id}`}
         subtitle={dateTime(data.checked_at)}

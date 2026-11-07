@@ -104,6 +104,7 @@ export default function ShellWeightCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "shell-weight-check", id: data.id }}
         compactTitle
         title={`Khối lượng vỏ #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

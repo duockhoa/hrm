@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ProductionOrderHistoryButton from "@/features/edit-history/production-order-history-button";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useWeighingRecordSocket } from "../use-weighing-record-socket";
@@ -148,6 +149,7 @@ export default function ProductionOrderWeighingRecordDetail({
             {lotNumber ? ` - Lô ${lotNumber}` : ""}
           </p>
         </div>
+        <ProductionOrderHistoryButton resource="weighing-record" id={record.id} title={`Phiếu cân #${record.id}`} />
         {!locked ? (
           <div className="flex shrink-0 flex-wrap justify-end gap-2">
             <Button

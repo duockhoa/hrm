@@ -108,6 +108,7 @@ export default function SteamSterilizationChecksView({
       {!embedded && onClose && (
         <DetailPanelHeader
           title="Theo dõi quá trình tiệt trùng"
+        history={{ resource: "steam-sterilization-check", id, scope: "production-order" }}
           subtitle={`Lệnh sản xuất #${id}`}
           actions={
             <Button type="button" size="sm" onClick={() => setIsAddOpen(true)}>

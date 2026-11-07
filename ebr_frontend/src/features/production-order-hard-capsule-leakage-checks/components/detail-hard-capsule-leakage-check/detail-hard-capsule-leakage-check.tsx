@@ -115,6 +115,7 @@ export default function HardCapsuleLeakageCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "hard-capsule-leakage-check", id: data.id }}
         compactTitle
         title={`Độ rò rỉ viên nang cứng #${data.id}`}
         subtitle={formatDateTime(data.checked_at)}

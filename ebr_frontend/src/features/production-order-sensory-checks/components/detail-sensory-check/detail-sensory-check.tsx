@@ -136,6 +136,7 @@ export default function SensoryCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "sensory-check", id: data.id }}
         compactTitle
         title={`Thử mùi vị #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

@@ -471,6 +471,7 @@ export default function ProductionOrderAttachmentDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "production-order-attachment", id: data.id }}
         compactTitle
         title={`Hình ảnh đính kèm #${data.id}`}
         subtitle={formatDateTime(data.entered_at ?? data.created_at)}

@@ -273,6 +273,8 @@ const PRODUCTION_ORDERS = {
     `/production-orders/finished-product-summaries/${summaryId}`,
   finishedProductSummaryHistory: (summaryId: string | number) =>
     `/production-orders/finished-product-summaries/${summaryId}/history`,
+  recordHistory: (resource: string, recordId: string | number, scope?: "record" | "production-order") =>
+    `/production-orders/history/${encodeURIComponent(resource)}/${encodeURIComponent(recordId)}${scope === "production-order" ? "?scope=production-order" : ""}`,
   semiFinishedProductSummaries: (id: string | number) =>
     `/production-orders/${id}/semi-finished-product-summaries`,
   semiFinishedProductSummaryDetail: (summaryId: string | number) =>

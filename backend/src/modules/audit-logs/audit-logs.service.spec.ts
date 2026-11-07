@@ -2,6 +2,52 @@ import { PrismaService } from 'src/prisma.service';
 import { AuditLogsService } from './audit-logs.service';
 
 describe('AuditLogsService', () => {
+  it('keeps resource types paired with their IDs when reading multiple records', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const service = new AuditLogsService({
+      auditLogs: { findMany, count },
+      $transaction: (operations: Promise<unknown>[]) => Promise.all(operations),
+    } as unknown as PrismaService);
+    await service.findForEntities(
+      [
+        { entityType: 'parent', ids: [7] },
+        { entityType: 'child', ids: [8, 9] },
+      ],
+      {},
+    );
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [
+            { entity_type: 'parent', entity_id: { in: [7n] } },
+            { entity_type: 'child', entity_id: { in: [8n, 9n] } },
+          ],
+        },
+      }),
+    );
+  });
+
+  it('recovers removed child IDs only from logs with the matching foreign key', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ entity_id: 12n }]);
+    const service = new AuditLogsService({
+      auditLogs: { findMany },
+    } as unknown as PrismaService);
+    await expect(
+      service.findHistoricalEntityIds('children', 'parent_id', [7]),
+    ).resolves.toEqual([12]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        entity_type: 'children',
+        OR: [
+          { old_values: { path: '$.parent_id', equals: 7 } },
+          { new_values: { path: '$.parent_id', equals: 7 } },
+        ],
+      },
+      select: { entity_id: true },
+      distinct: ['entity_id'],
+    });
+  });
   it('paginates logs, serializes bigint IDs, and excludes request metadata', async () => {
     const findMany = jest.fn().mockResolvedValue([
       {

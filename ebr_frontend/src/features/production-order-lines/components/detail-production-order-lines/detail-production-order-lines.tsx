@@ -58,6 +58,7 @@ export default function ProductionOrderLinesDetail({
           compactTitle
           title="Tổng kết vật liệu"
           subtitle={`Mã lệnh sản xuất ${id}`}
+          history={{ resource: "material-summary", id, scope: "production-order" }}
           onClose={onClose}
         />
       </div>

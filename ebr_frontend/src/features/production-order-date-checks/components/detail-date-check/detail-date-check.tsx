@@ -411,6 +411,7 @@ export default function DateCheckDetail({
         ? createPortal(detailActions, externalActionsContainer)
         : null}
       <DetailPanelHeader
+        history={{ resource: "date-check", id: data.id }}
         compactTitle
         title={`Kiểm tra date #${data.id}`}
         subtitle={formatDateTime(data.checked_at)}

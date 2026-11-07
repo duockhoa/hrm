@@ -34,13 +34,19 @@ export function getHistoryChanges(
 
 export function formatHistoryValue(value: unknown, field: EditHistoryField) {
   if (value === null || value === undefined || value === "") return "—";
+  if (field.type === "boolean" && typeof value === "boolean") {
+    return value ? "Có" : "Không";
+  }
+  if (field.type === "date" && typeof value === "string") {
+    return formatHistoryDate(value);
+  }
   if (
     field.type === "number" &&
     (typeof value === "string" || typeof value === "number")
   ) {
     const numberValue = Number(value);
     if (Number.isFinite(numberValue))
-      return numberValue.toLocaleString("vi-VN");
+      return numberValue.toLocaleString("vi-VN", { maximumFractionDigits: 20 });
   }
   return typeof value === "object" ? JSON.stringify(value) : String(value);
 }

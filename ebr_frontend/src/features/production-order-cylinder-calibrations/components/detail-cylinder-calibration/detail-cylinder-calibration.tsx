@@ -75,6 +75,7 @@ export default function CylinderCalibrationDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "cylinder-calibration", id: data.id }}
         compactTitle
         title="Hiệu chỉnh ống đong"
         subtitle={formatDateTime(data.updated_at ?? data.created_at)}

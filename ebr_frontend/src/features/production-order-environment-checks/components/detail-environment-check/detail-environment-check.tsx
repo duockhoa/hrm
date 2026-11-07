@@ -152,6 +152,7 @@ export default function EnvironmentCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "environment-check", id: data.id }}
         compactTitle
         title={`Nhiệt độ/độ ẩm #${data.id}`}
         subtitle={formatDateTime(data.checked_at)}

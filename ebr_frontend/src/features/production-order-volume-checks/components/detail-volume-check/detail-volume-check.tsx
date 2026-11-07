@@ -206,6 +206,7 @@ export default function VolumeCheckDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "volume-check", id: data.id }}
         compactTitle
         title={`Kiểm tra thể tích #${data.id}`}
         subtitle={formatDateTime(data.created_at)}

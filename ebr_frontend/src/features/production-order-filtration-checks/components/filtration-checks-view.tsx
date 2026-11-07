@@ -47,6 +47,7 @@ export default function FiltrationChecksView({
       {!embedded && onClose ? (
         <DetailPanelHeader
           title="Theo dõi quá trình lọc"
+        history={{ resource: "filtration-check", id, scope: "production-order" }}
           subtitle={`Lệnh sản xuất #${id}`}
           actions={<Button type="button" size="sm" onClick={() => setIsAddOpen(true)}><Plus className="size-4" />Thêm mới</Button>}
           onClose={onClose}

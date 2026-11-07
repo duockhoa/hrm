@@ -259,6 +259,7 @@ export default function SemiFinishedProductSummaryDetail({
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md text-sm">
       <DetailPanelHeader
+        history={{ resource: "semi-finished-product-summary", id: data.id }}
         compactTitle
         title={`Tổng kết sản lượng bán thành phẩm #${data.id}`}
         actions={
