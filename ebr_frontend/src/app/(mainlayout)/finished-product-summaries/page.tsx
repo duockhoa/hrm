@@ -302,9 +302,6 @@ export default function FinishedProductSummariesPage() {
               Danh sách tổng kết thành phẩm
             </Link>
           </div>
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
-            {filteredSummaries.length}
-          </span>
         </div>
       </div>
 
