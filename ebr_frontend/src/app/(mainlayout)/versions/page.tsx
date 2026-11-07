@@ -94,6 +94,19 @@ export default function VersionsPage() {
             </TableHeader>
             <TableBody>
               <TableRow>
+                <TableCell className="font-medium">1.2.1</TableCell>
+                <TableCell>
+                  <time dateTime="2026-11-07">07/11/2026</time>
+                </TableCell>
+                <TableCell className="min-w-72 max-w-xl whitespace-normal">
+                  Bổ sung menu “Lịch sử kết nối” để theo dõi các phiên truy cập
+                  EBR, thời điểm kết nối và ngắt kết nối, thời lượng phiên,
+                  trạng thái, địa chỉ IP và thiết bị. Tự động cập nhật dữ liệu,
+                  hỗ trợ phân trang và phân quyền xem lịch sử.
+                </TableCell>
+                <VersionResponsibleCells />
+              </TableRow>
+              <TableRow>
                 <TableCell className="font-medium">1.1.3</TableCell>
                 <TableCell>
                   <time dateTime="2026-11-02">02/11/2026</time>
