@@ -54,6 +54,8 @@ import { MixingActivityTemplateStageStepsService } from './mixing-activity-templ
 import { MixingActivityTemplateStageStepParametersService } from './mixing-activity-template-stage-step-parameters.service';
 import { ItemsService } from './items.service';
 import { ITEM_PERMISSIONS } from './items.permissions';
+import type { ListItemsQuery } from './dto/list-items-query';
+import { ApiItemsQuery } from './items-query.swagger';
 
 @UseGuards(jwtAuthGuard, PermissionsGuard, NetworkPolicyGuard)
 @Controller('items')
@@ -70,8 +72,14 @@ export class ItemsController {
 
   @Get()
   @Permissions(ITEM_PERMISSIONS.LIST)
-  async findAll(@Query('codePrefix') codePrefix?: string) {
-    return this.itemsService.findAll(codePrefix);
+  @ApiItemsQuery()
+  async findAll(
+    @Query() query: ListItemsQuery = {},
+    @Res({ passthrough: true }) response?: Response,
+  ) {
+    return this.itemsService.findAll(query, (total) =>
+      response?.setHeader('X-Total-Count', total),
+    );
   }
 
   @Get('series')
@@ -88,20 +96,38 @@ export class ItemsController {
 
   @Get('finished-products')
   @Permissions(ITEM_PERMISSIONS.LIST)
-  async findFinishedProducts() {
-    return this.itemsService.findFinishedProducts();
+  @ApiItemsQuery()
+  async findFinishedProducts(
+    @Query() query: ListItemsQuery = {},
+    @Res({ passthrough: true }) response?: Response,
+  ) {
+    return this.itemsService.findFinishedProducts(query, (total) =>
+      response?.setHeader('X-Total-Count', total),
+    );
   }
 
   @Get('semi-finished-products')
   @Permissions(ITEM_PERMISSIONS.LIST)
-  async findSemiFinishedProducts() {
-    return this.itemsService.findSemiFinishedProducts();
+  @ApiItemsQuery()
+  async findSemiFinishedProducts(
+    @Query() query: ListItemsQuery = {},
+    @Res({ passthrough: true }) response?: Response,
+  ) {
+    return this.itemsService.findSemiFinishedProducts(query, (total) =>
+      response?.setHeader('X-Total-Count', total),
+    );
   }
 
   @Get('raw-materials')
   @Permissions(ITEM_PERMISSIONS.LIST)
-  async findRawMaterials() {
-    return this.itemsService.findRawMaterials();
+  @ApiItemsQuery()
+  async findRawMaterials(
+    @Query() query: ListItemsQuery = {},
+    @Res({ passthrough: true }) response?: Response,
+  ) {
+    return this.itemsService.findRawMaterials(query, (total) =>
+      response?.setHeader('X-Total-Count', total),
+    );
   }
 
   @Get('equipment/:itemEquipmentId')

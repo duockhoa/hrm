@@ -361,8 +361,13 @@ describe('ItemsController', () => {
     const items = [{ item_code: 'BTP00001' }];
     itemsService.findAll.mockResolvedValue(items);
 
-    await expect(controller.findAll('BTP')).resolves.toBe(items);
-    expect(itemsService.findAll).toHaveBeenCalledWith('BTP');
+    await expect(controller.findAll({ codePrefix: 'BTP' })).resolves.toBe(
+      items,
+    );
+    expect(itemsService.findAll).toHaveBeenCalledWith(
+      { codePrefix: 'BTP' },
+      expect.any(Function),
+    );
   });
 
   it('gets all mixing activity templates with their items', async () => {

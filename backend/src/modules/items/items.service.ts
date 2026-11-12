@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { UpdateItemDto } from './dto/update-item.dto';
+import { Prisma } from '@prisma/client';
+import { ListItemsQuery, parseItemsQuery } from './dto/list-items-query';
 
 const ITEM_INCLUDE = {
   registration: true,
@@ -42,57 +44,108 @@ export class ItemsService {
     return itemSeries;
   }
 
-  async findAll(codePrefix?: string) {
-    const normalizedCodePrefix = this.normalizeCodePrefix(codePrefix);
-    const items = await this.prismaService.items.findMany({
-      ...(normalizedCodePrefix
-        ? {
-            where: {
-              item_code: { startsWith: normalizedCodePrefix },
-            },
-          }
-        : {}),
-      include: ITEM_INCLUDE,
-    });
-
-    return items.map((item) => this.hideDeletedProductionSpecification(item));
+  async findAll(
+    query: ListItemsQuery | string = {},
+    onCount?: (total: number) => void,
+  ) {
+    return this.listItems(
+      typeof query === 'string' ? { codePrefix: query } : query,
+      {},
+      onCount,
+    );
   }
 
-  async findFinishedProducts() {
-    const items = await this.prismaService.items.findMany({
-      where: {
-        item_code: {
-          startsWith: 'TP',
-        },
-      },
-      include: ITEM_INCLUDE,
-    });
-
-    return items.map((item) => this.hideDeletedProductionSpecification(item));
+  async findFinishedProducts(
+    query: ListItemsQuery = {},
+    onCount?: (total: number) => void,
+  ) {
+    return this.listItems(query, { item_code: { startsWith: 'TP' } }, onCount);
   }
-  async findSemiFinishedProducts() {
-    const items = await this.prismaService.items.findMany({
-      where: {
-        item_code: {
-          startsWith: 'BTP',
-        },
-      },
-      include: ITEM_INCLUDE,
-    });
-
-    return items.map((item) => this.hideDeletedProductionSpecification(item));
+  async findSemiFinishedProducts(
+    query: ListItemsQuery = {},
+    onCount?: (total: number) => void,
+  ) {
+    return this.listItems(query, { item_code: { startsWith: 'BTP' } }, onCount);
   }
-  async findRawMaterials() {
-    const items = await this.prismaService.items.findMany({
-      where: {
+  async findRawMaterials(
+    query: ListItemsQuery = {},
+    onCount?: (total: number) => void,
+  ) {
+    return this.listItems(
+      query,
+      {
         NOT: [
           { item_code: { startsWith: 'TP' } },
           { item_code: { startsWith: 'BTP' } },
         ],
       },
-      include: ITEM_INCLUDE,
-    });
+      onCount,
+    );
+  }
 
+  private async listItems(
+    input: ListItemsQuery,
+    scope: Prisma.ItemsWhereInput,
+    onCount?: (total: number) => void,
+  ) {
+    const query = parseItemsQuery(input);
+    const conditions: Prisma.ItemsWhereInput[] = [];
+    if (Object.keys(scope).length) conditions.push(scope);
+    if (query.codePrefix)
+      conditions.push({ item_code: { startsWith: query.codePrefix } });
+    if (query.search) {
+      conditions.push({
+        OR: [
+          { item_code: { contains: query.search } },
+          { item_name: { contains: query.search } },
+          { dk_code: { contains: query.search } },
+        ],
+      });
+    }
+    if (query.series) conditions.push({ series: { in: query.series } });
+    if (query.registrationId !== undefined)
+      conditions.push({ registration_id: query.registrationId });
+    if (query.hasRegistration !== undefined)
+      conditions.push({
+        registration_id: query.hasRegistration ? { not: null } : null,
+      });
+    const where = conditions.length > 1 ? { AND: conditions } : conditions[0];
+    const relations: Prisma.ItemsInclude = {};
+    const expansions =
+      query.expand ??
+      (query.select ? [] : ['registration', 'productionSpecification']);
+    for (const name of expansions) {
+      if (name === 'registration')
+        relations.registration = ITEM_INCLUDE.registration;
+      if (name === 'productionSpecification')
+        relations.productionSpecification =
+          ITEM_INCLUDE.productionSpecification;
+    }
+    const projection: Pick<Prisma.ItemsFindManyArgs, 'select' | 'include'> =
+      query.select
+        ? {
+            select: {
+              ...Object.fromEntries(query.select.map((field) => [field, true])),
+              ...relations,
+            },
+          }
+        : { include: relations };
+    const args: Prisma.ItemsFindManyArgs = {
+      ...(where ? { where } : {}),
+      ...(query.skip !== undefined ? { skip: query.skip } : {}),
+      ...(query.top !== undefined ? { take: query.top } : {}),
+      orderBy: query.orderBy.map(({ field, direction }) => ({
+        [field]: direction,
+      })),
+      ...projection,
+    };
+    const [items, total] = await Promise.all([
+      this.prismaService.items.findMany(args),
+      query.count
+        ? this.prismaService.items.count({ ...(where ? { where } : {}) })
+        : undefined,
+    ]);
+    if (total !== undefined) onCount?.(total);
     return items.map((item) => this.hideDeletedProductionSpecification(item));
   }
 
@@ -133,20 +186,6 @@ export class ItemsService {
     if (!item) {
       throw new NotFoundException('Item not found');
     }
-  }
-
-  private normalizeCodePrefix(value?: string) {
-    if (value === undefined || value.trim() === '') {
-      return undefined;
-    }
-
-    const normalizedValue = value.trim().toUpperCase();
-
-    if (!/^[A-Z]+$/.test(normalizedValue)) {
-      throw new BadRequestException('codePrefix must contain letters only');
-    }
-
-    return normalizedValue;
   }
 
   private async buildUpdateData(dto: UpdateItemDto) {
@@ -197,12 +236,12 @@ export class ItemsService {
     return registrationId;
   }
 
-  private hideDeletedProductionSpecification<
-    T extends {
-      productionSpecification?: { deleted_at?: Date | null } | null;
-    } | null,
-  >(item: T) {
-    if (item?.productionSpecification?.deleted_at) {
+  private hideDeletedProductionSpecification<T extends object | null>(item: T) {
+    const specification =
+      item && 'productionSpecification' in item
+        ? (item.productionSpecification as { deleted_at?: Date | null } | null)
+        : null;
+    if (specification?.deleted_at) {
       return {
         ...item,
         productionSpecification: null,

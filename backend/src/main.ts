@@ -23,6 +23,7 @@ async function bootstrap() {
       'Content-Disposition',
       'WWW-Authenticate',
       'MCP-Protocol-Version',
+      'X-Total-Count',
     ],
   });
 

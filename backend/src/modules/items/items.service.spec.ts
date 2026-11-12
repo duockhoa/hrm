@@ -91,6 +91,7 @@ describe('ItemsService', () => {
 
     await expect(service.findAll()).resolves.toEqual(items);
     expect(prismaService.items.findMany).toHaveBeenCalledWith({
+      orderBy: [{ item_code: 'asc' }],
       include: {
         registration: true,
         productionSpecification: {
@@ -120,6 +121,7 @@ describe('ItemsService', () => {
       where: {
         item_code: { startsWith: 'BTP' },
       },
+      orderBy: [{ item_code: 'asc' }],
       include: expect.any(Object),
     });
   });

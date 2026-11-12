@@ -642,6 +642,7 @@ model Items {
   update_at               DateTime                           @default(now()) @updatedAt
   deleted_at              DateTime?
 
+  @@index([series, item_code])
   @@map("items")
 }
 

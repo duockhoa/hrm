@@ -979,6 +979,8 @@ Response:
 
 ## Items
 
+Các API danh sách Items hỗ trợ `skip`, `top`, `search`, `codePrefix`, `series`, `registrationId`, `hasRegistration`, `select`, `orderBy`, `count` và `expand`. Xem [hướng dẫn query Items](docs/items-query.md) để biết quy tắc, giới hạn và ví dụ. Response vẫn là mảng; `count=true` trả tổng số bản ghi qua header `X-Total-Count`.
+
 Tất cả API item và thiết bị theo item trong nhóm này cần `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`.
 
 | Key quyền      | API được phép gọi                                                                                             |
