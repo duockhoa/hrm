@@ -594,15 +594,30 @@ model BusinessPartners {
 }
 
 model SapItemSeries {
-  series      Int      @id
-  document    String   @db.VarChar(20)
-  name        String   @db.VarChar(255)
-  prefix      String?  @db.VarChar(255)
-  suffix      String?  @db.VarChar(255)
-  is_manual   Boolean?
-  is_locked   Boolean?
-  raw_data    Json
-  synced_at   DateTime @db.DateTime(3)
+  series                           Int      @id
+  document                         String   @db.VarChar(20)
+  document_sub_type                String?  @db.VarChar(20)
+  initial_number                   Int?
+  last_number                      Int?
+  next_number                      Int?
+  prefix                           String?  @db.VarChar(255)
+  suffix                           String?  @db.VarChar(255)
+  remarks                          String?  @db.Text
+  group_code                       String?  @db.VarChar(50)
+  is_locked                        Boolean?
+  period_indicator                 String?  @db.VarChar(255)
+  name                             String   @db.VarChar(255)
+  is_digital_series                Boolean?
+  digit_number                     Int?
+  series_type                      String?  @db.VarChar(50)
+  is_manual                        Boolean?
+  bpl_id                           Int?
+  at_document_type                 String?  @db.VarChar(255)
+  is_electronic_comm_enabled       Boolean?
+  cost_account_only                Boolean?
+  invoice_type                     Int?
+  invoice_type_of_negative_invoice Int?
+  synced_at                        DateTime @db.DateTime(3)
 
   @@map("sap_item_series")
 }

@@ -1,11 +1,25 @@
-import { Prisma } from '@prisma/client';
-
-export type SapItemSeries = Prisma.InputJsonObject & {
+export type SapItemSeries = {
   Series: number;
   Document: string;
   Name: string;
+  DocumentSubType?: string | null;
+  InitialNumber?: number | null;
+  LastNumber?: number | null;
+  NextNumber?: number | null;
   Prefix?: string | null;
   Suffix?: string | null;
   IsManual?: string | null;
   Locked?: string | null;
+  Remarks?: string | null;
+  GroupCode?: string | null;
+  PeriodIndicator?: string | null;
+  IsDigitalSeries?: string | null;
+  DigitNumber?: number | null;
+  SeriesType?: string | null;
+  BPLID?: number | null;
+  ATDocumentType?: string | null;
+  IsElectronicCommEnabled?: string | null;
+  CostAccountOnly?: string | null;
+  InvoiceType?: number | null;
+  InvoiceTypeOfNegativeInvoice?: number | null;
 };

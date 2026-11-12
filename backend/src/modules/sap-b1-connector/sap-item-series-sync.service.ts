@@ -72,12 +72,30 @@ export class SapItemSeriesSyncService implements OnModuleInit {
     return {
       series: row.Series,
       document: row.Document,
+      document_sub_type: row.DocumentSubType ?? null,
+      initial_number: row.InitialNumber ?? null,
+      last_number: row.LastNumber ?? null,
+      next_number: row.NextNumber ?? null,
       name: row.Name,
       prefix: row.Prefix ?? null,
       suffix: row.Suffix ?? null,
+      remarks: row.Remarks ?? null,
+      group_code: row.GroupCode ?? null,
+      period_indicator: row.PeriodIndicator ?? null,
+      is_digital_series: this.parseBoolean(row.IsDigitalSeries),
+      digit_number: row.DigitNumber ?? null,
+      series_type: row.SeriesType ?? null,
+      bpl_id: row.BPLID ?? null,
+      at_document_type: row.ATDocumentType ?? null,
+      is_electronic_comm_enabled: this.parseBoolean(
+        row.IsElectronicCommEnabled,
+      ),
+      cost_account_only: this.parseBoolean(row.CostAccountOnly),
+      invoice_type: row.InvoiceType ?? null,
+      invoice_type_of_negative_invoice:
+        row.InvoiceTypeOfNegativeInvoice ?? null,
       is_manual: this.parseBoolean(row.IsManual),
       is_locked: this.parseBoolean(row.Locked),
-      raw_data: row,
       synced_at: syncedAt,
     };
   }
