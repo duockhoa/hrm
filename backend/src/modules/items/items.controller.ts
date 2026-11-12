@@ -74,6 +74,18 @@ export class ItemsController {
     return this.itemsService.findAll(codePrefix);
   }
 
+  @Get('series')
+  @Permissions(ITEM_PERMISSIONS.LIST)
+  async findAllSeries() {
+    return this.itemsService.findAllSeries();
+  }
+
+  @Get('series/:series')
+  @Permissions(ITEM_PERMISSIONS.READ)
+  async findSeriesById(@Param('series', ParseIntPipe) series: number) {
+    return this.itemsService.findSeriesById(series);
+  }
+
   @Get('finished-products')
   @Permissions(ITEM_PERMISSIONS.LIST)
   async findFinishedProducts() {

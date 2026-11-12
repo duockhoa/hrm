@@ -28,6 +28,20 @@ const ITEM_INCLUDE = {
 @Injectable()
 export class ItemsService {
   constructor(private readonly prismaService: PrismaService) {}
+  async findAllSeries() {
+    return this.prismaService.sapItemSeries.findMany({
+      orderBy: { series: 'asc' },
+    });
+  }
+
+  async findSeriesById(series: number) {
+    const itemSeries = await this.prismaService.sapItemSeries.findUnique({
+      where: { series },
+    });
+    if (!itemSeries) throw new NotFoundException('Item series not found');
+    return itemSeries;
+  }
+
   async findAll(codePrefix?: string) {
     const normalizedCodePrefix = this.normalizeCodePrefix(codePrefix);
     const items = await this.prismaService.items.findMany({

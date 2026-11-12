@@ -14,6 +14,10 @@ describe('ItemsService', () => {
     registrationNumbers: {
       findUnique: jest.Mock;
     };
+    sapItemSeries: {
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
@@ -23,6 +27,10 @@ describe('ItemsService', () => {
         {
           provide: PrismaService,
           useValue: {
+            sapItemSeries: {
+              findMany: jest.fn(),
+              findUnique: jest.fn(),
+            },
             items: {
               findMany: jest.fn(),
               findUnique: jest.fn(),
@@ -42,6 +50,24 @@ describe('ItemsService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('returns the stored series list and detail', async () => {
+    const series = { series: 108, name: 'TP', prefix: 'TP' };
+    prismaService.sapItemSeries.findMany.mockResolvedValue([series]);
+    prismaService.sapItemSeries.findUnique.mockResolvedValue(series);
+    await expect(service.findAllSeries()).resolves.toEqual([series]);
+    await expect(service.findSeriesById(108)).resolves.toEqual(series);
+    expect(prismaService.sapItemSeries.findUnique).toHaveBeenCalledWith({
+      where: { series: 108 },
+    });
+  });
+
+  it('returns not found for an unknown series', async () => {
+    prismaService.sapItemSeries.findUnique.mockResolvedValue(null);
+    await expect(service.findSeriesById(999)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('returns items with production specification product line', async () => {

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import * as https from 'https';
 import { SAP_BP_SELECT, SapBusinessPartner } from './sap-business-partner';
+import { SapItemSeries } from './sap-item-series';
 
 type SapPagedResponse<T> = {
   value?: T[];
@@ -54,6 +55,17 @@ export class SapB1ServiceLayerClient {
     return this.fetchAllPages<SapBusinessPartner>(
       `BusinessPartners?$select=${SAP_BP_SELECT}&$orderby=CardCode`,
     );
+  }
+
+  async getItemSeries(): Promise<SapItemSeries[]> {
+    const data = await this.post<SapPagedResponse<SapItemSeries>>(
+      'SeriesService_GetDocumentSeries',
+      { DocumentTypeParams: { Document: '4' } },
+    );
+    if (!Array.isArray(data.value)) {
+      throw new Error('SAP item series response did not include a value array');
+    }
+    return data.value;
   }
 
   async getProductionOrders() {
@@ -122,6 +134,30 @@ export class SapB1ServiceLayerClient {
         return this.get<T>(endpoint, false);
       }
 
+      throw error;
+    }
+  }
+
+  private async post<T>(
+    endpoint: string,
+    body: Record<string, unknown>,
+    retryOnUnauthorized = true,
+  ): Promise<T> {
+    const token = await this.getValidToken();
+    try {
+      const response = await this.sapApi.post<T>(endpoint, body, {
+        headers: this.buildSessionHeaders(token),
+      });
+      return response.data;
+    } catch (error) {
+      if (
+        retryOnUnauthorized &&
+        axios.isAxiosError(error) &&
+        error.response?.status === 401
+      ) {
+        this.clearSession();
+        return this.post<T>(endpoint, body, false);
+      }
       throw error;
     }
   }

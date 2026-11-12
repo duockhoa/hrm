@@ -26,6 +26,8 @@ describe('Items network policy', () => {
   let policy = 'IP_ALLOWLIST';
   const originalProxy = process.env.TRUSTED_PROXY_CIDRS;
   const findAll = jest.fn().mockResolvedValue([]);
+  const findAllSeries = jest.fn().mockResolvedValue([{ series: 108, name: 'TP' }]);
+  const findSeriesById = jest.fn().mockResolvedValue({ series: 108, name: 'TP' });
   const update = jest.fn().mockResolvedValue({ item_code: 'TP001' });
   const findImageFile = jest.fn();
   const findMany = jest.fn();
@@ -36,7 +38,10 @@ describe('Items network policy', () => {
       providers: [
         PermissionsGuard,
         NetworkPoliciesService,
-        { provide: ItemsService, useValue: { findAll, update } },
+        {
+          provide: ItemsService,
+          useValue: { findAll, update, findAllSeries, findSeriesById },
+        },
         { provide: ItemEquipmentService, useValue: {} },
         { provide: DatePrintTemplatesService, useValue: { findImageFile } },
         { provide: MixingActivityTemplatesService, useValue: {} },
@@ -150,5 +155,40 @@ describe('Items network policy', () => {
   });
   it('still requires authentication', async () => {
     await request(app.getHttpServer()).get('/items').expect(401);
+  });
+
+  it('routes series requests and validates the series id', async () => {
+    policy = 'OPEN';
+    await request(app.getHttpServer())
+      .get('/items/series')
+      .set('Authorization', 'test')
+      .expect(200, [{ series: 108, name: 'TP' }]);
+    await request(app.getHttpServer())
+      .get('/items/series/108')
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'items.read')
+      .expect(200, { series: 108, name: 'TP' });
+    expect(findSeriesById).toHaveBeenCalledWith(108);
+    await request(app.getHttpServer())
+      .get('/items/series/invalid')
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'items.read')
+      .expect(400);
+  });
+
+  it('protects series data with authentication, permissions and network policy', async () => {
+    await request(app.getHttpServer()).get('/items/series').expect(401);
+    await request(app.getHttpServer())
+      .get('/items/series')
+      .set('Authorization', 'test')
+      .set('X-Forwarded-For', '192.0.2.10')
+      .set('x-test-permission', 'other')
+      .expect(403);
+    await request(app.getHttpServer())
+      .get('/items/series')
+      .set('Authorization', 'test')
+      .set('X-Forwarded-For', '198.51.100.1')
+      .expect(403);
+    expect(findAllSeries).not.toHaveBeenCalled();
   });
 });
