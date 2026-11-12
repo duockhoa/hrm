@@ -107,6 +107,63 @@ describe('SapB1ConnectorService', () => {
     });
   });
 
+  it.each([3, 0, null, undefined])(
+    'stores SAP Series %s when creating an item',
+    async (series) => {
+      sapB1Client.getItems.mockResolvedValue([
+        { ItemCode: 'TP001', ItemName: 'Item', Series: series },
+      ]);
+      prismaService.items.findUnique.mockResolvedValue(null);
+
+      await service.handleCronSyncItems();
+
+      expect(prismaService.items.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          item_code: 'TP001',
+          series: series ?? null,
+        }),
+      });
+    },
+  );
+
+  it.each([3, 0, null])(
+    'updates an existing item when only SAP Series changes to %s',
+    async (series) => {
+      sapB1Client.getItems.mockResolvedValue([
+        { ItemCode: 'TP001', ItemName: 'Item', Series: series },
+      ]);
+      prismaService.items.findUnique.mockResolvedValue({
+        item_code: 'TP001',
+        item_name: 'Item',
+        series: 2,
+      });
+
+      await service.handleCronSyncItems();
+
+      expect(prismaService.items.update).toHaveBeenCalledWith({
+        where: { item_code: 'TP001' },
+        data: expect.objectContaining({ series }),
+      });
+      expect(prismaService.items.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not update an item when SAP fields including Series are unchanged', async () => {
+    sapB1Client.getItems.mockResolvedValue([
+      { ItemCode: 'TP001', ItemName: 'Item', Series: 3 },
+    ]);
+    prismaService.items.findUnique.mockResolvedValue({
+      item_code: 'TP001',
+      item_name: 'Item',
+      series: 3,
+    });
+
+    await service.handleCronSyncItems();
+
+    expect(prismaService.items.update).not.toHaveBeenCalled();
+    expect(prismaService.items.create).not.toHaveBeenCalled();
+  });
+
   it('skips SAP items without item name', async () => {
     sapB1Client.getItems.mockResolvedValue([
       {

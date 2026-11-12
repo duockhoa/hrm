@@ -160,6 +160,7 @@ export class SapB1ConnectorService {
             const sapItemName = item.ItemName;
             const unit = item.SalesUnit;
             const dk_code = item.U_MDK;
+            const series: number | null = item.Series ?? null;
 
             if (this.isMissingSapValue(sapItemCode)) {
               this.logger.warn('Skipped item with missing ItemCode');
@@ -190,7 +191,8 @@ export class SapB1ConnectorService {
               if (
                 existingItem.item_name !== item_name ||
                 existingItem.unit !== unit ||
-                existingItem.dk_code !== dk_code
+                existingItem.dk_code !== dk_code ||
+                existingItem.series !== series
               ) {
                 await this.prismaService.items.update({
                   where: { item_code: item_code },
@@ -198,6 +200,7 @@ export class SapB1ConnectorService {
                     item_name: item_name,
                     unit: unit,
                     dk_code: dk_code,
+                    series,
                   },
                 });
                 this.logger.log(`Updated product: ${item_code}`);
@@ -209,6 +212,7 @@ export class SapB1ConnectorService {
                   item_name: item_name,
                   unit: unit,
                   dk_code: dk_code,
+                  series,
                 },
               });
               this.logger.log(`Created new product: ${item_code}`);

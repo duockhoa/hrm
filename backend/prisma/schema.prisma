@@ -599,6 +599,7 @@ model Items {
   item_name               String                             @db.Text
   unit                    String?
   dk_code                 String?
+  series                  Int?
   registration_id         Int?
   registration            RegistrationNumbers?               @relation(fields: [registration_id], references: [id])
   itemFeatures            ItemFeatures[]

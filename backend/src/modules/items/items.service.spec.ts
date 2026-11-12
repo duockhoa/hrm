@@ -48,6 +48,7 @@ describe('ItemsService', () => {
     const items = [
       {
         item_code: 'TP00001',
+        series: 3,
         productionSpecification: {
           item_code: 'TP00001',
           product_line_id: 1,
@@ -107,6 +108,7 @@ describe('ItemsService', () => {
   it('returns item detail with production specification product line', async () => {
     const item = {
       item_code: 'TP00001',
+      series: 3,
       productionSpecification: {
         item_code: 'TP00001',
         product_line_id: 1,

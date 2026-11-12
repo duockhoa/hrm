@@ -46,7 +46,7 @@ export class SapB1ServiceLayerClient {
 
   async getItems() {
     return this.fetchAllPages(
-      'Items?$select=ItemCode,ItemName,SalesUnit,U_MDK,ManageBatchNumbers',
+      'Items?$select=ItemCode,ItemName,SalesUnit,U_MDK,ManageBatchNumbers,Series',
     );
   }
 
