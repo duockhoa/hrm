@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { generateOtp } from 'src/common/utils/otp.util';
 import { EmailService } from '../email/email.service';
 import { randomUUID } from 'crypto';
+import { jwtUserId } from './jwt-payload';
 
 export interface LoginMetadata {
   ipAddress?: string;
@@ -52,27 +53,35 @@ export class AuthService {
     };
   }
 
-  async refreshToken(refreshTokenDto: any) {
-    const { refreshToken } = refreshTokenDto;
+  async refreshToken(
+    refreshTokenDto: { refreshToken?: unknown } | null | undefined,
+  ) {
+    const refreshToken = refreshTokenDto?.refreshToken;
+    if (typeof refreshToken !== 'string' || !refreshToken.trim()) return null;
+    let payload: unknown;
+    try {
+      payload = this.jwtService.verify(refreshToken);
+    } catch {
+      return null;
+    }
+    const userId = jwtUserId(payload, 'refresh');
+    if (userId === null) return null;
     const storedToken = await this.prisma.tokens.findUnique({
       where: { refreshToken },
     });
-    if (!storedToken) {
+    if (!storedToken || storedToken.user_id !== userId) {
       return null;
     }
-    let payload: any;
-    try {
-      payload = this.jwtService.verify(refreshToken);
-    } catch (e) {
-      console.log("verify failed")
-      return null;
-    }
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, deleted_at: true },
+    });
+    if (!user || user.deleted_at) return null;
     const newAccessToken = this.jwtService.sign({
-      username: payload.username,
-      sub: payload.sub,
+      username: user.username,
+      sub: user.id,
       token_use: 'access',
     });
-    console.log("verify successfully")
     return {
       accessToken: newAccessToken,
     };

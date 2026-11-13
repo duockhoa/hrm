@@ -3,6 +3,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ExtractJwt } from 'passport-jwt';
 import { Strategy } from 'passport-jwt';
 import { UsersService } from 'src/modules/users/users.service';
+import { jwtUserId } from 'src/modules/auth/jwt-payload';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly userService: UsersService) {
@@ -12,14 +13,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: process.env.JWT_SECRET as string,
     });
   }
-  async validate(payload: any) {
-    const userId = Number(payload?.sub);
-    if (!payload?.sub || !Number.isInteger(userId) || userId <= 0) {
+  async validate(payload: unknown) {
+    const userId = jwtUserId(payload, 'access');
+    if (userId === null) {
       throw new UnauthorizedException('Invalid token');
     }
 
     const user = await this.userService.findById(userId);
-    if (!user) {
+    if (!user || user.deleted_at) {
       throw new UnauthorizedException('User not found');
     }
     return user;

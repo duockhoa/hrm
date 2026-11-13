@@ -120,9 +120,15 @@ describe('AuthService', () => {
   it('refreshes an access token without roles or permissions', async () => {
     const jwtService = (service as any).jwtService as JwtService;
     prisma.tokens.findUnique.mockResolvedValue({ user_id: 1 });
+    prisma.users.findUnique.mockResolvedValue({
+      id: 1,
+      username: 'user@example.com',
+      deleted_at: null,
+    });
     (jwtService.verify as jest.Mock).mockReturnValue({
       username: 'user@example.com',
       sub: 1,
+      token_use: 'refresh',
       roles: ['admin'],
       permissions: ['users.write'],
     });

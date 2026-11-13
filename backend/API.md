@@ -155,6 +155,8 @@ Các trường trên đều có thể cập nhật qua `PATCH`; `cleaning_object
 
 ## Auth
 
+API nghiệp vụ dùng `Authorization: Bearer <accessToken>` và chỉ chấp nhận JWT có `token_use=access`. API `POST /auth/refresh-token` chỉ nhận `token_use=refresh`; token phải có chữ ký và thời hạn hợp lệ, còn trong DB, khớp chủ sở hữu và người dùng chưa bị xóa. Token sai loại hoặc thiếu `token_use` trả `401`. Các phiên cũ không có nhãn này cần đăng nhập lại. Không cần migration DB cho thay đổi này.
+
 ### Đăng nhập
 
 ```http

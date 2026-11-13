@@ -67,7 +67,11 @@ export class AuthController {
   }
 
   @Post('refresh-token')
-  @ApiOperation({ summary: 'Cấp access token mới từ refresh token' })
+  @ApiOperation({
+    summary: 'Cấp access token mới từ refresh token',
+    description:
+      'Chỉ nhận JWT có token_use=refresh, chữ ký và thời hạn hợp lệ, còn được lưu trong DB và khớp với người dùng chưa bị xóa. Access token hoặc token cũ không có token_use bị từ chối với HTTP 401. Access token mới có token_use=access và được dùng trong Authorization: Bearer để gọi các API nghiệp vụ.',
+  })
   @ApiBody({ type: RefreshTokenDto })
   @ApiCreatedResponse({ type: AccessTokenResponseDto })
   @ApiBadRequestResponse({ description: 'Thiếu refresh token' })
