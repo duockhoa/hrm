@@ -234,7 +234,7 @@ export class SapB1ConnectorService {
     }
   }
 
-  @Cron(process.env.SAP_B1_LOT_LIST_SYNC_CRON || '*/30 * * * * *')
+  @Cron(process.env.SAP_B1_LOT_LIST_SYNC_CRON || '0 * * * * *')
   async handleCronSyncProductionOrders() {
     try {
       const production_orders = await this.sapB1Client.getProductionOrders();
