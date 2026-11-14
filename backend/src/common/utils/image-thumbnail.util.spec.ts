@@ -3,12 +3,14 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { Readable } from 'stream';
 import sharp from 'sharp';
+import { promises as files } from 'fs';
 import {
   createImageThumbnail,
   getImageThumbnailPath,
   removeImageAndThumbnail,
   resolvePreferredImageFile,
   thumbnailDiskStorage,
+  UPLOADED_THUMBNAIL_SOURCES,
 } from './image-thumbnail.util';
 
 describe('image thumbnail utilities', () => {
@@ -19,6 +21,7 @@ describe('image thumbnail utilities', () => {
   });
 
   afterEach(async () => {
+    jest.restoreAllMocks();
     await rm(temporaryDirectory, { recursive: true, force: true });
   });
 
@@ -71,6 +74,21 @@ describe('image thumbnail utilities', () => {
     expect(originalFile?.contentType).toBe('image/jpeg');
   });
 
+  it('does not leave a thumbnail when the source is deleted during encoding', async () => {
+    const imagePath = await createTestImage();
+    const rename = files.rename;
+    jest.spyOn(files, 'rename').mockImplementationOnce(async (from, to) => {
+      await files.unlink(imagePath);
+      await rename(from, to);
+    });
+    await expect(createImageThumbnail(imagePath)).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(stat(getImageThumbnailPath(imagePath))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
   it('removes the original image and its thumbnail together', async () => {
     const imagePath = await createTestImage();
     const thumbnailPath = await createImageThumbnail(imagePath);
@@ -81,7 +99,7 @@ describe('image thumbnail utilities', () => {
     await expect(stat(thumbnailPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('creates a thumbnail as part of storing a new upload', async () => {
+  it('validates and stores an upload without waiting for thumbnail generation', async () => {
     const imageBuffer = await sharp({
       create: {
         width: 1000,
@@ -104,9 +122,10 @@ describe('image thumbnail utilities', () => {
       stream: Readable.from(imageBuffer),
     } as Express.Multer.File;
 
+    const request: { [UPLOADED_THUMBNAIL_SOURCES]?: string[] } = {};
     const info = await new Promise<Partial<Express.Multer.File>>(
       (resolve, reject) => {
-        storage._handleFile({} as never, file, (error, storedInfo) => {
+        storage._handleFile(request as never, file, (error, storedInfo) => {
           if (error || !storedInfo) {
             reject(
               error instanceof Error
@@ -120,10 +139,11 @@ describe('image thumbnail utilities', () => {
       },
     );
     const thumbnailPath = getImageThumbnailPath(info.path!);
-    const metadata = await sharp(thumbnailPath).metadata();
-
     expect(info.path).toBe(join(temporaryDirectory, 'uploaded.jpg'));
-    expect(metadata.width).toBe(640);
-    expect(metadata.height).toBe(320);
+    await expect(stat(info.path!)).resolves.toMatchObject({
+      size: imageBuffer.length,
+    });
+    await expect(stat(thumbnailPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(request[UPLOADED_THUMBNAIL_SOURCES]).toEqual([info.path]);
   });
 });

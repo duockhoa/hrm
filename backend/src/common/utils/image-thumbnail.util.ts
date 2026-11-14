@@ -1,8 +1,19 @@
 import { randomUUID } from 'crypto';
-import { rename, stat, unlink } from 'fs/promises';
+import { readFile, rename, stat, unlink } from 'fs/promises';
 import multer, { diskStorage } from 'multer';
 import { extname } from 'path';
 import sharp from 'sharp';
+import { BadRequestException } from '@nestjs/common';
+
+// Upload filenames are unique and may be deleted immediately on a failed save.
+// Do not let libvips retain open file handles (which prevent unlink on Windows).
+sharp.cache({ files: 0 });
+
+// Collected by the global interceptor, which queues work only after the handler succeeds.
+export const UPLOADED_THUMBNAIL_SOURCES = Symbol('uploaded-thumbnail-sources');
+export type ThumbnailUploadRequest = {
+  [UPLOADED_THUMBNAIL_SOURCES]?: string[];
+};
 
 export const IMAGE_THUMBNAIL_MAX_SIZE = 640;
 export const IMAGE_THUMBNAIL_QUALITY = 80;
@@ -75,6 +86,13 @@ export const createImageThumbnail = async (
       .webp({ quality: IMAGE_THUMBNAIL_QUALITY })
       .toFile(temporaryPath);
     await rename(temporaryPath, thumbnailPath);
+    // An upload may be deleted while Sharp is working. Do not resurrect its thumbnail.
+    try {
+      await stat(originalPath);
+    } catch (error) {
+      await unlink(thumbnailPath).catch(() => undefined);
+      throw error;
+    }
     return thumbnailPath;
   } catch (error) {
     await unlink(temporaryPath).catch(() => undefined);
@@ -83,10 +101,8 @@ export const createImageThumbnail = async (
 };
 
 export const removeImageAndThumbnail = async (originalPath: string) => {
-  await Promise.all([
-    unlink(originalPath).catch(() => undefined),
-    unlink(getImageThumbnailPath(originalPath)).catch(() => undefined),
-  ]);
+  await unlink(originalPath).catch(() => undefined);
+  await unlink(getImageThumbnailPath(originalPath)).catch(() => undefined);
 };
 
 export const resolvePreferredImageFile = async (
@@ -139,11 +155,19 @@ export const thumbnailDiskStorage = (
           return;
         }
 
-        void createImageThumbnail(info.path)
-          .then(() => callback(undefined, info))
-          .catch(async (thumbnailError) => {
+        // Decode all pixels to reject corrupt/truncated images, without WebP encoding.
+        // Use a buffer for validation so a failed Sharp decode cannot retain a
+        // source file handle and prevent the controller/Multer from cleaning up.
+        void readFile(info.path)
+          .then((bytes) => sharp(bytes, { failOn: 'error' }).stats())
+          .then(() => {
+            const uploadRequest = request as ThumbnailUploadRequest;
+            (uploadRequest[UPLOADED_THUMBNAIL_SOURCES] ??= []).push(info.path!);
+            callback(undefined, info);
+          })
+          .catch(async () => {
             await removeImageAndThumbnail(info.path!);
-            callback(thumbnailError);
+            callback(new BadRequestException('Invalid or corrupt image'));
           });
       });
     },

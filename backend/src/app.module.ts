@@ -44,10 +44,12 @@ import { WarehouseTemperatureHumidityChecksModule } from './modules/warehouse-te
 import { McpModule } from './modules/mcp/mcp.module';
 import { NetworkPoliciesModule } from './modules/network-policies/network-policies.module';
 import { EbrConnectionSessionsModule } from './modules/ebr-connection-sessions/ebr-connection-sessions.module';
+import { ThumbnailProcessingModule } from './common/thumbnails/thumbnail-processing.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({}),
+    ThumbnailProcessingModule,
     EventEmitterModule.forRoot(),
     UsersModule,
     AuthModule,
