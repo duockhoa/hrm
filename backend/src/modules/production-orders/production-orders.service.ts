@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { GetProductionOrderListDto } from './dto/get-production-order-list.dto';
+import { productionOrderListWhere } from './production-order-list-query';
 import {
   assertProductionOrderInScope,
   getProductionOrderScope,
@@ -289,42 +291,36 @@ export class ProductionOrdersService {
     );
   }
 
-  async findFinishedProducts() {
-    const productionOrders = await this.prismaService.productionOrders.findMany(
-      {
-        where: {
-          item_code: {
-            startsWith: 'TP',
-          },
-        },
-        select: productionOrderListSelect,
-        orderBy: {
-          id: 'desc',
-        },
-      },
-    );
-
-    return productionOrders.map(toProductionOrderListItem);
+  async findFinishedProducts(options: GetProductionOrderListDto = {}) {
+    return this.findLotList(true, options);
   }
 
-  async findSemiFinishedProducts() {
-    const productionOrders = await this.prismaService.productionOrders.findMany(
-      {
-        where: {
-          item_code: {
-            not: {
-              startsWith: 'TP',
-            },
-          },
-        },
-        select: productionOrderListSelect,
-        orderBy: {
-          id: 'desc',
-        },
-      },
-    );
+  async findSemiFinishedProducts(options: GetProductionOrderListDto = {}) {
+    return this.findLotList(false, options);
+  }
 
-    return productionOrders.map(toProductionOrderListItem);
+  private async findLotList(finished: boolean, options: GetProductionOrderListDto) {
+    const where = productionOrderListWhere(finished, options);
+    const paginated = options.page !== undefined || options.limit !== undefined;
+    const page = options.page ?? 1;
+    const limit = options.limit ?? 50;
+    const query = {
+      where,
+      select: productionOrderListSelect,
+      orderBy: { id: 'desc' as const },
+      ...(paginated ? { skip: (page - 1) * limit, take: limit } : {}),
+    };
+    if (!paginated) {
+      const rows = await this.prismaService.productionOrders.findMany(query);
+      return rows.map(toProductionOrderListItem);
+    }
+
+    // Both reads use the scoped Prisma client; total must obey the same access restrictions.
+    const [rows, total] = await this.prismaService.$transaction([
+      this.prismaService.productionOrders.findMany(query),
+      this.prismaService.productionOrders.count({ where }),
+    ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+    return { data: rows.map(toProductionOrderListItem), total, page, limit };
   }
 
   async findProductionOrderById(id: number) {

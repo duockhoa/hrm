@@ -1,4 +1,5 @@
 import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
+import { GetProductionOrderListDto } from './dto/get-production-order-list.dto';
 import { ApiOperation, ApiProduces, ApiOkResponse } from '@nestjs/swagger';
 import {
   BadRequestException,
@@ -466,14 +467,20 @@ export class ProductionOrdersController {
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)
   @Get('finished-products')
-  async findFinishedProducts() {
-    return this.productionOrdersService.findFinishedProducts();
+  async findFinishedProducts(
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query: GetProductionOrderListDto = {},
+  ) {
+    return this.productionOrdersService.findFinishedProducts(query);
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)
   @Get('semi-finished-products')
-  async findSemiFinishedProducts() {
-    return this.productionOrdersService.findSemiFinishedProducts();
+  async findSemiFinishedProducts(
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query: GetProductionOrderListDto = {},
+  ) {
+    return this.productionOrdersService.findSemiFinishedProducts(query);
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)

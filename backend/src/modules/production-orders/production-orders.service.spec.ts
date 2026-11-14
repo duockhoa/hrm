@@ -89,9 +89,11 @@ describe('ProductionOrdersService', () => {
   let prismaService: {
     productionOrders: {
       findMany: jest.Mock;
+      count: jest.Mock;
       findUnique: jest.Mock;
       update: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -129,9 +131,11 @@ describe('ProductionOrdersService', () => {
           useValue: {
             productionOrders: {
               findMany: jest.fn(),
+              count: jest.fn(),
               findUnique: jest.fn(),
               update: jest.fn(),
             },
+            $transaction: jest.fn((queries) => Promise.all(queries)),
           },
         },
       ],
@@ -310,6 +314,36 @@ describe('ProductionOrdersService', () => {
     expect(query.select.samplingRequests).toEqual({
       orderBy: { sent_at: 'desc' }, take: 1, select: { status: true },
     });
+  });
+
+  it.each([true, false])('filters before pagination and counts using the same scoped where (finished=%s)', async (finished) => {
+    prismaService.productionOrders.findMany.mockResolvedValue([]);
+    prismaService.productionOrders.count.mockResolvedValue(45);
+    const query = { search: 'aspirin 001', page: 2, limit: 20 };
+    const result = await (finished ? service.findFinishedProducts(query) : service.findSemiFinishedProducts(query));
+    expect(result).toEqual({ data: [], total: 45, page: 2, limit: 20 });
+    const args = prismaService.productionOrders.findMany.mock.calls[0][0];
+    expect(args).toMatchObject({ take: 20, skip: 20, orderBy: { id: 'desc' } });
+    expect(args.where.AND).toHaveLength(2);
+    expect(prismaService.productionOrders.count).toHaveBeenCalledWith({ where: args.where });
+    expect(prismaService.$transaction).toHaveBeenCalledWith(expect.any(Array), { isolationLevel: 'RepeatableRead' });
+  });
+
+  it.each([
+    [{ page: 2 }, 2, 50, 50],
+    [{ limit: 10 }, 1, 10, 0],
+  ])('defaults missing pagination values for %j', async (query, page, limit, skip) => {
+    prismaService.productionOrders.findMany.mockResolvedValue([]);
+    prismaService.productionOrders.count.mockResolvedValue(0);
+    expect(await service.findFinishedProducts(query)).toEqual({ data: [], total: 0, page, limit });
+    expect(prismaService.productionOrders.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip, take: limit }));
+  });
+
+  it('keeps array responses for search without pagination and avoids count queries', async () => {
+    prismaService.productionOrders.findMany.mockResolvedValue([]);
+    expect(await service.findFinishedProducts({ search: 'aspirin' })).toEqual([]);
+    expect(prismaService.productionOrders.count).not.toHaveBeenCalled();
+    expect(prismaService.productionOrders.findMany.mock.calls[0][0]).not.toHaveProperty('take');
   });
 
   it('returns a production order by id with PYCLM sending info and saved registration number', async () => {

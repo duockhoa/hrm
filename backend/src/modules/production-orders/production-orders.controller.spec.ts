@@ -1119,6 +1119,16 @@ describe('ProductionOrdersController', () => {
     );
   });
 
+  it.each(['findFinishedProducts', 'findSemiFinishedProducts'] as const)(
+    'passes lot query parameters through %s', async (method) => {
+      const query = { search: 'aspirin 001', page: 2, limit: 20, status: 'boposReleased' };
+      const page = { data: [], total: 0, page: 2, limit: 20 };
+      productionOrdersService[method].mockResolvedValue(page);
+      await expect(controller[method](query)).resolves.toBe(page);
+      expect(productionOrdersService[method]).toHaveBeenCalledWith(query);
+    },
+  );
+
   it('gets production orders with BTP item codes', async () => {
     const productionOrders = [{ id: 2031, item_code: 'BTP00001' }];
     productionOrdersService.findSemiFinishedProducts.mockResolvedValue(
