@@ -42,16 +42,49 @@ describe('ProductionOrderDateChecksService create', () => {
 
 describe('ProductionOrderDateChecksService global list', () => {
   const findMany = jest.fn();
+  const count = jest.fn();
+  const transaction = jest.fn((queries) => Promise.all(queries));
   const groupBy = jest.fn();
   const findImages = jest.fn();
   let service: ProductionOrderDateChecksService;
 
   beforeEach(() => {
     jest.resetAllMocks();
+    transaction.mockImplementation((queries) => Promise.all(queries));
     service = new ProductionOrderDateChecksService({
-      productionOrderDateChecks: { findMany },
+      $transaction: transaction,
+      productionOrderDateChecks: { findMany, count },
       productionOrderDateCheckImages: { groupBy, findMany: findImages },
     } as unknown as PrismaService);
+  });
+
+  it('paginates filtered checks before loading last upload metadata', async () => {
+    findMany.mockResolvedValue([{ id: 51 }]);
+    count.mockResolvedValue(80);
+    groupBy.mockResolvedValue([]);
+    const result = await service.findAll({ search: 'aspirin 001', approval_status: 'approved', has_images: 'true', page: 2, limit: 20 });
+    expect(result).toEqual({ data: [{ id: 51, last_image_uploaded_at: null, last_image_uploaded_by: null }], total: 80, page: 2, limit: 20 });
+    const query = findMany.mock.calls[0][0];
+    expect(query).toMatchObject({ skip: 20, take: 20, where: { approval_status: 'approved', images: { some: {} } } });
+    expect(query.where.AND).toHaveLength(2);
+    expect(count).toHaveBeenCalledWith({ where: query.where });
+    expect(transaction).toHaveBeenCalledWith(expect.any(Array), { isolationLevel: 'RepeatableRead' });
+    expect(groupBy).toHaveBeenCalledWith(expect.objectContaining({ where: { date_check_id: { in: [51] } } }));
+  });
+
+  it('retains total on an empty page and skips upload metadata queries', async () => {
+    findMany.mockResolvedValue([]);
+    count.mockResolvedValue(2);
+    expect(await service.findAll({ page: 10 })).toEqual({ data: [], total: 2, page: 10, limit: 50 });
+    expect(groupBy).not.toHaveBeenCalled();
+    expect(findImages).not.toHaveBeenCalled();
+  });
+
+  it('keeps array response for search without pagination and avoids counting', async () => {
+    findMany.mockResolvedValue([]);
+    expect(await service.findAll({ search: 'aspirin' })).toEqual([]);
+    expect(count).not.toHaveBeenCalled();
+    expect(findMany.mock.calls[0][0]).not.toHaveProperty('take');
   });
 
   it('matches the latest image times to their checks, including checks without images', async () => {

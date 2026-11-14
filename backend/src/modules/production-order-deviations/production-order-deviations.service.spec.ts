@@ -13,6 +13,7 @@ describe('ProductionOrderDeviationsService', () => {
     productionOrderDeviations: {
       findFirst: jest.Mock;
       findMany: jest.Mock;
+      count: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
     };
@@ -32,10 +33,11 @@ describe('ProductionOrderDeviationsService', () => {
   beforeEach(async () => {
     notificationService.notifyCreated.mockReset().mockResolvedValue(undefined);
     prismaService = {
-      $transaction: jest.fn((callback) => callback(prismaService)),
+      $transaction: jest.fn((input) => Array.isArray(input) ? Promise.all(input) : input(prismaService)),
       productionOrderDeviations: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
       },
@@ -69,6 +71,46 @@ describe('ProductionOrderDeviationsService', () => {
     service = module.get<ProductionOrderDeviationsService>(
       ProductionOrderDeviationsService,
     );
+  });
+
+  it('preserves array and authenticated image paths for legacy filtered lists', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
+    prismaService.productionOrderDeviations.findMany.mockResolvedValue([
+      { id: 1, images: [{ image_path: '/production-order-deviations/images/test.jpg' }] },
+    ]);
+    const result = await service.findAll('2031');
+    expect(result).toEqual([expect.objectContaining({ id: 1, deviation_images: ['/production-order-deviations/images/test.jpg'] })]);
+    expect(prismaService.productionOrderDeviations.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { production_order_id: 2031, deleted_at: null },
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    }));
+    expect(prismaService.productionOrderDeviations.count).not.toHaveBeenCalled();
+  });
+
+  it('uses the same active/scoped filters for the page and total', async () => {
+    prismaService.productionOrderDeviations.findMany.mockResolvedValue([
+      { id: 1, images: [{ image_path: '/production-order-deviations/images/test.jpg' }] },
+    ]);
+    prismaService.productionOrderDeviations.count.mockResolvedValue(45);
+    const result = await service.findAll({ search: 'aspirin 001', reporter_id: 7, page: 2, limit: 20 });
+    expect(result).toEqual({ data: [expect.objectContaining({ id: 1, deviation_image: '/production-order-deviations/images/test.jpg' })], total: 45, page: 2, limit: 20 });
+    const query = prismaService.productionOrderDeviations.findMany.mock.calls[0][0];
+    expect(query).toMatchObject({ take: 20, skip: 20, where: { deleted_at: null, reporter_id: 7 } });
+    expect(query.where.AND).toHaveLength(2);
+    expect(prismaService.productionOrderDeviations.count).toHaveBeenCalledWith({ where: query.where });
+    expect(prismaService.$transaction).toHaveBeenCalledWith(expect.any(Array), { isolationLevel: 'RepeatableRead' });
+  });
+
+  it('keeps the count on an empty out-of-range page', async () => {
+    prismaService.productionOrderDeviations.findMany.mockResolvedValue([]);
+    prismaService.productionOrderDeviations.count.mockResolvedValue(2);
+    expect(await service.findAll({ page: 10 })).toEqual({ data: [], total: 2, page: 10, limit: 50 });
+  });
+
+  it('preserves missing production order errors for the existing filter', async () => {
+    prismaService.productionOrders.findUnique.mockResolvedValue(null);
+    await expect(service.findAll({ production_order_id: 2031 })).rejects.toThrow('Production order not found');
+    expect(prismaService.productionOrderDeviations.findMany).not.toHaveBeenCalled();
   });
 
   it('creates a production order deviation with normalized data', async () => {

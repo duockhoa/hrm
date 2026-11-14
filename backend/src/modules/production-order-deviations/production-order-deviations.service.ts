@@ -5,6 +5,9 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { recordPagination } from '../../common/utils/record-list-query';
+import { GetProductionOrderDeviationsDto } from './dto/get-production-order-deviations.dto';
+import { productionOrderDeviationListWhere } from './production-order-deviation-list-query';
 import { CreateProductionOrderDeviationDto } from './dto/create-production-order-deviation.dto';
 import { UpdateProductionOrderDeviationDto } from './dto/update-production-order-deviation.dto';
 import { ProductionOrderDeviationNotificationService } from './production-order-deviation-notification.service';
@@ -58,9 +61,18 @@ export class ProductionOrderDeviationsService {
     private readonly notificationService: ProductionOrderDeviationNotificationService,
   ) {}
 
-  async findAll(productionOrderId?: string) {
+  async findAll(input: GetProductionOrderDeviationsDto | string = {}) {
+    // Keep internal callers using the legacy production order ID argument working.
+    const options =
+      typeof input === 'string'
+        ? {
+            production_order_id:
+              this.normalizeOptionalInt(input, 'production_order_id') ??
+              undefined,
+          }
+        : input;
     const normalizedProductionOrderId = this.normalizeOptionalInt(
-      productionOrderId,
+      options.production_order_id,
       'production_order_id',
     );
 
@@ -68,21 +80,29 @@ export class ProductionOrderDeviationsService {
       await this.ensureProductionOrderExists(normalizedProductionOrderId);
     }
 
-    const deviations =
-      await this.prismaService.productionOrderDeviations.findMany({
-        where: {
-          production_order_id: normalizedProductionOrderId ?? undefined,
-          deleted_at: null,
-        },
-        include: productionOrderDeviationInclude,
-        orderBy: {
-          created_at: 'desc',
-        },
-      });
-
-    return deviations.map((deviation) =>
+    const where = productionOrderDeviationListWhere(options);
+    const pagination = recordPagination(options);
+    const query = {
+      where,
+      include: productionOrderDeviationInclude,
+      orderBy: [{ created_at: 'desc' as const }, { id: 'desc' as const }],
+      ...pagination.args,
+    };
+    const [deviations, total] = pagination.enabled
+      ? await this.prismaService.$transaction(
+          [
+            this.prismaService.productionOrderDeviations.findMany(query),
+            this.prismaService.productionOrderDeviations.count({ where }),
+          ],
+          { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+        )
+      : [await this.prismaService.productionOrderDeviations.findMany(query), 0];
+    const data = deviations.map((deviation) =>
       this.withAuthenticatedImagePaths(deviation),
     );
+    return pagination.enabled
+      ? { data, total, page: pagination.page, limit: pagination.limit }
+      : data;
   }
 
   async findImageFile(filename: string, original = false) {

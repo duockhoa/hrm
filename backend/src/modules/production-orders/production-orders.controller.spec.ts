@@ -3163,6 +3163,14 @@ describe('ProductionOrdersController', () => {
     await expect(controller.findAllDateChecks()).resolves.toBe(checks);
   });
 
+  it('passes search, filters and pagination to the global date-check list', async () => {
+    const query = { search: 'aspirin 001', approval_status: 'approved' as const, has_images: 'true', page: 2, limit: 20 };
+    const page = { data: [], total: 0, page: 2, limit: 20 };
+    productionOrderDateChecksService.findAll.mockResolvedValue(page);
+    await expect(controller.findAllDateChecks(query)).resolves.toBe(page);
+    expect(productionOrderDateChecksService.findAll).toHaveBeenCalledWith(query);
+  });
+
   it('gets date checks for a production order', async () => {
     const dateChecks = [{ id: 1, production_order_id: 2031 }];
     productionOrderDateChecksService.findAllByProductionOrder.mockResolvedValue(

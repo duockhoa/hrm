@@ -97,13 +97,36 @@ describe('Deviation HTTP network access', () => {
     policy = 'OPEN';
     await list('198.51.100.1').expect(200);
     expect(findMany).not.toHaveBeenCalled();
-    expect(service.findAll).toHaveBeenCalledWith('123');
+    expect(service.findAll).toHaveBeenCalledWith(expect.objectContaining({ production_order_id: 123 }));
   });
   it.each(['192.0.2.1', '::ffff:192.0.2.1', '2001:db8::1'])(
     'allows matching IP %s',
     async (ip) => {
       await list(ip).expect(200);
-      expect(service.findAll).toHaveBeenCalledWith('123');
+      expect(service.findAll).toHaveBeenCalledWith(expect.objectContaining({ production_order_id: 123 }));
+    },
+  );
+
+  it('parses and validates list query parameters over HTTP', async () => {
+    policy = 'OPEN';
+    await request(app.getHttpServer())
+      .get('/production-order-deviations')
+      .query({ search: '  lô 001  ', page: '2', limit: '20', reporter_id: '7', item_code: ' BTP001 ' })
+      .set('Authorization', 'test')
+      .expect(200);
+    expect(service.findAll).toHaveBeenCalledWith(expect.objectContaining({
+      search: 'lô 001', page: 2, limit: 20, reporter_id: 7, item_code: 'BTP001',
+    }));
+  });
+
+  it.each(['page=0', 'limit=201', 'search=a&search=b', 'from_date=2026-02-30', 'production_order_id=abc'])(
+    'rejects invalid list query %s before calling service', async (query) => {
+      policy = 'OPEN';
+      await request(app.getHttpServer())
+        .get(`/production-order-deviations?${query}`)
+        .set('Authorization', 'test')
+        .expect(400);
+      expect(service.findAll).not.toHaveBeenCalled();
     },
   );
   it('blocks after the user changes to an outside network', async () => {

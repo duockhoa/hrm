@@ -1,5 +1,6 @@
 import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { GetProductionOrderListDto } from './dto/get-production-order-list.dto';
+import { GetProductionOrderDateChecksDto } from './dto/get-production-order-date-checks.dto';
 import { ApiOperation, ApiProduces, ApiOkResponse } from '@nestjs/swagger';
 import {
   BadRequestException,
@@ -2066,8 +2067,11 @@ export class ProductionOrdersController {
 
   @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ)
   @Get('date-checks')
-  async findAllDateChecks() {
-    return this.productionOrderDateChecksService.findAll();
+  async findAllDateChecks(
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query: GetProductionOrderDateChecksDto = {},
+  ) {
+    return this.productionOrderDateChecksService.findAll(query);
   }
 
   @Permissions(PRODUCTION_ORDER_DATE_CHECK_PERMISSIONS.READ)

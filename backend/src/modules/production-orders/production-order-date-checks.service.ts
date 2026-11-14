@@ -6,6 +6,9 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { recordPagination } from '../../common/utils/record-list-query';
+import { GetProductionOrderDateChecksDto } from './dto/get-production-order-date-checks.dto';
+import { productionOrderDateCheckListWhere } from './production-order-date-check-list-query';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
 import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
@@ -69,16 +72,44 @@ const productionOrderDateCheckInclude = {
   },
 } satisfies Prisma.ProductionOrderDateChecksInclude;
 
+const productionOrderDateCheckListInclude = {
+  ...productionOrderDateCheckInclude,
+  images: false,
+} satisfies Prisma.ProductionOrderDateChecksInclude;
+
+type DateCheckListRow = Prisma.ProductionOrderDateChecksGetPayload<{
+  include: typeof productionOrderDateCheckListInclude;
+}>;
+
 @Injectable()
 export class ProductionOrderDateChecksService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll() {
-    const checks = await this.prismaService.productionOrderDateChecks.findMany({
-      include: { ...productionOrderDateCheckInclude, images: false },
-      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-    });
+  async findAll(options: GetProductionOrderDateChecksDto = {}) {
+    const where = productionOrderDateCheckListWhere(options);
+    const pagination = recordPagination(options);
+    const query = {
+      ...(Object.keys(where).length ? { where } : {}),
+      include: productionOrderDateCheckListInclude,
+      orderBy: [{ created_at: 'desc' as const }, { id: 'desc' as const }],
+      ...pagination.args,
+    };
+    const [checks, total] = pagination.enabled
+      ? await this.prismaService.$transaction(
+          [
+            this.prismaService.productionOrderDateChecks.findMany(query),
+            this.prismaService.productionOrderDateChecks.count({ where }),
+          ],
+          { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+        )
+      : [await this.prismaService.productionOrderDateChecks.findMany(query), 0];
+    const data = await this.addLatestImageInfo(checks);
+    return pagination.enabled
+      ? { data, total, page: pagination.page, limit: pagination.limit }
+      : data;
+  }
 
+  private async addLatestImageInfo(checks: DateCheckListRow[]) {
     if (checks.length === 0) {
       return [];
     }

@@ -15,6 +15,7 @@ import {
   UploadedFiles,
   UseGuards,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { createReadStream } from 'fs';
@@ -33,6 +34,7 @@ import {
 } from './production-order-deviation-upload.config';
 import { PRODUCTION_ORDER_DEVIATION_PERMISSIONS } from './production-order-deviations.permissions';
 import { ProductionOrderDeviationsService } from './production-order-deviations.service';
+import { GetProductionOrderDeviationsDto } from './dto/get-production-order-deviations.dto';
 
 type DeviationImageUploadFields = {
   deviation_images?: Express.Multer.File[];
@@ -55,8 +57,11 @@ export class ProductionOrderDeviationsController {
 
   @Get()
   @Permissions(PRODUCTION_ORDER_DEVIATION_PERMISSIONS.LIST)
-  async findAll(@Query('production_order_id') productionOrderId?: string) {
-    return this.productionOrderDeviationsService.findAll(productionOrderId);
+  async findAll(
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query: GetProductionOrderDeviationsDto = {},
+  ) {
+    return this.productionOrderDeviationsService.findAll(query);
   }
 
   @Get('images/:filename')
@@ -66,11 +71,10 @@ export class ProductionOrderDeviationsController {
     @Query('original') original: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const imageFile =
-      await this.productionOrderDeviationsService.findImageFile(
-        filename,
-        original === 'true',
-      );
+    const imageFile = await this.productionOrderDeviationsService.findImageFile(
+      filename,
+      original === 'true',
+    );
 
     if (!imageFile) {
       throw new NotFoundException('Deviation image not found');

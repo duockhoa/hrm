@@ -72,10 +72,18 @@ describe('ProductionOrderDeviationsController', () => {
   it('passes production order id query to service when listing', async () => {
     productionOrderDeviationsService.findAll.mockResolvedValue([]);
 
-    await expect(controller.findAll('2031')).resolves.toEqual([]);
+    await expect(controller.findAll({ production_order_id: 2031 })).resolves.toEqual([]);
     expect(productionOrderDeviationsService.findAll).toHaveBeenCalledWith(
-      '2031',
+      { production_order_id: 2031 },
     );
+  });
+
+  it('passes search, filters and pagination through unchanged', async () => {
+    const query = { search: 'aspirin 001', reporter_id: 7, page: 2, limit: 20 };
+    const result = { data: [], total: 0, page: 2, limit: 20 };
+    productionOrderDeviationsService.findAll.mockResolvedValue(result);
+    await expect(controller.findAll(query)).resolves.toBe(result);
+    expect(productionOrderDeviationsService.findAll).toHaveBeenCalledWith(query);
   });
 
   it('uses the uploaded deviation image paths when creating', async () => {
