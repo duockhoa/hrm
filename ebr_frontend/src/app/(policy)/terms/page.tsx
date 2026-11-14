@@ -186,14 +186,6 @@ export default function TermsPage() {
                 </section>
               ))}
             </div>
-            <p className="mt-4">
-              Giấy phép nêu trên là giấy phép của từng gói thư viện. Các bộ biểu
-              tượng được cung cấp qua react-icons có thể có giấy phép riêng theo
-              dự án gốc. Vui lòng truy cập kho mã nguồn qua liên kết của từng thư
-              viện để xem toàn văn giấy phép, thông báo bản quyền và các điều kiện
-              sử dụng liên quan. Quyền sở hữu của các tác giả và bên thứ ba được
-              giữ nguyên theo giấy phép tương ứng.
-            </p>
           </section>
         </div>
 
