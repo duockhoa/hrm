@@ -35,3 +35,21 @@ Khi đăng xuất, frontend chờ server ghi kết thúc phiên qua socket ackno
 API `GET /app-connection-sessions/:applicationKey` (`hsl` hoặc `wms`) hỗ trợ phân trang, tìm tên/tài khoản/email, trạng thái và khoảng ngày bắt đầu phiên theo múi giờ Việt Nam. Phản hồi gồm `application_key` và số liệu tổng hợp theo ứng dụng/người dùng/khoảng ngày (không áp dụng bộ lọc trạng thái cho số liệu tổng hợp). Giao diện tự tải lại mỗi 15 giây khi được hiển thị.
 
 Giữ `GET /ebr-connection-sessions` và `POST /ebr-connection-sessions/end` làm alias cố định cho `hsl`, cùng namespace và sự kiện socket EBR cũ để tương thích các tab EBR chưa tải lại.
+# Infinite connection history
+
+`GET /app-connection-sessions/hsl?pagination=cursor&limit=300` starts an
+infinite list. Pass `meta.next_cursor` as `cursor` on subsequent calls; `null`
+means the list has ended. The same option is available for WMS and the legacy
+EBR route. Existing page-based requests and response fields remain supported.
+The maximum limit is 300. Invalid cursor values return HTTP 400.
+
+Cursor ordering is `connected_at DESC, id DESC`, with an exclusive timestamp/ID
+boundary. Newly inserted sessions do not shift older pages, and deleting the
+boundary row does not invalidate the cursor. Keyword, status, application and
+date filters apply to every page; reset the cursor when changing filters.
+Totals and summary counts cover all matching sessions, not only the remaining
+cursor range. Connection status is evaluated when each request is made.
+
+The EBR UI loads 300 rows at a time. It refreshes every 15 seconds only while
+showing the first batch at the top; deeper scrolling stays stable. “Làm mới”
+restarts at the latest sessions. Search remains debounced for one second.

@@ -7,6 +7,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTableSkeletonRowCount } from "@/hooks/use-table-skeleton-row-count";
 import {
   TableBody,
   TableCell,
@@ -143,9 +144,10 @@ function PyclmStatus({ sent }: { sent: boolean }) {
 }
 
 function FinishedProductSummariesSkeleton() {
+  const rowCount = useTableSkeletonRowCount();
   return (
     <>
-      {Array.from({ length: 10 }).map((_, rowIndex) => (
+      {Array.from({ length: rowCount }).map((_, rowIndex) => (
         <TableRow key={rowIndex}>
           {Array.from({ length: 12 }).map((__, cellIndex) => (
             <TableCell key={cellIndex} className="border-r">

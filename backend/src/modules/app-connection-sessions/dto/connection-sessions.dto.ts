@@ -28,8 +28,17 @@ export class GetConnectionSessionsDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(300)
   limit: number = 20;
+
+  @IsOptional()
+  @IsIn(['page', 'cursor'])
+  pagination?: 'page' | 'cursor';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  cursor?: string;
 
   @IsOptional()
   @IsString()

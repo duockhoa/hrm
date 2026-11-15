@@ -16,6 +16,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTableSkeletonRowCount } from "@/hooks/use-table-skeleton-row-count";
 import {
   TableBody,
   TableCell,
@@ -79,7 +80,8 @@ const groupChecksByLastImageUploadDate = (
 };
 
 function DateChecksTableSkeleton() {
-  return Array.from({ length: 8 }, (_, rowIndex) => (
+  const rowCount = useTableSkeletonRowCount();
+  return Array.from({ length: rowCount }, (_, rowIndex) => (
     <TableRow key={rowIndex}>
       {Array.from({ length: COLUMN_COUNT }, (_, cellIndex) => (
         <TableCell key={cellIndex} className="border-r">

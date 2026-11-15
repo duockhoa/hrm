@@ -78,7 +78,9 @@ describe.each([
   it('validates pagination, dates and status before querying history', async () => {
     for (const query of [
       'page=0',
-      'limit=101',
+      'limit=301',
+      'pagination=unknown',
+      `cursor=${'x'.repeat(257)}`,
       'status=unknown',
       'connected_from=invalid',
     ]) {
@@ -88,6 +90,17 @@ describe.each([
         .expect(400);
     }
     expect(sessions.findAll).not.toHaveBeenCalled();
+  });
+
+  it('accepts cursor pagination with 300 records', async () => {
+    await request(app.getHttpServer())
+      .get(`${route}?pagination=cursor&limit=300`)
+      .set('Authorization', 'Bearer admin')
+      .expect(200);
+    expect(sessions.findAll).toHaveBeenCalledWith(
+      applicationKey,
+      expect.objectContaining({ pagination: 'cursor', limit: 300 }),
+    );
   });
 
   it('does not let query or body fields override the route application or authenticated user', async () => {

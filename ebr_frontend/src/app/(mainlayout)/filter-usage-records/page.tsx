@@ -7,6 +7,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTableSkeletonRowCount } from "@/hooks/use-table-skeleton-row-count";
 import {
   TableBody,
   TableCell,
@@ -55,9 +56,10 @@ const groupFilterCatalogsByUsageStatus = (filterCatalogs: FilterCatalog[]) => {
 };
 
 function FilterCatalogTableSkeleton() {
+  const rowCount = useTableSkeletonRowCount();
   return (
     <>
-      {Array.from({ length: 8 }).map((_, rowIndex) => (
+      {Array.from({ length: rowCount }).map((_, rowIndex) => (
         <TableRow key={rowIndex}>
           {Array.from({ length: 6 }).map((__, cellIndex) => (
             <TableCell key={cellIndex} className="border-r px-3">

@@ -1,15 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import useSWR from "swr";
 import { isAxiosError } from "axios";
-import {
-  Activity,
-  ChevronLeft,
-  ChevronRight,
-  Clock3,
-  Unplug,
-} from "lucide-react";
+import { Activity, RefreshCw, Clock3, Unplug } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,11 +18,13 @@ import { API_ROUTES } from "@/lib/api-routes";
 import { userService } from "@/services/index.service";
 import useSearchStore from "@/store/search.store";
 import {
-  CONNECTION_HISTORY_URL,
-  fetchConnectionHistory,
   type ConnectionSession,
   type ConnectionStatus,
 } from "@/features/connection-history/connection-history.service";
+
+import { useInfiniteConnectionHistory } from "@/features/connection-history/use-infinite-connection-history";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
+import { useTableSkeletonRowCount } from "@/hooks/use-table-skeleton-row-count";
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
   day: "2-digit",
@@ -109,62 +105,40 @@ export default function ConnectionHistoryPage() {
   const keyword = useSearchStore(
     (state) => state.searchByPath["/connection-history"] ?? "",
   ).trim();
-  const [previousKeyword, setPreviousKeyword] = useState(keyword);
-  const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ConnectionStatus>();
-  const [pageSize, setPageSize] = useState(1);
-  const tableViewportRef = useRef<HTMLDivElement>(null);
-  const tableHeaderRef = useRef<HTMLTableSectionElement>(null);
-
-  // Reset before fetching so a new keyword never requests the previous page.
-  if (previousKeyword !== keyword) {
-    setPreviousKeyword(keyword);
-    setPage(1);
-  }
-
-  useEffect(() => {
-    const viewport = tableViewportRef.current;
-    const header = tableHeaderRef.current;
-    if (!viewport || !header) return;
-
-    let currentRows = 1;
-    const updatePageSize = () => {
-      const rows = Math.max(
-        1,
-        Math.min(100, Math.floor((viewport.clientHeight - header.offsetHeight) / 64)),
-      );
-      if (currentRows === rows) return;
-      currentRows = rows;
-      setPage(1);
-      setPageSize(rows);
-    };
-    const observer = new ResizeObserver(updatePageSize);
-    observer.observe(viewport);
-    observer.observe(header);
-    updatePageSize();
-    return () => observer.disconnect();
-  }, []);
+  const [connectedFrom, setConnectedFrom] = useState("");
+  const [connectedTo, setConnectedTo] = useState("");
+  const invalidDateRange = Boolean(
+    connectedFrom && connectedTo && connectedFrom > connectedTo,
+  );
+  const skeletonRows = useTableSkeletonRowCount();
   const {
     data: permissions,
     error: permissionsError,
     mutate: retryPermissions,
   } = useSWR(API_ROUTES.users.myPermissions, userService.fetchMyPermissions);
   const canRead = permissions?.permissionKeys.includes("users.list");
-  const { data, error, isLoading } = useSWR(
-    canRead ? [CONNECTION_HISTORY_URL, page, status, pageSize, keyword] : null,
-    () => fetchConnectionHistory(page, status, pageSize, keyword),
-    {
-      refreshInterval: 15_000,
-      revalidateOnFocus: true,
-      shouldRetryOnError: false,
-      keepPreviousData: true,
-      onSuccess(result) {
-        const lastPage = Math.max(1, result.meta.total_pages);
-        if (page > lastPage) setPage(lastPage);
-      },
-    },
+  const {
+    records,
+    summary,
+    error,
+    loading,
+    loadingMore,
+    hasMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+    refresh,
+    isValidating,
+  } = useInfiniteConnectionHistory(
+    Boolean(canRead) && !invalidDateRange,
+    keyword,
+    status,
+    connectedFrom,
+    connectedTo,
   );
-  const showSkeleton = !permissions || isLoading;
+  const showSkeleton = !permissions || loading;
 
   if (permissionsError)
     return (
@@ -193,7 +167,10 @@ export default function ConnectionHistoryPage() {
     );
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-hidden" aria-busy={showSkeleton}>
+    <div
+      className="flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-hidden"
+      aria-busy={showSkeleton}
+    >
       {showSkeleton && (
         <span role="status" className="sr-only">
           Đang tải lịch sử kết nối...
@@ -229,7 +206,6 @@ export default function ConnectionHistoryPage() {
             aria-pressed={status === key}
             disabled={!permissions}
             onClick={() => {
-              setPage(1);
               setStatus((current) => (current === key ? undefined : key));
             }}
             className={`flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg border px-2 py-3 text-left shadow-sm transition-colors sm:px-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
@@ -241,14 +217,18 @@ export default function ConnectionHistoryPage() {
             <div>
               <span className="block text-sm text-gray-500">{title}</span>
               <div className="mt-1 text-2xl font-semibold text-gray-900">
-                {showSkeleton && !data ? (
+                {showSkeleton && !summary ? (
                   <Skeleton className="h-8 w-16" />
-                ) : !error && data
-                  ? data.summary[key].toLocaleString("vi-VN")
-                  : "—"}
+                ) : summary ? (
+                  summary[key].toLocaleString("vi-VN")
+                ) : (
+                  "—"
+                )}
               </div>
             </div>
-            <span className={`hidden shrink-0 rounded-lg p-3 sm:block ${color}`}>
+            <span
+              className={`hidden shrink-0 rounded-lg p-3 sm:block ${color}`}
+            >
               <Icon className="size-5" />
             </span>
           </button>
@@ -256,14 +236,44 @@ export default function ConnectionHistoryPage() {
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div ref={tableViewportRef} className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-b p-2 text-sm">
+          <label className="flex items-center gap-2">
+            Từ ngày
+            <input
+              type="date"
+              value={connectedFrom}
+              max={connectedTo || undefined}
+              onChange={(event) => setConnectedFrom(event.target.value)}
+              className="rounded-md border px-2 py-1"
+            />
+          </label>
+          <label className="flex items-center gap-2">
+            Đến ngày
+            <input
+              type="date"
+              value={connectedTo}
+              min={connectedFrom || undefined}
+              onChange={(event) => setConnectedTo(event.target.value)}
+              className="rounded-md border px-2 py-1"
+            />
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canRead || isValidating || invalidDateRange}
+            onClick={() => void refresh().catch(() => {})}
+          >
+            <RefreshCw /> Làm mới
+          </Button>
+        </div>
+        <div ref={containerRef} className="min-h-0 flex-1 overflow-auto">
           <table className="w-full table-fixed text-sm [&_th]:whitespace-normal [&_th]:break-words [&_td]:truncate [&_td>div]:truncate [&_[data-slot=skeleton]]:max-w-full">
             <colgroup>
               {[20, 13, 13, 13, 10, 14, 7, 10].map((width, index) => (
                 <col key={index} style={{ width: `${width}%` }} />
               ))}
             </colgroup>
-            <TableHeader ref={tableHeaderRef} className="bg-gray-50">
+            <TableHeader className="sticky top-0 z-10 bg-gray-50">
               <TableRow>
                 <TableHead className="pl-4">Phiên / Người dùng</TableHead>
                 <TableHead>Mở EBR lúc</TableHead>
@@ -276,9 +286,21 @@ export default function ConnectionHistoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {showSkeleton ? (
-                <ConnectionHistoryTableSkeleton rows={pageSize} />
-              ) : error ? (
+              {invalidDateRange ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    role="alert"
+                    className="py-12 text-center text-red-600"
+                  >
+                    Từ ngày phải trước hoặc bằng đến ngày.
+                  </TableCell>
+                </TableRow>
+              ) : showSkeleton ? (
+                <ConnectionHistoryTableSkeleton
+                  rows={Math.ceil(skeletonRows / 2)}
+                />
+              ) : error && !records.length ? (
                 <TableRow>
                   <TableCell
                     colSpan={8}
@@ -290,7 +312,7 @@ export default function ConnectionHistoryPage() {
                       : "Không thể tải lịch sử kết nối. Vui lòng thử lại sau."}
                   </TableCell>
                 </TableRow>
-              ) : !data?.data.length ? (
+              ) : !records.length ? (
                 <TableRow>
                   <TableCell
                     colSpan={8}
@@ -304,26 +326,38 @@ export default function ConnectionHistoryPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                data.data.map((session) => (
+                records.map((session) => (
                   <TableRow key={session.id} className="h-16">
                     <TableCell className="pl-4">
-                      <div className="font-medium text-gray-900" title={session.user.name || session.user.username}>
+                      <div
+                        className="font-medium text-gray-900"
+                        title={session.user.name || session.user.username}
+                      >
                         {session.user.name || session.user.username}
                       </div>
                       <div className="mt-1 text-xs text-gray-500">
                         #{session.id} · {session.user.username}
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs" title={formatDate(session.connected_at)}>
+                    <TableCell
+                      className="text-xs"
+                      title={formatDate(session.connected_at)}
+                    >
                       {formatDate(session.connected_at)}
                     </TableCell>
-                    <TableCell className="text-xs" title={formatDate(session.last_seen_at)}>
+                    <TableCell
+                      className="text-xs"
+                      title={formatDate(session.last_seen_at)}
+                    >
                       {formatDate(session.last_seen_at)}
                     </TableCell>
-                    <TableCell className="text-xs" title={formatDate(session.ended_at ?? session.disconnected_at)}>
-                      {formatDate(
+                    <TableCell
+                      className="text-xs"
+                      title={formatDate(
                         session.ended_at ?? session.disconnected_at,
                       )}
+                    >
+                      {formatDate(session.ended_at ?? session.disconnected_at)}
                     </TableCell>
                     <TableCell className="text-sm" title={duration(session)}>
                       {duration(session)}
@@ -341,7 +375,10 @@ export default function ConnectionHistoryPage() {
                     <TableCell className="text-center text-sm">
                       {session.connection_count}
                     </TableCell>
-                    <TableCell className="font-mono text-xs" title={session.ip_address ?? undefined}>
+                    <TableCell
+                      className="font-mono text-xs"
+                      title={session.ip_address ?? undefined}
+                    >
                       {session.ip_address || "—"}
                     </TableCell>
                   </TableRow>
@@ -349,35 +386,15 @@ export default function ConnectionHistoryPage() {
               )}
             </TableBody>
           </table>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1 || showSkeleton}
-              onClick={() => setPage((current) => current - 1)}
-            >
-              <ChevronLeft />
-              Trước
-            </Button>
-            {showSkeleton && !data ? (
-              <Skeleton className="h-4 w-20" />
-            ) : (
-              <span>
-                Trang {page}/{Math.max(1, data?.meta.total_pages ?? 1)}
-              </span>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!data || page >= data.meta.total_pages || showSkeleton}
-              onClick={() => setPage((current) => current + 1)}
-            >
-              Sau
-              <ChevronRight />
-            </Button>
-          </div>
+          <InfiniteRecordLoadStatus
+            sentinelRef={sentinelRef}
+            count={records.length}
+            error={error}
+            loading={loadingMore}
+            hasMore={hasMore}
+            onRetry={retry}
+            onLoadMore={loadMore}
+          />
         </div>
       </div>
     </div>

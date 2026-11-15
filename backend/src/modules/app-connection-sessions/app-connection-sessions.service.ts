@@ -225,12 +225,38 @@ export class AppConnectionSessionsService {
     const filtered = query.status
       ? { AND: [where, states[query.status]] }
       : where;
+    const cursorMode = query.pagination === 'cursor';
+    let boundary: Prisma.UserAppSessionsWhereInput | undefined;
+    if (query.cursor !== undefined) {
+      try {
+        const value = JSON.parse(
+          Buffer.from(query.cursor, 'base64url').toString(),
+        ) as { at: string; id: number };
+        const at = new Date(value.at);
+        if (
+          !cursorMode ||
+          !Number.isInteger(value.id) ||
+          value.id < 1 ||
+          value.id > 2147483647 ||
+          at.toISOString() !== value.at
+        )
+          throw new Error('Invalid cursor');
+        boundary = {
+          OR: [
+            { connected_at: { lt: at } },
+            { connected_at: at, id: { lt: value.id } },
+          ],
+        };
+      } catch {
+        throw new BadRequestException('Cursor không hợp lệ');
+      }
+    }
     const [data, total, connected, reconnecting, ended] =
       await this.prisma.$transaction([
         this.prisma.userAppSessions.findMany({
-          where: filtered,
-          skip: (page - 1) * limit,
-          take: limit,
+          where: boundary ? { AND: [filtered, boundary] } : filtered,
+          ...(cursorMode ? {} : { skip: (page - 1) * limit }),
+          take: cursorMode ? limit + 1 : limit,
           orderBy: [{ connected_at: 'desc' }, { id: 'desc' }],
           select: {
             id: true,
@@ -256,8 +282,11 @@ export class AppConnectionSessionsService {
           }),
         ),
       ]);
+    const hasMore = cursorMode && data.length > limit;
+    const rows = cursorMode ? data.slice(0, limit) : data;
+    const last = rows[rows.length - 1];
     return {
-      data: data.map((session) => ({
+      data: rows.map((session) => ({
         ...session,
         status: session.ended_at
           ? 'ended'
@@ -265,7 +294,26 @@ export class AppConnectionSessionsService {
             ? 'reconnecting'
             : 'connected',
       })),
-      meta: { page, limit, total, total_pages: Math.ceil(total / limit) },
+      meta: {
+        page,
+        limit,
+        total,
+        total_pages: Math.ceil(total / limit),
+        ...(cursorMode
+          ? {
+              has_more: hasMore,
+              next_cursor:
+                hasMore && last
+                  ? Buffer.from(
+                      JSON.stringify({
+                        at: last.connected_at.toISOString(),
+                        id: last.id,
+                      }),
+                    ).toString('base64url')
+                  : null,
+            }
+          : {}),
+      },
       summary: { connected, reconnecting, ended },
     };
   }

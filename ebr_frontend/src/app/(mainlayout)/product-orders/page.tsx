@@ -2,6 +2,7 @@
 
 import { ListProductOrderHeader } from "@/features/production-orders";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTableSkeletonRowCount } from "@/hooks/use-table-skeleton-row-count";
 import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
 import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import {
@@ -252,9 +253,10 @@ function ProductionStatusCell({ status }: { status: string }) {
 }
 
 function ProductOrderTableSkeleton() {
+  const rowCount = useTableSkeletonRowCount();
   return (
     <>
-      {Array.from({ length: 10 }).map((_, index) => (
+      {Array.from({ length: rowCount }).map((_, index) => (
         <TableRow key={index}>
           {Array.from({ length: 13 }).map((__, cellIndex) => (
             <TableCell key={cellIndex} className="border-r">
