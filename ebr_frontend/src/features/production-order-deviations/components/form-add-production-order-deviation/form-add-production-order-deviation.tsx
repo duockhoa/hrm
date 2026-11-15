@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { API_ROUTES } from "@/lib/api-routes";
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import { productionOrderDeviationsService } from "@/services/index.service";
 import useUserStore from "@/store/user.store";
 import useUsersStore from "@/store/users.store";
@@ -98,6 +99,7 @@ export default function FormAddProductionOrderDeviation({
   const refreshData = async () => {
     await Promise.all([
       mutate(API_ROUTES.productionOrderDeviations.base),
+      refreshItemCatalog(API_ROUTES.productionOrderDeviations.base),
       productionOrderId
         ? mutate(
             `${API_ROUTES.productionOrderDeviations.base}?production_order_id=${productionOrderId}`,

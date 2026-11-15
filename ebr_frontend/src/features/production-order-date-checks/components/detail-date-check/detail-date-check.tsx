@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_ROUTES } from "@/lib/api-routes";
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import productionOrdersService from "@/services/product-orders.service";
 import type { ProductionOrderDateCheck } from "../../types";
 import AddDateCheckImagesForm from "./add-date-check-images-form";
@@ -248,6 +249,7 @@ export default function DateCheckDetail({
   const refreshLists = async () => {
     await Promise.all([
       mutateGlobal(API_ROUTES.productionOrders.allDateChecks),
+      refreshItemCatalog(API_ROUTES.productionOrders.allDateChecks),
       listKey ? mutateGlobal(listKey) : Promise.resolve(),
     ]);
   };

@@ -29,6 +29,7 @@ import {
 } from "@/features/features";
 import { API_ROUTES } from "@/lib/api-routes";
 import productionOrdersService from "@/services/product-orders.service";
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import userService from "@/services/user.service";
 import useUserStore from "@/store/user.store";
 
@@ -147,6 +148,10 @@ export default function ProductionOrderDocumentControlActions({
       setSubmittingAction(action.key);
       await action.submit(productionOrderId);
       await mutate(`${API_ROUTES.productionOrders.base}/${productionOrderId}`);
+      await Promise.all([
+        refreshItemCatalog(API_ROUTES.productionOrders.finishedProducts),
+        refreshItemCatalog(API_ROUTES.productionOrders.semiFinishedProducts),
+      ]);
       toast.success(`Đã ${action.label.toLocaleLowerCase("vi-VN")}.`, {
         duration: 1000,
         position: "top-left",

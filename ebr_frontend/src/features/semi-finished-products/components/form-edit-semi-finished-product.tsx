@@ -1,4 +1,5 @@
 "use client";
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -473,6 +474,7 @@ export default function EditSemiFinishedProductForm({
     await Promise.all([
       mutate(`${API_ROUTES.items.base}/${itemCode}`),
       mutate((key) => (Array.isArray(key) ? key[0] : key) === listRoute),
+      refreshItemCatalog(listRoute),
       mutate(`${API_ROUTES.productionSpecifications.base}/${itemCode}`),
     ]);
   };

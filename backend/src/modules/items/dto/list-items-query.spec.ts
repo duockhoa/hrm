@@ -10,6 +10,7 @@ describe('Items query validation', () => {
     expect(parseItemsQuery({})).not.toHaveProperty('top');
     expect(parseItemsQuery({ skip: '0' })).toMatchObject({ skip: 0, top: 50 });
     expect(parseItemsQuery({ top: '200' })).toMatchObject({ top: 200 });
+    expect(parseItemsQuery({ top: '300' })).toMatchObject({ top: 300 });
   });
 
   it('parses every parameter and preserves zero Series IDs', () => {
@@ -70,7 +71,7 @@ describe('Items query validation', () => {
     { skip: '2147483648' },
     { skip: '' },
     { top: '0' },
-    { top: '201' },
+    { top: '301' },
     { top: 'Infinity' },
     { top: '1e2' },
     { series: '-1' },

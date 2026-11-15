@@ -1,4 +1,5 @@
 "use client";
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 
 import OpenFormButton from "@/components/button-open-form/button-open-form";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
@@ -268,6 +269,7 @@ export default function FinishedProductSummaryDetail({
   const refreshRelatedSummaries = async () => {
     await Promise.all([
       mutate(),
+      refreshItemCatalog(API_ROUTES.productionOrders.finishedProductSummaries),
       mutateGlobal(
         (key) =>
           (Array.isArray(key) ? key[0] : key) ===
@@ -287,6 +289,7 @@ export default function FinishedProductSummaryDetail({
       await productionOrdersService.deleteFinishedProductSummary(summaryId);
       toast.success("Đã xóa tổng kết thành phẩm.");
       await Promise.all([
+        refreshItemCatalog(API_ROUTES.productionOrders.finishedProductSummaries),
         mutateGlobal(
           (key) =>
             (Array.isArray(key) ? key[0] : key) ===
@@ -401,6 +404,7 @@ export default function FinishedProductSummaryDetail({
                   productionOrderId={productionOrderId}
                   onCreated={async () => {
                     await Promise.all([
+                      refreshItemCatalog(API_ROUTES.productionOrders.finishedProductSummaries),
                       mutate(),
                       mutateGlobal(
                         (key) =>

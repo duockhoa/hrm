@@ -8,6 +8,7 @@ import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
 import { CONNECTION_HISTORY_URL } from "@/features/connection-history/connection-history.service";
 import { API_ROUTES } from "@/lib/api-routes";
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 
 const API_SEARCH_URLS: Record<string, string[]> = {
   "/connection-history": [CONNECTION_HISTORY_URL],
@@ -25,6 +26,8 @@ const API_SEARCH_URLS: Record<string, string[]> = {
   "/finished-product-summaries": [
     API_ROUTES.productionOrders.finishedProductSummaries,
   ],
+  "/production-order-deviations": ["/production-order-deviations"],
+  "/production-order-date-checks": ["/production-orders/date-checks"],
 };
 
 export default function Search() {
@@ -76,6 +79,9 @@ function SearchInput({ searchScopePath }: { searchScopePath: string }) {
               (key) =>
                 apiSearchUrls?.includes(Array.isArray(key) ? key[0] : key) ?? false,
             );
+            for (const url of apiSearchUrls ?? []) {
+              void refreshItemCatalog(url).catch(() => { /* The list displays errors. */ });
+            }
           }
         }
         ref.current?.focus();

@@ -29,15 +29,18 @@ describe('lot list query validation and search', () => {
       );
     }
     await expect(
-      pipe.transform({ search: ' creator ', page: '2', limit: '20' }, metadata),
-    ).resolves.toMatchObject({ search: 'creator', page: 2, limit: 20 });
+      pipe.transform(
+        { search: ' creator ', page: '2', limit: '300' },
+        metadata,
+      ),
+    ).resolves.toMatchObject({ search: 'creator', page: 2, limit: 300 });
     for (const query of [
       { page: '0' },
       { page: '-1' },
       { page: '1.5' },
       { page: '1000001' },
       { limit: '0' },
-      { limit: '201' },
+      { limit: '301' },
       { limit: 'abc' },
       { limit: ['20', '50'] },
     ]) {
@@ -59,9 +62,9 @@ describe('lot list query validation and search', () => {
     const query = await parse({
       search: '  Lô\u0300   001  ',
       page: '2',
-      limit: '20',
+      limit: '300',
     });
-    expect(query).toMatchObject({ search: 'Lồ   001', page: 2, limit: 20 });
+    expect(query).toMatchObject({ search: 'Lồ   001', page: 2, limit: 300 });
     expect((await parse({})).page).toBeUndefined();
   });
 
@@ -70,7 +73,7 @@ describe('lot list query validation and search', () => {
     { page: '1.5' },
     { page: 'Infinity' },
     { page: '1000001' },
-    { limit: '201' },
+    { limit: '301' },
     { limit: '' },
     { search: ['a', 'b'] },
     { search: { contains: 'a' } },

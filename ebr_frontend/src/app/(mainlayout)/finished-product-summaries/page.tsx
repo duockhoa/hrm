@@ -18,15 +18,14 @@ import { FinishedProductSummaryDetail } from "@/features/finished-product-summar
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
 import { getSearchScopePath } from "@/lib/search-utils";
-import { productOrdersService } from "@/services/index.service";
-import type { FinishedProductSummariesPage } from "@/services/product-orders.service";
 import useSearchStore from "@/store/search.store";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { X } from "lucide-react";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
+import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
 import { AiOutlineRight } from "react-icons/ai";
-import useSWR from "swr";
 
 type FinishedProductSummaryUser = {
   id?: string | number;
@@ -120,9 +119,7 @@ const getCreatedBy = (summary: FinishedProductSummary) =>
 const getUserLabel = (user: FinishedProductSummaryUser | null | undefined) =>
   user?.name ?? user?.username ?? user?.email ?? "";
 
-const isPyclmSent = (
-  pyclm: FinishedProductSummaryOrder["pyclm"],
-) => {
+const isPyclmSent = (pyclm: FinishedProductSummaryOrder["pyclm"]) => {
   if (pyclm?.isSent !== null && pyclm?.isSent !== undefined) {
     return pyclm.isSent;
   }
@@ -221,44 +218,26 @@ export default function FinishedProductSummariesPage() {
   const [selectedSummaryId, setSelectedSummaryId] = useState<
     string | number | null
   >(null);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
   ).trim();
-  const [previousKeyword, setPreviousKeyword] = useState(searchKeyword);
-  if (previousKeyword !== searchKeyword) {
-    setPreviousKeyword(searchKeyword);
-    setPage(1);
-  }
   const isSearching = searchKeyword.length > 0;
-  const { data, error, isLoading } = useSWR<
-    FinishedProductSummariesPage<FinishedProductSummary>
-  >(
-    [
-      API_ROUTES.productionOrders.finishedProductSummaries,
-      searchKeyword,
-      page,
-      pageSize,
-    ],
-    () =>
-      productOrdersService.fetchFinishedProductSummariesPage<FinishedProductSummary>(
-        searchKeyword,
-        page,
-        pageSize,
-      ),
-    {
-      onSuccess(result) {
-        const lastPage = Math.max(1, Math.ceil(result.total / result.limit));
-        if (page > lastPage) setPage(lastPage);
-      },
-    },
-  );
-
-  const total = data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const summaries = useMemo(() => data?.data ?? [], [data]);
+  const {
+    records: summaries,
+    error,
+    isLoading,
+    hasMore,
+    isLoadingMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+  } = useInfiniteRecordList<FinishedProductSummary>({
+    url: API_ROUTES.productionOrders.finishedProductSummaries,
+    filters: { search: searchKeyword },
+    storageKey: "finishedProductSummaryListScroll",
+  });
   const filteredSummaries = summaries;
   const groupedSummaries = useMemo(
     () => groupSummariesByCreatedDate(filteredSummaries),
@@ -306,212 +285,167 @@ export default function FinishedProductSummariesPage() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
-        {error ? (
-          <div className="m-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            Không thể tải danh sách tổng kết thành phẩm.
-          </div>
-        ) : (
-          <table className="w-full min-w-[1400px] caption-bottom border-t text-[13px]">
-            <TableHeader className="sticky top-0 z-10 bg-white">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-24 border-r px-2 font-bold text-gray-900">
-                  Mã sản phẩm
-                </TableHead>
-                <TableHead className="w-72 border-r px-3 font-bold text-gray-900">
-                  Tên sản phẩm
-                </TableHead>
-                <TableHead className="border-r px-3 font-bold text-gray-900">
-                  Số lô
-                </TableHead>
-                <TableHead className="border-r px-3 text-right font-bold text-gray-900">
-                  Cỡ lô
-                </TableHead>
-                <TableHead className="border-r px-3 text-center font-bold text-gray-900">
-                  NSX
-                </TableHead>
-                <TableHead className="border-r px-3 text-center font-bold text-gray-900">
-                  HSD
-                </TableHead>
-                <TableHead className="w-20 whitespace-normal border-r px-2 text-right font-bold text-gray-900">
-                  Số kiện
-                </TableHead>
-                <TableHead className="w-24 whitespace-normal border-r px-2 text-right font-bold text-gray-900">
-                  Số hộp/kiện
-                </TableHead>
-                <TableHead className="w-20 whitespace-normal border-r px-2 text-right font-bold text-gray-900">
-                  Số hộp lẻ
-                </TableHead>
-                <TableHead className="w-24 whitespace-normal border-r px-2 text-right font-bold text-gray-900">
-                  Tổng số lượng
-                </TableHead>
-                <TableHead className="border-r px-3 font-bold text-gray-900">
-                  Gửi PYCLM
-                </TableHead>
-                <TableHead className="border-r px-3 font-bold text-gray-900">
-                  Người tạo
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <FinishedProductSummariesSkeleton />
-              ) : groupedSummaries.length > 0 ? (
-                groupedSummaries.map((group) => (
-                  <Fragment key={group.key}>
-                    <TableRow className="bg-gray-50 hover:bg-gray-50">
-                      <TableCell
-                        colSpan={12}
-                        className="border-r px-3 font-semibold text-gray-900"
-                      >
-                        {group.label}
-                      </TableCell>
-                    </TableRow>
-                    {group.summaries.map((summary) => {
-                      const productionOrder = getProductionOrder(summary);
-                      const createdBy = getCreatedBy(summary);
-                      const isSelected =
-                        selectedSummaryId !== null &&
-                        String(summary.id) === String(selectedSummaryId);
+      <div
+        ref={containerRef}
+        className="min-h-0 flex-1 overflow-x-auto overflow-y-auto"
+      >
+        <table className="w-full min-w-[1400px] caption-bottom border-t text-[13px]">
+          <TableHeader className="sticky top-0 z-10 bg-white">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-24 border-r px-2 font-bold text-gray-900">
+                Mã sản phẩm
+              </TableHead>
+              <TableHead className="w-72 border-r px-3 font-bold text-gray-900">
+                Tên sản phẩm
+              </TableHead>
+              <TableHead className="border-r px-3 font-bold text-gray-900">
+                Số lô
+              </TableHead>
+              <TableHead className="border-r px-3 text-right font-bold text-gray-900">
+                Cỡ lô
+              </TableHead>
+              <TableHead className="border-r px-3 text-center font-bold text-gray-900">
+                NSX
+              </TableHead>
+              <TableHead className="border-r px-3 text-center font-bold text-gray-900">
+                HSD
+              </TableHead>
+              <TableHead className="w-20 whitespace-normal border-r px-2 text-right font-bold text-gray-900">
+                Số kiện
+              </TableHead>
+              <TableHead className="w-24 whitespace-normal border-r px-2 text-right font-bold text-gray-900">
+                Số hộp/kiện
+              </TableHead>
+              <TableHead className="w-20 whitespace-normal border-r px-2 text-right font-bold text-gray-900">
+                Số hộp lẻ
+              </TableHead>
+              <TableHead className="w-24 whitespace-normal border-r px-2 text-right font-bold text-gray-900">
+                Tổng số lượng
+              </TableHead>
+              <TableHead className="border-r px-3 font-bold text-gray-900">
+                Gửi PYCLM
+              </TableHead>
+              <TableHead className="border-r px-3 font-bold text-gray-900">
+                Người tạo
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <FinishedProductSummariesSkeleton />
+            ) : groupedSummaries.length > 0 ? (
+              groupedSummaries.map((group) => (
+                <Fragment key={group.key}>
+                  <TableRow className="bg-gray-50 hover:bg-gray-50">
+                    <TableCell
+                      colSpan={12}
+                      className="border-r px-3 font-semibold text-gray-900"
+                    >
+                      {group.label}
+                    </TableCell>
+                  </TableRow>
+                  {group.summaries.map((summary) => {
+                    const productionOrder = getProductionOrder(summary);
+                    const createdBy = getCreatedBy(summary);
+                    const isSelected =
+                      selectedSummaryId !== null &&
+                      String(summary.id) === String(selectedSummaryId);
 
-                      return (
-                        <TableRow
-                          key={summary.id}
-                          tabIndex={0}
-                          aria-selected={isSelected}
-                          data-state={isSelected ? "selected" : undefined}
-                          className={`cursor-pointer ${
-                            isSelected
-                              ? "bg-blue-50 hover:bg-blue-100"
-                              : "hover:bg-gray-50"
-                          }`}
-                          onClick={() => setSelectedSummaryId(summary.id)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setSelectedSummaryId(summary.id);
-                            }
-                          }}
-                        >
-                      <TableCell className="border-r px-2">
-                        {productionOrder?.item_code ??
-                          productionOrder?.item?.item_code}
-                      </TableCell>
-                      <TableCell className="max-w-72 whitespace-normal break-words border-r px-3">
-                        {productionOrder?.item?.item_name}
-                      </TableCell>
-                      <TableCell className="border-r px-3">
-                        {productionOrder?.lot_no}
-                      </TableCell>
-                      <TableCell className="border-r px-3 text-right">
-                        {[
-                          formatNumber(
-                            productionOrder?.planned_quatity ??
-                              productionOrder?.planned_quantity,
-                          ),
-                          productionOrder?.unit ?? productionOrder?.item?.unit,
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                      </TableCell>
-                      <TableCell className="border-r px-3 text-center">
-                        {formatDate(productionOrder?.date_manufacture)}
-                      </TableCell>
-                      <TableCell className="border-r px-3 text-center">
-                        {formatDate(productionOrder?.expire_date)}
-                      </TableCell>
-                      <TableCell className="border-r px-2 text-right">
-                        {formatNumber(summary.package_count)}
-                      </TableCell>
-                      <TableCell className="border-r px-2 text-right">
-                        {formatNumber(summary.boxes_per_package)}
-                      </TableCell>
-                      <TableCell className="border-r px-2 text-right">
-                        {formatNumber(summary.loose_box_count)}
-                      </TableCell>
-                      <TableCell className="border-r px-2 text-right font-semibold">
-                        {formatNumber(getTotalQuantity(summary))}
-                      </TableCell>
-                      <TableCell className="border-r px-3">
-                        <PyclmStatus
-                          sent={isPyclmSent(productionOrder?.pyclm)}
-                        />
-                      </TableCell>
-                      <TableCell className="border-r px-3">
-                        {getUserLabel(createdBy)}
-                      </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </Fragment>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={12}
-                    className="h-32 text-center text-sm text-gray-500"
-                  >
-                    {isSearching
-                      ? "Không tìm thấy tổng kết thành phẩm phù hợp."
-                      : "Chưa có tổng kết thành phẩm nào."}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </table>
-        )}
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t px-3 py-2 text-sm text-gray-500">
-        <label className="flex items-center gap-2" htmlFor="summary-page-size">
-          Số dòng/trang
-          <select
-            id="summary-page-size"
-            value={pageSize}
-            disabled={isLoading}
-            className="rounded border bg-white px-2 py-1 text-gray-900"
-            onChange={(event) => {
-              setPageSize(Number(event.target.value));
-              setPage(1);
-              setSelectedSummaryId(null);
-            }}
-          >
-            {[10, 20, 50, 100, 200].map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span>
-          {isLoading ? "Đang tải..." : `${total.toLocaleString("vi-VN")} bản ghi`}
-        </span>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isLoading || !!error || page <= 1}
-            onClick={() => {
-              setPage((current) => current - 1);
-              setSelectedSummaryId(null);
-            }}
-          >
-            <ChevronLeft /> Trước
-          </Button>
-          <span>Trang {page}/{totalPages}</span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isLoading || !!error || page >= totalPages}
-            onClick={() => {
-              setPage((current) => current + 1);
-              setSelectedSummaryId(null);
-            }}
-          >
-            Sau <ChevronRight />
-          </Button>
-        </div>
+                    return (
+                      <TableRow
+                        key={summary.id}
+                        tabIndex={0}
+                        aria-selected={isSelected}
+                        data-state={isSelected ? "selected" : undefined}
+                        className={`cursor-pointer ${
+                          isSelected
+                            ? "bg-blue-50 hover:bg-blue-100"
+                            : "hover:bg-gray-50"
+                        }`}
+                        onClick={() => setSelectedSummaryId(summary.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedSummaryId(summary.id);
+                          }
+                        }}
+                      >
+                        <TableCell className="border-r px-2">
+                          {productionOrder?.item_code ??
+                            productionOrder?.item?.item_code}
+                        </TableCell>
+                        <TableCell className="max-w-72 whitespace-normal break-words border-r px-3">
+                          {productionOrder?.item?.item_name}
+                        </TableCell>
+                        <TableCell className="border-r px-3">
+                          {productionOrder?.lot_no}
+                        </TableCell>
+                        <TableCell className="border-r px-3 text-right">
+                          {[
+                            formatNumber(
+                              productionOrder?.planned_quatity ??
+                                productionOrder?.planned_quantity,
+                            ),
+                            productionOrder?.unit ??
+                              productionOrder?.item?.unit,
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        </TableCell>
+                        <TableCell className="border-r px-3 text-center">
+                          {formatDate(productionOrder?.date_manufacture)}
+                        </TableCell>
+                        <TableCell className="border-r px-3 text-center">
+                          {formatDate(productionOrder?.expire_date)}
+                        </TableCell>
+                        <TableCell className="border-r px-2 text-right">
+                          {formatNumber(summary.package_count)}
+                        </TableCell>
+                        <TableCell className="border-r px-2 text-right">
+                          {formatNumber(summary.boxes_per_package)}
+                        </TableCell>
+                        <TableCell className="border-r px-2 text-right">
+                          {formatNumber(summary.loose_box_count)}
+                        </TableCell>
+                        <TableCell className="border-r px-2 text-right font-semibold">
+                          {formatNumber(getTotalQuantity(summary))}
+                        </TableCell>
+                        <TableCell className="border-r px-3">
+                          <PyclmStatus
+                            sent={isPyclmSent(productionOrder?.pyclm)}
+                          />
+                        </TableCell>
+                        <TableCell className="border-r px-3">
+                          {getUserLabel(createdBy)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </Fragment>
+              ))
+            ) : !error && !hasMore ? (
+              <TableRow>
+                <TableCell
+                  colSpan={12}
+                  className="h-32 text-center text-sm text-gray-500"
+                >
+                  {isSearching
+                    ? "Không tìm thấy tổng kết thành phẩm phù hợp."
+                    : "Chưa có tổng kết thành phẩm nào."}
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </table>
+        <InfiniteRecordLoadStatus
+          sentinelRef={sentinelRef}
+          count={summaries.length}
+          error={error}
+          loading={isLoadingMore}
+          hasMore={hasMore}
+          onRetry={retry}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );
@@ -557,34 +491,35 @@ export default function FinishedProductSummariesPage() {
     <EmptyDetailState />
   );
 
-  if (shouldShowMobileDetail) {
-    return <div className="h-full overflow-auto">{detailPanel}</div>;
-  }
-
   return (
     <div className="h-full overflow-hidden rounded-lg bg-white shadow-md">
-      <ResizablePanelGroup>
-        <ResizablePanel
-          defaultSize={selectedSummaryExists ? 55 : 100}
-          minSize={35}
-          className="min-h-0 min-w-0 overflow-hidden"
-        >
-          {listPanel}
-        </ResizablePanel>
+      <div className={shouldShowMobileDetail ? "hidden" : "h-full"}>
+        <ResizablePanelGroup>
+          <ResizablePanel
+            defaultSize={selectedSummaryExists ? 55 : 100}
+            minSize={35}
+            className="min-h-0 min-w-0 overflow-hidden"
+          >
+            {listPanel}
+          </ResizablePanel>
 
-        {selectedSummaryId ? (
-          <>
-            <ResizableHandle />
-            <ResizablePanel
-              defaultSize={45}
-              minSize={30}
-              className="min-h-0 min-w-0 overflow-auto bg-blue-50"
-            >
-              {detailPanel}
-            </ResizablePanel>
-          </>
-        ) : null}
-      </ResizablePanelGroup>
+          {selectedSummaryId && !isMobile ? (
+            <>
+              <ResizableHandle />
+              <ResizablePanel
+                defaultSize={45}
+                minSize={30}
+                className="min-h-0 min-w-0 overflow-auto bg-blue-50"
+              >
+                {detailPanel}
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
+      </div>
+      {shouldShowMobileDetail && (
+        <div className="h-full overflow-auto">{detailPanel}</div>
+      )}
     </div>
   );
 }

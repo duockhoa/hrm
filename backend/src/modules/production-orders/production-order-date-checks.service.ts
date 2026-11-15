@@ -8,7 +8,12 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { recordPagination } from '../../common/utils/record-list-query';
 import { GetProductionOrderDateChecksDto } from './dto/get-production-order-date-checks.dto';
-import { productionOrderDateCheckListWhere } from './production-order-date-check-list-query';
+import {
+  approvalLabels,
+  packageLabels,
+  productionOrderDateCheckListWhere,
+} from './production-order-date-check-list-query';
+import { normalizeLotSearch } from './production-order-list-query';
 import { ApproveProductionOrderDateCheckDto } from './dto/approve-production-order-date-check.dto';
 import { CreateProductionOrderDateCheckDto } from './dto/create-production-order-date-check.dto';
 import { UpdateProductionOrderDateCheckDto } from './dto/update-production-order-date-check.dto';
@@ -81,6 +86,57 @@ type DateCheckListRow = Prisma.ProductionOrderDateChecksGetPayload<{
   include: typeof productionOrderDateCheckListInclude;
 }>;
 
+type DateCheckImageListRow = DateCheckListRow & {
+  last_image_uploaded_at: Date | null;
+  last_image_uploaded_by: {
+    name?: string | null;
+    username?: string | null;
+    email?: string | null;
+  } | null;
+};
+
+const userLabel = (user: DateCheckImageListRow['last_image_uploaded_by']) =>
+  user?.name ?? user?.username ?? user?.email ?? '';
+
+const formatSearchDate = (date: Date | null | undefined) =>
+  date?.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Ho_Chi_Minh',
+  }) ?? '';
+
+const matchesImageListSearch = (
+  check: DateCheckImageListRow,
+  search: string,
+) => {
+  const order = check.productionOrder;
+  return [
+    check.id,
+    check.production_order_id,
+    order?.production_order_code,
+    order?.lot_no,
+    order?.item_code,
+    order?.item?.item_name ?? order?.description ?? order?.item_code,
+    check.package_type,
+    packageLabels[check.package_type] ?? check.package_type,
+    check.approval_status,
+    approvalLabels[check.approval_status] ?? check.approval_status,
+    check.request_file_path,
+    check.created_at?.toISOString(),
+    formatSearchDate(check.created_at),
+    check.checked_at?.toISOString(),
+    formatSearchDate(check.checked_at),
+    check.last_image_uploaded_at?.toISOString(),
+    formatSearchDate(check.last_image_uploaded_at),
+    userLabel(check.last_image_uploaded_by),
+    userLabel(check.createdBy),
+    userLabel(check.approvedBy),
+  ].some((value) => normalizeLotSearch(value).includes(search));
+};
+
 @Injectable()
 export class ProductionOrderDateChecksService {
   constructor(private readonly prismaService: PrismaService) {}
@@ -88,6 +144,25 @@ export class ProductionOrderDateChecksService {
   async findAll(options: GetProductionOrderDateChecksDto = {}) {
     const where = productionOrderDateCheckListWhere(options);
     const pagination = recordPagination(options);
+    if (options.order_by === 'last_image_uploaded_at') {
+      if (options.has_images !== 'true') {
+        throw new BadRequestException(
+          'order_by=last_image_uploaded_at requires has_images=true',
+        );
+      }
+      const search = normalizeLotSearch(options.search).trim();
+      const imageListWhere = search
+        ? productionOrderDateCheckListWhere({ ...options, search: undefined })
+        : where;
+      const { data, total } = await this.findByLatestImage(
+        imageListWhere,
+        pagination,
+        search,
+      );
+      return pagination.enabled
+        ? { data, total, page: pagination.page, limit: pagination.limit }
+        : data;
+    }
     const query = {
       ...(Object.keys(where).length ? { where } : {}),
       include: productionOrderDateCheckListInclude,
@@ -109,17 +184,81 @@ export class ProductionOrderDateChecksService {
       : data;
   }
 
-  private async addLatestImageInfo(checks: DateCheckListRow[]) {
+  private async findByLatestImage(
+    where: Prisma.ProductionOrderDateChecksWhereInput,
+    pagination: ReturnType<typeof recordPagination>,
+    search = '',
+  ) {
+    const read = async (client: Prisma.TransactionClient) => {
+      // Rank all matching checks by their latest upload before taking a page.
+      const uploads = await client.productionOrderDateCheckImages.groupBy({
+        by: ['date_check_id'],
+        where: { dateCheck: { is: where } },
+        _max: { created_at: true },
+        orderBy: [{ _max: { created_at: 'desc' } }, { date_check_id: 'desc' }],
+        ...(search ? {} : pagination.args),
+      });
+      const total =
+        pagination.enabled && !search
+          ? await client.productionOrderDateChecks.count({ where })
+          : 0;
+      const checks = uploads.length
+        ? await client.productionOrderDateChecks.findMany({
+            where: {
+              AND: [
+                where,
+                { id: { in: uploads.map((upload) => upload.date_check_id) } },
+              ],
+            },
+            include: productionOrderDateCheckListInclude,
+          })
+        : [];
+      const checksById = new Map(checks.map((check) => [check.id, check]));
+      const orderedChecks = uploads.flatMap((upload) => {
+        const check = checksById.get(upload.date_check_id);
+        return check ? [check] : [];
+      });
+      const data = await this.addLatestImageInfo(orderedChecks, client);
+      if (!search) return { data, total };
+
+      // Search the same projection as the image list, including only its latest
+      // uploader. Filtering before slicing preserves full-list search results.
+      const matches = data
+        .filter((check) => matchesImageListSearch(check, search))
+        .sort(
+          (a, b) =>
+            (b.last_image_uploaded_at?.getTime() ?? 0) -
+              (a.last_image_uploaded_at?.getTime() ?? 0) || b.id - a.id,
+        );
+      const skip = (pagination.page - 1) * pagination.limit;
+      return {
+        data: pagination.enabled
+          ? matches.slice(skip, skip + pagination.limit)
+          : matches,
+        total: matches.length,
+      };
+    };
+
+    return pagination.enabled
+      ? this.prismaService.$transaction(read, {
+          isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+        })
+      : read(this.prismaService);
+  }
+
+  private async addLatestImageInfo(
+    checks: DateCheckListRow[],
+    client: Prisma.TransactionClient = this.prismaService,
+  ) {
     if (checks.length === 0) {
       return [];
     }
 
-    const latestUploads =
-      await this.prismaService.productionOrderDateCheckImages.groupBy({
-        by: ['date_check_id'],
-        where: { date_check_id: { in: checks.map((check) => check.id) } },
-        _max: { created_at: true },
-      });
+    const latestUploads = await client.productionOrderDateCheckImages.groupBy({
+      by: ['date_check_id'],
+      where: { date_check_id: { in: checks.map((check) => check.id) } },
+      _max: { created_at: true },
+    });
     const latestUploadFilters = latestUploads.flatMap((upload) =>
       upload._max.created_at
         ? [
@@ -131,7 +270,7 @@ export class ProductionOrderDateChecksService {
         : [],
     );
     const latestImages = latestUploadFilters.length
-      ? await this.prismaService.productionOrderDateCheckImages.findMany({
+      ? await client.productionOrderDateCheckImages.findMany({
           where: { OR: latestUploadFilters },
           select: {
             date_check_id: true,

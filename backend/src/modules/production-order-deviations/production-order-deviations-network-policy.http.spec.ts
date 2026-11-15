@@ -111,15 +111,15 @@ describe('Deviation HTTP network access', () => {
     policy = 'OPEN';
     await request(app.getHttpServer())
       .get('/production-order-deviations')
-      .query({ search: '  lô 001  ', page: '2', limit: '20', reporter_id: '7', item_code: ' BTP001 ' })
+      .query({ search: '  lô 001  ', page: '2', limit: '300', reporter_id: '7', item_code: ' BTP001 ' })
       .set('Authorization', 'test')
       .expect(200);
     expect(service.findAll).toHaveBeenCalledWith(expect.objectContaining({
-      search: 'lô 001', page: 2, limit: 20, reporter_id: 7, item_code: 'BTP001',
+      search: 'lô 001', page: 2, limit: 300, reporter_id: 7, item_code: 'BTP001',
     }));
   });
 
-  it.each(['page=0', 'limit=201', 'search=a&search=b', 'from_date=2026-02-30', 'production_order_id=abc'])(
+  it.each(['page=0', 'limit=301', 'search=a&search=b', 'from_date=2026-02-30', 'production_order_id=abc'])(
     'rejects invalid list query %s before calling service', async (query) => {
       policy = 'OPEN';
       await request(app.getHttpServer())

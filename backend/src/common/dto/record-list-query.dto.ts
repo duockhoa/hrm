@@ -60,6 +60,6 @@ export class RecordListQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(200)
+  @Max(300)
   limit?: number;
 }

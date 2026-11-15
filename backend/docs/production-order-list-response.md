@@ -18,7 +18,7 @@ Both endpoints accept the same parameters:
 | `from_date`, `to_date` | Inclusive calendar date bounds, strictly `YYYY-MM-DD`. Either bound may be omitted. Reversed ranges return HTTP 400. |
 | `date_field` | `creation_date` (default), `start_date`, or `date_manufacture`. |
 | `page` | Integer from 1 to 1,000,000. Defaults to 1 when only `limit` is supplied. |
-| `limit` | Integer from 1 to 200. Defaults to 50 when only `page` is supplied. |
+| `limit` | Integer from 1 to 300. Defaults to 50 when only `page` is supplied. |
 
 Blank searches are ignored. Search input is trimmed and normalized to Unicode NFC.
 Words are separated by whitespace; **every word must match at least one searchable

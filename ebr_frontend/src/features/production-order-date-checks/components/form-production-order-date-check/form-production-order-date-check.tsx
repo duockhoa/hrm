@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { API_ROUTES } from "@/lib/api-routes";
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import productionOrdersService from "@/services/product-orders.service";
 import { PACKAGE_TYPE_OPTIONS } from "../../utils";
 
@@ -84,6 +85,7 @@ export default function FormProductionOrderDateCheck({
       await Promise.all([
         mutate(dateChecksKey),
         mutate(API_ROUTES.productionOrders.allDateChecks),
+        refreshItemCatalog(API_ROUTES.productionOrders.allDateChecks),
       ]);
       onClose?.();
     } catch (error: any) {

@@ -1,17 +1,16 @@
 "use client";
 
 import { HeaderListFinishedProductLot } from "@/features/finished-product-production-orders";
-import { Button } from "@/components/ui/button";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
 import { ItemProductOrder } from "@/features/production-orders";
-import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
+import type { ProductionOrderListItem } from "@/features/production-orders/types";
+import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import { API_ROUTES } from "@/lib/api-routes";
 import { isCancelledProductionOrder } from "@/lib/production-order-status";
 import { getSearchScopePath } from "@/lib/search-utils";
-import { productOrdersService } from "@/services/index.service";
 import useSearchStore from "@/store/search.store";
 import { usePathname, useRouter } from "next/navigation";
-import { Fragment, useMemo, useRef } from "react";
-import useSWR from "swr";
+import { Fragment, useMemo } from "react";
 
 const FINISHED_PRODUCT_PRODUCTION_ORDERS_ROUTE =
   "/finished-product-production-orders";
@@ -85,12 +84,22 @@ export default function FinishedProductProductionOrdersPage() {
     (state) => state.searchByPath[searchScopePath] ?? "",
   ).trim();
   const isSearching = searchKeyword.length > 0;
-  const { data: productOrders = [], error, isLoading, mutate } = useSWR(
-    isSearching
-      ? [API_ROUTES.productionOrders.finishedProducts, searchKeyword]
-      : API_ROUTES.productionOrders.finishedProducts,
-    () => productOrdersService.searchFinishedProducts(searchKeyword),
-  );
+  const {
+    records: productOrders,
+    error,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+    saveScrollPosition,
+  } = useInfiniteRecordList<ProductionOrderListItem>({
+    url: API_ROUTES.productionOrders.finishedProducts,
+    filters: { search: searchKeyword || undefined },
+    storageKey: "finishedProductLotListScroll",
+  });
   const activeLotId = pathname.startsWith(
     `${FINISHED_PRODUCT_PRODUCTION_ORDERS_ROUTE}/`,
   )
@@ -98,7 +107,6 @@ export default function FinishedProductProductionOrdersPage() {
         pathname.replace(`${FINISHED_PRODUCT_PRODUCTION_ORDERS_ROUTE}/`, ""),
       )
     : null;
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const filteredLots = useMemo(
     () => productOrders.filter((lot) => !isCancelledProductionOrder(lot.status)),
@@ -108,12 +116,6 @@ export default function FinishedProductProductionOrdersPage() {
     () => groupLotsByCreationDate(filteredLots),
     [filteredLots],
   );
-
-  const { saveScrollPosition } = useScrollRestoration({
-    ref: containerRef,
-    storageKey: "productOrderListScroll",
-    restoreSignal: `${filteredLots.length}:${pathname}`,
-  });
 
   const handleClick = (lotId: string | number) => {
     saveScrollPosition({ restoreOnNextFrame: true });
@@ -132,14 +134,7 @@ export default function FinishedProductProductionOrdersPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
-        {error ? (
-          <div role="alert" className="p-4 text-center text-sm text-red-600">
-            Không thể tải danh sách lô.
-            <Button type="button" variant="link" onClick={() => void mutate()}>
-              Thử lại
-            </Button>
-          </div>
-        ) : isLoading ? (
+        {isLoading ? (
           Array.from({ length: 10 }).map((_, index) => (
             <ItemProductOrder
               key={index}
@@ -164,13 +159,22 @@ export default function FinishedProductProductionOrdersPage() {
               ))}
             </Fragment>
           ))
-        ) : (
+        ) : !error && !hasMore ? (
           <p className="p-4 text-center text-sm text-gray-500">
             {isSearching
               ? "Không tìm thấy lô thành phẩm phù hợp."
               : "Chưa có lô thành phẩm nào."}
           </p>
-        )}
+        ) : null}
+        <InfiniteRecordLoadStatus
+          sentinelRef={sentinelRef}
+          count={filteredLots.length}
+          error={error}
+          loading={isLoadingMore}
+          hasMore={hasMore}
+          onRetry={retry}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );

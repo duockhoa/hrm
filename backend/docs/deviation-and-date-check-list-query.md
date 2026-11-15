@@ -20,14 +20,15 @@ returns `{ data, total, page, limit }`, as with the finished/semi-finished lot A
 | `from_date`, `to_date` | Inclusive date bounds in strict `YYYY-MM-DD` format. Either can be omitted. |
 | `date_field` | Field to apply the date range to; defaults to `created_at`. Allowed fields differ by endpoint below. |
 | `page` | Integer 1–1,000,000. Defaults to 1 when only `limit` is supplied. |
-| `limit` | Integer 1–200. Defaults to 50 when only `page` is supplied. |
+| `limit` | Integer 1–300. Defaults to 50 when only `page` is supplied. |
 
 Inputs are validated and transformed at the controller. Invalid supported values,
 too many search words and reversed date ranges return HTTP 400. Unknown query
 parameters are stripped. Date bounds use midnight UTC through exclusive midnight
 of the day after `to_date`, matching the lot list API's date range convention.
 
-All filters combine with AND. Search is applied in the database before pagination;
+All filters combine with AND. Except for the latest-upload image-list compatibility
+mode below, search is applied in the database before pagination;
 each word must match at least one searchable field, and words can match different
 fields in any order. Input is trimmed and normalized to Unicode NFC; duplicate
 words are ignored. `%`, `_` and backslash are literal characters, not SQL LIKE
@@ -36,9 +37,10 @@ query values, including Vietnamese text and `%`, `+`, `&` characters.
 
 Case/accent comparison for stored text follows MySQL column collation
 (`utf8mb4_unicode_ci` in the repository migrations). No fuzzy matching is added.
-Dates are searched through the date filters rather than formatted display strings.
+In that default mode, dates are searched through date filters rather than formatted
+display strings.
 
-Both lists use `created_at DESC, id DESC` for stable pagination. `total` counts
+Both lists default to `created_at DESC, id DESC` for stable pagination. `total` counts
 matching records before pagination, using the same filters and access scope as
 `data`. Page and count reads share a repeatable-read transaction. An out-of-range
 page returns an empty `data` array with the matching total. Requests without
@@ -77,6 +79,7 @@ Additional filters:
 | `package_type` | Exact stored package code, e.g. `goi`, `lo`, `chai`, `hop`, `thung`, `ong_be`, `tui_nhom`, `tuyp`. |
 | `created_by_id`, `approved_by_id` | Exact positive 32-bit user IDs. |
 | `has_images` | Exactly `true` or `false`; filters whether the check has uploaded images. |
+| `order_by` | `created_at` (default), or `last_image_uploaded_at` when `has_images=true`. Both sort descending with check ID descending as a stable tie breaker. |
 
 `date_field` accepts `created_at`, `updated_at`, `checked_at` or `approved_at`.
 
@@ -86,15 +89,41 @@ exact check ID or production order ID. Vietnamese package and status labels are
 also supported, with or without accents: for example `túi nhôm`, `tui nhom`,
 `Đã duyệt`, `da duyet`, `Chờ duyệt`, `Từ chối`. These words follow the same AND
 semantics as other search terms. Use exact filters for unambiguous status selection.
-File paths, formatted dates and latest-image uploader names are not search fields.
+In the default search mode, file paths, formatted dates and latest-image uploader
+names are not search fields.
 
 The existing last-upload metadata (`last_image_uploaded_at`,
-`last_image_uploaded_by`) is preserved. Upload metadata queries only load IDs in
-the resulting page. The per-production-order detail endpoint
+`last_image_uploaded_by`) is preserved. Without image-list compatibility search,
+upload metadata queries only load IDs in the resulting page. The per-production-order detail endpoint
 `GET /production-orders/:id/date-checks` is unchanged.
+
+For the In Date image list, use `has_images=true&order_by=last_image_uploaded_at`.
+Without a nonblank `search`, the database ranks all matching checks by their most recent image upload before
+applying pagination, preserving the latest-upload order across pages. Ordering,
+count and page rows share a repeatable-read transaction. This ordering requires
+`has_images=true`; requests without it return HTTP 400.
+
+With both `order_by=last_image_uploaded_at` and a nonblank `search`, the endpoint
+preserves the former image list's search behavior. It matches the whole phrase
+(case/accent insensitive) within a single field of the displayed projection,
+including request-file paths, raw ISO dates, formatted `created_at`, `checked_at`
+and latest-upload dates, and the latest uploader's displayed name/username/email
+fallback. Formatted dates use `vi-VN` with the `Asia/Ho_Chi_Minh` timezone. Older
+uploaders on the same check do not match. Package/status labels and the existing
+lot, product, creator and approver display fields are included as before.
+
+This compatibility search applies exact filters and production-order access scope
+first, enriches all candidate rows with latest-upload metadata, then filters,
+sorts by latest upload and ID descending, computes the matching total and slices
+the requested page. These reads share a repeatable-read transaction. Each searched
+page therefore scans candidates on the server, while its response still contains
+at most the requested `limit` (maximum 300). Requests without search retain database
+pagination; default `created_at` search retains database filtering and multiword
+AND semantics. Search without pagination continues to return an array.
 
 ```text
 GET /production-orders/date-checks?search=aspirin%20001&page=1&limit=20
 GET /production-orders/date-checks?approval_status=pending&package_type=hop&has_images=true&page=1
 GET /production-orders/date-checks?production_order_id=2031&date_field=checked_at&from_date=2026-11-01
+GET /production-orders/date-checks?has_images=true&order_by=last_image_uploaded_at&page=1&limit=300
 ```

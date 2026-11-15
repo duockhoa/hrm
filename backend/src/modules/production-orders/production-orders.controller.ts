@@ -493,7 +493,7 @@ export class ProductionOrdersController {
   })
   @ApiQuery({ name: 'search', required: false, schema: { type: 'string', maxLength: 200 } })
   @ApiQuery({ name: 'page', required: false, schema: { type: 'integer', minimum: 1, maximum: 1000000, default: 1 } })
-  @ApiQuery({ name: 'limit', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 20 } })
+  @ApiQuery({ name: 'limit', required: false, schema: { type: 'integer', minimum: 1, maximum: 300, default: 20 } })
   async findAllFinishedProductSummaries(
     @Query(new ValidationPipe({ transform: true, whitelist: true }))
     query: GetFinishedProductSummariesDto = {},

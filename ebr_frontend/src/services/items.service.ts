@@ -16,6 +16,39 @@ export type ItemCatalogEntry = {
   unit: string | null;
 };
 
+export const ITEM_CATALOG_PAGE_SIZE = 300;
+
+export type ItemCatalogPage = {
+  items: ItemCatalogEntry[];
+  total: number | null;
+  skip: number;
+};
+
+const fetchCatalogPage = async (
+  url: string,
+  search: string,
+  skip: number,
+): Promise<ItemCatalogPage> => {
+  const response = await axiosClient.get<ItemCatalogEntry[]>(url, {
+    params: {
+      search: search.trim() || undefined,
+      skip,
+      top: ITEM_CATALOG_PAGE_SIZE,
+      count: true,
+      orderBy: "item_code:desc",
+      select: "item_code,item_name,dk_code,unit",
+      expand: "none",
+    },
+  });
+  const count = response.headers["x-total-count"];
+  const total = count !== undefined && count !== "" ? Number(count) : NaN;
+  return {
+    items: response.data,
+    total: Number.isSafeInteger(total) && total >= 0 ? total : null,
+    skip,
+  };
+};
+
 const fetchItems = async () => {
   const response = await axiosClient.get(API_ROUTES.items.base);
   return response.data;
@@ -113,6 +146,7 @@ const copyItemEquipment = async (
 };
 
 const itemsService = {
+  fetchCatalogPage,
   fetchItems,
   fetchItemsByCodePrefix,
   fetchFinishedProducts,

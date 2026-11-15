@@ -1,17 +1,16 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
 import { ItemProductOrder } from "@/features/production-orders";
-import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
+import type { ProductionOrderListItem } from "@/features/production-orders/types";
+import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import { API_ROUTES } from "@/lib/api-routes";
 import { isCancelledProductionOrder } from "@/lib/production-order-status";
 import { getSearchScopePath } from "@/lib/search-utils";
-import { productOrdersService } from "@/services/index.service";
 import useSearchStore from "@/store/search.store";
 import { usePathname, useRouter } from "next/navigation";
-import { Fragment, useMemo, useRef } from "react";
+import { Fragment, useMemo } from "react";
 import HeaderListSemiFinishedLot from "@/components/header-list-semi-finished-lot/header-list-semi-finished-lot";
-import useSWR from "swr";
 
 const getLotCreationDate = (lot: any) => lot?.creation_date ?? lot?.created_at;
 
@@ -82,16 +81,25 @@ export default function HomePage() {
     (state) => state.searchByPath[searchScopePath] ?? "",
   ).trim();
   const isSearching = searchKeyword.length > 0;
-  const { data: productOrders = [], error, isLoading, mutate } = useSWR(
-    isSearching
-      ? [API_ROUTES.productionOrders.semiFinishedProducts, searchKeyword]
-      : API_ROUTES.productionOrders.semiFinishedProducts,
-    () => productOrdersService.searchSemiFinishedProducts(searchKeyword),
-  );
+  const {
+    records: productOrders,
+    error,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+    saveScrollPosition,
+  } = useInfiniteRecordList<ProductionOrderListItem>({
+    url: API_ROUTES.productionOrders.semiFinishedProducts,
+    filters: { search: searchKeyword || undefined },
+    storageKey: "semiFinishedLotListScroll",
+  });
   const activeLotId = pathname.startsWith("/home/")
     ? decodeURIComponent(pathname.replace("/home/", ""))
     : null;
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const filteredLots = useMemo(
     () => productOrders.filter((lot) => !isCancelledProductionOrder(lot.status)),
@@ -101,12 +109,6 @@ export default function HomePage() {
     () => groupLotsByCreationDate(filteredLots),
     [filteredLots],
   );
-
-  const { saveScrollPosition } = useScrollRestoration({
-    ref: containerRef,
-    storageKey: "productOrderListScroll",
-    restoreSignal: `${filteredLots.length}:${pathname}`,
-  });
 
   const handleClick = (lotId: string | number) => {
     saveScrollPosition({ restoreOnNextFrame: true });
@@ -123,14 +125,7 @@ export default function HomePage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
-        {error ? (
-          <div role="alert" className="p-4 text-center text-sm text-red-600">
-            Không thể tải danh sách lô.
-            <Button type="button" variant="link" onClick={() => void mutate()}>
-              Thử lại
-            </Button>
-          </div>
-        ) : isLoading ? (
+        {isLoading ? (
           Array.from({ length: 10 }).map((_, index) => (
             <ItemProductOrder
               key={index}
@@ -155,11 +150,20 @@ export default function HomePage() {
               ))}
             </Fragment>
           ))
-        ) : (
+        ) : !error && !hasMore ? (
           <p className="p-4 text-center text-sm text-gray-500">
             {isSearching ? "Không tìm thấy lô phù hợp." : "Chưa có lô nào."}
           </p>
-        )}
+        ) : null}
+        <InfiniteRecordLoadStatus
+          sentinelRef={sentinelRef}
+          count={filteredLots.length}
+          error={error}
+          loading={isLoadingMore}
+          hasMore={hasMore}
+          onRetry={retry}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );

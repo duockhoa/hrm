@@ -31,7 +31,7 @@ describe.each([
           item_code: ' TP001 ',
           production_order_id: '2031',
           page: '2',
-          limit: '20',
+          limit: '300',
         },
         dto,
       ),
@@ -40,7 +40,7 @@ describe.each([
       item_code: 'TP001',
       production_order_id: 2031,
       page: 2,
-      limit: 20,
+      limit: 300,
     });
     expect((await parse({}, dto)).page).toBeUndefined();
     expect(
@@ -56,7 +56,7 @@ describe.each([
     { page: '1.2' },
     { page: 'Infinity' },
     { page: '1000001' },
-    { limit: '201' },
+    { limit: '301' },
     { limit: '' },
     { item_code: ['TP1', 'TP2'] },
     { production_order_id: '0' },
@@ -179,6 +179,25 @@ describe('deviation list search', () => {
 });
 
 describe('date check list search', () => {
+  it('accepts latest-upload ordering with 300 records per page', async () => {
+    await expect(
+      parse(
+        {
+          has_images: 'true',
+          order_by: 'last_image_uploaded_at',
+          page: '1',
+          limit: '300',
+        },
+        GetProductionOrderDateChecksDto,
+      ),
+    ).resolves.toMatchObject({
+      has_images: 'true',
+      order_by: 'last_image_uploaded_at',
+      page: 1,
+      limit: 300,
+    });
+  });
+
   it('searches multiple words across package, approval, lot and creator/approver', () => {
     const where = productionOrderDateCheckListWhere({ search: 'aspirin 001' });
     const clauses = where.AND as any[];
@@ -251,6 +270,7 @@ describe('date check list search', () => {
   it.each([
     { approval_status: 'sent' },
     { has_images: 'yes' },
+    { order_by: 'id' },
     { created_by_id: '0' },
     { approved_by_id: '-1' },
     { package_type: ['hop', 'goi'] },

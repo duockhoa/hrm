@@ -13,7 +13,7 @@ Responses remain JSON arrays. Existing requests without pagination continue retu
 | Parameter | Behavior |
 | --- | --- |
 | `skip` | Non-negative integer offset, maximum 2147483647. With no `top`, page size defaults to 50. |
-| `top` | Integer page size, 1–200. With no `skip`, starts at the first record. If both are omitted, no pagination is applied. |
+| `top` | Integer page size, 1–300. With no `skip`, starts at the first record. If both are omitted, no pagination is applied. |
 | `search` | Trimmed contains search on `item_code`, `item_name`, `dk_code`; maximum 200 characters. Empty search is ignored. Case/accent matching follows database collation. |
 | `codePrefix` | Alphabetical code prefix; trimmed and uppercased. Existing behavior is retained. Empty prefix is ignored. |
 | `series` | Up to 100 comma-separated non-negative integer IDs, e.g. `108,109`. Duplicates are removed. |

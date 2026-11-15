@@ -103,7 +103,7 @@ export function parseItemsQuery(query: ListItemsQuery): ParsedItemsQuery {
   };
   if (query.skip !== undefined) result.skip = integer(text('skip')!, 'skip');
   if (query.top !== undefined)
-    result.top = integer(text('top')!, 'top', 1, 200);
+    result.top = integer(text('top')!, 'top', 1, 300);
   else if (result.skip !== undefined) result.top = 50;
   if (text('search')) {
     if (text('search')!.length > 200)

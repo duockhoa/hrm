@@ -9,7 +9,7 @@ import {
 } from '../../common/utils/record-list-query';
 import { GetProductionOrderDateChecksDto } from './dto/get-production-order-date-checks.dto';
 
-const packageLabels: Record<string, string> = {
+export const packageLabels: Record<string, string> = {
   goi: 'Gói',
   lo: 'Lọ',
   chai: 'Chai',
@@ -19,7 +19,7 @@ const packageLabels: Record<string, string> = {
   tui_nhom: 'Túi nhôm',
   tuyp: 'Tuýp',
 };
-const approvalLabels: Record<string, string> = {
+export const approvalLabels: Record<string, string> = {
   pending: 'Chờ duyệt',
   approved: 'Đã duyệt',
   rejected: 'Từ chối',

@@ -2,7 +2,8 @@
 
 import { ListProductOrderHeader } from "@/features/production-orders";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
+import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import {
   TableBody,
   TableCell,
@@ -10,14 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { API_ROUTES } from "@/lib/api-routes";
 import { isCancelledProductionOrder } from "@/lib/production-order-status";
 import { getSearchScopePath } from "@/lib/search-utils";
 import { productOrdersService } from "@/services/index.service";
 import useSearchStore from "@/store/search.store";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Fragment, useMemo, useRef } from "react";
+import { Fragment, useMemo } from "react";
 import useSWR from "swr";
 
 const PRODUCT_ORDERS_ROUTE = "/product-orders";
@@ -279,71 +279,54 @@ export default function ProductOrdersPage() {
     (state) => state.searchByPath[searchScopePath] ?? "",
   ).trim();
   const isSearching = searchKeyword.length > 0;
-  const {
-    data: semiFinishedProducts = [],
-    isLoading: semiFinishedProductsLoading,
-    error: semiFinishedProductsError,
-    mutate: reloadSemiFinishedProducts,
-  } = useSWR<ProductionOrderLot[]>(
-    isSearching
-      ? [API_ROUTES.productionOrders.semiFinishedProducts, searchKeyword]
-      : API_ROUTES.productionOrders.semiFinishedProducts,
-    () => productOrdersService.searchSemiFinishedProducts(searchKeyword),
-  );
-  const {
-    data: finishedProducts = [],
-    isLoading: finishedProductsLoading,
-    error: finishedProductsError,
-    mutate: reloadFinishedProducts,
-  } = useSWR<ProductionOrderLot[]>(
-    isSearching
-      ? [API_ROUTES.productionOrders.finishedProducts, searchKeyword]
-      : API_ROUTES.productionOrders.finishedProducts,
-    () => productOrdersService.searchFinishedProducts(searchKeyword),
-  );
   const requestedTab = searchParams.get("tab");
   const hasRequestedTab =
-    requestedTab === LOT_TABS.finished || requestedTab === LOT_TABS.semiFinished;
-  const { data: activeLot } = useSWR<ProductionOrderLot>(
+    requestedTab === LOT_TABS.finished ||
+    requestedTab === LOT_TABS.semiFinished;
+  const { data: activeLot, error: activeLotError } = useSWR<ProductionOrderLot>(
     activeLotId && !hasRequestedTab
       ? `${API_ROUTES.productionOrders.base}/${activeLotId}`
       : null,
     () => productOrdersService.fetchProductionOrderById(activeLotId!),
   );
-  const inferredTab =
-    activeLot?.item_code?.startsWith("TP")
-      ? LOT_TABS.finished
-      : LOT_TABS.semiFinished;
+  const inferredTab = activeLot?.item_code?.startsWith("TP")
+    ? LOT_TABS.finished
+    : LOT_TABS.semiFinished;
   const activeTab: LotTab = hasRequestedTab ? requestedTab : inferredTab;
-  const productOrders =
-    activeTab === LOT_TABS.semiFinished
-      ? semiFinishedProducts
-      : finishedProducts;
-  const productOrdersLoading =
-    activeTab === LOT_TABS.semiFinished
-      ? semiFinishedProductsLoading
-      : finishedProductsLoading;
-
-  const productOrdersError =
-    activeTab === LOT_TABS.semiFinished
-      ? semiFinishedProductsError
-      : finishedProductsError;
-  const containerRef = useRef<HTMLDivElement>(null);
+  const {
+    records: productOrders,
+    error: productOrdersError,
+    isLoading: productOrdersLoading,
+    hasMore,
+    isLoadingMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+    saveScrollPosition,
+  } = useInfiniteRecordList<ProductionOrderLot>({
+    enabled:
+      !activeLotId ||
+      hasRequestedTab ||
+      Boolean(activeLot) ||
+      Boolean(activeLotError),
+    url:
+      activeTab === LOT_TABS.semiFinished
+        ? API_ROUTES.productionOrders.semiFinishedProducts
+        : API_ROUTES.productionOrders.finishedProducts,
+    filters: { search: searchKeyword },
+    storageKey: "allProductOrderListScroll",
+  });
 
   const filteredLots = useMemo(
-    () => productOrders.filter((lot) => !isCancelledProductionOrder(lot.status)),
+    () =>
+      productOrders.filter((lot) => !isCancelledProductionOrder(lot.status)),
     [productOrders],
   );
   const groupedLots = useMemo(
     () => groupLotsByCreationDate(filteredLots),
     [filteredLots],
   );
-
-  const { saveScrollPosition } = useScrollRestoration({
-    ref: containerRef,
-    storageKey: `allProductOrderListScroll:${activeTab}`,
-    restoreSignal: `${activeTab}:${filteredLots.length}:${pathname}`,
-  });
 
   const getRouteWithTab = (route: string, tab: LotTab) => {
     const nextSearchParams = new URLSearchParams(searchParams.toString());
@@ -450,28 +433,7 @@ export default function ProductOrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {productOrdersError ? (
-              <TableRow>
-                <TableCell
-                  colSpan={13}
-                  role="alert"
-                  className="p-4 text-center text-red-600"
-                >
-                  Không thể tải danh sách lô.
-                  <Button
-                    type="button"
-                    variant="link"
-                    onClick={() => void (
-                      activeTab === LOT_TABS.semiFinished
-                        ? reloadSemiFinishedProducts()
-                        : reloadFinishedProducts()
-                    )}
-                  >
-                    Thử lại
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ) : productOrdersLoading ? (
+            {productOrdersLoading ? (
               <ProductOrderTableSkeleton />
             ) : groupedLots.length > 0 ? (
               groupedLots.map((group) => (
@@ -590,11 +552,23 @@ export default function ProductOrdersPage() {
           </TableBody>
         </table>
 
-        {!productOrdersError && !productOrdersLoading && filteredLots.length === 0 ? (
+        {!productOrdersError &&
+        !productOrdersLoading &&
+        !hasMore &&
+        filteredLots.length === 0 ? (
           <p className="p-4 text-center text-sm text-gray-500">
             {isSearching ? "Không tìm thấy lô phù hợp." : "Chưa có lô nào."}
           </p>
         ) : null}
+        <InfiniteRecordLoadStatus
+          sentinelRef={sentinelRef}
+          count={filteredLots.length}
+          error={productOrdersError}
+          loading={isLoadingMore}
+          hasMore={hasMore}
+          onRetry={retry}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );

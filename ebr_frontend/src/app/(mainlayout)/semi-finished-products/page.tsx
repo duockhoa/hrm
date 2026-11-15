@@ -1,47 +1,37 @@
 "use client";
 
+import { useInfiniteItemCatalog } from "@/hooks/use-infinite-item-catalog";
+import ItemCatalogLoadStatus from "@/components/item-catalog-load-status/item-catalog-load-status";
+
 import {
   ItemSemiFinishProduct,
   ListSemiFinishProductHeader,
 } from "@/features/semi-finished-products";
-import { getSearchScopePath } from "@/lib/search-utils";
-import { Button } from "@/components/ui/button";
 import { API_ROUTES } from "@/lib/api-routes";
-import { sortByItemCodeDesc } from "@/lib/item-sort";
-import { itemsService } from "@/services/index.service";
-import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
-import useSearchStore from "@/store/search.store";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useRef } from "react";
-import useSWR from "swr";
 
 export default function SemiFinishProducts() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchScopePath = getSearchScopePath(pathname);
-  const searchKeyword = useSearchStore(
-    (state) => state.searchByPath[searchScopePath] ?? "",
-  ).trim();
-  const isSearching = searchKeyword.length > 0;
-  const { data, error, isLoading, mutate } = useSWR(
-    isSearching
-      ? [API_ROUTES.items.semiFinishedProducts, searchKeyword]
-      : API_ROUTES.items.semiFinishedProducts,
-    () => itemsService.fetchSemiFinishedProducts(searchKeyword),
+  const {
+    items: filteredProducts,
+    error,
+    hasMore,
+    isInitialLoading,
+    isLoadingMore,
+    isSearching,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+    saveScrollPosition,
+  } = useInfiniteItemCatalog(
+    API_ROUTES.items.semiFinishedProducts,
+    "semiFinishedProductListScroll",
   );
   const activeProductId = pathname.startsWith("/semi-finished-products/")
     ? decodeURIComponent(pathname.replace("/semi-finished-products/", ""))
     : null;
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const filteredProducts = useMemo(() => sortByItemCodeDesc(data ?? []), [data]);
-
-  const { saveScrollPosition } = useScrollRestoration({
-    ref: containerRef,
-    storageKey: "semiFinishedProductListScroll",
-    restoreSignal: `${filteredProducts.length}:${pathname}`,
-  });
-
   const handleClick = (productId: string) => {
     saveScrollPosition({ restoreOnNextFrame: true });
     router.push(`/semi-finished-products/${productId}`, { scroll: false });
@@ -57,14 +47,7 @@ export default function SemiFinishProducts() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
-        {error ? (
-          <div role="alert" className="p-4 text-center text-sm text-red-600">
-            Không thể tải danh mục bán thành phẩm.
-            <Button type="button" variant="link" onClick={() => void mutate()}>
-              Thử lại
-            </Button>
-          </div>
-        ) : isLoading ? (
+        {isInitialLoading ? (
           Array.from({ length: 10 }).map((_, index) => (
             <ItemSemiFinishProduct
               key={index}
@@ -81,13 +64,22 @@ export default function SemiFinishProducts() {
               onClick={() => handleClick(product.item_code)}
             />
           ))
-        ) : (
+        ) : !error ? (
           <p className="p-4 text-center text-sm text-gray-500">
             {isSearching
               ? "Không tìm thấy bán thành phẩm phù hợp."
               : "Chưa có bán thành phẩm nào."}
           </p>
-        )}
+        ) : null}
+        <ItemCatalogLoadStatus
+          sentinelRef={sentinelRef}
+          count={filteredProducts.length}
+          error={error}
+          loading={isLoadingMore}
+          hasMore={hasMore}
+          onRetry={retry}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );

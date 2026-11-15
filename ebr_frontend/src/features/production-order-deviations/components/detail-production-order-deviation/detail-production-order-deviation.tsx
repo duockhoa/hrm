@@ -33,6 +33,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { API_ROUTES } from "@/lib/api-routes";
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import { productionOrderDeviationsService } from "@/services/index.service";
 
 type DeviationUser = {
@@ -782,6 +783,7 @@ export default function ProductionOrderDeviationDetail({
   ) => {
     await Promise.all([
       mutateGlobal(API_ROUTES.productionOrderDeviations.base),
+      refreshItemCatalog(API_ROUTES.productionOrderDeviations.base),
       productionOrderId !== null && productionOrderId !== undefined
         ? mutateGlobal(
             `${API_ROUTES.productionOrderDeviations.base}?production_order_id=${productionOrderId}`,
@@ -931,14 +933,7 @@ export default function ProductionOrderDeviationDetail({
             onCancel={() => setIsCauseFormOpen(false)}
             onSaved={async () => {
               await mutate();
-              if (
-                data.production_order_id !== null &&
-                data.production_order_id !== undefined
-              ) {
-                await mutateGlobal(
-                  `${API_ROUTES.productionOrderDeviations.base}?production_order_id=${data.production_order_id}`,
-                );
-              }
+              await refreshDeviationList(data.production_order_id);
               setIsCauseFormOpen(false);
             }}
           />

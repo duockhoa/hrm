@@ -43,6 +43,10 @@ export class GetProductionOrderDateChecksDto extends RecordListQueryDto {
   has_images?: string;
 
   @IsOptional()
+  @IsIn(['created_at', 'last_image_uploaded_at'])
+  order_by?: 'created_at' | 'last_image_uploaded_at';
+
+  @IsOptional()
   @IsIn(['created_at', 'updated_at', 'checked_at', 'approved_at'])
   date_field?: 'created_at' | 'updated_at' | 'checked_at' | 'approved_at';
 }

@@ -85,6 +85,22 @@ describe('Items list query HTTP contract', () => {
     },
   );
 
+  it.each(paths)('accepts 300-item pages on %s', async (path) => {
+    count.mockResolvedValue(650);
+    await request(app.getHttpServer())
+      .get(path)
+      .query({ skip: 300, top: 300, count: true, orderBy: 'item_code:desc' })
+      .expect('X-Total-Count', '650')
+      .expect(200);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 300,
+        take: 300,
+        orderBy: [{ item_code: 'desc' }],
+      }),
+    );
+  });
+
   it('keeps legacy requests unpaginated with default relations and no count header', async () => {
     const response = await request(app.getHttpServer())
       .get('/items?codePrefix=tp')
@@ -122,7 +138,7 @@ describe('Items list query HTTP contract', () => {
   });
 
   it.each([
-    'top=201',
+    'top=301',
     'top=1&top=2',
     'select=password',
     'expand=users',

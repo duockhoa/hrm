@@ -214,4 +214,64 @@ describe('Prisma scope extension', () => {
       },
     });
   });
+
+  it('limits latest-upload groups to visible production orders before pagination', async () => {
+    await run(() =>
+      client.productionOrderDateCheckImages.groupBy({
+        by: ['date_check_id'],
+        where: { dateCheck: { is: { approval_status: 'approved' } } },
+        _max: { created_at: true },
+        orderBy: [{ _max: { created_at: 'desc' } }, { date_check_id: 'desc' }],
+        skip: 300,
+        take: 300,
+      }),
+    );
+    expect(query.mock.calls.at(-1)?.[0].args).toMatchObject({
+      where: {
+        dateCheck: { is: { approval_status: 'approved' } },
+        AND: [
+          { dateCheck: { is: { production_order_id: { in: [301, 300] } } } },
+        ],
+      },
+      orderBy: [{ _max: { created_at: 'desc' } }, { date_check_id: 'desc' }],
+      skip: 300,
+      take: 300,
+    });
+  });
+
+  it('retains scope when image-list compatibility search reads all candidates before slicing', async () => {
+    const filters = { approval_status: 'approved', images: { some: {} } };
+    await run(() =>
+      client.productionOrderDateCheckImages.groupBy({
+        by: ['date_check_id'],
+        where: { dateCheck: { is: filters } },
+        _max: { created_at: true },
+        orderBy: [{ _max: { created_at: 'desc' } }, { date_check_id: 'desc' }],
+      }),
+    );
+    const rankArgs = query.mock.calls.at(-1)?.[0].args;
+    expect(rankArgs).toMatchObject({
+      where: {
+        dateCheck: { is: filters },
+        AND: [
+          { dateCheck: { is: { production_order_id: { in: [301, 300] } } } },
+        ],
+      },
+    });
+    expect(rankArgs).not.toHaveProperty('take');
+    await run(() =>
+      client.productionOrderDateChecks.findMany({
+        where: { AND: [filters, { id: { in: [21, 22] } }] },
+      }),
+    );
+    expect(query.mock.calls.at(-1)?.[0].args).toMatchObject({
+      where: {
+        AND: [
+          filters,
+          { id: { in: [21, 22] } },
+          { production_order_id: { in: [301, 300] } },
+        ],
+      },
+    });
+  });
 });

@@ -13,7 +13,7 @@ export function ApiItemsQuery() {
     ApiQuery({
       name: 'top',
       required: false,
-      schema: { type: 'integer', minimum: 1, maximum: 200 },
+      schema: { type: 'integer', minimum: 1, maximum: 300 },
       description:
         'Page size. No pagination when both skip and top are omitted.',
     }),
