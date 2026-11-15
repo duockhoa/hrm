@@ -1728,7 +1728,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     );
   });
 
-  it('exposes exactly thirteen read-only tools', async () => {
+  it('exposes exactly fifteen read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
@@ -1744,12 +1744,100 @@ describe('MCP Streamable HTTP endpoint', () => {
       'get_mixing_records',
       'analyze_production_parameters',
       'get_production_statistics',
+      'search_connection_sessions',
+      'get_connection_statistics',
     ]);
     expect(
       body(response).result.tools.every(
         (tool) => tool.annotations.readOnlyHint,
       ),
     ).toBe(true);
+  });
+
+  it.each(['search_connection_sessions', 'get_connection_statistics'])(
+    'requires users.list for %s before touching the database',
+    async (name) => {
+      const denied = await rpc('tools/call', { name, arguments: {} }).expect(
+        200,
+      );
+      expect(body(denied).result.isError).toBe(true);
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it('allows connection analytics with users.list without production-order permissions', async () => {
+    const identity = authenticated();
+    identity.auth.extra.permissions = ['users.list'];
+    oauth.resolveMcpToken.mockResolvedValue(identity);
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ total_sessions: 2306n, unique_users: 50n }])
+      .mockResolvedValueOnce([
+        {
+          group_key: '2026-11-09',
+          total_sessions: 300n,
+          unique_users: 20n,
+          total_groups: 7n,
+          has_group: 1,
+        },
+      ]);
+    const response = await rpc('tools/call', {
+      name: 'get_connection_statistics',
+      arguments: {
+        application_key: 'hsl',
+        date_from: '2026-11-09',
+        date_to: '2026-11-15',
+      },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent).toMatchObject({
+      summary: { total_sessions: 2306, unique_users: 50 },
+      data: [{ group_key: '2026-11-09', total_sessions: 300 }],
+      pagination: { total_groups: 7 },
+      date_range: { timezone: 'Asia/Ho_Chi_Minh' },
+    });
+    expect(prisma.productionOrders.findMany).not.toHaveBeenCalled();
+  });
+
+  it('searches WMS sessions with explicit IP option using connection permission', async () => {
+    const identity = authenticated();
+    identity.auth.extra.permissions = ['users.list'];
+    oauth.resolveMcpToken.mockResolvedValue(identity);
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ total: 1n }])
+      .mockResolvedValueOnce([
+        {
+          id: 4,
+          user_id: 7,
+          duration_seconds: 50n,
+          reconnect_count: 2n,
+          ip_address: '127.0.0.1',
+        },
+      ]);
+    const response = await rpc('tools/call', {
+      name: 'search_connection_sessions',
+      arguments: { application_key: 'wms', today: true, include_ip: true },
+    }).expect(200);
+    expect(body(response).result.isError).not.toBe(true);
+    expect(body(response).result.structuredContent).toMatchObject({
+      application_key: 'wms',
+      data: [{ id: 4, reconnect_count: 2, ip_address: '127.0.0.1' }],
+    });
+    expect(
+      (prisma.$queryRaw.mock.calls as [Prisma.Sql][])[0][0].values,
+    ).toContain('wms');
+  });
+
+  it('rejects reversed connection dates before querying', async () => {
+    const identity = authenticated();
+    identity.auth.extra.permissions = ['users.list'];
+    oauth.resolveMcpToken.mockResolvedValue(identity);
+    const response = await rpc('tools/call', {
+      name: 'get_connection_statistics',
+      arguments: { date_from: '2026-11-15', date_to: '2026-11-09' },
+    }).expect(200);
+    expect(body(response).result.isError).toBe(true);
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
 
   function allowDeviationSearch(...permissions: string[]) {

@@ -56,6 +56,12 @@ import {
   decodeParameterAnalysis,
   type ParameterAnalysisInput,
 } from './mcp-parameter-analysis';
+import {
+  getConnectionStatistics,
+  searchConnectionSessions,
+  type ConnectionStatisticsInput,
+  type ConnectionSearchInput,
+} from './mcp-connection-history';
 
 const orderSelect = {
   id: true,
@@ -176,6 +182,14 @@ export class McpToolsService {
     private readonly prisma: PrismaService,
     private readonly completeness: ProductionOrderLocalCompletenessService,
   ) {}
+
+  searchConnectionSessions(input: ConnectionSearchInput) {
+    return searchConnectionSessions(this.prisma, input);
+  }
+
+  getConnectionStatistics(input: ConnectionStatisticsInput) {
+    return getConnectionStatistics(this.prisma, input);
+  }
 
   async getProductionStatistics(
     input: ProductionStatisticsInput,

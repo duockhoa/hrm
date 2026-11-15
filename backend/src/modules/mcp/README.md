@@ -35,6 +35,71 @@ SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/nod
 Chạy backend bằng `npm run start:dev` trong thư mục `backend`, rồi nhập URL trên
 vào client MCP. Không cần API key của nhà cung cấp AI để chạy module này.
 
+## Phân tích lịch sử kết nối bằng AI
+
+Hai tool kết nối dùng OAuth `mcp:read` và quyền **`users.list`**, cùng quyền xem
+lịch sử trên giao diện; không cần quyền đọc lệnh sản xuất. Bổ sung vào endpoint
+`/mcp` hiện có, không cần thêm server, API key hoặc migration. Sau khi triển khai
+backend mới, làm mới danh sách tool/kết nối lại MCP để AI nhận hai tool này.
+
+- `application_key=hsl` (mặc định) là EBR; `wms` là Kho Dược Khoa; `all` gộp cả hai.
+- Không truyền ngày: 30 ngày gần nhất, gồm hôm nay theo `Asia/Ho_Chi_Minh`.
+  Dùng `today=true`, cặp `date_from`/`date_to` (bao gồm toàn bộ ngày cuối, tối đa
+  366 ngày), hoặc `all_time=true`. Không kết hợp các cách chọn ngày.
+- Ngày được lọc theo **lúc bắt đầu phiên**. Một phiên kéo dài qua ngày tiếp theo
+  chỉ thuộc nhóm ngày bắt đầu; `unique_users` không phải toàn bộ người thao tác
+  trong ngày. Không cộng số người duy nhất giữa nhóm/ngày/ứng dụng để suy ra tổng.
+- `user_id` lọc chính xác; `keyword` tìm tên/tài khoản/email như giao diện;
+  `status` là trạng thái hiện tại tại `as_of`, không phải trạng thái lịch sử.
+- `min_connection_count`, `min_duration_seconds`, `max_duration_seconds` giúp
+  tìm phiên nối lại nhiều, phiên rất ngắn hoặc kéo dài. Điều kiện kết hợp AND.
+- Search có `sort_by=newest|duration_desc|reconnects_desc`, `include_ip=false`
+  mặc định. Không trả mã client/socket/active key, token hoặc user agent.
+- Statistics có `group_by=none|day|hour|user|application|status|end_reason`;
+  giờ là **ngày + giờ** bắt đầu phiên theo Việt Nam, không phải giờ trong ngày
+  gộp tất cả các ngày. Sắp xếp `group|sessions_desc|reconnects_desc|duration_desc`.
+- Phân trang `page=1`, `limit=100`, tối đa 300. `get_connection_statistics`
+  tổng hợp ngay tại database trước khi phân trang nhóm; `summary` luôn tính
+  toàn bộ tập đã lọc. Trang nhóm vượt giới hạn giữ tổng và trả `data=[]`.
+  Chỉ trả nhóm có dữ liệu; xem `pagination.has_next_page` để lấy đủ nhóm.
+
+`summary` và từng nhóm có: tổng số phiên, số người dùng duy nhất, số phiên đang
+kết nối/chờ nối lại/đã kết thúc, tổng số lần kết nối, số lần nối lại
+`sum(max(connection_count-1,0))`, số phiên có nối lại, tổng/trung bình/tối đa
+thời lượng giây và số phiên dưới 60 giây. Trên tập rỗng, count/tổng là 0;
+trung bình/tối đa thời lượng là null.
+
+Thời lượng giữ cách tính của giao diện, chặn số âm và thời điểm tương lai:
+phiên đã chốt tính đến `ended_at`; đang kết nối tính đến `as_of`; chờ nối lại
+tính đến `disconnected_at` hoặc `last_seen_at`. Đây là thời gian mở phiên, có
+thể gồm để tab mở và gián đoạn, **không phải thời gian làm việc/năng suất**.
+Không suy ra lỗi mạng từ số lần nối lại, hoặc đỉnh người dùng đồng thời, vì
+bảng không lưu từng lần ngắt/nối lại và thao tác nghiệp vụ. `definitions` trong
+kết quả nhắc lại các giới hạn này. Hai truy vấn mỗi báo cáo cùng snapshot
+repeatable-read và cùng mốc `as_of`.
+
+Ví dụ thống kê EBR từ 9 đến hết 15/11/2026:
+
+```json
+{ "name": "get_connection_statistics", "arguments": { "application_key": "hsl", "date_from": "2026-11-09", "date_to": "2026-11-15", "group_by": "day" } }
+```
+
+Xếp hạng người dùng có nhiều lần nối lại nhất trong cùng khoảng ngày:
+
+```json
+{ "name": "get_connection_statistics", "arguments": { "date_from": "2026-11-09", "date_to": "2026-11-15", "group_by": "user", "sort_by": "reconnects_desc" } }
+```
+
+Đọc các phiên cụ thể có từ 10 lần kết nối trở lên:
+
+```json
+{ "name": "search_connection_sessions", "arguments": { "date_from": "2026-11-09", "date_to": "2026-11-15", "min_connection_count": 10, "sort_by": "reconnects_desc", "limit": 100 } }
+```
+
+Có thể yêu cầu AI: “Phân tích kết nối EBR từ 9/11 đến 15/11/2026: số phiên,
+số người dùng thực tế, xu hướng theo ngày, top người dùng có nhiều phiên và
+nhiều lần nối lại. Đối chiếu tổng summary, không cộng unique_users giữa ngày.”
+
 ## Các tool hiện có
 
 | Tool                                 | Tham số                                                                                                                                       | Kết quả                                                      |
@@ -50,6 +115,8 @@ vào client MCP. Không cần API key của nhà cung cấp AI để chạy modu
 | `get_mixing_records`                 | `ids`, `view?`                                                                                                                                | Nội dung nhiều phiếu đã chọn, tối đa 10 ID mỗi lần           |
 | `analyze_production_parameters`      | `source`, `parameter`, bộ lọc lệnh/ngày/công đoạn/đơn vị, `group_by?`, `sort_by?`, `page?`, `limit?`                                          | Thống kê số học trên nhiều lô, phân biệt phép đo và lô       |
 | `get_production_statistics`          | `metrics?`, bộ lọc lệnh/ngày, `group_by?`, `category?`, `page?`, `limit?`                                                                     | Tổng hợp số lô, hồ sơ, PYCLM, sản lượng và các nhóm đã chọn  |
+| `search_connection_sessions` | `application_key?`, bộ lọc người dùng/ngày/trạng thái/thời lượng, `sort_by?`, `include_ip?`, `page?`, `limit?` | Phiên kết nối EBR/WMS và số lần nối lại |
+| `get_connection_statistics` | Cùng bộ lọc kết nối, `group_by?`, `sort_by?`, `page?`, `limit?` | Thống kê toàn bộ dữ liệu phù hợp, phân trang các nhóm |
 
 Hai tool bổ sung cho phiếu cân:
 
@@ -84,7 +151,7 @@ Ví dụ tìm rồi đọc phiếu cân:
 { "name": "get_weighing_records", "arguments": { "ids": [1, 2], "view": "full" } }
 ```
 
-Có mười ba tên tool được đăng ký. Phiếu cân và phiếu pha chế/gia công được tìm và đọc riêng;
+Có mười lăm tên tool được đăng ký. Phiếu cân và phiếu pha chế/gia công được tìm và đọc riêng;
 `get_production_order` chỉ giữ số lượng/ID tham chiếu của nhóm này. Các nhóm sai
 lệch, checklist, kiểm tra, tổng kết, đóng gói, lấy mẫu và tài liệu tiếp tục nằm
 trong hồ sơ lô. Client đã kết nối trước đó cần làm mới danh sách tool.

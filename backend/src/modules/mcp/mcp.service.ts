@@ -29,6 +29,11 @@ import {
 import { orderSearchSchema } from './mcp-order-search';
 import { productionStatisticsSchema } from './mcp-production-statistics';
 import { parameterAnalysisSchema } from './mcp-parameter-analysis';
+import {
+  connectionSearchSchema,
+  connectionStatisticsSchema,
+} from './mcp-connection-history';
+import { USER_PERMISSIONS } from '../users/users.permissions';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -75,6 +80,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
+        'Phân tích lịch sử kết nối EBR/WMS: dùng get_connection_statistics để đếm phiên, người dùng, nối lại và thời lượng theo ngày/giờ/người dùng/ứng dụng; search_connection_sessions xem các phiên cụ thể. Cần users.list. Mặc định EBR (hsl), 30 ngày gần nhất theo Việt Nam; application_key=wms hoặc all khi được yêu cầu. Ngày lọc theo lúc BẮT ĐẦU phiên. Phiên khác người dùng và khác tổng số lần kết nối; thời lượng không phải thời gian làm việc. Không cộng unique_users giữa các nhóm, không suy ra đỉnh người dùng đồng thời hoặc lỗi mạng từ reconnect_count. Kiểm tra pagination để lấy đủ nhóm; không tải từng trang phiên chỉ để tự thống kê. ' +
         'Phiếu xuất kho: dùng get_warehouse_release với production_order_id từ search_production_orders. Đây là dữ liệu ProductionOrderLines lấy trực tiếp từ SAP, có phân trang, giai đoạn và đơn vị tính; không phải phiếu cân. ' +
         'Phiếu cân: dùng search_weighing_records để tìm, get_weighing_records đọc theo ids (tối đa 10). sections.weighing_records trả ids và detail_tool. Lọc lô theo phiếu cân bằng presence.weighing_records, weighing_status, weighing_qa_status, weighing_ipc_status, weighing_has_weights; include/counts hỗ trợ weighing_records. Tổng cân tính cả số âm, tách mã nguyên liệu và đơn vị; ảnh chỉ trả tham chiếu. ' +
         'Tra cứu EBR. Dùng search_production_orders tìm lệnh rồi get_production_order xem hồ sơ lô. Câu hỏi liệt kê lô theo giao nhận hồ sơ, PYCLM, có/chưa có phiếu hoặc trạng thái duyệt dùng bộ lọc search_production_orders; include lấy trạng thái và counts đếm nhóm phiếu cho từng lô trong trang. Thống kê nhiều lô dùng get_production_statistics; thống kê pH/thông số dùng analyze_production_parameters, chọn đúng source và parameter, không tải hàng loạt hồ sơ chi tiết để tự tính. Hai tool thống kê mặc định 30 ngày gần nhất, ngày bắt đầu lệnh, loại lô hủy; muốn toàn bộ thời gian phải all_time=true. Kết quả phân trang theo nhóm; kiểm tra pagination trước khi kết luận đủ nhóm. Thông số tách mã hàng, đơn vị, công đoạn và phiên bản, trung bình theo phép đo, không suy ra đạt chất lượng. Riêng phiếu pha chế/gia công chỉ có số lượng và ids trong sections.mixing_records; muốn đọc phiếu phải gọi get_mixing_records. Dùng search_mixing_records tìm phiếu theo mã hàng/mã lệnh/số lô/thông số/ngày/duyệt, sau đó get_mixing_records theo ids; view=results cho so sánh thông số gọn hơn, view=full để đọc cả phiếu. Mỗi lần đọc tối đa 10 phiếu. Hỏi đếm sai lệch dùng search_production_order_deviations mode=count, xem danh sách dùng mode=list; today=true theo ngày Việt Nam. Dùng search_items/get_item xem cấu hình sản phẩm hiện tại, không tự áp dụng cho lô cũ. Nhóm thiếu quyền có available=false, khác với dữ liệu rỗng. Có dữ liệu khác với đạt chất lượng, có người duyệt khác với xử lý hoàn tất. Ngoại trừ phiếu xuất kho đọc từ SAP, các tool chỉ đọc dữ liệu cục bộ và tham chiếu ảnh/tệp.',
@@ -338,6 +344,39 @@ export class McpService implements OnModuleDestroy {
               input,
               stringArray(auth?.extra?.permissions),
             ),
+        ),
+    );
+
+    server.registerTool(
+      'search_connection_sessions',
+      {
+        description:
+          'Tra cứu phiên kết nối ứng dụng EBR (hsl), WMS hoặc cả hai. Lọc user_id, keyword tên/tài khoản/email, trạng thái tại thời điểm truy vấn, số lần kết nối tối thiểu và khoảng thời lượng giây. Ngày bắt đầu phiên theo Việt Nam: mặc định 30 ngày, today=true, cặp date_from/date_to tối đa 366 ngày, hoặc all_time=true. Sắp xếp mới nhất/thời lượng/nối lại giảm dần, phân trang tối đa 300 phiên. Mặc định không trả IP; include_ip=true khi cần phân tích IP. Không trả token, mã phiên client/socket hay user agent. Đọc definitions để tránh hiểu thời gian mở tab là thời gian thao tác. Cần users.list.',
+        inputSchema: connectionSearchSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'search_connection_sessions',
+          auth,
+          USER_PERMISSIONS.LIST,
+          () => this.tools.searchConnectionSessions(input),
+        ),
+    );
+    server.registerTool(
+      'get_connection_statistics',
+      {
+        description:
+          'Thống kê trực tiếp database lịch sử kết nối theo ngày, giờ bắt đầu, người dùng, ứng dụng, trạng thái hoặc lý do kết thúc. Trả summary toàn bộ tập lọc: số phiên, người dùng duy nhất, trạng thái hiện tại, tổng số lần kết nối, số lần nối lại (count-1), số phiên có nối lại, tổng/trung bình/tối đa thời lượng và số phiên dưới 60 giây; data là các nhóm có phân trang. Bộ lọc và khoảng ngày giống search_connection_sessions, mặc định EBR và 30 ngày Việt Nam. Tổng summary không bị cắt theo trang nhóm. Không cộng unique_users giữa nhóm; phiên kéo dài qua ngày chỉ thuộc ngày bắt đầu. Số lần nối lại không chứng minh lỗi mạng; thời lượng không phải năng suất. Không có lịch sử thao tác hay đỉnh đồng thời. Cần users.list.',
+        inputSchema: connectionStatisticsSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'get_connection_statistics',
+          auth,
+          USER_PERMISSIONS.LIST,
+          () => this.tools.getConnectionStatistics(input),
         ),
     );
 
