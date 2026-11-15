@@ -40,9 +40,6 @@ function SearchInput({ searchScopePath }: { searchScopePath: string }) {
   const isConnectionHistory = searchScopePath === "/connection-history";
   const apiSearchUrls = API_SEARCH_URLS[searchScopePath];
   const isApiSearch = Boolean(apiSearchUrls);
-  const isLotSearch = apiSearchUrls?.some((url) =>
-    url.startsWith("/production-orders/"),
-  );
   const search = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
   );
@@ -87,15 +84,6 @@ function SearchInput({ searchScopePath }: { searchScopePath: string }) {
       <Input
         type="text"
         aria-label="Tìm kiếm"
-        placeholder={
-          isConnectionHistory
-            ? "Tên, tài khoản, email..."
-            : isLotSearch
-              ? "Mã lệnh, số lô, sản phẩm..."
-              : isApiSearch
-                ? "Mã hàng, tên hàng, mã DK..."
-                : "Tìm kiếm..."
-        }
         maxLength={isConnectionHistory ? 100 : isApiSearch ? 200 : undefined}
         className="rounded-full  md:w-40 w-0 focus:w-40  md:focus:w-100 focus:ring-0 focus-visible:ring-0 transition-all duration-300 ease-in-out pr-8"
         value={isApiSearch ? draft : search}

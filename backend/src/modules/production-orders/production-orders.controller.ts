@@ -2,7 +2,7 @@ import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { GetProductionOrderListDto } from './dto/get-production-order-list.dto';
 import { GetFinishedProductSummariesDto } from './dto/get-finished-product-summaries.dto';
 import { GetProductionOrderDateChecksDto } from './dto/get-production-order-date-checks.dto';
-import { ApiOperation, ApiProduces, ApiOkResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiProduces, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
 import {
   BadRequestException,
   Body,
@@ -487,11 +487,20 @@ export class ProductionOrdersController {
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)
   @Get('finished-product-summaries')
+  @ApiOperation({
+    summary: 'Danh sách tổng kết thành phẩm',
+    description: 'Có page hoặc limit: trả { data, total, page, limit }. Không truyền phân trang: trả mảng để tương thích báo cáo hiện có.',
+  })
+  @ApiQuery({ name: 'search', required: false, schema: { type: 'string', maxLength: 200 } })
+  @ApiQuery({ name: 'page', required: false, schema: { type: 'integer', minimum: 1, maximum: 1000000, default: 1 } })
+  @ApiQuery({ name: 'limit', required: false, schema: { type: 'integer', minimum: 1, maximum: 200, default: 20 } })
   async findAllFinishedProductSummaries(
     @Query(new ValidationPipe({ transform: true, whitelist: true }))
     query: GetFinishedProductSummariesDto = {},
   ) {
-    return this.productionOrderFinishedProductSummariesService.findAll(query);
+    return query.page !== undefined || query.limit !== undefined
+      ? this.productionOrderFinishedProductSummariesService.findPage(query)
+      : this.productionOrderFinishedProductSummariesService.findAll(query);
   }
 
   @Permissions(

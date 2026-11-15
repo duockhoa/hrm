@@ -15,7 +15,7 @@ const parse = (value: unknown): Promise<GetProductionOrderListDto> =>
   });
 
 describe('lot list query validation and search', () => {
-  it('validates and normalizes summary search independently of pagination', async () => {
+  it('validates summary search and pagination', async () => {
     const metadata = {
       type: 'query' as const,
       metatype: GetFinishedProductSummariesDto,
@@ -25,6 +25,23 @@ describe('lot list query validation and search', () => {
     ).resolves.toMatchObject({ search: 'người tạo' });
     for (const search of ['x'.repeat(201), ['a', 'b'], { contains: 'a' }]) {
       await expect(pipe.transform({ search }, metadata)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    }
+    await expect(
+      pipe.transform({ search: ' creator ', page: '2', limit: '20' }, metadata),
+    ).resolves.toMatchObject({ search: 'creator', page: 2, limit: 20 });
+    for (const query of [
+      { page: '0' },
+      { page: '-1' },
+      { page: '1.5' },
+      { page: '1000001' },
+      { limit: '0' },
+      { limit: '201' },
+      { limit: 'abc' },
+      { limit: ['20', '50'] },
+    ]) {
+      await expect(pipe.transform(query, metadata)).rejects.toBeInstanceOf(
         BadRequestException,
       );
     }

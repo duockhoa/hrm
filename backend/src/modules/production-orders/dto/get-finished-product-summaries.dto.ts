@@ -3,5 +3,5 @@ import { GetProductionOrderListDto } from './get-production-order-list.dto';
 
 export class GetFinishedProductSummariesDto extends PickType(
   GetProductionOrderListDto,
-  ['search'] as const,
+  ['search', 'page', 'limit'] as const,
 ) {}

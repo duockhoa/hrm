@@ -19,8 +19,9 @@ import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
 import { getSearchScopePath } from "@/lib/search-utils";
 import { productOrdersService } from "@/services/index.service";
+import type { FinishedProductSummariesPage } from "@/services/product-orders.service";
 import useSearchStore from "@/store/search.store";
-import { X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
@@ -220,19 +221,44 @@ export default function FinishedProductSummariesPage() {
   const [selectedSummaryId, setSelectedSummaryId] = useState<
     string | number | null
   >(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
   ).trim();
+  const [previousKeyword, setPreviousKeyword] = useState(searchKeyword);
+  if (previousKeyword !== searchKeyword) {
+    setPreviousKeyword(searchKeyword);
+    setPage(1);
+  }
   const isSearching = searchKeyword.length > 0;
-  const { data, error, isLoading } = useSWR<FinishedProductSummary[]>(
-    isSearching
-      ? [API_ROUTES.productionOrders.finishedProductSummaries, searchKeyword]
-      : API_ROUTES.productionOrders.finishedProductSummaries,
-    () => productOrdersService.searchFinishedProductSummaries(searchKeyword),
+  const { data, error, isLoading } = useSWR<
+    FinishedProductSummariesPage<FinishedProductSummary>
+  >(
+    [
+      API_ROUTES.productionOrders.finishedProductSummaries,
+      searchKeyword,
+      page,
+      pageSize,
+    ],
+    () =>
+      productOrdersService.fetchFinishedProductSummariesPage<FinishedProductSummary>(
+        searchKeyword,
+        page,
+        pageSize,
+      ),
+    {
+      onSuccess(result) {
+        const lastPage = Math.max(1, Math.ceil(result.total / result.limit));
+        if (page > lastPage) setPage(lastPage);
+      },
+    },
   );
 
-  const summaries = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const summaries = useMemo(() => data?.data ?? [], [data]);
   const filteredSummaries = summaries;
   const groupedSummaries = useMemo(
     () => groupSummariesByCreatedDate(filteredSummaries),
@@ -434,6 +460,58 @@ export default function FinishedProductSummariesPage() {
             </TableBody>
           </table>
         )}
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t px-3 py-2 text-sm text-gray-500">
+        <label className="flex items-center gap-2" htmlFor="summary-page-size">
+          Số dòng/trang
+          <select
+            id="summary-page-size"
+            value={pageSize}
+            disabled={isLoading}
+            className="rounded border bg-white px-2 py-1 text-gray-900"
+            onChange={(event) => {
+              setPageSize(Number(event.target.value));
+              setPage(1);
+              setSelectedSummaryId(null);
+            }}
+          >
+            {[10, 20, 50, 100, 200].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span>
+          {isLoading ? "Đang tải..." : `${total.toLocaleString("vi-VN")} bản ghi`}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isLoading || !!error || page <= 1}
+            onClick={() => {
+              setPage((current) => current - 1);
+              setSelectedSummaryId(null);
+            }}
+          >
+            <ChevronLeft /> Trước
+          </Button>
+          <span>Trang {page}/{totalPages}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isLoading || !!error || page >= totalPages}
+            onClick={() => {
+              setPage((current) => current + 1);
+              setSelectedSummaryId(null);
+            }}
+          >
+            Sau <ChevronRight />
+          </Button>
+        </div>
       </div>
     </div>
   );

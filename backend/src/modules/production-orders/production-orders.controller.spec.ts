@@ -123,6 +123,7 @@ describe('ProductionOrdersController', () => {
   };
   let productionOrderFinishedProductSummariesService: {
     findAll: jest.Mock;
+    findPage: jest.Mock;
     findById: jest.Mock;
     findAllByProductionOrder: jest.Mock;
     create: jest.Mock;
@@ -451,6 +452,7 @@ describe('ProductionOrdersController', () => {
     };
     productionOrderFinishedProductSummariesService = {
       findAll: jest.fn(),
+      findPage: jest.fn(),
       findById: jest.fn(),
       findAllByProductionOrder: jest.fn(),
       create: jest.fn(),
@@ -3302,6 +3304,16 @@ describe('ProductionOrdersController', () => {
     expect(
       productionOrderFinishedProductSummariesService.findAll,
     ).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses paginated summaries only when page or limit is supplied', async () => {
+    const result = { data: [], total: 0, page: 2, limit: 10 };
+    productionOrderFinishedProductSummariesService.findPage.mockResolvedValue(result);
+    for (const query of [{ page: 2, limit: 10, search: 'LOT' }, { limit: 10 }, { page: 2 }]) {
+      await expect(controller.findAllFinishedProductSummaries(query)).resolves.toBe(result);
+      expect(productionOrderFinishedProductSummariesService.findPage).toHaveBeenLastCalledWith(query);
+    }
+    expect(productionOrderFinishedProductSummariesService.findAll).not.toHaveBeenCalled();
   });
 
   it('gets a finished product summary by id', async () => {

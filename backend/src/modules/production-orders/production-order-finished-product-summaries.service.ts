@@ -88,6 +88,32 @@ const finishedProductSummaryListInclude = {
   },
 } satisfies Prisma.ProductionOrderFinishedProductSummariesInclude;
 
+type FinishedProductSummaryListRow =
+  Prisma.ProductionOrderFinishedProductSummariesGetPayload<{
+    include: typeof finishedProductSummaryListInclude;
+  }>;
+
+const toFinishedProductSummaryListItem = (
+  summary: FinishedProductSummaryListRow,
+) => {
+  const { samplingRequests, ...productionOrder } = summary.productionOrder;
+  const latestSamplingRequest = samplingRequests[0] ?? null;
+  return {
+    ...summary,
+    productionOrder: {
+      ...productionOrder,
+      pyclm: {
+        isSent: latestSamplingRequest?.status === 'sent',
+        status: latestSamplingRequest?.status ?? null,
+        googleDocUrl: latestSamplingRequest?.google_doc_url ?? null,
+        sentAt: latestSamplingRequest?.sent_at ?? null,
+        location: latestSamplingRequest?.location ?? null,
+        sender: latestSamplingRequest?.sender ?? null,
+      },
+    },
+  };
+};
+
 @Injectable()
 export class ProductionOrderFinishedProductSummariesService {
   constructor(
@@ -122,25 +148,7 @@ export class ProductionOrderFinishedProductSummariesService {
         },
       );
 
-    const result = summaries.map((summary) => {
-      const { samplingRequests, ...productionOrder } = summary.productionOrder;
-      const latestSamplingRequest = samplingRequests[0] ?? null;
-
-      return {
-        ...summary,
-        productionOrder: {
-          ...productionOrder,
-          pyclm: {
-            isSent: latestSamplingRequest?.status === 'sent',
-            status: latestSamplingRequest?.status ?? null,
-            googleDocUrl: latestSamplingRequest?.google_doc_url ?? null,
-            sentAt: latestSamplingRequest?.sent_at ?? null,
-            location: latestSamplingRequest?.location ?? null,
-            sender: latestSamplingRequest?.sender ?? null,
-          },
-        },
-      };
-    });
+    const result = summaries.map(toFinishedProductSummaryListItem);
 
     const search = normalizeLotSearch(options.search).trim();
     if (!search) return result;
@@ -168,6 +176,42 @@ export class ProductionOrderFinishedProductSummariesService {
         summary.created_at.toISOString(),
       ].some((value) => normalizeLotSearch(value).includes(search));
     });
+  }
+
+  async findPage(options: GetFinishedProductSummariesDto) {
+    const page = options.page ?? 1;
+    const limit = options.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    if (normalizeLotSearch(options.search).trim()) {
+      // Filter computed fields (including latest PYCLM) before paging and counting.
+      const matches = await this.findAll({ search: options.search });
+      return {
+        data: matches.slice(skip, skip + limit),
+        total: matches.length,
+        page,
+        limit,
+      };
+    }
+
+    const [rows, total] = await this.prismaService.$transaction(
+      [
+        this.prismaService.productionOrderFinishedProductSummaries.findMany({
+          include: finishedProductSummaryListInclude,
+          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+          skip,
+          take: limit,
+        }),
+        this.prismaService.productionOrderFinishedProductSummaries.count(),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return {
+      data: rows.map(toFinishedProductSummaryListItem),
+      total,
+      page,
+      limit,
+    };
   }
 
   async findById(summaryId: number) {

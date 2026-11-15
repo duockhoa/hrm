@@ -1875,6 +1875,25 @@ const searchFinishedProductSummaries = async (search = "") => {
 
 const fetchFinishedProductSummaries = async () => searchFinishedProductSummaries();
 
+export type FinishedProductSummariesPage<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+const fetchFinishedProductSummariesPage = async <T>(
+  search = "",
+  page = 1,
+  limit = 20,
+): Promise<FinishedProductSummariesPage<T>> => {
+  const response = await axiosClient.get<FinishedProductSummariesPage<T>>(
+    API_ROUTES.productionOrders.finishedProductSummaries,
+    { params: { search: search.trim() || undefined, page, limit } },
+  );
+  return response.data;
+};
+
 const fetchFinishedProductSummary = async (id: string | number) => {
   const response = await axiosClient.get(
     API_ROUTES.productionOrders.finishedProductSummary(id),
@@ -2562,6 +2581,7 @@ const productOrdersService = {
   searchFinishedProducts,
   searchSemiFinishedProducts,
   searchFinishedProductSummaries,
+  fetchFinishedProductSummariesPage,
   fetchFinishedProducts,
   fetchSemiFinishedProducts,
   fetchProductionOrderById,

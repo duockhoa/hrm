@@ -12,12 +12,14 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
   let service: ProductionOrderFinishedProductSummariesService;
   const auditLogsService = { findAll: jest.fn() };
   let prismaService: {
+    $transaction: jest.Mock;
     productionOrders: {
       findUnique: jest.Mock;
     };
     productionOrderFinishedProductSummaries: {
       findUnique: jest.Mock;
       findMany: jest.Mock;
+      count: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
       delete: jest.Mock;
@@ -27,12 +29,16 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
   beforeEach(async () => {
     auditLogsService.findAll.mockReset();
     prismaService = {
+      $transaction: jest.fn((operations: Promise<unknown>[]) =>
+        Promise.all(operations),
+      ),
       productionOrders: {
         findUnique: jest.fn(),
       },
       productionOrderFinishedProductSummaries: {
         findUnique: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         create: jest.fn(),
         update: jest.fn(),
         delete: jest.fn(),
@@ -263,6 +269,90 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     ).toEqual([41, 42]);
     expect(await service.findAll({ search: ' \n ' })).toHaveLength(2);
   });
+
+  it('pages unfiltered rows in the database and counts the same scoped model', async () => {
+    prismaService.productionOrderFinishedProductSummaries.findMany.mockResolvedValue(
+      [
+        { id: 3, productionOrder: { samplingRequests: [] } },
+        { id: 2, productionOrder: { samplingRequests: [] } },
+      ],
+    );
+    prismaService.productionOrderFinishedProductSummaries.count.mockResolvedValue(
+      5,
+    );
+    const result = await service.findPage({ page: 2, limit: 2 });
+    expect(result).toMatchObject({ total: 5, page: 2, limit: 2 });
+    expect(result.data.map((row) => row.id)).toEqual([3, 2]);
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 2,
+        take: 2,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      }),
+    );
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.count,
+    ).toHaveBeenCalledTimes(1);
+    expect(prismaService.$transaction).toHaveBeenCalledWith(expect.any(Array), {
+      isolationLevel: 'RepeatableRead',
+    });
+  });
+
+  it('filters before paging and reports the filtered total even beyond the last page', async () => {
+    const rows = Array.from({ length: 6 }, (_, index) => ({
+      id: 6 - index,
+      production_order_id: 2000 + index,
+      created_at: new Date('2026-11-15T01:00:00Z'),
+      createdBy: { name: index % 2 ? 'Nguyễn Văn Bình' : 'Lê Minh' },
+      productionOrder: { item_code: 'TP001', samplingRequests: [] },
+    }));
+    prismaService.productionOrderFinishedProductSummaries.findMany.mockResolvedValue(
+      rows,
+    );
+    const result = await service.findPage({
+      search: 'nguyen van binh',
+      page: 2,
+      limit: 2,
+    });
+    expect(result).toMatchObject({ total: 3, page: 2, limit: 2 });
+    expect(result.data.map((row) => row.id)).toEqual([1]);
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.findMany,
+    ).not.toHaveBeenCalledWith(
+      expect.objectContaining({ skip: expect.any(Number) }),
+    );
+    expect(
+      await service.findPage({ search: 'nguyen van binh', page: 99, limit: 2 }),
+    ).toEqual({ data: [], total: 3, page: 99, limit: 2 });
+    expect(
+      await service.findPage({ search: 'not found', page: 1, limit: 20 }),
+    ).toEqual({ data: [], total: 0, page: 1, limit: 20 });
+  });
+
+  it.each([
+    [{ limit: 5 }, 1, 5],
+    [{ page: 2 }, 2, 20],
+  ] as const)(
+    'supplies the missing pagination default for %j',
+    async (options, page, limit) => {
+      prismaService.productionOrderFinishedProductSummaries.findMany.mockResolvedValue(
+        [],
+      );
+      expect(await service.findPage(options)).toEqual({
+        data: [],
+        total: 0,
+        page,
+        limit,
+      });
+      expect(
+        prismaService.productionOrderFinishedProductSummaries.findMany,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: (page - 1) * limit, take: limit }),
+      );
+    },
+  );
 
   it('gets a finished product summary by id', async () => {
     const summary = {
