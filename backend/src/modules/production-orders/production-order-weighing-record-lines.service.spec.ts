@@ -208,6 +208,62 @@ describe('ProductionOrderWeighingRecordLinesService', () => {
     },
   );
 
+  it.each([null, new Date()])(
+    'locks lot checks and image deletion after IPC approval (QA: %s)',
+    async (qaApproval) => {
+      prisma.productionOrderWeighingRecords.findUnique.mockResolvedValue({
+        ...parent,
+        qa_staff_approved_at: qaApproval,
+        ipc_staff_approved_at: new Date(),
+      });
+      await expect(
+        service.checkLot(3, 7, { lot_no: 'LOT', is_correct: true }, { id: 9 }, [
+          { filename: 'new.png' } as Express.Multer.File,
+        ]),
+      ).rejects.toThrow('IPC đã ký duyệt');
+      await expect(service.deleteLotCheckImage(3, 7, 8)).rejects.toThrow(
+        'IPC đã ký duyệt',
+      );
+      expect(
+        prisma.productionOrderWeighingRecordLines.updateMany,
+      ).not.toHaveBeenCalled();
+      expect(
+        prisma.productionOrderWeighingRecordLines.update,
+      ).not.toHaveBeenCalled();
+      expect(
+        prisma.productionOrderWeighingRecordLineChecks.upsert,
+      ).not.toHaveBeenCalled();
+      expect(
+        prisma.productionOrderWeighingRecordLineCheckImages.delete,
+      ).not.toHaveBeenCalled();
+      await expect(service.findAll(3)).resolves.toEqual([]);
+    },
+  );
+
+  it.each(['P2025', 'P2034'])(
+    'rejects IPC signing concurrently with lot-check changes (%s)',
+    async (code) => {
+      prisma.productionOrderWeighingRecords.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Concurrent signature', {
+          code,
+          clientVersion: '6',
+        }),
+      );
+      await expect(
+        service.checkLot(3, 7, { lot_no: 'LOT', is_correct: false }, { id: 9 }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.deleteLotCheckImage(3, 7, 8)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(
+        prisma.productionOrderWeighingRecordLineChecks.upsert,
+      ).not.toHaveBeenCalled();
+      expect(
+        prisma.productionOrderWeighingRecordLineCheckImages.delete,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
   it('rejects stale lot checks without saving a result', async () => {
     prisma.productionOrderWeighingRecordLines.updateMany.mockResolvedValue({
       count: 0,

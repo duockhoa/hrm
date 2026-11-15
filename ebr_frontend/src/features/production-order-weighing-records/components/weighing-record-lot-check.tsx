@@ -22,10 +22,12 @@ import type {
 export default function WeighingRecordLotCheckButton({
   recordId,
   line,
+  locked,
   onSaved,
 }: {
   recordId: number;
   line: ProductionOrderWeighingRecordLine;
+  locked: boolean;
   onSaved: (check: WeighingRecordLotCheck) => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
@@ -37,7 +39,7 @@ export default function WeighingRecordLotCheckButton({
   const fileRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
   const chooseImages = (files: File[]) => {
-    if (!files.length) return;
+    if (locked || !files.length) return;
     if (
       files.some(
         (file) =>
@@ -61,7 +63,7 @@ export default function WeighingRecordLotCheckButton({
     setError("");
   };
   const save = async (isCorrect: boolean) => {
-    if (busyRef.current) return;
+    if (locked || busyRef.current) return;
     busyRef.current = true;
     setSaving(true);
     setError("");
@@ -91,7 +93,7 @@ export default function WeighingRecordLotCheckButton({
     }
   };
   const deleteImage = async (imageId: number) => {
-    if (busyRef.current) return;
+    if (locked || busyRef.current) return;
     busyRef.current = true;
     setSaving(true);
     setError("");
@@ -144,7 +146,14 @@ export default function WeighingRecordLotCheckButton({
             </DialogDescription>
           </DialogHeader>
           <p>
-            Số lô <strong>{lotNo}</strong> có đúng không?
+            Số lô <strong>{lotNo}</strong>
+            {locked
+              ? status
+                ? status.is_correct
+                  ? ": Đúng"
+                  : ": Sai"
+                : ": Chưa kiểm tra"
+              : " có đúng không?"}
           </p>
           <div className="space-y-3">
             <p className="text-sm font-medium">Hình ảnh kiểm tra số lô</p>
@@ -161,112 +170,120 @@ export default function WeighingRecordLotCheckButton({
                       className="h-32 w-full rounded"
                       objectFit="contain"
                     />
+                    {!locked && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        className="absolute top-1 right-1"
+                        disabled={saving || locked}
+                        aria-label={`Xóa ảnh ${index + 1}`}
+                        onClick={() => void deleteImage(image.id)}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {!locked && (
+              <>
+                <input
+                  ref={cameraRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  capture="environment"
+                  className="hidden"
+                  disabled={saving || locked}
+                  onChange={(event) => {
+                    chooseImages(Array.from(event.target.files ?? []));
+                    event.target.value = "";
+                  }}
+                />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  disabled={saving || locked}
+                  onChange={(event) => {
+                    chooseImages(Array.from(event.target.files ?? []));
+                    event.target.value = "";
+                  }}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saving || locked}
+                    onClick={() => cameraRef.current?.click()}
+                  >
+                    <Camera className="size-4" />
+                    Chụp ảnh
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saving || locked}
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    <ImagePlus className="size-4" />
+                    Chọn ảnh
+                  </Button>
+                </div>
+                {images.map((image, index) => (
+                  <div
+                    key={`${image.name}-${index}`}
+                    className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm"
+                  >
+                    <span className="min-w-0 break-words">{image.name}</span>
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="icon-sm"
-                      className="absolute top-1 right-1"
-                      disabled={saving}
-                      aria-label={`Xóa ảnh ${index + 1}`}
-                      onClick={() => void deleteImage(image.id)}
+                      disabled={saving || locked}
+                      aria-label="Bỏ ảnh đã chọn"
+                      onClick={() =>
+                        setImages((current) =>
+                          current.filter((_, position) => position !== index),
+                        )
+                      }
                     >
                       <X className="size-4" />
                     </Button>
                   </div>
                 ))}
-              </div>
-            ) : null}
-            <input
-              ref={cameraRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              capture="environment"
-              className="hidden"
-              disabled={saving}
-              onChange={(event) => {
-                chooseImages(Array.from(event.target.files ?? []));
-                event.target.value = "";
-              }}
-            />
-            <input
-              ref={fileRef}
-              type="file"
-              multiple
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              disabled={saving}
-              onChange={(event) => {
-                chooseImages(Array.from(event.target.files ?? []));
-                event.target.value = "";
-              }}
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving}
-                onClick={() => cameraRef.current?.click()}
-              >
-                <Camera className="size-4" />
-                Chụp ảnh
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving}
-                onClick={() => fileRef.current?.click()}
-              >
-                <ImagePlus className="size-4" />
-                Chọn ảnh
-              </Button>
-            </div>
-            {images.map((image, index) => (
-              <div
-                key={`${image.name}-${index}`}
-                className="flex items-center justify-between gap-2 rounded border px-3 py-2 text-sm"
-              >
-                <span className="min-w-0 break-words">{image.name}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={saving}
-                  aria-label="Bỏ ảnh đã chọn"
-                  onClick={() =>
-                    setImages((current) =>
-                      current.filter((_, position) => position !== index),
-                    )
-                  }
-                >
-                  <X className="size-4" />
-                </Button>
-              </div>
-            ))}
-            <p className="text-xs text-slate-500">
-              Ảnh mới được lưu khi chọn Đúng hoặc Sai.
-            </p>
+                <p className="text-xs text-slate-500">
+                  Ảnh mới được lưu khi chọn Đúng hoặc Sai.
+                </p>
+              </>
+            )}
           </div>
           {error ? (
             <p role="alert" className="text-sm text-red-600">
               {error}
             </p>
           ) : null}
-          <DialogFooter className="grid grid-cols-2 gap-3">
-            <Button
-              className="w-full bg-black text-white hover:bg-black/90"
-              disabled={saving}
-              onClick={() => void save(false)}
-            >
-              Sai
-            </Button>
-            <Button
-              className="w-full bg-black text-white hover:bg-black/90"
-              disabled={saving}
-              onClick={() => void save(true)}
-            >
-              {saving ? "Đang lưu..." : "Đúng"}
-            </Button>
-          </DialogFooter>
+          {!locked && (
+            <DialogFooter className="grid grid-cols-2 gap-3">
+              <Button
+                className="w-full bg-black text-white hover:bg-black/90"
+                disabled={saving || locked}
+                onClick={() => void save(false)}
+              >
+                Sai
+              </Button>
+              <Button
+                className="w-full bg-black text-white hover:bg-black/90"
+                disabled={saving || locked}
+                onClick={() => void save(true)}
+              >
+                {saving ? "Đang lưu..." : "Đúng"}
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </>

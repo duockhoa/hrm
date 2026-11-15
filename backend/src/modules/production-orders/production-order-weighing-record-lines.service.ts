@@ -134,8 +134,7 @@ export class ProductionOrderWeighingRecordLinesService {
       !dto.lot_no.trim()
     )
       throw new BadRequestException('is_correct and lot_no are required');
-    return this.prisma.$transaction(async (tx) => {
-      await this.parent(tx, recordId);
+    return this.write(recordId, async (tx) => {
       await this.line(tx, recordId, lineId);
       // Lock the material row and reject a form opened for an older lot number.
       const locked = await tx.productionOrderWeighingRecordLines.updateMany({
@@ -257,8 +256,7 @@ export class ProductionOrderWeighingRecordLinesService {
   }
 
   async deleteLotCheckImage(recordId: number, lineId: number, imageId: number) {
-    const { updated, path } = await this.prisma.$transaction(async (tx) => {
-      await this.parent(tx, recordId);
+    const { updated, path } = await this.write(recordId, async (tx) => {
       await this.line(tx, recordId, lineId);
       await tx.productionOrderWeighingRecordLines.update({
         where: { id: lineId, production_order_weighing_record_id: recordId },
@@ -352,7 +350,7 @@ export class ProductionOrderWeighingRecordLinesService {
           const record = await this.parent(tx, recordId);
           if (record.ipc_staff_approved_at) {
             throw new ConflictException(
-              'IPC đã ký duyệt, không thể sửa nguyên liệu của phiếu cân.',
+              'IPC đã ký duyệt, không thể sửa nguyên liệu hoặc kiểm tra số lô của phiếu cân.',
             );
           }
           if (record.status === 'approved') {

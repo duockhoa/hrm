@@ -286,6 +286,7 @@ export default function WeighingRecordMaterials({
                     </td>
                     <td className="break-words border border-black px-1 py-1.5">
                       <WeighingRecordLotCheckButton
+                        locked={locked}
                         recordId={recordId}
                         line={line}
                         onSaved={async (lotCheck) => {
