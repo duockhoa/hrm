@@ -6,6 +6,29 @@ import { GetProductionOrderListDto } from './dto/get-production-order-list.dto';
 export const escapeLotSearch = (value: string) =>
   value.replace(/[\\%_]/g, '\\$&');
 
+export const normalizeLotSearch = (value: string | number | null | undefined) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase();
+
+const statusSearchLabels = [
+  {
+    label: 'Đã lên kế hoạch',
+    values: ['boposPlanned', 'boppPlanned', 'Planned', 'P'],
+  },
+  {
+    label: 'Đã phát hành',
+    values: ['boposReleased', 'boppReleased', 'Released', 'R'],
+  },
+  { label: 'Đã đóng', values: ['boposClosed', 'boppClosed', 'Closed', 'L'] },
+  {
+    label: 'Đã huỷ',
+    values: ['boposCancelled', 'boppCancelled', 'Cancelled', 'C'],
+  },
+];
+
 export function productionOrderListWhere(
   finished: boolean,
   options: GetProductionOrderListDto,
@@ -36,8 +59,15 @@ export function productionOrderListWhere(
       { production_order_code: { contains } },
       { item_code: { contains } },
       { description: { contains } },
+      { status: { contains } },
       { item: { is: { item_name: { contains } } } },
     ];
+    const statuses = statusSearchLabels
+      .filter(({ label }) =>
+        normalizeLotSearch(label).includes(normalizeLotSearch(term)),
+      )
+      .flatMap(({ values }) => values);
+    if (statuses.length) or.push({ status: { in: statuses } });
     // Numeric terms also match the exact SAP document number; leading zeros are allowed.
     if (/^\d+$/.test(term) && Number(term) <= 2147483647) {
       or.push({ id: Number(term) });

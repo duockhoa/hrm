@@ -1,5 +1,6 @@
 import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { GetProductionOrderListDto } from './dto/get-production-order-list.dto';
+import { GetFinishedProductSummariesDto } from './dto/get-finished-product-summaries.dto';
 import { GetProductionOrderDateChecksDto } from './dto/get-production-order-date-checks.dto';
 import { ApiOperation, ApiProduces, ApiOkResponse } from '@nestjs/swagger';
 import {
@@ -486,8 +487,11 @@ export class ProductionOrdersController {
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.LIST)
   @Get('finished-product-summaries')
-  async findAllFinishedProductSummaries() {
-    return this.productionOrderFinishedProductSummariesService.findAll();
+  async findAllFinishedProductSummaries(
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query: GetFinishedProductSummariesDto = {},
+  ) {
+    return this.productionOrderFinishedProductSummariesService.findAll(query);
   }
 
   @Permissions(

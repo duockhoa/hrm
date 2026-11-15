@@ -25,19 +25,25 @@ const fetchProductionOrders = async () => {
   return response.data;
 };
 
-const fetchFinishedProducts = async () => {
+const searchFinishedProducts = async (search = "") => {
   const response = await axiosClient.get<ProductionOrderListItem[]>(
     API_ROUTES.productionOrders.finishedProducts,
+    { params: { search: search.trim() || undefined } },
   );
   return response.data;
 };
 
-const fetchSemiFinishedProducts = async () => {
+const fetchFinishedProducts = async () => searchFinishedProducts();
+
+const searchSemiFinishedProducts = async (search = "") => {
   const response = await axiosClient.get<ProductionOrderListItem[]>(
     API_ROUTES.productionOrders.semiFinishedProducts,
+    { params: { search: search.trim() || undefined } },
   );
   return response.data;
 };
+
+const fetchSemiFinishedProducts = async () => searchSemiFinishedProducts();
 
 const fetchProductionOrderById = async (id: string | number) => {
   const response = await axiosClient.get(
@@ -1859,12 +1865,15 @@ const fetchAuthenticatedAsset = async (
   return response;
 };
 
-const fetchFinishedProductSummaries = async () => {
+const searchFinishedProductSummaries = async (search = "") => {
   const response = await axiosClient.get(
     API_ROUTES.productionOrders.finishedProductSummaries,
+    { params: { search: search.trim() || undefined } },
   );
   return response.data;
 };
+
+const fetchFinishedProductSummaries = async () => searchFinishedProductSummaries();
 
 const fetchFinishedProductSummary = async (id: string | number) => {
   const response = await axiosClient.get(
@@ -2550,6 +2559,9 @@ const exportProductionOrderBatchReportPDF = async (id: string | number) => {
 const productOrdersService = {
   fetchProductionOrderCompleteness,
   fetchProductionOrders,
+  searchFinishedProducts,
+  searchSemiFinishedProducts,
+  searchFinishedProductSummaries,
   fetchFinishedProducts,
   fetchSemiFinishedProducts,
   fetchProductionOrderById,

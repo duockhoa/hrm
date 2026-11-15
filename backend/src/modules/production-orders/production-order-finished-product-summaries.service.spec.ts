@@ -193,6 +193,77 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     );
   });
 
+  it('searches the scoped summary projection, including the creator and latest PYCLM, without accents', async () => {
+    const first = {
+      id: 41,
+      production_order_id: 2001,
+      created_at: new Date('2026-11-15T08:00:00Z'),
+      createdBy: { name: 'Nguyễn Văn Bình', department: 'Đảm bảo chất lượng' },
+      productionOrder: {
+        id: 2001,
+        item_code: 'TP001',
+        production_order_code: 'LSX-A',
+        lot_no: 'LOT-A',
+        item: { item_code: 'TP001', item_name: 'Vitamin C' },
+        samplingRequests: [
+          {
+            status: 'sent',
+            location: 'Kho thành phẩm',
+            sender: { name: 'Trần Hà' },
+          },
+          {
+            status: 'pending',
+            location: 'Old location',
+            sender: { name: 'Old sender' },
+          },
+        ],
+      },
+    };
+    const second = {
+      ...first,
+      id: 42,
+      production_order_id: 2002,
+      createdBy: { name: 'Lê Minh', department: 'Sản xuất' },
+      productionOrder: {
+        ...first.productionOrder,
+        production_order_code: 'LSX-B',
+        item_code: 'TP002',
+        lot_no: 'LOT-B',
+        item: { item_name: 'Zinc' },
+        samplingRequests: [],
+      },
+    };
+    prismaService.productionOrderFinishedProductSummaries.findMany.mockResolvedValue(
+      [first, second],
+    );
+    for (const search of [
+      '  LSX-A  ',
+      'LOT-A',
+      'vitamin',
+      'TP001',
+      '2001',
+      '41',
+      'nguyen van binh',
+      'dam bao chat luong',
+      'kho thanh pham',
+      'tran ha',
+      'da gui',
+    ]) {
+      expect((await service.findAll({ search })).map((row) => row.id)).toEqual([
+        41,
+      ]);
+    }
+    expect(
+      (await service.findAll({ search: 'chua gui' })).map((row) => row.id),
+    ).toEqual([42]);
+    expect(await service.findAll({ search: 'old location' })).toEqual([]);
+    expect(await service.findAll({ search: 'old sender' })).toEqual([]);
+    expect(
+      (await service.findAll({ search: '2026-11-15' })).map((row) => row.id),
+    ).toEqual([41, 42]);
+    expect(await service.findAll({ search: ' \n ' })).toHaveLength(2);
+  });
+
   it('gets a finished product summary by id', async () => {
     const summary = {
       id: 1,

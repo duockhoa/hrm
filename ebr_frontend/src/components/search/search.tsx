@@ -9,11 +9,22 @@ import useSearchStore from "@/store/search.store";
 import { CONNECTION_HISTORY_URL } from "@/features/connection-history/connection-history.service";
 import { API_ROUTES } from "@/lib/api-routes";
 
-const API_SEARCH_URLS: Record<string, string> = {
-  "/connection-history": CONNECTION_HISTORY_URL,
-  "/finished-products": API_ROUTES.items.finishedProducts,
-  "/raw-materials": API_ROUTES.items.rawMaterials,
-  "/semi-finished-products": API_ROUTES.items.semiFinishedProducts,
+const API_SEARCH_URLS: Record<string, string[]> = {
+  "/connection-history": [CONNECTION_HISTORY_URL],
+  "/finished-products": [API_ROUTES.items.finishedProducts],
+  "/raw-materials": [API_ROUTES.items.rawMaterials],
+  "/semi-finished-products": [API_ROUTES.items.semiFinishedProducts],
+  "/home": [API_ROUTES.productionOrders.semiFinishedProducts],
+  "/finished-product-production-orders": [
+    API_ROUTES.productionOrders.finishedProducts,
+  ],
+  "/product-orders": [
+    API_ROUTES.productionOrders.semiFinishedProducts,
+    API_ROUTES.productionOrders.finishedProducts,
+  ],
+  "/finished-product-summaries": [
+    API_ROUTES.productionOrders.finishedProductSummaries,
+  ],
 };
 
 export default function Search() {
@@ -27,8 +38,11 @@ function SearchInput({ searchScopePath }: { searchScopePath: string }) {
   const ref = useRef<HTMLInputElement>(null);
   const { mutate } = useSWRConfig();
   const isConnectionHistory = searchScopePath === "/connection-history";
-  const apiSearchUrl = API_SEARCH_URLS[searchScopePath];
-  const isApiSearch = Boolean(apiSearchUrl);
+  const apiSearchUrls = API_SEARCH_URLS[searchScopePath];
+  const isApiSearch = Boolean(apiSearchUrls);
+  const isLotSearch = apiSearchUrls?.some((url) =>
+    url.startsWith("/production-orders/"),
+  );
   const search = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
   );
@@ -62,7 +76,8 @@ function SearchInput({ searchScopePath }: { searchScopePath: string }) {
           setSearch(searchScopePath, keyword);
           if (keyword === search.trim()) {
             void mutate(
-              (key) => (Array.isArray(key) ? key[0] : key) === apiSearchUrl,
+              (key) =>
+                apiSearchUrls?.includes(Array.isArray(key) ? key[0] : key) ?? false,
             );
           }
         }
@@ -75,9 +90,11 @@ function SearchInput({ searchScopePath }: { searchScopePath: string }) {
         placeholder={
           isConnectionHistory
             ? "Tên, tài khoản, email..."
-            : isApiSearch
-              ? "Mã hàng, tên hàng, mã DK..."
-              : "Tìm kiếm..."
+            : isLotSearch
+              ? "Mã lệnh, số lô, sản phẩm..."
+              : isApiSearch
+                ? "Mã hàng, tên hàng, mã DK..."
+                : "Tìm kiếm..."
         }
         maxLength={isConnectionHistory ? 100 : isApiSearch ? 200 : undefined}
         className="rounded-full  md:w-40 w-0 focus:w-40  md:focus:w-100 focus:ring-0 focus-visible:ring-0 transition-all duration-300 ease-in-out pr-8"

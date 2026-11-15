@@ -10,6 +10,8 @@ import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-pro
 import { UpdateProductionOrderFinishedProductSummaryDto } from './dto/update-production-order-finished-product-summary.dto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { GetAuditLogPageDto } from '../audit-logs/dto/get-audit-log-page.dto';
+import { GetFinishedProductSummariesDto } from './dto/get-finished-product-summaries.dto';
+import { normalizeLotSearch } from './production-order-list-query';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -104,7 +106,7 @@ export class ProductionOrderFinishedProductSummariesService {
     });
   }
 
-  async findAll() {
+  async findAll(options: GetFinishedProductSummariesDto = {}) {
     const summaries =
       await this.prismaService.productionOrderFinishedProductSummaries.findMany(
         {
@@ -120,7 +122,7 @@ export class ProductionOrderFinishedProductSummariesService {
         },
       );
 
-    return summaries.map((summary) => {
+    const result = summaries.map((summary) => {
       const { samplingRequests, ...productionOrder } = summary.productionOrder;
       const latestSamplingRequest = samplingRequests[0] ?? null;
 
@@ -138,6 +140,33 @@ export class ProductionOrderFinishedProductSummariesService {
           },
         },
       };
+    });
+
+    const search = normalizeLotSearch(options.search).trim();
+    if (!search) return result;
+
+    // Search the same projection shown to users, including only the latest PYCLM.
+    // Keeping this after projection avoids matching superseded sampling requests.
+    return result.filter((summary) => {
+      const order = summary.productionOrder;
+      const creator = summary.createdBy;
+      const sender = order.pyclm.sender;
+      return [
+        summary.id,
+        summary.production_order_id,
+        order.production_order_code,
+        order.item_code,
+        order.item?.item_code,
+        order.item?.item_name,
+        order.lot_no,
+        order.pyclm.status,
+        order.pyclm.isSent ? 'Đã gửi' : 'Chưa gửi',
+        order.pyclm.location,
+        sender?.name ?? sender?.username ?? sender?.email,
+        creator?.name ?? creator?.username ?? creator?.email,
+        creator?.department,
+        summary.created_at.toISOString(),
+      ].some((value) => normalizeLotSearch(value).includes(search));
     });
   }
 

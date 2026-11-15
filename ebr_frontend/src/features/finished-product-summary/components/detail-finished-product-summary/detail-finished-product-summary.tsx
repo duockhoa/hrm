@@ -268,7 +268,11 @@ export default function FinishedProductSummaryDetail({
   const refreshRelatedSummaries = async () => {
     await Promise.all([
       mutate(),
-      mutateGlobal(API_ROUTES.productionOrders.finishedProductSummaries),
+      mutateGlobal(
+        (key) =>
+          (Array.isArray(key) ? key[0] : key) ===
+          API_ROUTES.productionOrders.finishedProductSummaries,
+      ),
       ...(productionOrderSummaryKey
         ? [mutateGlobal(productionOrderSummaryKey)]
         : []),
@@ -283,7 +287,11 @@ export default function FinishedProductSummaryDetail({
       await productionOrdersService.deleteFinishedProductSummary(summaryId);
       toast.success("Đã xóa tổng kết thành phẩm.");
       await Promise.all([
-        mutateGlobal(API_ROUTES.productionOrders.finishedProductSummaries),
+        mutateGlobal(
+          (key) =>
+            (Array.isArray(key) ? key[0] : key) ===
+            API_ROUTES.productionOrders.finishedProductSummaries,
+        ),
         ...(productionOrderSummaryKey
           ? [mutateGlobal(productionOrderSummaryKey)]
           : []),
@@ -395,7 +403,9 @@ export default function FinishedProductSummaryDetail({
                     await Promise.all([
                       mutate(),
                       mutateGlobal(
-                        API_ROUTES.productionOrders.finishedProductSummaries,
+                        (key) =>
+                          (Array.isArray(key) ? key[0] : key) ===
+                          API_ROUTES.productionOrders.finishedProductSummaries,
                       ),
                     ]);
                   }}

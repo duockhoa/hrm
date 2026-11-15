@@ -1,5 +1,7 @@
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { GetProductionOrderListDto } from './dto/get-production-order-list.dto';
+import { GetFinishedProductSummariesDto } from './dto/get-finished-product-summaries.dto';
 import {
   escapeLotSearch,
   productionOrderListWhere,
@@ -13,6 +15,29 @@ const parse = (value: unknown): Promise<GetProductionOrderListDto> =>
   });
 
 describe('lot list query validation and search', () => {
+  it('validates and normalizes summary search independently of pagination', async () => {
+    const metadata = {
+      type: 'query' as const,
+      metatype: GetFinishedProductSummariesDto,
+    };
+    await expect(
+      pipe.transform({ search: '  người tạo  ' }, metadata),
+    ).resolves.toMatchObject({ search: 'người tạo' });
+    for (const search of ['x'.repeat(201), ['a', 'b'], { contains: 'a' }]) {
+      await expect(pipe.transform({ search }, metadata)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    }
+  });
+
+  it('searches displayed Vietnamese production statuses as well as raw statuses', () => {
+    const clauses = productionOrderListWhere(true, { search: 'da dong' })
+      .AND as Prisma.ProductionOrdersWhereInput[];
+    expect(clauses[1].OR).toContainEqual({
+      status: { in: ['boposClosed', 'boppClosed', 'Closed', 'L'] },
+    });
+    expect(clauses[1].OR).toContainEqual({ status: { contains: 'dong' } });
+  });
   it('normalizes Vietnamese Unicode, trims input and parses optional pagination', async () => {
     const query = await parse({
       search: '  Lô\u0300   001  ',
@@ -45,7 +70,7 @@ describe('lot list query validation and search', () => {
     const where = productionOrderListWhere(true, {
       search: '  aspirin\t001\naspirin  ',
     });
-    const clauses = where.AND as any[];
+    const clauses = where.AND as Prisma.ProductionOrdersWhereInput[];
     expect(clauses).toHaveLength(2);
     expect(clauses[0].OR).toContainEqual({
       item: { is: { item_name: { contains: 'aspirin' } } },

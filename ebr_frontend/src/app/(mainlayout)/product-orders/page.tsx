@@ -2,6 +2,7 @@
 
 import { ListProductOrderHeader } from "@/features/production-orders";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   TableBody,
   TableCell,
@@ -12,7 +13,7 @@ import {
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { API_ROUTES } from "@/lib/api-routes";
 import { isCancelledProductionOrder } from "@/lib/production-order-status";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { getSearchScopePath } from "@/lib/search-utils";
 import { productOrdersService } from "@/services/index.service";
 import useSearchStore from "@/store/search.store";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -273,29 +274,47 @@ export default function ProductOrdersPage() {
   const activeLotId = pathname.startsWith(`${PRODUCT_ORDERS_ROUTE}/`)
     ? decodeURIComponent(pathname.replace(`${PRODUCT_ORDERS_ROUTE}/`, ""))
     : null;
+  const searchScopePath = getSearchScopePath(pathname);
+  const searchKeyword = useSearchStore(
+    (state) => state.searchByPath[searchScopePath] ?? "",
+  ).trim();
+  const isSearching = searchKeyword.length > 0;
   const {
     data: semiFinishedProducts = [],
     isLoading: semiFinishedProductsLoading,
+    error: semiFinishedProductsError,
+    mutate: reloadSemiFinishedProducts,
   } = useSWR<ProductionOrderLot[]>(
-    API_ROUTES.productionOrders.semiFinishedProducts,
-    productOrdersService.fetchSemiFinishedProducts,
+    isSearching
+      ? [API_ROUTES.productionOrders.semiFinishedProducts, searchKeyword]
+      : API_ROUTES.productionOrders.semiFinishedProducts,
+    () => productOrdersService.searchSemiFinishedProducts(searchKeyword),
   );
-  const { data: finishedProducts = [], isLoading: finishedProductsLoading } =
-    useSWR<ProductionOrderLot[]>(
-      API_ROUTES.productionOrders.finishedProducts,
-      productOrdersService.fetchFinishedProducts,
-    );
+  const {
+    data: finishedProducts = [],
+    isLoading: finishedProductsLoading,
+    error: finishedProductsError,
+    mutate: reloadFinishedProducts,
+  } = useSWR<ProductionOrderLot[]>(
+    isSearching
+      ? [API_ROUTES.productionOrders.finishedProducts, searchKeyword]
+      : API_ROUTES.productionOrders.finishedProducts,
+    () => productOrdersService.searchFinishedProducts(searchKeyword),
+  );
   const requestedTab = searchParams.get("tab");
+  const hasRequestedTab =
+    requestedTab === LOT_TABS.finished || requestedTab === LOT_TABS.semiFinished;
+  const { data: activeLot } = useSWR<ProductionOrderLot>(
+    activeLotId && !hasRequestedTab
+      ? `${API_ROUTES.productionOrders.base}/${activeLotId}`
+      : null,
+    () => productOrdersService.fetchProductionOrderById(activeLotId!),
+  );
   const inferredTab =
-    activeLotId &&
-    finishedProducts.some((lot) => String(lot.id) === activeLotId) &&
-    !semiFinishedProducts.some((lot) => String(lot.id) === activeLotId)
+    activeLot?.item_code?.startsWith("TP")
       ? LOT_TABS.finished
       : LOT_TABS.semiFinished;
-  const activeTab: LotTab =
-    requestedTab === LOT_TABS.finished || requestedTab === LOT_TABS.semiFinished
-      ? requestedTab
-      : inferredTab;
+  const activeTab: LotTab = hasRequestedTab ? requestedTab : inferredTab;
   const productOrders =
     activeTab === LOT_TABS.semiFinished
       ? semiFinishedProducts
@@ -305,37 +324,16 @@ export default function ProductOrdersPage() {
       ? semiFinishedProductsLoading
       : finishedProductsLoading;
 
-  const searchScopePath = getSearchScopePath(pathname);
-  const searchKeyword = useSearchStore(
-    (state) => state.searchByPath[searchScopePath] ?? "",
-  );
-  const isSearching = searchKeyword.trim().length > 0;
+  const productOrdersError =
+    activeTab === LOT_TABS.semiFinished
+      ? semiFinishedProductsError
+      : finishedProductsError;
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const filteredLots = useMemo(() => {
-    const activeLots = productOrders.filter(
-      (lot) => !isCancelledProductionOrder(lot.status),
-    );
-
-    if (!searchKeyword) {
-      return activeLots;
-    }
-
-    return activeLots.filter((lot) =>
-      matchesSearchKeyword(
-        [
-          lot.id,
-          lot.item_code,
-          lot.description,
-          lot.production_order_code,
-          lot.lot_no,
-          lot.item?.item_name,
-          formatProductionOrderStatus(lot.status),
-        ],
-        searchKeyword,
-      ),
-    );
-  }, [productOrders, searchKeyword]);
+  const filteredLots = useMemo(
+    () => productOrders.filter((lot) => !isCancelledProductionOrder(lot.status)),
+    [productOrders],
+  );
   const groupedLots = useMemo(
     () => groupLotsByCreationDate(filteredLots),
     [filteredLots],
@@ -452,7 +450,28 @@ export default function ProductOrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {productOrdersLoading ? (
+            {productOrdersError ? (
+              <TableRow>
+                <TableCell
+                  colSpan={13}
+                  role="alert"
+                  className="p-4 text-center text-red-600"
+                >
+                  Không thể tải danh sách lô.
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => void (
+                      activeTab === LOT_TABS.semiFinished
+                        ? reloadSemiFinishedProducts()
+                        : reloadFinishedProducts()
+                    )}
+                  >
+                    Thử lại
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ) : productOrdersLoading ? (
               <ProductOrderTableSkeleton />
             ) : groupedLots.length > 0 ? (
               groupedLots.map((group) => (
@@ -571,7 +590,7 @@ export default function ProductOrdersPage() {
           </TableBody>
         </table>
 
-        {!productOrdersLoading && filteredLots.length === 0 ? (
+        {!productOrdersError && !productOrdersLoading && filteredLots.length === 0 ? (
           <p className="p-4 text-center text-sm text-gray-500">
             {isSearching ? "Không tìm thấy lô phù hợp." : "Chưa có lô nào."}
           </p>

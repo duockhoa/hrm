@@ -17,7 +17,7 @@ import {
 import { FinishedProductSummaryDetail } from "@/features/finished-product-summary";
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { getSearchScopePath } from "@/lib/search-utils";
 import { productOrdersService } from "@/services/index.service";
 import useSearchStore from "@/store/search.store";
 import { X } from "lucide-react";
@@ -223,42 +223,17 @@ export default function FinishedProductSummariesPage() {
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
-  );
-  const isSearching = searchKeyword.trim().length > 0;
+  ).trim();
+  const isSearching = searchKeyword.length > 0;
   const { data, error, isLoading } = useSWR<FinishedProductSummary[]>(
-    API_ROUTES.productionOrders.finishedProductSummaries,
-    productOrdersService.fetchFinishedProductSummaries,
+    isSearching
+      ? [API_ROUTES.productionOrders.finishedProductSummaries, searchKeyword]
+      : API_ROUTES.productionOrders.finishedProductSummaries,
+    () => productOrdersService.searchFinishedProductSummaries(searchKeyword),
   );
 
   const summaries = useMemo(() => (Array.isArray(data) ? data : []), [data]);
-  const filteredSummaries = useMemo(() => {
-    if (!searchKeyword) return summaries;
-
-    return summaries.filter((summary) => {
-      const productionOrder = getProductionOrder(summary);
-      const createdBy = getCreatedBy(summary);
-
-      return matchesSearchKeyword(
-        [
-          summary.id,
-          summary.production_order_id,
-          productionOrder?.production_order_code,
-          productionOrder?.item_code,
-          productionOrder?.item?.item_code,
-          productionOrder?.item?.item_name,
-          productionOrder?.lot_no,
-          productionOrder?.pyclm?.status,
-          isPyclmSent(productionOrder?.pyclm) ? "Đã gửi" : "Chưa gửi",
-          productionOrder?.pyclm?.location,
-          getUserLabel(productionOrder?.pyclm?.sender),
-          getUserLabel(createdBy),
-          createdBy?.department,
-          summary.created_at,
-        ],
-        searchKeyword,
-      );
-    });
-  }, [searchKeyword, summaries]);
+  const filteredSummaries = summaries;
   const groupedSummaries = useMemo(
     () => groupSummariesByCreatedDate(filteredSummaries),
     [filteredSummaries],

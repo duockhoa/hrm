@@ -1,15 +1,15 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ItemProductOrder } from "@/features/production-orders";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { API_ROUTES } from "@/lib/api-routes";
 import { isCancelledProductionOrder } from "@/lib/production-order-status";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { getSearchScopePath } from "@/lib/search-utils";
 import { productOrdersService } from "@/services/index.service";
-import useProductOrderStore from "@/store/product-orders.store";
 import useSearchStore from "@/store/search.store";
 import { usePathname, useRouter } from "next/navigation";
-import { Fragment, useEffect, useMemo, useRef } from "react";
+import { Fragment, useMemo, useRef } from "react";
 import HeaderListSemiFinishedLot from "@/components/header-list-semi-finished-lot/header-list-semi-finished-lot";
 import useSWR from "swr";
 
@@ -75,60 +75,28 @@ const groupLotsByCreationDate = <T extends Record<string, any>>(lots: T[]) => {
 };
 
 export default function HomePage() {
-  const {
-    productOrders,
-    productOrdersLoading,
-    setProductOrders,
-    setIsLoading,
-  } = useProductOrderStore();
-  const { data, isLoading } = useSWR(
-    API_ROUTES.productionOrders.semiFinishedProducts,
-    productOrdersService.fetchSemiFinishedProducts,
-  );
-
-  useEffect(() => {
-    setIsLoading(isLoading);
-    if (data) {
-      setProductOrders(data);
-      setIsLoading(false);
-    }
-  }, [data, isLoading, setIsLoading, setProductOrders]);
-
   const router = useRouter();
   const pathname = usePathname();
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
+  ).trim();
+  const isSearching = searchKeyword.length > 0;
+  const { data: productOrders = [], error, isLoading, mutate } = useSWR(
+    isSearching
+      ? [API_ROUTES.productionOrders.semiFinishedProducts, searchKeyword]
+      : API_ROUTES.productionOrders.semiFinishedProducts,
+    () => productOrdersService.searchSemiFinishedProducts(searchKeyword),
   );
-  const isSearching = searchKeyword.trim().length > 0;
   const activeLotId = pathname.startsWith("/home/")
     ? decodeURIComponent(pathname.replace("/home/", ""))
     : null;
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const filteredLots = useMemo(() => {
-    const activeLots = productOrders.filter(
-      (lot) => !isCancelledProductionOrder(lot.status),
-    );
-
-    if (!searchKeyword) {
-      return activeLots;
-    }
-
-    return activeLots.filter((lot) =>
-      matchesSearchKeyword(
-        [
-          lot.id,
-          lot.item_code,
-          lot.description,
-          lot.production_order_code,
-          lot.lot_no,
-          lot.item?.item_name,
-        ],
-        searchKeyword,
-      ),
-    );
-  }, [productOrders, searchKeyword]);
+  const filteredLots = useMemo(
+    () => productOrders.filter((lot) => !isCancelledProductionOrder(lot.status)),
+    [productOrders],
+  );
   const groupedLots = useMemo(
     () => groupLotsByCreationDate(filteredLots),
     [filteredLots],
@@ -155,7 +123,14 @@ export default function HomePage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
-        {productOrdersLoading ? (
+        {error ? (
+          <div role="alert" className="p-4 text-center text-sm text-red-600">
+            Không thể tải danh sách lô.
+            <Button type="button" variant="link" onClick={() => void mutate()}>
+              Thử lại
+            </Button>
+          </div>
+        ) : isLoading ? (
           Array.from({ length: 10 }).map((_, index) => (
             <ItemProductOrder
               key={index}
@@ -182,7 +157,7 @@ export default function HomePage() {
           ))
         ) : (
           <p className="p-4 text-center text-sm text-gray-500">
-            {isSearching ? "Khong tim thay lo phu hop." : "Chua co lo nao."}
+            {isSearching ? "Không tìm thấy lô phù hợp." : "Chưa có lô nào."}
           </p>
         )}
       </div>
