@@ -1,9 +1,10 @@
 import axiosClient from "@/lib/axios-client";
 
-export const CONNECTION_HISTORY_URL = "/ebr-connection-sessions";
+export const CONNECTION_HISTORY_URL = "/app-connection-sessions/hsl";
 export type ConnectionStatus = "connected" | "reconnecting" | "ended";
 export type ConnectionSession = {
   id: number;
+  application_key: "hsl";
   connected_at: string;
   last_seen_at: string;
   disconnected_at: string | null;

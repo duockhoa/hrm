@@ -10,6 +10,12 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import type { ConnectionApplicationKey } from '../app-connection-sessions.service';
+
+export class ConnectionApplicationParamsDto {
+  @IsIn(['hsl', 'wms'])
+  applicationKey: ConnectionApplicationKey;
+}
 
 export class GetConnectionSessionsDto {
   @IsOptional()

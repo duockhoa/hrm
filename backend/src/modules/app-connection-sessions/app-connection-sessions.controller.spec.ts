@@ -7,17 +7,27 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { Server } from 'node:http';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
-import { EbrConnectionSessionsController } from './ebr-connection-sessions.controller';
-import { EbrConnectionSessionsService } from './ebr-connection-sessions.service';
+import {
+  AppConnectionSessionsController,
+  EbrConnectionSessionsController,
+} from './app-connection-sessions.controller';
+import { AppConnectionSessionsService } from './app-connection-sessions.service';
 
-describe('EBR connection history HTTP authorization', () => {
+describe.each([
+  ['/ebr-connection-sessions', 'hsl'],
+  ['/app-connection-sessions/hsl', 'hsl'],
+  ['/app-connection-sessions/wms', 'wms'],
+] as const)('%s HTTP authorization', (route, applicationKey) => {
   let app: INestApplication<Server>;
   const sessions = { findAll: jest.fn(), end: jest.fn() };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
-      controllers: [EbrConnectionSessionsController],
+      controllers: [
+        AppConnectionSessionsController,
+        EbrConnectionSessionsController,
+      ],
       providers: [
-        { provide: EbrConnectionSessionsService, useValue: sessions },
+        { provide: AppConnectionSessionsService, useValue: sessions },
       ],
     })
       .overrideGuard(jwtAuthGuard)
@@ -50,18 +60,17 @@ describe('EBR connection history HTTP authorization', () => {
   afterAll(() => app.close());
 
   it('requires authentication and users.list permission for the history', async () => {
+    await request(app.getHttpServer()).get(route).expect(401);
     await request(app.getHttpServer())
-      .get('/ebr-connection-sessions')
-      .expect(401);
-    await request(app.getHttpServer())
-      .get('/ebr-connection-sessions')
+      .get(route)
       .set('Authorization', 'Bearer user')
       .expect(403);
     await request(app.getHttpServer())
-      .get('/ebr-connection-sessions?page=2&limit=10')
+      .get(`${route}?page=2&limit=10`)
       .set('Authorization', 'Bearer admin')
       .expect(200);
     expect(sessions.findAll).toHaveBeenCalledWith(
+      applicationKey,
       expect.objectContaining({ page: 2, limit: 10 }),
     );
   });
@@ -74,23 +83,70 @@ describe('EBR connection history HTTP authorization', () => {
       'connected_from=invalid',
     ]) {
       await request(app.getHttpServer())
-        .get(`/ebr-connection-sessions?${query}`)
+        .get(`${route}?${query}`)
         .set('Authorization', 'Bearer admin')
         .expect(400);
     }
     expect(sessions.findAll).not.toHaveBeenCalled();
   });
 
+  it('does not let query or body fields override the route application or authenticated user', async () => {
+    const otherApplication = applicationKey === 'hsl' ? 'wms' : 'hsl';
+    await request(app.getHttpServer())
+      .get(
+        `${route}?application_key=${otherApplication}&applicationKey=${otherApplication}`,
+      )
+      .set('Authorization', 'Bearer admin')
+      .expect(200);
+    expect(sessions.findAll).toHaveBeenCalledWith(
+      applicationKey,
+      expect.not.objectContaining({ application_key: otherApplication }),
+    );
+    const clientSessionId = '0464244a-e11a-4e03-9e41-f6c7309b125c';
+    await request(app.getHttpServer())
+      .post(`${route}/end`)
+      .set('Authorization', 'Bearer user')
+      .send({
+        client_session_id: clientSessionId,
+        user_id: 99,
+        application_key: otherApplication,
+      })
+      .expect(201);
+    expect(sessions.end).toHaveBeenCalledWith(
+      applicationKey,
+      7,
+      clientSessionId,
+    );
+  });
+
+  it('rejects applications outside the supported list', async () => {
+    await request(app.getHttpServer())
+      .get('/app-connection-sessions/unknown')
+      .set('Authorization', 'Bearer admin')
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/app-connection-sessions/unknown/end')
+      .set('Authorization', 'Bearer user')
+      .send({ client_session_id: '0464244a-e11a-4e03-9e41-f6c7309b125c' })
+      .expect(400);
+    expect(sessions.findAll).not.toHaveBeenCalled();
+    expect(sessions.end).not.toHaveBeenCalled();
+  });
+
   it('lets a normal user end only their own tab session', async () => {
     const clientSessionId = '0464244a-e11a-4e03-9e41-f6c7309b125c';
     await request(app.getHttpServer())
-      .post('/ebr-connection-sessions/end')
+      .post(`${route}/end`)
       .set('Authorization', 'Bearer user')
       .send({ client_session_id: clientSessionId, user_id: 99 })
       .expect(201);
-    expect(sessions.end).toHaveBeenCalledWith(7, clientSessionId);
+    expect(sessions.end).toHaveBeenCalledWith(
+      applicationKey,
+      7,
+      clientSessionId,
+    );
     await request(app.getHttpServer())
-      .post('/ebr-connection-sessions/end')
+      .post(`${route}/end`)
       .set('Authorization', 'Bearer user')
       .send({ client_session_id: 'invalid' })
       .expect(400);

@@ -5,11 +5,19 @@ import Header from "@/components/header/header";
 import Sidebar from "@/components/sidebar/sidebar";
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
-import { usersService } from "@/services/index.service";
+import { userService, usersService } from "@/services/index.service";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useUsersStore from "@/store/users.store";
 import useRawMaterialsStore from "@/store/raw-materials.store";
-import { Boxes, Info, Package, PackageSearch, Thermometer } from "lucide-react";
+import {
+  Boxes,
+  Info,
+  Package,
+  PackageSearch,
+  Thermometer,
+  Unplug,
+} from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import useSWR from "swr";
 
@@ -39,6 +47,12 @@ const menuItems = [
     url: "/items",
   },
   {
+    id: "connection-history",
+    name: "Lịch sử kết nối",
+    icon: <Unplug className="size-5 shrink-0" />,
+    url: "/connection-history",
+  },
+  {
     id: "about",
     name: "About",
     icon: <Info className="size-5 shrink-0" />,
@@ -59,6 +73,8 @@ export default function MainLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isConnectionHistoryPage = pathname === "/connection-history";
   const { isOpen, toggleSidebar } = useSidebarStore();
   const isMobile = useMobile();
   useEffect(() => {
@@ -68,6 +84,15 @@ export default function MainLayout({
   }, [isMobile, toggleSidebar]);
 
   const { setUsers, setIsLoading } = useUsersStore();
+  const { data: myPermissions } = useSWR(
+    API_ROUTES.users.myPermissions,
+    userService.fetchMyPermissions,
+  );
+  const menuData = menuItems.filter(
+    (item) =>
+      item.id !== "connection-history" ||
+      myPermissions?.permissionKeys.includes("users.list"),
+  );
   const { data: users, isLoading } = useSWR(
     API_ROUTES.users.base,
     usersService.fetcherUsers,
@@ -86,11 +111,13 @@ export default function MainLayout({
   return (
     <ApplicationAccessGuard>
       <RawMaterialsLoader />
-      <div className="flex h-screen flex-col">
+      <div className="flex h-dvh flex-col overflow-hidden">
         <Header />
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <Sidebar isOpen={isOpen} data={menuItems} isMobile={isMobile} />
-          <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-blue-50 p-2">
+          <Sidebar isOpen={isOpen} data={menuData} isMobile={isMobile} />
+          <div
+            className={`min-h-0 min-w-0 flex-1 bg-blue-50 p-2 ${isConnectionHistoryPage ? "overflow-hidden" : "overflow-auto"}`}
+          >
             {children}
           </div>
         </div>

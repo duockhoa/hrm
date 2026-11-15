@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
   OnGatewayConnection,
@@ -11,7 +11,10 @@ import { PrismaService } from 'src/prisma.service';
 import { getClientIp } from '../network-policies/client-ip';
 import { NetworkPoliciesService } from '../network-policies/network-policies.service';
 import { UsersService } from '../users/users.service';
-import { EbrConnectionSessionsService } from './ebr-connection-sessions.service';
+import {
+  AppConnectionSessionsService,
+  type ConnectionApplicationKey,
+} from './app-connection-sessions.service';
 
 const socketError = (code: string) =>
   Object.assign(new Error(code), { data: { code } });
@@ -35,18 +38,20 @@ type PresenceNamespace = Namespace<
   PresenceData
 >;
 
-@WebSocketGateway({ namespace: '/ebr-presence', cors: { origin: '*' } })
-export class EbrConnectionSessionsGateway
+@Injectable()
+abstract class AppConnectionSessionsGateway
   implements OnGatewayInit, OnGatewayConnection
 {
-  private readonly logger = new Logger(EbrConnectionSessionsGateway.name);
+  private readonly logger = new Logger(AppConnectionSessionsGateway.name);
+  protected abstract readonly applicationKey: ConnectionApplicationKey;
+  protected abstract readonly eventPrefix: string;
 
   constructor(
     private readonly jwt: JwtService,
     private readonly users: UsersService,
     private readonly prisma: PrismaService,
     private readonly networkPolicies: NetworkPoliciesService,
-    private readonly sessions: EbrConnectionSessionsService,
+    private readonly sessions: AppConnectionSessionsService,
   ) {}
 
   afterInit(server: PresenceNamespace) {
@@ -98,7 +103,10 @@ export class EbrConnectionSessionsGateway
     const user = await this.users.findById(userId);
     if (!user) throw socketError('AUTH_INVALID');
     const application = await this.prisma.userApplications.findFirst({
-      where: { user_id: userId, application: { key: 'hsl', is_active: true } },
+      where: {
+        user_id: userId,
+        application: { key: this.applicationKey, is_active: true },
+      },
       select: { id: true },
     });
     if (!application) throw socketError('FORBIDDEN');
@@ -125,7 +133,10 @@ export class EbrConnectionSessionsGateway
       initialized = resolve;
     });
     const reportError = (error: unknown) =>
-      this.logger.error('Unable to update EBR connection history', error);
+      this.logger.error(
+        `Unable to update ${this.applicationKey} connection history`,
+        error,
+      );
     const markDisconnected = async (reason: string) => {
       if (connection)
         await this.sessions.disconnect(
@@ -148,7 +159,7 @@ export class EbrConnectionSessionsGateway
         .touch(connection)
         .then((active) => {
           if (!active) {
-            socket.emit('ebr-session:ended');
+            socket.emit(`${this.eventPrefix}:ended`);
             socket.disconnect();
           }
         })
@@ -159,11 +170,12 @@ export class EbrConnectionSessionsGateway
     };
     socket.conn.on('packet', onPacket);
     socket.on(
-      'ebr-session:logout',
+      `${this.eventPrefix}:logout`,
       (acknowledge: (value: { success: boolean }) => void) => {
         void (async () => {
           await ready;
           await this.sessions.end(
+            this.applicationKey,
             socket.data.userId,
             socket.data.clientSessionId,
           );
@@ -188,6 +200,7 @@ export class EbrConnectionSessionsGateway
         return;
       }
       const session = await this.sessions.connect(
+        this.applicationKey,
         socket.data.userId,
         socket.data.clientSessionId,
         {
@@ -213,14 +226,27 @@ export class EbrConnectionSessionsGateway
         ),
       );
       expirationTimer.unref();
-      socket.emit('ebr-session:ready', { sessionId: session.id });
+      socket.emit(`${this.eventPrefix}:ready`, { sessionId: session.id });
     } catch (error) {
       reportError(error);
       // Client retries transient database failures with backoff.
-      socket.emit('ebr-session:retry');
+      socket.emit(`${this.eventPrefix}:retry`);
       socket.disconnect();
     } finally {
       initialized!();
     }
   }
+}
+
+// Keep EBR's existing namespace and events compatible with already-open tabs.
+@WebSocketGateway({ namespace: '/ebr-presence', cors: { origin: '*' } })
+export class EbrConnectionSessionsGateway extends AppConnectionSessionsGateway {
+  protected readonly applicationKey = 'hsl' as const;
+  protected readonly eventPrefix = 'ebr-session';
+}
+
+@WebSocketGateway({ namespace: '/wms-presence', cors: { origin: '*' } })
+export class WmsConnectionSessionsGateway extends AppConnectionSessionsGateway {
+  protected readonly applicationKey = 'wms' as const;
+  protected readonly eventPrefix = 'wms-session';
 }

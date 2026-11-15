@@ -14,8 +14,9 @@ import { API_ROUTES } from "@/lib/api-routes";
 import { userService } from "@/services/index.service";
 import useUserStore from "@/store/user.store";
 import packageJson from "../../../package.json";
+import WmsPresence from "@/features/connection-history/wms-presence";
 
-const REQUIRED_APPLICATION_KEY = "hsl";
+const REQUIRED_APPLICATION_KEY = "wms";
 const ALL_APPLICATIONS_URL = process.env.NEXT_PUBLIC_ALL_APPLICATIONS_URL;
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -126,8 +127,8 @@ export default function ApplicationAccessGuard({
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm leading-6 text-gray-600">
-                Tài khoản của bạn chưa được cấp quyền sử dụng ứng dụng Hồ sơ
-                lô. Vui lòng liên hệ quản trị viên để được cấp quyền.
+                Tài khoản của bạn chưa được cấp quyền sử dụng ứng dụng Kho
+                Dược Khoa. Vui lòng liên hệ quản trị viên để được cấp quyền.
               </p>
               <div>
                 <Button
@@ -146,5 +147,10 @@ export default function ApplicationAccessGuard({
     );
   }
 
-  return children;
+  return (
+    <>
+      <WmsPresence />
+      {children}
+    </>
+  );
 }

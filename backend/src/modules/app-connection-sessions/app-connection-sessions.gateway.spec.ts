@@ -6,10 +6,16 @@ import { io, Socket } from 'socket.io-client';
 import { PrismaService } from 'src/prisma.service';
 import { NetworkPoliciesService } from '../network-policies/network-policies.service';
 import { UsersService } from '../users/users.service';
-import { EbrConnectionSessionsGateway } from './ebr-connection-sessions.gateway';
-import { EbrConnectionSessionsService } from './ebr-connection-sessions.service';
+import {
+  EbrConnectionSessionsGateway,
+  WmsConnectionSessionsGateway,
+} from './app-connection-sessions.gateway';
+import { AppConnectionSessionsService } from './app-connection-sessions.service';
 
-describe('EBR presence socket integration', () => {
+describe.each([
+  ['hsl', 'ebr'],
+  ['wms', 'wms'],
+] as const)('%s presence socket integration', (applicationKey, prefix) => {
   let app: INestApplication;
   let url: string;
   const sockets: Socket[] = [];
@@ -42,7 +48,7 @@ describe('EBR presence socket integration', () => {
     token = jwt.sign({ sub: 1, token_use: 'access' }, { expiresIn: 60 }),
     clientSessionId = randomUUID(),
   ) => {
-    const socket = io(`${url}/ebr-presence`, {
+    const socket = io(`${url}/${prefix}-presence`, {
       autoConnect: false,
       transports: ['websocket'],
       reconnection: false,
@@ -57,11 +63,12 @@ describe('EBR presence socket integration', () => {
     const module = await Test.createTestingModule({
       providers: [
         EbrConnectionSessionsGateway,
+        WmsConnectionSessionsGateway,
         { provide: JwtService, useValue: jwt },
         { provide: UsersService, useValue: users },
         { provide: PrismaService, useValue: prisma },
         { provide: NetworkPoliciesService, useValue: network },
-        { provide: EbrConnectionSessionsService, useValue: sessions },
+        { provide: AppConnectionSessionsService, useValue: sessions },
       ],
     }).compile();
     app = module.createNestApplication();
@@ -92,14 +99,22 @@ describe('EBR presence socket integration', () => {
 
   it('records an authenticated connection and its disconnect on the server', async () => {
     const socket = connect();
-    const ready = event(socket, 'ebr-session:ready');
+    const ready = event(socket, `${prefix}-session:ready`);
     socket.connect();
     expect(await ready).toEqual({ sessionId: 42 });
     expect(sessions.connect).toHaveBeenCalledWith(
+      applicationKey,
       1,
       socket.auth['clientSessionId'],
       expect.objectContaining({ socketId: socket.id }),
     );
+    expect(prisma.userApplications.findFirst).toHaveBeenCalledWith({
+      where: {
+        user_id: 1,
+        application: { key: applicationKey, is_active: true },
+      },
+      select: { id: true },
+    });
     const disconnected = new Promise<void>((resolve) =>
       sessions.disconnect.mockImplementationOnce(() => {
         resolve();
@@ -142,9 +157,25 @@ describe('EBR presence socket integration', () => {
     },
   );
 
-  it('rejects users without EBR access', async () => {
+  it('rejects users without access to this application', async () => {
     prisma.userApplications.findFirst.mockResolvedValueOnce(null);
     const socket = connect();
+    const rejected = event(socket, 'connect_error');
+    socket.connect();
+    expect((await rejected).data.code).toBe('FORBIDDEN');
+    expect(sessions.connect).not.toHaveBeenCalled();
+  });
+
+  it('does not accept access to the other application or an application supplied by the client', async () => {
+    const otherApplication = applicationKey === 'hsl' ? 'wms' : 'hsl';
+    prisma.userApplications.findFirst.mockImplementation(
+      ({ where }: { where: { application: { key: string } } }) =>
+        Promise.resolve(
+          where.application.key === otherApplication ? { id: 1 } : null,
+        ),
+    );
+    const socket = connect();
+    socket.auth = { ...socket.auth, applicationKey: otherApplication };
     const rejected = event(socket, 'connect_error');
     socket.connect();
     expect((await rejected).data.code).toBe('FORBIDDEN');
@@ -169,12 +200,15 @@ describe('EBR presence socket integration', () => {
 
   it('acknowledges logout only after the connection history is finalized', async () => {
     const socket = connect();
-    const ready = event(socket, 'ebr-session:ready');
+    const ready = event(socket, `${prefix}-session:ready`);
     socket.connect();
     await ready;
-    const result = await socket.timeout(2000).emitWithAck('ebr-session:logout');
+    const result = await socket
+      .timeout(2000)
+      .emitWithAck(`${prefix}-session:logout`);
     expect(result).toEqual({ success: true });
     expect(sessions.end).toHaveBeenCalledWith(
+      applicationKey,
       1,
       socket.auth['clientSessionId'],
     );
@@ -184,7 +218,7 @@ describe('EBR presence socket integration', () => {
     const socket = connect(
       jwt.sign({ sub: 1, token_use: 'access' }, { expiresIn: 1 }),
     );
-    const ready = event(socket, 'ebr-session:ready');
+    const ready = event(socket, `${prefix}-session:ready`);
     const expired = event(socket, 'auth:expired');
     socket.connect();
     await ready;

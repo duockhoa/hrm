@@ -10,6 +10,7 @@ export const STALE_CONNECTION_MS = 120_000;
 export const CONNECTED_THRESHOLD_MS = 60_000;
 
 type Connection = { id: number; connection_key: string };
+export type ConnectionApplicationKey = 'hsl' | 'wms';
 type ConnectionMetadata = {
   socketId: string;
   ipAddress?: string;
@@ -17,18 +18,19 @@ type ConnectionMetadata = {
 };
 
 @Injectable()
-export class EbrConnectionSessionsService {
-  private readonly logger = new Logger(EbrConnectionSessionsService.name);
+export class AppConnectionSessionsService {
+  private readonly logger = new Logger(AppConnectionSessionsService.name);
   private sweeping = false;
 
   constructor(private readonly prisma: PrismaService) {}
 
   async connect(
+    applicationKey: ConnectionApplicationKey,
     userId: number,
     clientSessionId: string,
     metadata: ConnectionMetadata,
   ) {
-    const activeKey = `${userId}:${clientSessionId}`;
+    const activeKey = `${applicationKey}:${userId}:${clientSessionId}`;
     await this.expireSessions(activeKey);
     const now = new Date();
     const connectionKey = randomUUID();
@@ -41,10 +43,11 @@ export class EbrConnectionSessionsService {
       ip_address: metadata.ipAddress?.slice(0, 45),
       user_agent: metadata.userAgent?.slice(0, 1000),
     };
-    const args: Prisma.UserEbrSessionsUpsertArgs = {
+    const args: Prisma.UserAppSessionsUpsertArgs = {
       where: { active_key: activeKey },
       create: {
         ...common,
+        application_key: applicationKey,
         user_id: userId,
         client_session_id: clientSessionId,
         active_key: activeKey,
@@ -54,19 +57,19 @@ export class EbrConnectionSessionsService {
     };
     // Concurrent reload/reconnect handshakes can race on MySQL's unique key.
     try {
-      return await this.prisma.userEbrSessions.upsert(args);
+      return await this.prisma.userAppSessions.upsert(args);
     } catch (error) {
       if (
         !(error instanceof Prisma.PrismaClientKnownRequestError) ||
         error.code !== 'P2002'
       )
         throw error;
-      return this.prisma.userEbrSessions.upsert(args);
+      return this.prisma.userAppSessions.upsert(args);
     }
   }
 
   async touch(connection: Connection) {
-    const result = await this.prisma.userEbrSessions.updateMany({
+    const result = await this.prisma.userAppSessions.updateMany({
       where: { ...connection, ended_at: null, disconnected_at: null },
       data: { last_seen_at: new Date() },
     });
@@ -75,7 +78,7 @@ export class EbrConnectionSessionsService {
 
   async disconnect(connection: Connection, reason: string) {
     // An old socket must never disconnect a newer connection of the same tab.
-    return this.prisma.userEbrSessions.updateMany({
+    return this.prisma.userAppSessions.updateMany({
       where: { ...connection, ended_at: null, disconnected_at: null },
       data: {
         disconnected_at: new Date(),
@@ -84,10 +87,15 @@ export class EbrConnectionSessionsService {
     });
   }
 
-  async end(userId: number, clientSessionId: string) {
+  async end(
+    applicationKey: ConnectionApplicationKey,
+    userId: number,
+    clientSessionId: string,
+  ) {
     const now = new Date();
-    await this.prisma.userEbrSessions.updateMany({
+    await this.prisma.userAppSessions.updateMany({
       where: {
+        application_key: applicationKey,
         user_id: userId,
         client_session_id: clientSessionId,
         ended_at: null,
@@ -111,7 +119,10 @@ export class EbrConnectionSessionsService {
     try {
       await this.expireSessions();
     } catch (error) {
-      this.logger.error('Unable to finalize expired EBR sessions', error);
+      this.logger.error(
+        'Unable to finalize expired application sessions',
+        error,
+      );
     } finally {
       this.sweeping = false;
     }
@@ -119,7 +130,7 @@ export class EbrConnectionSessionsService {
 
   async expireSessions(activeKey?: string) {
     const now = Date.now();
-    const stale = await this.prisma.userEbrSessions.findMany({
+    const stale = await this.prisma.userAppSessions.findMany({
       where: {
         ended_at: null,
         ...(activeKey ? { active_key: activeKey } : {}),
@@ -142,7 +153,7 @@ export class EbrConnectionSessionsService {
     });
     for (const session of stale) {
       // Compare the snapshot too: a heartbeat/reconnect may arrive during the sweep.
-      await this.prisma.userEbrSessions.updateMany({
+      await this.prisma.userAppSessions.updateMany({
         where: { ...session, ended_at: null },
         data: {
           active_key: null,
@@ -153,9 +164,14 @@ export class EbrConnectionSessionsService {
     }
   }
 
-  async findAll(query: GetConnectionSessionsDto) {
+  async findAll(
+    applicationKey: ConnectionApplicationKey,
+    query: GetConnectionSessionsDto,
+  ) {
     const { page = 1, limit = 20 } = query;
-    const where: Prisma.UserEbrSessionsWhereInput = {};
+    const where: Prisma.UserAppSessionsWhereInput = {
+      application_key: applicationKey,
+    };
     const keyword = query.keyword?.trim();
     if (keyword) {
       where.user = {
@@ -191,7 +207,7 @@ export class EbrConnectionSessionsService {
       };
 
     const cutoff = new Date(Date.now() - CONNECTED_THRESHOLD_MS);
-    const states: Record<string, Prisma.UserEbrSessionsWhereInput> = {
+    const states: Record<string, Prisma.UserAppSessionsWhereInput> = {
       connected: {
         ended_at: null,
         disconnected_at: null,
@@ -211,13 +227,14 @@ export class EbrConnectionSessionsService {
       : where;
     const [data, total, connected, reconnecting, ended] =
       await this.prisma.$transaction([
-        this.prisma.userEbrSessions.findMany({
+        this.prisma.userAppSessions.findMany({
           where: filtered,
           skip: (page - 1) * limit,
           take: limit,
           orderBy: [{ connected_at: 'desc' }, { id: 'desc' }],
           select: {
             id: true,
+            application_key: true,
             connected_at: true,
             last_seen_at: true,
             disconnected_at: true,
@@ -232,9 +249,9 @@ export class EbrConnectionSessionsService {
             },
           },
         }),
-        this.prisma.userEbrSessions.count({ where: filtered }),
+        this.prisma.userAppSessions.count({ where: filtered }),
         ...['connected', 'reconnecting', 'ended'].map((status) =>
-          this.prisma.userEbrSessions.count({
+          this.prisma.userAppSessions.count({
             where: { AND: [where, states[status]] },
           }),
         ),

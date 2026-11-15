@@ -43,7 +43,7 @@ import { WarehouseReceiptItemsModule } from './modules/warehouse-receipt-items/w
 import { WarehouseTemperatureHumidityChecksModule } from './modules/warehouse-temperature-humidity-checks/warehouse-temperature-humidity-checks.module';
 import { McpModule } from './modules/mcp/mcp.module';
 import { NetworkPoliciesModule } from './modules/network-policies/network-policies.module';
-import { EbrConnectionSessionsModule } from './modules/ebr-connection-sessions/ebr-connection-sessions.module';
+import { AppConnectionSessionsModule } from './modules/app-connection-sessions/app-connection-sessions.module';
 import { ThumbnailProcessingModule } from './common/thumbnails/thumbnail-processing.module';
 
 @Module({
@@ -84,7 +84,7 @@ import { ThumbnailProcessingModule } from './common/thumbnails/thumbnail-process
     SecondaryPackagingStageRequirementsModule,
     DosageFormsModule,
     UserLoginSessionsModule,
-    EbrConnectionSessionsModule,
+    AppConnectionSessionsModule,
     NotificationsModule,
     DataExportModule,
     AuditLogsModule,

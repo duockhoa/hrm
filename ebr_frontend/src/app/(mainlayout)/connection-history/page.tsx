@@ -100,9 +100,6 @@ function ConnectionHistoryTableSkeleton({ rows }: { rows: number }) {
       <TableCell>
         <Skeleton className="h-3 w-24" />
       </TableCell>
-      <TableCell>
-        <Skeleton className="h-3 w-44" />
-      </TableCell>
     </TableRow>
   ));
 }
@@ -251,7 +248,7 @@ export default function ConnectionHistoryPage() {
         <div ref={tableViewportRef} className="min-h-0 flex-1 overflow-hidden">
           <table className="w-full table-fixed text-sm [&_th]:whitespace-normal [&_th]:break-words [&_td]:truncate [&_td>div]:truncate [&_[data-slot=skeleton]]:max-w-full">
             <colgroup>
-              {[16, 11, 11, 11, 9, 13, 7, 10, 12].map((width, index) => (
+              {[20, 13, 13, 13, 10, 14, 7, 10].map((width, index) => (
                 <col key={index} style={{ width: `${width}%` }} />
               ))}
             </colgroup>
@@ -265,7 +262,6 @@ export default function ConnectionHistoryPage() {
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Số lần kết nối</TableHead>
                 <TableHead>Địa chỉ IP</TableHead>
-                <TableHead>Thiết bị / Trình duyệt</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -274,7 +270,7 @@ export default function ConnectionHistoryPage() {
               ) : error ? (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={8}
                     className="py-12 text-center text-red-600"
                     role="alert"
                   >
@@ -286,7 +282,7 @@ export default function ConnectionHistoryPage() {
               ) : !data?.data.length ? (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={8}
                     className="py-12 text-center text-gray-500"
                   >
                     {status
@@ -334,12 +330,6 @@ export default function ConnectionHistoryPage() {
                     </TableCell>
                     <TableCell className="font-mono text-xs" title={session.ip_address ?? undefined}>
                       {session.ip_address || "—"}
-                    </TableCell>
-                    <TableCell
-                      className="max-w-56 truncate text-xs text-gray-500"
-                      title={session.user_agent ?? undefined}
-                    >
-                      {session.user_agent || "—"}
                     </TableCell>
                   </TableRow>
                 ))

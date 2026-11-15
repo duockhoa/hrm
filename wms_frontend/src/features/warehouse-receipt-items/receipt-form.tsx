@@ -5,6 +5,15 @@ import useSWR, { useSWRConfig } from "swr";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Combobox,
   ComboboxContent,
@@ -185,6 +194,12 @@ export default function ReceiptForm({
     data?.manufacturer_code ?? "",
   );
   const [manufacturerSearchQuery, setManufacturerSearchQuery] = useState("");
+  const [manufacturerOpen, setManufacturerOpen] = useState(false);
+  const [createManufacturerOpen, setCreateManufacturerOpen] = useState(false);
+  const [newManufacturerName, setNewManufacturerName] = useState("");
+  const [manufacturerError, setManufacturerError] = useState("");
+  const [creatingManufacturer, setCreatingManufacturer] = useState(false);
+  const creatingManufacturerRef = useRef(false);
   const {
     data: manufacturers,
     error: manufacturersError,
@@ -208,6 +223,54 @@ export default function ReceiptForm({
       manufacturer.searchText.includes(manufacturerSearchQuery),
     [manufacturerSearchQuery],
   );
+
+  async function handleCreateManufacturer(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (creatingManufacturerRef.current) return;
+    const name = newManufacturerName.trim();
+    if (!name || name.length > 255) {
+      setManufacturerError(
+        !name
+          ? "Vui lòng nhập tên nhà sản xuất."
+          : "Tên nhà sản xuất không được quá 255 ký tự.",
+      );
+      return;
+    }
+    creatingManufacturerRef.current = true;
+    setCreatingManufacturer(true);
+    onSubmittingChange?.(true);
+    setManufacturerError("");
+    try {
+      const saved = await manufacturersService.create({
+        manufacturer_name: name,
+      });
+      await reloadManufacturers(
+        (current = []) =>
+          [...current.filter((item) => item.id !== saved.id), saved].sort((a, b) =>
+            a.manufacturer_code.localeCompare(b.manufacturer_code),
+          ),
+        { revalidate: false },
+      );
+      setManufacturerCode(saved.manufacturer_code);
+      setManufacturerSearchQuery("");
+      setError("");
+      setCreateManufacturerOpen(false);
+      toast.success("Đã thêm nhà sản xuất.");
+    } catch (error) {
+      setManufacturerError(
+        isAxiosError(error) && error.response?.status === 403
+          ? "Bạn không có quyền tạo nhà sản xuất."
+          : "Không thể tạo nhà sản xuất. Vui lòng thử lại.",
+      );
+    } finally {
+      creatingManufacturerRef.current = false;
+      setCreatingManufacturer(false);
+      onSubmittingChange?.(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -520,6 +583,8 @@ export default function ReceiptForm({
             <div key={key} className="space-y-2">
               <Label htmlFor="receipt-manufacturer-code">Nhà sản xuất</Label>
               <Combobox
+                open={manufacturerOpen}
+                onOpenChange={setManufacturerOpen}
                 autoHighlight
                 items={manufacturerOptions}
                 limit={50}
@@ -572,6 +637,23 @@ export default function ReceiptForm({
                       </ComboboxItem>
                     )}
                   </ComboboxList>
+                  <div className="border-t p-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full justify-start"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        setManufacturerOpen(false);
+                        setNewManufacturerName("");
+                        setManufacturerError("");
+                        setCreateManufacturerOpen(true);
+                      }}
+                    >
+                      <Plus className="size-4" />
+                      Tạo mới nhà sản xuất
+                    </Button>
+                  </div>
                 </ComboboxContent>
               </Combobox>
               {manufacturersError && (
@@ -733,6 +815,67 @@ export default function ReceiptForm({
           {isSubmitting ? "Đang lưu..." : "Lưu"}
         </Button>
       </div>
+      <Dialog
+        open={createManufacturerOpen}
+        onOpenChange={(open) => {
+          if (!creatingManufacturerRef.current) setCreateManufacturerOpen(open);
+        }}
+      >
+        <DialogContent
+          showCloseButton={!creatingManufacturer}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            formRef.current
+              ?.querySelector<HTMLInputElement>("#receipt-manufacturer-code")
+              ?.focus();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Tạo mới nhà sản xuất</DialogTitle>
+            <DialogDescription>
+              Nhập tên nhà sản xuất. Mã sẽ được cấp tự động khi lưu.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateManufacturer} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="receipt-new-manufacturer-name">
+                Tên nhà sản xuất *
+              </Label>
+              <Input
+                id="receipt-new-manufacturer-name"
+                value={newManufacturerName}
+                onChange={(event) => {
+                  setNewManufacturerName(event.target.value);
+                  setManufacturerError("");
+                }}
+                placeholder="Nhập tên nhà sản xuất"
+                autoFocus
+                required
+                maxLength={255}
+                disabled={creatingManufacturer}
+              />
+            </div>
+            {manufacturerError && (
+              <p role="alert" className="text-sm text-red-600">
+                {manufacturerError}
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={creatingManufacturer}
+                onClick={() => setCreateManufacturerOpen(false)}
+              >
+                Hủy
+              </Button>
+              <Button type="submit" disabled={creatingManufacturer}>
+                {creatingManufacturer ? "Đang lưu..." : "Lưu và chọn"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

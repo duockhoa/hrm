@@ -7,6 +7,7 @@ const protectedPaths = [
   "/home",
   "/finished-product-summaries",
   "/warehouse-temperature-humidity-checks",
+  "/connection-history",
   "/label",
   "/profile",
   "/setting",
