@@ -32,6 +32,7 @@ export async function fetchConnectionHistory(
   page: number,
   status?: ConnectionStatus,
   limit = 20,
+  keyword = "",
 ) {
   const response = await axiosClient.get<ConnectionHistoryResponse>(
     CONNECTION_HISTORY_URL,
@@ -40,6 +41,7 @@ export async function fetchConnectionHistory(
         page,
         limit,
         status,
+        keyword: keyword.trim() || undefined,
       },
     },
   );

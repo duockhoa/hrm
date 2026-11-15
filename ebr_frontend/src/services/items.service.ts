@@ -9,6 +9,13 @@ export type UpdateItemPayload = {
   registration_id?: number | null;
 };
 
+export type ItemCatalogEntry = {
+  item_code: string;
+  item_name: string | null;
+  dk_code: string | null;
+  unit: string | null;
+};
+
 const fetchItems = async () => {
   const response = await axiosClient.get(API_ROUTES.items.base);
   return response.data;
@@ -21,18 +28,27 @@ const fetchItemsByCodePrefix = async (codePrefix: string) => {
   return response.data;
 };
 
-const fetchFinishedProducts = async () => {
-  const response = await axiosClient.get(API_ROUTES.items.finishedProducts);
+const fetchFinishedProducts = async (search = "") => {
+  const response = await axiosClient.get<ItemCatalogEntry[]>(
+    API_ROUTES.items.finishedProducts,
+    { params: { search: search.trim() || undefined } },
+  );
   return response.data;
 };
 
-const fetchSemiFinishedProducts = async () => {
-  const response = await axiosClient.get(API_ROUTES.items.semiFinishedProducts);
+const fetchSemiFinishedProducts = async (search = "") => {
+  const response = await axiosClient.get<ItemCatalogEntry[]>(
+    API_ROUTES.items.semiFinishedProducts,
+    { params: { search: search.trim() || undefined } },
+  );
   return response.data;
 };
 
-const fetchRawMaterials = async () => {
-  const response = await axiosClient.get(API_ROUTES.items.rawMaterials);
+const fetchRawMaterials = async (search = "") => {
+  const response = await axiosClient.get<ItemCatalogEntry[]>(
+    API_ROUTES.items.rawMaterials,
+    { params: { search: search.trim() || undefined } },
+  );
   return response.data;
 };
 

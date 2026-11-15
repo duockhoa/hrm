@@ -472,7 +472,7 @@ export default function EditSemiFinishedProductForm({
   const refreshData = async () => {
     await Promise.all([
       mutate(`${API_ROUTES.items.base}/${itemCode}`),
-      mutate(listRoute),
+      mutate((key) => (Array.isArray(key) ? key[0] : key) === listRoute),
       mutate(`${API_ROUTES.productionSpecifications.base}/${itemCode}`),
     ]);
   };

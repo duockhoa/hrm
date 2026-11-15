@@ -1,59 +1,40 @@
 "use client";
 
 import { ItemRawMaterial, ListRawMaterialHeader } from "@/features/raw-materials";
+import { Button } from "@/components/ui/button";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { API_ROUTES } from "@/lib/api-routes";
 import { sortByItemCodeDesc } from "@/lib/item-sort";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { getSearchScopePath } from "@/lib/search-utils";
 import { itemsService } from "@/services/index.service";
-import useRawMaterialStore from "@/store/raw-materials.store";
 import useSearchStore from "@/store/search.store";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import useSWR from "swr";
 
 export default function RawMaterialsPage() {
-  const { rawMaterials, rawMaterialsLoading, setRawMaterials, setIsLoading } =
-    useRawMaterialStore();
-  const { data, isLoading } = useSWR(
-    API_ROUTES.items.rawMaterials,
-    itemsService.fetchRawMaterials,
-  );
-
-  useEffect(() => {
-    setIsLoading(isLoading);
-    if (data) {
-      setRawMaterials(data);
-      setIsLoading(false);
-    }
-  }, [data, isLoading, setIsLoading, setRawMaterials]);
-
   const router = useRouter();
   const pathname = usePathname();
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
+  ).trim();
+  const isSearching = searchKeyword.length > 0;
+  const { data, error, isLoading, mutate } = useSWR(
+    isSearching
+      ? [API_ROUTES.items.rawMaterials, searchKeyword]
+      : API_ROUTES.items.rawMaterials,
+    () => itemsService.fetchRawMaterials(searchKeyword),
   );
-  const isSearching = searchKeyword.trim().length > 0;
   const activeRawMaterialId = pathname.startsWith("/raw-materials/")
     ? decodeURIComponent(pathname.replace("/raw-materials/", ""))
     : null;
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const filteredRawMaterials = useMemo(() => {
-    if (!searchKeyword) {
-      return sortByItemCodeDesc(rawMaterials);
-    }
-
-    return sortByItemCodeDesc(
-      rawMaterials.filter((rawMaterial) =>
-        matchesSearchKeyword(
-          [rawMaterial.item_code, rawMaterial.item_name, rawMaterial.dk_code],
-          searchKeyword,
-        ),
-      ),
-    );
-  }, [rawMaterials, searchKeyword]);
+  const filteredRawMaterials = useMemo(
+    () => sortByItemCodeDesc(data ?? []),
+    [data],
+  );
 
   const { saveScrollPosition } = useScrollRestoration({
     ref: containerRef,
@@ -76,7 +57,14 @@ export default function RawMaterialsPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
-        {rawMaterialsLoading ? (
+        {error ? (
+          <div role="alert" className="p-4 text-center text-sm text-red-600">
+            Không thể tải danh mục nguyên liệu.
+            <Button type="button" variant="link" onClick={() => void mutate()}>
+              Thử lại
+            </Button>
+          </div>
+        ) : isLoading ? (
           Array.from({ length: 10 }).map((_, index) => (
             <ItemRawMaterial
               key={index}

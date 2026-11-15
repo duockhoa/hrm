@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { API_ROUTES } from "@/lib/api-routes";
 import { userService } from "@/services/index.service";
+import useSearchStore from "@/store/search.store";
 import {
   CONNECTION_HISTORY_URL,
   fetchConnectionHistory,
@@ -105,11 +106,21 @@ function ConnectionHistoryTableSkeleton({ rows }: { rows: number }) {
 }
 
 export default function ConnectionHistoryPage() {
+  const keyword = useSearchStore(
+    (state) => state.searchByPath["/connection-history"] ?? "",
+  ).trim();
+  const [previousKeyword, setPreviousKeyword] = useState(keyword);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ConnectionStatus>();
   const [pageSize, setPageSize] = useState(1);
   const tableViewportRef = useRef<HTMLDivElement>(null);
   const tableHeaderRef = useRef<HTMLTableSectionElement>(null);
+
+  // Reset before fetching so a new keyword never requests the previous page.
+  if (previousKeyword !== keyword) {
+    setPreviousKeyword(keyword);
+    setPage(1);
+  }
 
   useEffect(() => {
     const viewport = tableViewportRef.current;
@@ -140,8 +151,8 @@ export default function ConnectionHistoryPage() {
   } = useSWR(API_ROUTES.users.myPermissions, userService.fetchMyPermissions);
   const canRead = permissions?.permissionKeys.includes("users.list");
   const { data, error, isLoading } = useSWR(
-    canRead ? [CONNECTION_HISTORY_URL, page, status, pageSize] : null,
-    () => fetchConnectionHistory(page, status, pageSize),
+    canRead ? [CONNECTION_HISTORY_URL, page, status, pageSize, keyword] : null,
+    () => fetchConnectionHistory(page, status, pageSize, keyword),
     {
       refreshInterval: 15_000,
       revalidateOnFocus: true,
@@ -285,9 +296,11 @@ export default function ConnectionHistoryPage() {
                     colSpan={8}
                     className="py-12 text-center text-gray-500"
                   >
-                    {status
-                      ? "Chưa có phiên kết nối thuộc trạng thái này."
-                      : "Chưa có lịch sử kết nối."}
+                    {keyword
+                      ? "Không tìm thấy phiên kết nối phù hợp với từ khóa."
+                      : status
+                        ? "Chưa có phiên kết nối thuộc trạng thái này."
+                        : "Chưa có lịch sử kết nối."}
                   </TableCell>
                 </TableRow>
               ) : (
