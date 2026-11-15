@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
+import { recordPagination } from '../../common/utils/record-list-query';
 import { CreateProductionWorkshopPressureDifferentialDto } from './dto/create-production-workshop-pressure-differential.dto';
 import { UpdateProductionWorkshopPressureDifferentialDto } from './dto/update-production-workshop-pressure-differential.dto';
 
@@ -55,23 +57,37 @@ export class ProductionWorkshopPressureDifferentialsService {
     return pressureDifferential;
   }
 
-  async findAllByProductionWorkshop(workshopId: number) {
+  async findAllByProductionWorkshop(
+    workshopId: number,
+    options: RecordListQueryDto = {},
+  ) {
     await this.ensureProductionWorkshopExists(workshopId);
+    const pagination = recordPagination(options);
+    const where = { workshop_id: workshopId };
 
-    return this.prismaService.productionWorkshopPressureDifferentials.findMany({
-      where: {
-        workshop_id: workshopId,
-      },
-      include: pressureDifferentialInclude,
-      orderBy: [
+    const data =
+      await this.prismaService.productionWorkshopPressureDifferentials.findMany(
         {
-          created_at: 'desc',
+          where,
+          ...pagination.args,
+          include: pressureDifferentialInclude,
+          orderBy: [
+            {
+              created_at: 'desc',
+            },
+            {
+              id: 'desc',
+            },
+          ],
         },
-        {
-          id: 'desc',
-        },
-      ],
-    });
+      );
+    if (!pagination.enabled) return data;
+
+    const total =
+      await this.prismaService.productionWorkshopPressureDifferentials.count({
+        where,
+      });
+    return { data, total, page: pagination.page, limit: pagination.limit };
   }
 
   async create(

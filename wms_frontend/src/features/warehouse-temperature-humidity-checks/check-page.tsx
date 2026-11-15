@@ -1,11 +1,15 @@
 "use client";
 
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useSkeletonRowCount } from "@/hooks/use-skeleton-row-count";
+
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AiOutlineRight } from "react-icons/ai";
 import { Plus, X } from "lucide-react";
-import useSWR from "swr";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
+import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import useMobile from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,9 +31,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
-import warehouseTemperatureHumidityChecksService, {
+import {
   WAREHOUSE_TEMPERATURE_HUMIDITY_CHECKS_URL,
   type WarehouseTemperatureHumidityCheck,
 } from "@/services/warehouse-temperature-humidity-checks.service";
@@ -64,6 +68,7 @@ export default function CheckPage({
   initialId?: number | null;
 }) {
   const isMobile = useMobile();
+  const skeletonRows = useSkeletonRowCount();
   const router = useRouter();
   const pathname = usePathname();
   const scope = getSearchScopePath(pathname);
@@ -72,20 +77,27 @@ export default function CheckPage({
   const [actionsContainer, setActionsContainer] =
     useState<HTMLDivElement | null>(null);
   const [creating, setCreating] = useState(false);
-  const { data, error, isLoading, mutate } = useSWR(
-    WAREHOUSE_TEMPERATURE_HUMIDITY_CHECKS_URL,
-    warehouseTemperatureHumidityChecksService.list,
-  );
+  const serverSearch = useDebouncedValue(search.trim());
+  const {
+    records: data,
+    error,
+    isLoading,
+    mutate,
+    isLoadingMore,
+    hasMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+  } = useInfiniteRecordList<WarehouseTemperatureHumidityCheck>({
+    url: WAREHOUSE_TEMPERATURE_HUMIDITY_CHECKS_URL,
+    filters: { search: serverSearch || undefined },
+    observe: !isMobile || selectedId === null,
+    storageKey: "warehouseCheckListScroll",
+  });
   const groups = useMemo(() => {
     const result = new Map<string, WarehouseTemperatureHumidityCheck[]>();
     for (const check of data ?? []) {
-      if (
-        !matchesSearchKeyword(
-          [check.id, check.requirement, ...rowValues(check)],
-          search,
-        )
-      )
-        continue;
       const date = new Date(check.created_at).toLocaleDateString("vi-VN", {
         timeZone: "Asia/Ho_Chi_Minh",
       });
@@ -94,7 +106,7 @@ export default function CheckPage({
       result.set(date, group);
     }
     return Array.from(result, ([date, checks]) => ({ date, checks }));
-  }, [data, search]);
+  }, [data]);
   const selected = data?.find((check) => check.id === selectedId);
   const title = selected ? selected.location : `#${selectedId}`;
   function closeDetail() {
@@ -118,8 +130,11 @@ export default function CheckPage({
           </Button>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
-        {error ? (
+      <div
+        ref={containerRef}
+        className="min-h-0 flex-1 overflow-x-auto overflow-y-auto"
+      >
+        {error && data.length === 0 ? (
           <div
             role="alert"
             className="m-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700"
@@ -145,7 +160,7 @@ export default function CheckPage({
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array.from({ length: 8 }, (_, row) => (
+                Array.from({ length: skeletonRows }, (_, row) => (
                   <TableRow key={row}>
                     {columns.map((label) => (
                       <TableCell key={label} className="border-r">
@@ -225,6 +240,15 @@ export default function CheckPage({
             </TableBody>
           </table>
         )}
+        <InfiniteRecordLoadStatus
+          sentinelRef={sentinelRef}
+          count={data.length}
+          error={error}
+          loading={isLoadingMore}
+          hasMore={hasMore}
+          onRetry={retry}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );

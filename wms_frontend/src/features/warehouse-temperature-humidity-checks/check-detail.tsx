@@ -1,5 +1,7 @@
 "use client";
 
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
+
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import useSWR, { useSWRConfig } from "swr";
@@ -57,6 +59,7 @@ export default function CheckDetail({
           (list ?? []).filter((entry) => entry.id !== id),
         { revalidate: true },
       );
+      await refreshItemCatalog(WAREHOUSE_TEMPERATURE_HUMIDITY_CHECKS_URL);
       onClose();
     } catch (error) {
       setDeleteError(
@@ -143,6 +146,9 @@ export default function CheckDetail({
             onSaved={(saved) => {
               void mutate(saved, { revalidate: false });
               void mutateGlobal(WAREHOUSE_TEMPERATURE_HUMIDITY_CHECKS_URL);
+              void refreshItemCatalog(
+                WAREHOUSE_TEMPERATURE_HUMIDITY_CHECKS_URL,
+              );
               setEditing(false);
             }}
           />

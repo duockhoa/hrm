@@ -2,43 +2,44 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useRef } from "react";
 import { AiOutlineRight } from "react-icons/ai";
-import { Button } from "@/components/ui/button";
-import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
-import useRawMaterialsStore from "@/store/raw-materials.store";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
+import { useInfiniteItemCatalog } from "@/hooks/use-infinite-item-catalog";
+import { useSkeletonRowCount } from "@/hooks/use-skeleton-row-count";
+import { API_ROUTES } from "@/lib/api-routes";
+import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
 import ItemRow from "./item-row";
 
-const collator = new Intl.Collator("vi-VN", { numeric: true, sensitivity: "base" });
-
 export default function ItemsPage() {
-  const data = useRawMaterialsStore((state) => state.items);
-  const status = useRawMaterialsStore((state) => state.status);
-  const isLoading = status === "idle" || status === "loading";
+  const skeletonRows = useSkeletonRowCount(100);
   const router = useRouter();
   const pathname = usePathname();
   const searchScopePath = getSearchScopePath(pathname);
-  const searchKeyword = useSearchStore((state) => state.searchByPath[searchScopePath] ?? "");
+  const searchKeyword = useSearchStore(
+    (state) => state.searchByPath[searchScopePath] ?? "",
+  );
   const activeItemCode = pathname.startsWith("/items/")
     ? decodeURIComponent(pathname.slice("/items/".length))
     : null;
-  const containerRef = useRef<HTMLDivElement>(null);
-  const filteredItems = useMemo(
-    () => (data ?? [])
-      .filter((item) => matchesSearchKeyword([item.item_code, item.item_name, item.dk_code], searchKeyword))
-      .sort((first, second) => collator.compare(second.item_code, first.item_code)),
-    [data, searchKeyword],
-  );
-  const { saveScrollPosition } = useScrollRestoration({
-    ref: containerRef,
-    storageKey: "itemsListScroll",
-    restoreSignal: `${filteredItems.length}:${pathname}`,
-  });
+  const {
+    items: filteredItems,
+    error,
+    hasMore,
+    isInitialLoading: isLoading,
+    isLoadingMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+    saveScrollPosition,
+  } = useInfiniteItemCatalog(API_ROUTES.items.rawMaterials, "itemsListScroll");
 
   return (
-    <div ref={containerRef} className="flex h-full min-h-0 flex-col overflow-auto rounded-lg bg-white shadow-md">
+    <div
+      ref={containerRef}
+      className="flex h-full min-h-0 flex-col overflow-auto rounded-lg bg-white shadow-md"
+    >
       <div className="sticky top-0 z-10 w-full bg-white p-2">
         <div className="flex w-full items-center gap-2 border-b border-gray-200 pb-2">
           <AiOutlineRight />
@@ -47,12 +48,9 @@ export default function ItemsPage() {
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
         {isLoading ? (
-          Array.from({ length: 10 }, (_, index) => <ItemRow key={index} item={null} />)
-        ) : status === "error" ? (
-          <div role="alert" className="p-4 text-center text-sm text-red-600">
-            <p>Không thể tải danh sách nguyên liệu.</p>
-            <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>Tải lại ứng dụng</Button>
-          </div>
+          Array.from({ length: skeletonRows }, (_, index) => (
+            <ItemRow key={index} item={null} />
+          ))
         ) : filteredItems.length ? (
           filteredItems.map((item) => (
             <ItemRow
@@ -61,15 +59,28 @@ export default function ItemsPage() {
               isActive={activeItemCode === item.item_code}
               onClick={() => {
                 saveScrollPosition({ restoreOnNextFrame: true });
-                router.push(`/items/${encodeURIComponent(item.item_code)}`, { scroll: false });
+                router.push(`/items/${encodeURIComponent(item.item_code)}`, {
+                  scroll: false,
+                });
               }}
             />
           ))
-        ) : (
+        ) : !error ? (
           <p className="p-4 text-center text-sm text-gray-500">
-            {searchKeyword.trim() ? "Không tìm thấy hàng hóa phù hợp." : "Chưa có hàng hóa nào."}
+            {searchKeyword.trim()
+              ? "Không tìm thấy hàng hóa phù hợp."
+              : "Chưa có hàng hóa nào."}
           </p>
-        )}
+        ) : null}
+        <InfiniteRecordLoadStatus
+          sentinelRef={sentinelRef}
+          count={filteredItems.length}
+          error={error}
+          loading={isLoadingMore}
+          hasMore={hasMore}
+          onRetry={retry}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );

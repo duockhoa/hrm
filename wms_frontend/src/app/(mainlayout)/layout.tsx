@@ -8,7 +8,6 @@ import { API_ROUTES } from "@/lib/api-routes";
 import { userService, usersService } from "@/services/index.service";
 import { useSidebarStore } from "@/store/sidebar-store";
 import useUsersStore from "@/store/users.store";
-import useRawMaterialsStore from "@/store/raw-materials.store";
 import {
   Boxes,
   ClipboardList,
@@ -74,14 +73,6 @@ const menuItems = [
   },
 ];
 
-function RawMaterialsLoader() {
-  const loadItems = useRawMaterialsStore((state) => state.loadItems);
-  useEffect(() => {
-    void loadItems();
-  }, [loadItems]);
-  return null;
-}
-
 export default function MainLayout({
   children,
 }: Readonly<{
@@ -124,7 +115,6 @@ export default function MainLayout({
 
   return (
     <ApplicationAccessGuard>
-      <RawMaterialsLoader />
       <div className="flex h-dvh flex-col overflow-hidden">
         <Header />
         <div className="flex min-h-0 flex-1 overflow-hidden">

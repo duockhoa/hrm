@@ -1,11 +1,15 @@
 "use client";
 
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useSkeletonRowCount } from "@/hooks/use-skeleton-row-count";
+
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AiOutlineRight } from "react-icons/ai";
 import { Plus, X } from "lucide-react";
-import useSWR from "swr";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
+import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import useMobile from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,9 +31,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
-import warehouseReceiptItemsService, {
+import {
   WAREHOUSE_RECEIPT_ITEMS_URL,
   type WarehouseReceiptItem,
 } from "@/services/warehouse-receipt-items.service";
@@ -77,6 +81,7 @@ export default function ReceiptPage({
   initialId?: number | null;
 }) {
   const isMobile = useMobile();
+  const skeletonRows = useSkeletonRowCount();
   const router = useRouter();
   const pathname = usePathname();
   const scope = getSearchScopePath(pathname);
@@ -86,32 +91,34 @@ export default function ReceiptPage({
     useState<HTMLDivElement | null>(null);
   const [creating, setCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { data, error, isLoading, mutate } = useSWR(
-    WAREHOUSE_RECEIPT_ITEMS_URL,
-    warehouseReceiptItemsService.list,
-  );
+  const serverSearch = useDebouncedValue(search.trim());
+  const {
+    records: data,
+    error,
+    isLoading,
+    mutate,
+    isLoadingMore,
+    hasMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+  } = useInfiniteRecordList<WarehouseReceiptItem>({
+    url: WAREHOUSE_RECEIPT_ITEMS_URL,
+    filters: { search: serverSearch || undefined },
+    observe: !isMobile || selectedId === null,
+    storageKey: "warehouseReceiptListScroll",
+  });
   const groups = useMemo(() => {
     const result = new Map<string, WarehouseReceiptItem[]>();
     for (const receipt of data ?? []) {
-      if (
-        !matchesSearchKeyword(
-          [
-            receipt.id,
-            ...rowValues(receipt),
-            receipt.supplier_code,
-            receipt.manufacturer_code,
-          ],
-          search,
-        )
-      )
-        continue;
       const date = new Date(receipt.received_at).toLocaleDateString("vi-VN");
       const group = result.get(date) ?? [];
       group.push(receipt);
       result.set(date, group);
     }
     return Array.from(result, ([date, receipts]) => ({ date, receipts }));
-  }, [data, search]);
+  }, [data]);
   const selected = data?.find((receipt) => receipt.id === selectedId);
   const title = selected
     ? [
@@ -141,8 +148,11 @@ export default function ReceiptPage({
           </Button>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
-        {error ? (
+      <div
+        ref={containerRef}
+        className="min-h-0 flex-1 overflow-x-auto overflow-y-auto"
+      >
+        {error && data.length === 0 ? (
           <div
             role="alert"
             className="m-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700"
@@ -165,7 +175,7 @@ export default function ReceiptPage({
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array.from({ length: 8 }, (_, row) => (
+                Array.from({ length: skeletonRows }, (_, row) => (
                   <TableRow key={row}>
                     {columns.map((label) => (
                       <TableCell key={label} className="border-r">
@@ -229,6 +239,15 @@ export default function ReceiptPage({
             </TableBody>
           </table>
         )}
+        <InfiniteRecordLoadStatus
+          sentinelRef={sentinelRef}
+          count={data.length}
+          error={error}
+          loading={isLoadingMore}
+          hasMore={hasMore}
+          onRetry={retry}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );

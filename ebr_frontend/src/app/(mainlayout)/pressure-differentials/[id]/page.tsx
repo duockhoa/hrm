@@ -45,10 +45,10 @@ export default function DetailPressureDifferentialsPage() {
 
         <ResizablePanel
           defaultSize={isMobile ? 100 : isTablet ? 75 : 70}
-          className="min-h-0 min-w-0 overflow-auto p-2 md:p-4"
+          className="min-h-0 min-w-0 overflow-hidden p-2 md:p-4"
           minSize={0}
         >
-          <div className="flex flex-col items-center gap-2 rounded md:gap-4">
+          <div className="flex h-full min-h-0 flex-col items-center gap-2 rounded md:gap-4">
             <ProductionWorkshopPressureDifferentialsPage
               workshopId={params.id}
               workshop={data}

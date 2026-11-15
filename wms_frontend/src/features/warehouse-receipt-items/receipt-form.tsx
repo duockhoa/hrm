@@ -1,6 +1,13 @@
 "use client";
 
-import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
@@ -156,6 +163,10 @@ export default function ReceiptForm({
   const [formCreatedAt] = useState(() => new Date());
   const lotNumber =
     manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, formCreatedAt);
+  const loadItems = useRawMaterialsStore((state) => state.loadItems);
+  useEffect(() => {
+    void loadItems();
+  }, [loadItems]);
   const itemOptions = useRawMaterialsStore((state) => state.itemOptions);
   const items = useRawMaterialsStore((state) => state.items);
   const unit =
@@ -249,8 +260,8 @@ export default function ReceiptForm({
       });
       await reloadManufacturers(
         (current = []) =>
-          [...current.filter((item) => item.id !== saved.id), saved].sort((a, b) =>
-            a.manufacturer_code.localeCompare(b.manufacturer_code),
+          [...current.filter((item) => item.id !== saved.id), saved].sort(
+            (a, b) => a.manufacturer_code.localeCompare(b.manufacturer_code),
           ),
         { revalidate: false },
       );

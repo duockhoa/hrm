@@ -1,5 +1,7 @@
 "use client";
 
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
+
 import { useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
@@ -65,6 +67,7 @@ export default function ReceiptDetail({
           (list ?? []).filter((entry) => entry.id !== id),
         { revalidate: true },
       );
+      await refreshItemCatalog(WAREHOUSE_RECEIPT_ITEMS_URL);
       onClose();
     } catch (error) {
       setDeleteError(receiptError(error, "Không thể xóa hàng nhập kho."));
@@ -199,6 +202,7 @@ export default function ReceiptDetail({
             onSaved={(saved) => {
               void mutate(saved, { revalidate: false });
               void mutateGlobal(WAREHOUSE_RECEIPT_ITEMS_URL);
+              void refreshItemCatalog(WAREHOUSE_RECEIPT_ITEMS_URL);
               setEditing(false);
             }}
           />

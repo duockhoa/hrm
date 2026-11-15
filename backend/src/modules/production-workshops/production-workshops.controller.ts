@@ -7,10 +7,13 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
   Request,
   UseGuards,
+  ValidationPipe,
 } from '@nestjs/common';
 import { Permissions } from 'src/decorators/permissions.decorator';
+import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateProductionWorkshopPressureDifferentialDto } from './dto/create-production-workshop-pressure-differential.dto';
@@ -111,9 +114,14 @@ export class ProductionWorkshopsController {
 
   @Get(':id/pressure-differentials')
   @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.READ)
-  async findPressureDifferentials(@Param('id', ParseIntPipe) id: number) {
+  async findPressureDifferentials(
+    @Param('id', ParseIntPipe) id: number,
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query: RecordListQueryDto = {},
+  ) {
     return this.productionWorkshopPressureDifferentialsService.findAllByProductionWorkshop(
       id,
+      query,
     );
   }
 

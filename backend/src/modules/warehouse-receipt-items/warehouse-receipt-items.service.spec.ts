@@ -24,6 +24,7 @@ describe('WarehouseReceiptItemsService', () => {
     $queryRaw: jest.fn(),
     warehouseReceiptItems: {
       findMany: jest.fn(),
+      count: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -37,6 +38,50 @@ describe('WarehouseReceiptItemsService', () => {
   const service = new WarehouseReceiptItemsService(
     prisma as unknown as PrismaService,
   );
+
+  it('pages and counts the same server search before returning results', async () => {
+    const rows = [{ id: 301 }];
+    prisma.warehouseReceiptItems.findMany.mockResolvedValue(rows);
+    prisma.warehouseReceiptItems.count.mockResolvedValue(301);
+    const result = await service.findAll({
+      search: 'Kho_A%',
+      page: 2,
+      limit: 300,
+    });
+    expect(result).toEqual({ data: rows, total: 301, page: 2, limit: 300 });
+    const query = prisma.warehouseReceiptItems.findMany.mock.calls[0][0];
+    expect(query).toMatchObject({
+      skip: 300,
+      take: 300,
+      orderBy: [{ received_at: 'desc' }, { id: 'desc' }],
+    });
+    expect(prisma.warehouseReceiptItems.count).toHaveBeenCalledWith({
+      where: query.where,
+    });
+    expect(JSON.stringify(query.where)).toContain(
+      JSON.stringify('Kho\\_A\\%').slice(1, -1),
+    );
+  });
+
+  it('keeps unpaged responses compatible with existing callers', async () => {
+    prisma.warehouseReceiptItems.findMany.mockResolvedValue([{ id: 1 }]);
+    await expect(service.findAll()).resolves.toEqual([{ id: 1 }]);
+    expect(
+      prisma.warehouseReceiptItems.findMany.mock.calls[0][0],
+    ).not.toHaveProperty('take');
+    expect(prisma.warehouseReceiptItems.count).not.toHaveBeenCalled();
+  });
+
+  it('returns an empty final page', async () => {
+    prisma.warehouseReceiptItems.findMany.mockResolvedValue([]);
+    prisma.warehouseReceiptItems.count.mockResolvedValue(300);
+    await expect(service.findAll({ page: 2, limit: 300 })).resolves.toEqual({
+      data: [],
+      total: 300,
+      page: 2,
+      limit: 300,
+    });
+  });
 
   beforeEach(() => {
     jest.resetAllMocks();

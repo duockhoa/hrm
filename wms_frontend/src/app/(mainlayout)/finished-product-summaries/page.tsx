@@ -1,5 +1,8 @@
 "use client";
 
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useSkeletonRowCount } from "@/hooks/use-skeleton-row-count";
+
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -17,15 +20,15 @@ import {
 import { FinishedProductSummaryDetail } from "@/features/finished-product-summary";
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
-import { productOrdersService } from "@/services/index.service";
+import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
 import { AiOutlineRight } from "react-icons/ai";
-import useSWR from "swr";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
+import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 
 type FinishedProductSummaryUser = {
   id?: string | number;
@@ -119,9 +122,7 @@ const getCreatedBy = (summary: FinishedProductSummary) =>
 const getUserLabel = (user: FinishedProductSummaryUser | null | undefined) =>
   user?.name ?? user?.username ?? user?.email ?? "";
 
-const isPyclmSent = (
-  pyclm: FinishedProductSummaryOrder["pyclm"],
-) => {
+const isPyclmSent = (pyclm: FinishedProductSummaryOrder["pyclm"]) => {
   if (pyclm?.isSent !== null && pyclm?.isSent !== undefined) {
     return pyclm.isSent;
   }
@@ -145,9 +146,10 @@ function PyclmStatus({ sent }: { sent: boolean }) {
 }
 
 function FinishedProductSummariesSkeleton() {
+  const skeletonRows = useSkeletonRowCount();
   return (
     <>
-      {Array.from({ length: 10 }).map((_, rowIndex) => (
+      {Array.from({ length: skeletonRows }).map((_, rowIndex) => (
         <TableRow key={rowIndex}>
           {Array.from({ length: 12 }).map((__, cellIndex) => (
             <TableCell key={cellIndex} className="border-r">
@@ -225,40 +227,25 @@ export default function FinishedProductSummariesPage() {
     (state) => state.searchByPath[searchScopePath] ?? "",
   );
   const isSearching = searchKeyword.trim().length > 0;
-  const { data, error, isLoading } = useSWR<FinishedProductSummary[]>(
-    API_ROUTES.productionOrders.finishedProductSummaries,
-    productOrdersService.fetchFinishedProductSummaries,
-  );
-
-  const summaries = useMemo(() => (Array.isArray(data) ? data : []), [data]);
-  const filteredSummaries = useMemo(() => {
-    if (!searchKeyword) return summaries;
-
-    return summaries.filter((summary) => {
-      const productionOrder = getProductionOrder(summary);
-      const createdBy = getCreatedBy(summary);
-
-      return matchesSearchKeyword(
-        [
-          summary.id,
-          summary.production_order_id,
-          productionOrder?.production_order_code,
-          productionOrder?.item_code,
-          productionOrder?.item?.item_code,
-          productionOrder?.item?.item_name,
-          productionOrder?.lot_no,
-          productionOrder?.pyclm?.status,
-          isPyclmSent(productionOrder?.pyclm) ? "Đã gửi" : "Chưa gửi",
-          productionOrder?.pyclm?.location,
-          getUserLabel(productionOrder?.pyclm?.sender),
-          getUserLabel(createdBy),
-          createdBy?.department,
-          summary.created_at,
-        ],
-        searchKeyword,
-      );
-    });
-  }, [searchKeyword, summaries]);
+  const serverSearch = useDebouncedValue(searchKeyword.trim());
+  const {
+    records: summaries,
+    total,
+    error,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+  } = useInfiniteRecordList<FinishedProductSummary>({
+    url: API_ROUTES.productionOrders.finishedProductSummaries,
+    filters: { search: serverSearch || undefined },
+    observe: !isMobile || selectedSummaryId === null,
+    storageKey: "finishedProductSummaryListScroll",
+  });
+  const filteredSummaries = summaries;
   const groupedSummaries = useMemo(
     () => groupSummariesByCreatedDate(filteredSummaries),
     [filteredSummaries],
@@ -303,13 +290,16 @@ export default function FinishedProductSummariesPage() {
             </Link>
           </div>
           <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
-            {filteredSummaries.length}
+            {total}
           </span>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
-        {error ? (
+      <div
+        ref={containerRef}
+        className="min-h-0 flex-1 overflow-x-auto overflow-y-auto"
+      >
+        {error && summaries.length === 0 ? (
           <div className="m-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             Không thể tải danh sách tổng kết thành phẩm.
           </div>
@@ -395,53 +385,54 @@ export default function FinishedProductSummariesPage() {
                             }
                           }}
                         >
-                      <TableCell className="border-r px-2">
-                        {productionOrder?.item_code ??
-                          productionOrder?.item?.item_code}
-                      </TableCell>
-                      <TableCell className="max-w-72 whitespace-normal break-words border-r px-3">
-                        {productionOrder?.item?.item_name}
-                      </TableCell>
-                      <TableCell className="border-r px-3">
-                        {productionOrder?.lot_no}
-                      </TableCell>
-                      <TableCell className="border-r px-3 text-right">
-                        {[
-                          formatNumber(
-                            productionOrder?.planned_quatity ??
-                              productionOrder?.planned_quantity,
-                          ),
-                          productionOrder?.unit ?? productionOrder?.item?.unit,
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                      </TableCell>
-                      <TableCell className="border-r px-3 text-center">
-                        {formatDate(productionOrder?.date_manufacture)}
-                      </TableCell>
-                      <TableCell className="border-r px-3 text-center">
-                        {formatDate(productionOrder?.expire_date)}
-                      </TableCell>
-                      <TableCell className="border-r px-2 text-right">
-                        {formatNumber(summary.package_count)}
-                      </TableCell>
-                      <TableCell className="border-r px-2 text-right">
-                        {formatNumber(summary.boxes_per_package)}
-                      </TableCell>
-                      <TableCell className="border-r px-2 text-right">
-                        {formatNumber(summary.loose_box_count)}
-                      </TableCell>
-                      <TableCell className="border-r px-2 text-right font-semibold">
-                        {formatNumber(getTotalQuantity(summary))}
-                      </TableCell>
-                      <TableCell className="border-r px-3">
-                        <PyclmStatus
-                          sent={isPyclmSent(productionOrder?.pyclm)}
-                        />
-                      </TableCell>
-                      <TableCell className="border-r px-3">
-                        {getUserLabel(createdBy)}
-                      </TableCell>
+                          <TableCell className="border-r px-2">
+                            {productionOrder?.item_code ??
+                              productionOrder?.item?.item_code}
+                          </TableCell>
+                          <TableCell className="max-w-72 whitespace-normal break-words border-r px-3">
+                            {productionOrder?.item?.item_name}
+                          </TableCell>
+                          <TableCell className="border-r px-3">
+                            {productionOrder?.lot_no}
+                          </TableCell>
+                          <TableCell className="border-r px-3 text-right">
+                            {[
+                              formatNumber(
+                                productionOrder?.planned_quatity ??
+                                  productionOrder?.planned_quantity,
+                              ),
+                              productionOrder?.unit ??
+                                productionOrder?.item?.unit,
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                          </TableCell>
+                          <TableCell className="border-r px-3 text-center">
+                            {formatDate(productionOrder?.date_manufacture)}
+                          </TableCell>
+                          <TableCell className="border-r px-3 text-center">
+                            {formatDate(productionOrder?.expire_date)}
+                          </TableCell>
+                          <TableCell className="border-r px-2 text-right">
+                            {formatNumber(summary.package_count)}
+                          </TableCell>
+                          <TableCell className="border-r px-2 text-right">
+                            {formatNumber(summary.boxes_per_package)}
+                          </TableCell>
+                          <TableCell className="border-r px-2 text-right">
+                            {formatNumber(summary.loose_box_count)}
+                          </TableCell>
+                          <TableCell className="border-r px-2 text-right font-semibold">
+                            {formatNumber(getTotalQuantity(summary))}
+                          </TableCell>
+                          <TableCell className="border-r px-3">
+                            <PyclmStatus
+                              sent={isPyclmSent(productionOrder?.pyclm)}
+                            />
+                          </TableCell>
+                          <TableCell className="border-r px-3">
+                            {getUserLabel(createdBy)}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -462,6 +453,15 @@ export default function FinishedProductSummariesPage() {
             </TableBody>
           </table>
         )}
+        <InfiniteRecordLoadStatus
+          sentinelRef={sentinelRef}
+          count={summaries.length}
+          error={error}
+          loading={isLoadingMore}
+          hasMore={hasMore}
+          onRetry={retry}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );

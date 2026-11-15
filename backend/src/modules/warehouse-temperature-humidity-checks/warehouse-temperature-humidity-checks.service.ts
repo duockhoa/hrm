@@ -7,6 +7,15 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
+import {
+  literalContains,
+  recordPagination,
+  recordSearchTerms,
+  searchDocumentId,
+  searchUserFields,
+} from '../../common/utils/record-list-query';
+import { normalizeLotSearch } from '../production-orders/production-order-list-query';
 import { CreateWarehouseTemperatureHumidityCheckDto } from './dto/create-warehouse-temperature-humidity-check.dto';
 import { UpdateWarehouseTemperatureHumidityCheckDto } from './dto/update-warehouse-temperature-humidity-check.dto';
 
@@ -24,11 +33,48 @@ const allowedFields = new Set([
 export class WarehouseTemperatureHumidityChecksService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.warehouseTemperatureHumidityChecks.findMany({
+  async findAll(options: RecordListQueryDto = {}) {
+    const pagination = recordPagination(options);
+    const result = normalizeLotSearch(options.search).trim();
+    const resultFilter =
+      result === 'dat' ? true : result === 'khong dat' ? false : undefined;
+    const where: Prisma.WarehouseTemperatureHumidityChecksWhereInput =
+      resultFilter !== undefined
+        ? { is_passed: resultFilter }
+        : {
+            AND: recordSearchTerms(options.search).map((term) => {
+              const contains = literalContains(term);
+              const id = searchDocumentId(term);
+              const numeric = /^-?\d+(?:[.,]\d+)?$/.test(term)
+                ? term.replace(',', '.')
+                : undefined;
+              return {
+                OR: [
+                  { location: contains },
+                  { requirement: contains },
+                  { checkedBy: { is: searchUserFields(term) } },
+                  ...(id !== undefined ? [{ id }] : []),
+                  ...(numeric !== undefined
+                    ? [
+                        { temperature: { equals: numeric } },
+                        { humidity: { equals: numeric } },
+                      ]
+                    : []),
+                ],
+              };
+            }),
+          };
+    const data = await this.prisma.warehouseTemperatureHumidityChecks.findMany({
+      where,
+      ...pagination.args,
       include: checkInclude,
       orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     });
+    if (!pagination.enabled) return data;
+    const total = await this.prisma.warehouseTemperatureHumidityChecks.count({
+      where,
+    });
+    return { data, total, page: pagination.page, limit: pagination.limit };
   }
 
   async findById(id: number) {

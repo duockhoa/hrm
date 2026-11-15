@@ -1,6 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
+import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,7 +29,6 @@ import { productionWorkshopsService } from "@/services/index.service";
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { Fragment, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
 import type { ProductionWorkshopPressureDifferential } from "../../types";
 import FormProductionWorkshopPressureDifferential from "../form-production-workshop-pressure-differential/form-production-workshop-pressure-differential";
 
@@ -152,15 +153,22 @@ export default function ProductionWorkshopPressureDifferentialsPage({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const {
-    data: records,
+    records,
     error,
     isLoading,
     mutate,
-  } = useSWR(
-    API_ROUTES.productionWorkshops.pressureDifferentials(workshopId),
-    () => productionWorkshopsService.fetchPressureDifferentials(workshopId),
-  );
-  const groupedRecords = records ? groupRecordsByDate(records) : [];
+    isLoadingMore,
+    hasMore,
+    containerRef,
+    sentinelRef,
+    loadMore,
+    retry,
+  } = useInfiniteRecordList<ProductionWorkshopPressureDifferential>({
+    url: API_ROUTES.productionWorkshops.pressureDifferentials(workshopId),
+    filters: {},
+    storageKey: "pressureDifferentialListScroll",
+  });
+  const groupedRecords = groupRecordsByDate(records);
 
   const openCreateForm = () => {
     setEditingRecord(null);
@@ -193,7 +201,7 @@ export default function ProductionWorkshopPressureDifferentialsPage({
   };
 
   return (
-    <>
+    <div ref={containerRef} className="h-full min-h-0 w-full overflow-auto">
       <HeaderDetailProductionWorkshop
         workshop={workshop}
         action={
@@ -206,7 +214,7 @@ export default function ProductionWorkshopPressureDifferentialsPage({
 
       <div className="mt-2 w-full rounded-lg border bg-white md:mt-4">
         <div className="min-h-0 overflow-auto p-4">
-          {error ? (
+          {error && records.length === 0 ? (
             <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               Không thể tải danh sách chênh áp.
             </div>
@@ -308,6 +316,15 @@ export default function ProductionWorkshopPressureDifferentialsPage({
               </TableBody>
             </Table>
           )}
+          <InfiniteRecordLoadStatus
+            sentinelRef={sentinelRef}
+            count={records.length}
+            error={error}
+            loading={isLoadingMore}
+            hasMore={hasMore}
+            onRetry={retry}
+            onLoadMore={loadMore}
+          />
         </div>
 
         <FormProductionWorkshopPressureDifferential
@@ -359,6 +376,6 @@ export default function ProductionWorkshopPressureDifferentialsPage({
           </DialogContent>
         </Dialog>
       </div>
-    </>
+    </div>
   );
 }

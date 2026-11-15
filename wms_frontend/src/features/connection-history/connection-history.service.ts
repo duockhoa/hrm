@@ -24,7 +24,14 @@ export type ConnectionSession = {
 };
 export type ConnectionHistoryResponse = {
   data: ConnectionSession[];
-  meta: { page: number; limit: number; total: number; total_pages: number };
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+    has_more?: boolean;
+    next_cursor?: string | null;
+  };
   summary: { connected: number; reconnecting: number; ended: number };
 };
 
@@ -32,6 +39,7 @@ export async function fetchConnectionHistory(
   page: number,
   status?: ConnectionStatus,
   limit = 20,
+  keyword = "",
 ) {
   const response = await axiosClient.get<ConnectionHistoryResponse>(
     CONNECTION_HISTORY_URL,
@@ -40,6 +48,31 @@ export async function fetchConnectionHistory(
         page,
         limit,
         status,
+        keyword: keyword.trim() || undefined,
+      },
+    },
+  );
+  return response.data;
+}
+
+export async function fetchConnectionHistoryCursor(
+  cursor: string | null,
+  status?: ConnectionStatus,
+  keyword = "",
+  connectedFrom = "",
+  connectedTo = "",
+) {
+  const response = await axiosClient.get<ConnectionHistoryResponse>(
+    CONNECTION_HISTORY_URL,
+    {
+      params: {
+        pagination: "cursor",
+        limit: 300,
+        cursor: cursor || undefined,
+        status,
+        keyword: keyword.trim() || undefined,
+        connected_from: connectedFrom || undefined,
+        connected_to: connectedTo || undefined,
       },
     },
   );

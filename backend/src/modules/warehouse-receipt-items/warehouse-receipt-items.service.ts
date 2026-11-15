@@ -8,6 +8,14 @@ import {
 import { Prisma } from '@prisma/client';
 import { isISO8601 } from 'class-validator';
 import { PrismaService } from 'src/prisma.service';
+import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
+import {
+  literalContains,
+  recordPagination,
+  recordSearchTerms,
+  searchDocumentId,
+  searchUserFields,
+} from '../../common/utils/record-list-query';
 import { CreateWarehouseReceiptItemDto } from './dto/create-warehouse-receipt-item.dto';
 import { UpdateWarehouseReceiptItemDto } from './dto/update-warehouse-receipt-item.dto';
 import { receiptAttachmentInclude } from './warehouse-receipt-attachments.service';
@@ -44,11 +52,47 @@ const allowedFields = new Set([
 export class WarehouseReceiptItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.warehouseReceiptItems.findMany({
+  async findAll(options: RecordListQueryDto = {}) {
+    const pagination = recordPagination(options);
+    const where: Prisma.WarehouseReceiptItemsWhereInput = {
+      AND: recordSearchTerms(options.search).map((term) => {
+        const contains = literalContains(term);
+        const id = searchDocumentId(term);
+        return {
+          OR: [
+            ...[
+              'item_code',
+              'unit',
+              'lot_number',
+              'manufacturer_lot_number',
+              'packaging_specification',
+              'supplier_code',
+              'supplier_name',
+              'manufacturer_code',
+              'manufacturer_name',
+              'note',
+            ].map((field) => ({ [field]: contains })),
+            { item: { is: { item_name: contains } } },
+            { supplier: { is: { card_name: contains } } },
+            { manufacturer: { is: { manufacturer_name: contains } } },
+            { enteredBy: { is: searchUserFields(term) } },
+            ...(id !== undefined ? [{ id }] : []),
+            ...(/^\d+(?:[.,]\d+)?$/.test(term)
+              ? [{ quantity: { equals: term.replace(',', '.') } }]
+              : []),
+          ],
+        };
+      }),
+    };
+    const data = await this.prisma.warehouseReceiptItems.findMany({
+      where,
+      ...pagination.args,
       include: receiptInclude,
       orderBy: [{ received_at: 'desc' }, { id: 'desc' }],
     });
+    if (!pagination.enabled) return data;
+    const total = await this.prisma.warehouseReceiptItems.count({ where });
+    return { data, total, page: pagination.page, limit: pagination.limit };
   }
 
   async findById(id: number) {

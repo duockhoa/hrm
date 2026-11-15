@@ -11,6 +11,7 @@ describe('WarehouseTemperatureHumidityChecksService', () => {
   const prisma = {
     warehouseTemperatureHumidityChecks: {
       findMany: jest.fn(),
+      count: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -27,6 +28,68 @@ describe('WarehouseTemperatureHumidityChecksService', () => {
     temperature: 25.5,
     humidity: 65.25,
   };
+
+  it('pages and counts the same server search before returning results', async () => {
+    const rows = [{ id: 301 }];
+    prisma.warehouseTemperatureHumidityChecks.findMany.mockResolvedValue(rows);
+    prisma.warehouseTemperatureHumidityChecks.count.mockResolvedValue(301);
+    const result = await service.findAll({
+      search: 'Kho_A%',
+      page: 2,
+      limit: 300,
+    });
+    expect(result).toEqual({ data: rows, total: 301, page: 2, limit: 300 });
+    const query =
+      prisma.warehouseTemperatureHumidityChecks.findMany.mock.calls[0][0];
+    expect(query).toMatchObject({
+      skip: 300,
+      take: 300,
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    });
+    expect(
+      prisma.warehouseTemperatureHumidityChecks.count,
+    ).toHaveBeenCalledWith({ where: query.where });
+    expect(JSON.stringify(query.where)).toContain(
+      JSON.stringify('Kho\\_A\\%').slice(1, -1),
+    );
+  });
+
+  it('keeps unpaged responses compatible with existing callers', async () => {
+    prisma.warehouseTemperatureHumidityChecks.findMany.mockResolvedValue([
+      { id: 1 },
+    ]);
+    await expect(service.findAll()).resolves.toEqual([{ id: 1 }]);
+    expect(
+      prisma.warehouseTemperatureHumidityChecks.findMany.mock.calls[0][0],
+    ).not.toHaveProperty('take');
+    expect(
+      prisma.warehouseTemperatureHumidityChecks.count,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('returns an empty final page', async () => {
+    prisma.warehouseTemperatureHumidityChecks.findMany.mockResolvedValue([]);
+    prisma.warehouseTemperatureHumidityChecks.count.mockResolvedValue(300);
+    await expect(service.findAll({ page: 2, limit: 300 })).resolves.toEqual({
+      data: [],
+      total: 300,
+      page: 2,
+      limit: 300,
+    });
+  });
+
+  it.each([
+    ['Đạt', true],
+    ['Không đạt', false],
+  ])('searches the displayed result %s', async (search, expected) => {
+    prisma.warehouseTemperatureHumidityChecks.findMany.mockResolvedValue([]);
+    await service.findAll({ search: search as string });
+    expect(
+      prisma.warehouseTemperatureHumidityChecks.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { is_passed: expected } }),
+    );
+  });
 
   beforeEach(() => {
     jest.resetAllMocks();

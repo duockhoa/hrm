@@ -10,6 +10,7 @@ describe('ProductionWorkshopPressureDifferentialsService', () => {
     };
     productionWorkshopPressureDifferentials: {
       findMany: jest.Mock;
+      count: jest.Mock;
       findUnique: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
@@ -29,6 +30,7 @@ describe('ProductionWorkshopPressureDifferentialsService', () => {
             },
             productionWorkshopPressureDifferentials: {
               findMany: jest.fn(),
+              count: jest.fn(),
               findUnique: jest.fn(),
               create: jest.fn(),
               update: jest.fn(),
@@ -126,6 +128,50 @@ describe('ProductionWorkshopPressureDifferentialsService', () => {
         },
       ],
     });
+  });
+
+  it('paginates within the selected workshop and returns the total', async () => {
+    prismaService.productionWorkshops.findUnique.mockResolvedValue({ id: 2 });
+    const records = [{ id: 301, workshop_id: 2 }];
+    prismaService.productionWorkshopPressureDifferentials.findMany.mockResolvedValue(
+      records,
+    );
+    prismaService.productionWorkshopPressureDifferentials.count.mockResolvedValue(
+      301,
+    );
+
+    await expect(
+      service.findAllByProductionWorkshop(2, { page: 2, limit: 300 }),
+    ).resolves.toEqual({ data: records, total: 301, page: 2, limit: 300 });
+    expect(
+      prismaService.productionWorkshopPressureDifferentials.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { workshop_id: 2 },
+        skip: 300,
+        take: 300,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      }),
+    );
+    expect(
+      prismaService.productionWorkshopPressureDifferentials.count,
+    ).toHaveBeenCalledWith({
+      where: { workshop_id: 2 },
+    });
+  });
+
+  it('returns an empty page after the last record', async () => {
+    prismaService.productionWorkshops.findUnique.mockResolvedValue({ id: 1 });
+    prismaService.productionWorkshopPressureDifferentials.findMany.mockResolvedValue(
+      [],
+    );
+    prismaService.productionWorkshopPressureDifferentials.count.mockResolvedValue(
+      300,
+    );
+
+    await expect(
+      service.findAllByProductionWorkshop(1, { page: 2, limit: 300 }),
+    ).resolves.toEqual({ data: [], total: 300, page: 2, limit: 300 });
   });
 
   it('updates provided fields', async () => {
