@@ -11,8 +11,10 @@ import useUsersStore from "@/store/users.store";
 import useRawMaterialsStore from "@/store/raw-materials.store";
 import {
   Boxes,
+  ClipboardList,
   Info,
   Package,
+  PackageMinus,
   PackageSearch,
   Thermometer,
   Unplug,
@@ -45,6 +47,18 @@ const menuItems = [
     name: "Danh sách nguyên liệu",
     icon: <Package className="size-5 shrink-0" />,
     url: "/items",
+  },
+  {
+    id: "stocktakes",
+    name: "Kiểm Kê",
+    icon: <ClipboardList className="size-5 shrink-0" />,
+    url: "/stocktakes",
+  },
+  {
+    id: "warehouse-dispatches",
+    name: "Phiếu xuất kho",
+    icon: <PackageMinus className="size-5 shrink-0" />,
+    url: "/warehouse-dispatches",
   },
   {
     id: "connection-history",
