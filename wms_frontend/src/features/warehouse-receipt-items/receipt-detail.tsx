@@ -80,14 +80,14 @@ export default function ReceiptDetail({
     return (
       <div
         role="alert"
-        className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        className="mx-auto w-full max-w-4xl rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700"
       >
         {receiptError(error, "Không thể tải chi tiết hàng nhập kho.")}
       </div>
     );
   if (!data)
     return (
-      <div className="space-y-4 rounded border bg-white p-4 shadow-md">
+      <div className="mx-auto w-full max-w-4xl space-y-4 rounded border bg-white p-4 shadow-md">
         <Skeleton className="h-9 w-64" />
         {Array.from({ length: 12 }, (_, i) => (
           <Skeleton key={i} className="h-6 w-full" />
@@ -139,7 +139,7 @@ export default function ReceiptDetail({
     ["Người nhập", data.enteredBy?.name || data.enteredBy?.username],
   ];
   return (
-    <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
+    <div className="mx-auto w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
       {externalActionsContainer &&
         createPortal(actions, externalActionsContainer)}
       <DetailPanelHeader

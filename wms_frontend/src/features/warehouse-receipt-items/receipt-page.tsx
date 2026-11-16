@@ -40,7 +40,6 @@ import {
 import ReceiptDetail, {
   formatExpiryDate,
   formatReceiptQuantity,
-  formatReceiptDateTime,
 } from "./receipt-detail";
 import ReceiptForm, { receiptError } from "./receipt-form";
 
@@ -55,7 +54,6 @@ const columns = [
   "Nhà cung cấp",
   "Nhà sản xuất",
   "Ghi chú",
-  "Thời điểm nhập",
   "Người nhập",
 ];
 function rowValues(receipt: WarehouseReceiptItem) {
@@ -70,7 +68,6 @@ function rowValues(receipt: WarehouseReceiptItem) {
     receipt.supplier?.card_name ?? receipt.supplier_name,
     receipt.manufacturer?.manufacturer_name ?? receipt.manufacturer_name,
     receipt.note,
-    formatReceiptDateTime(receipt.received_at),
     receipt.enteredBy?.name || receipt.enteredBy?.username,
   ];
 }
@@ -121,10 +118,7 @@ export default function ReceiptPage({
   }, [data]);
   const selected = data?.find((receipt) => receipt.id === selectedId);
   const title = selected
-    ? [
-        selected.item?.item_name || selected.item_code,
-        selected.lot_number,
-      ].join(" - ")
+    ? [selected.item_code, selected.lot_number].join(" - ")
     : `#${selectedId}`;
   function closeDetail() {
     setSelectedId(null);
