@@ -55,6 +55,9 @@ export class WarehouseReceiptItemsService {
   async findAll(options: RecordListQueryDto = {}) {
     const pagination = recordPagination(options);
     const where: Prisma.WarehouseReceiptItemsWhereInput = {
+      ...(options.item_code?.trim()
+        ? { item_code: options.item_code.trim() }
+        : {}),
       AND: recordSearchTerms(options.search).map((term) => {
         const contains = literalContains(term);
         const id = searchDocumentId(term);

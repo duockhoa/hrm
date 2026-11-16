@@ -8,12 +8,17 @@ import useSWR from "swr";
 import FieldDisplay from "@/components/field-display/field-display";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import useMobile from "@/hooks/use-mobile";
 import useTablet from "@/hooks/use-tablet";
 import { API_ROUTES } from "@/lib/api-routes";
 import itemsService from "@/services/items.service";
 import ItemsPage from "./items-page";
+import ItemReceiptHistory from "./item-receipt-history";
 import type { Item } from "./types";
 
 export default function ItemDetailPage() {
@@ -30,19 +35,35 @@ export default function ItemDetailPage() {
     <div className="h-full overflow-hidden rounded-lg bg-white shadow-md">
       <ResizablePanelGroup>
         {!isMobile && (
-          <ResizablePanel defaultSize={isTablet ? "25%" : "30%"} minSize={isTablet ? "20%" : "30%"} className="min-h-0 min-w-0 overflow-hidden">
+          <ResizablePanel
+            defaultSize={isTablet ? "25%" : "30%"}
+            minSize={isTablet ? "20%" : "30%"}
+            className="min-h-0 min-w-0 overflow-hidden"
+          >
             <ItemsPage />
           </ResizablePanel>
         )}
         {!isMobile && <ResizableHandle />}
-        <ResizablePanel defaultSize={isMobile ? "100%" : isTablet ? "75%" : "70%"} minSize={0} className="min-h-0 min-w-0 overflow-auto p-4">
+        <ResizablePanel
+          defaultSize={isMobile ? "100%" : isTablet ? "75%" : "70%"}
+          minSize={0}
+          className="min-h-0 min-w-0 overflow-auto p-4"
+        >
           <div className="flex w-full items-center justify-between gap-2 border-b border-gray-200 pb-2">
             <div className="flex min-w-0 items-center gap-2">
-              <Link className="shrink-0" href="/items">Danh sách nguyên liệu</Link>
+              <Link className="shrink-0" href="/items">
+                Danh sách nguyên liệu
+              </Link>
               <AiOutlineRight className="shrink-0" />
               <p className="truncate">{data?.item_code ?? id}</p>
             </div>
-            <Button variant="ghost" size="icon" className="size-9 shrink-0" onClick={() => router.push("/items")} aria-label="Đóng chi tiết hàng hóa">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-9 shrink-0"
+              onClick={() => router.push("/items")}
+              aria-label="Đóng chi tiết hàng hóa"
+            >
               <X className="size-5" />
             </Button>
           </div>
@@ -51,26 +72,58 @@ export default function ItemDetailPage() {
               <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
                 <Skeleton className="mx-auto h-10 w-3/4" />
                 <div className="mt-6 space-y-4">
-                  {Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-5 w-full" />)}
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <Skeleton key={index} className="h-5 w-full" />
+                  ))}
                 </div>
               </div>
             ) : error ? (
-              <div role="alert" className="p-4 text-center text-sm text-red-600">
+              <div
+                role="alert"
+                className="p-4 text-center text-sm text-red-600"
+              >
                 <p>Không thể tải thông tin hàng hóa.</p>
-                <Button variant="outline" className="mt-2" onClick={() => void mutate()}>Thử lại</Button>
+                <Button
+                  variant="outline"
+                  className="mt-2"
+                  onClick={() => void mutate()}
+                >
+                  Thử lại
+                </Button>
               </div>
             ) : data ? (
-              <div className="flex w-full max-w-4xl flex-col gap-4 rounded border bg-white p-4 shadow-md">
-                <h1 className="wrap-anywhere text-center text-4xl font-bold text-blue-500">{data.item_code} - {data.item_name}</h1>
-                <div className="border-t border-gray-300 py-2" />
-                <FieldDisplay lable="Mã hàng hóa" value={data.item_code} />
-                <FieldDisplay lable="Tên hàng hóa" value={data.item_name ?? ""} />
-                <FieldDisplay lable="Mã DK" value={data.dk_code ?? ""} />
-                <FieldDisplay lable="Đơn vị tính" value={data.unit ?? ""} />
-                <FieldDisplay lable="Số đăng ký" value={[data.registration?.registration_number, data.registration?.product_name].filter(Boolean).join(" - ")} />
-              </div>
+              <>
+                <div className="flex w-full max-w-4xl flex-col gap-4 rounded border bg-white p-4 shadow-md">
+                  <h1 className="wrap-anywhere text-center text-4xl font-bold text-blue-500">
+                    {data.item_code} - {data.item_name}
+                  </h1>
+                  <div className="border-t border-gray-300 py-2" />
+                  <FieldDisplay lable="Mã hàng hóa" value={data.item_code} />
+                  <FieldDisplay
+                    lable="Tên hàng hóa"
+                    value={data.item_name ?? ""}
+                  />
+                  <FieldDisplay lable="Mã DK" value={data.dk_code ?? ""} />
+                  <FieldDisplay lable="Đơn vị tính" value={data.unit ?? ""} />
+                  <FieldDisplay
+                    lable="Số đăng ký"
+                    value={[
+                      data.registration?.registration_number,
+                      data.registration?.product_name,
+                    ]
+                      .filter(Boolean)
+                      .join(" - ")}
+                  />
+                </div>
+                <ItemReceiptHistory
+                  key={data.item_code}
+                  itemCode={data.item_code}
+                />
+              </>
             ) : (
-              <p className="p-4 text-center text-sm text-gray-500">Không tìm thấy hàng hóa.</p>
+              <p className="p-4 text-center text-sm text-gray-500">
+                Không tìm thấy hàng hóa.
+              </p>
             )}
           </div>
         </ResizablePanel>

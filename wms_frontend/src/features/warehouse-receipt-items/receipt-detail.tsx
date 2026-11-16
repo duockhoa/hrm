@@ -2,7 +2,7 @@
 
 import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import useSWR, { useSWRConfig } from "swr";
@@ -113,8 +113,17 @@ export default function ReceiptDetail({
       </Button>
     </>
   );
-  const fields = [
-    ["Mã hàng", data.item_code],
+  const fields: [string, ReactNode][] = [
+    [
+      "Mã hàng",
+      <Link
+        key="item-code"
+        href={`/items/${encodeURIComponent(data.item_code)}`}
+        className="text-blue-600 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        {data.item_code}
+      </Link>,
+    ],
     ["Tên hàng", data.item?.item_name],
     ["Số lượng", formatReceiptQuantity(data.quantity)],
     ["Đơn vị tính", data.unit],

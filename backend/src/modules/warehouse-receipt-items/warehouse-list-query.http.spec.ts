@@ -43,11 +43,21 @@ describe.each([
     findAll.mockResolvedValue(page);
     const response = await request(app.getHttpServer())
       .get(`/${route}`)
-      .query({ page: '2', limit: '300', search: '  Kho A  ' })
+      .query({
+        page: '2',
+        limit: '300',
+        search: '  Kho A  ',
+        item_code: ' BB01447 ',
+      })
       .expect(200);
     expect(response.body).toEqual(page);
     expect(findAll).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 2, limit: 300, search: 'Kho A' }),
+      expect.objectContaining({
+        page: 2,
+        limit: 300,
+        search: 'Kho A',
+        item_code: 'BB01447',
+      }),
     );
   });
 

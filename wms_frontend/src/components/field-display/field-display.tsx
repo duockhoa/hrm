@@ -1,9 +1,11 @@
+import type { ReactNode } from "react";
+
 export default function FieldDisplay({
   lable,
   value,
 }: {
   lable: string;
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div className="flex w-full justify-start gap-3 md:gap-4">

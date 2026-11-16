@@ -63,6 +63,25 @@ describe('WarehouseReceiptItemsService', () => {
     );
   });
 
+  it('filters receipt history by exact item code before paging and counting', async () => {
+    prisma.warehouseReceiptItems.findMany.mockResolvedValue([
+      { id: 1, item_code: 'NL_001%' },
+    ]);
+    prisma.warehouseReceiptItems.count.mockResolvedValue(1);
+    await service.findAll({ item_code: ' NL_001% ', page: 1, limit: 300 });
+
+    const query = prisma.warehouseReceiptItems.findMany.mock.calls[0][0];
+    expect(query).toMatchObject({
+      where: { item_code: 'NL_001%' },
+      skip: 0,
+      take: 300,
+      orderBy: [{ received_at: 'desc' }, { id: 'desc' }],
+    });
+    expect(prisma.warehouseReceiptItems.count).toHaveBeenCalledWith({
+      where: query.where,
+    });
+  });
+
   it('keeps unpaged responses compatible with existing callers', async () => {
     prisma.warehouseReceiptItems.findMany.mockResolvedValue([{ id: 1 }]);
     await expect(service.findAll()).resolves.toEqual([{ id: 1 }]);

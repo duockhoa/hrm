@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AiOutlineRight } from "react-icons/ai";
 import { Plus, X } from "lucide-react";
+import useSWR from "swr";
 import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
 import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import useMobile from "@/hooks/use-mobile";
@@ -33,7 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
-import {
+import warehouseReceiptItemsService, {
   WAREHOUSE_RECEIPT_ITEMS_URL,
   type WarehouseReceiptItem,
 } from "@/services/warehouse-receipt-items.service";
@@ -116,7 +117,14 @@ export default function ReceiptPage({
     }
     return Array.from(result, ([date, receipts]) => ({ date, receipts }));
   }, [data]);
-  const selected = data?.find((receipt) => receipt.id === selectedId);
+  const selectedFromList = data.find((receipt) => receipt.id === selectedId);
+  const { data: selectedDetail } = useSWR(
+    selectedId !== null && !selectedFromList
+      ? `${WAREHOUSE_RECEIPT_ITEMS_URL}/${selectedId}`
+      : null,
+    () => warehouseReceiptItemsService.read(selectedId!),
+  );
+  const selected = selectedFromList ?? selectedDetail;
   const title = selected
     ? [selected.item_code, selected.lot_number].join(" - ")
     : `#${selectedId}`;
