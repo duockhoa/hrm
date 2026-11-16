@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "../ui/input";
-import useDepartmentStore from "@/store/department.store";
+import { useDepartmentDirectory } from "@/hooks/use-department-directory";
+import DirectoryLoadStatus from "@/components/common/directory-load-status";
 import { userService } from "@/services/index.service";
 import { mutate } from "swr";
 import { API_ROUTES } from "@/lib/api-routes";
@@ -32,7 +33,12 @@ export default function EditUserForm({
   user: any;
   onClose?: () => void;
 }) {
-  const { departments } = useDepartmentStore();
+  const {
+    data: departments = [],
+    isLoading: departmentsLoading,
+    error: departmentsError,
+    mutate: retryDepartments,
+  } = useDepartmentDirectory();
   const formSchema = z.object({
     username: z
       .string()
@@ -119,7 +125,11 @@ export default function EditUserForm({
               <FormItem className="mb-4">
                 <FormLabel>Bộ Phận</FormLabel>
                 <FormControl>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    disabled={departmentsLoading || Boolean(departmentsError)}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a department" />
                     </SelectTrigger>
@@ -135,6 +145,12 @@ export default function EditUserForm({
                     </SelectContent>
                   </Select>
                 </FormControl>
+                <DirectoryLoadStatus
+                  loading={departmentsLoading}
+                  error={departmentsError}
+                  label="danh sách phòng ban"
+                  onRetry={() => void retryDepartments().catch(() => {})}
+                />
                 <FormMessage />
               </FormItem>
             )}

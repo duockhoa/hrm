@@ -23,7 +23,8 @@ import {
 import { departmentsService } from "@/services/index.service";
 import { mutate } from "swr";
 import { API_ROUTES } from "@/lib/api-routes";
-import useUsersStore from "@/store/users.store";
+import { useUserDirectory } from "@/hooks/use-user-directory";
+import DirectoryLoadStatus from "@/components/common/directory-load-status";
 
 export default function FormEditDepartment({
   department,
@@ -32,7 +33,12 @@ export default function FormEditDepartment({
   department: any;
   onClose: () => void;
 }) {
-  const { users } = useUsersStore();
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    error: usersError,
+    mutate: retryUsers,
+  } = useUserDirectory();
   const { companies } = useCompanyStore();
   const formSchema = z.object({
     description: z.string().optional(),
@@ -142,6 +148,7 @@ export default function FormEditDepartment({
                 <FormLabel>Team Lead</FormLabel>
                 <FormControl>
                   <Select
+                    disabled={usersLoading || Boolean(usersError)}
                     onValueChange={(val) =>
                       field.onChange(val ? Number(val) : undefined)
                     }
@@ -163,6 +170,12 @@ export default function FormEditDepartment({
                     </SelectContent>
                   </Select>
                 </FormControl>
+                <DirectoryLoadStatus
+                  loading={usersLoading}
+                  error={usersError}
+                  label="danh sách nhân sự"
+                  onRetry={() => void retryUsers().catch(() => {})}
+                />
                 <FormMessage />
               </FormItem>
             )}

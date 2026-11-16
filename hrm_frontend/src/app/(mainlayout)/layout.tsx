@@ -13,15 +13,9 @@ import {
   MdMailOutline,
   MdPerson,
 } from "react-icons/md";
-import useUsersStore from "@/store/users.store";
-import useDepartmentStore from "@/store/department.store";
 import useCompanyStore from "@/store/companies.store";
 import useSWR from "swr";
-import {
-  departmentsService,
-  usersService,
-  companiesService,
-} from "@/services/index.service";
+import { usersService, companiesService } from "@/services/index.service";
 import { API_ROUTES } from "@/lib/api-routes";
 import ApplicationAccessGuard from "@/components/applications/application-access-guard";
 const data = [
@@ -113,30 +107,9 @@ function MainLayoutContent({
     if (isMobile) {
       toggleSidebar();
     }
-  }, [isMobile]);
+  }, [isMobile, toggleSidebar]);
 
-  const { setUsers, setIsLoading } = useUsersStore();
-  const {
-    data: users,
-    error,
-    isLoading,
-  } = useSWR(API_ROUTES.users.base, usersService.fetcherUsers);
-
-  const { setDepartments, setIsLoading: setDepartmentsLoading } =
-    useDepartmentStore();
   const { setCompanies, setIsLoading: setCompaniesLoading } = useCompanyStore();
-
-  const { data: departments, isLoading: isDepartmentsLoading } = useSWR(
-    API_ROUTES.departments.base,
-    departmentsService.fetcherDepartments,
-  );
-  useEffect(() => {
-    setDepartmentsLoading(isDepartmentsLoading);
-    if (departments) {
-      setDepartments(departments);
-      setDepartmentsLoading(false);
-    }
-  }, [departments, isDepartmentsLoading]);
 
   const { data: companies, isLoading: isCompaniesLoading } = useSWR(
     API_ROUTES.companies.base,
@@ -158,17 +131,7 @@ function MainLayoutContent({
       setCompanies(companies);
       setCompaniesLoading(false);
     }
-  }, [companies, isCompaniesLoading]);
-
-  useEffect(() => {
-    if (isLoading) {
-      setIsLoading(true);
-    }
-    if (users) {
-      setUsers(users);
-      setIsLoading(false);
-    }
-  }, [users, isLoading]);
+  }, [companies, isCompaniesLoading, setCompanies, setCompaniesLoading]);
 
   return (
     <div className="flex h-screen flex-col">

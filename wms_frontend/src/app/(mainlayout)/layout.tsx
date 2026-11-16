@@ -5,9 +5,8 @@ import Header from "@/components/header/header";
 import Sidebar from "@/components/sidebar/sidebar";
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
-import { userService, usersService } from "@/services/index.service";
+import { userService } from "@/services/index.service";
 import { useSidebarStore } from "@/store/sidebar-store";
-import useUsersStore from "@/store/users.store";
 import {
   Boxes,
   ClipboardList,
@@ -88,7 +87,6 @@ export default function MainLayout({
     }
   }, [isMobile, toggleSidebar]);
 
-  const { setUsers, setIsLoading } = useUsersStore();
   const { data: myPermissions } = useSWR(
     API_ROUTES.users.myPermissions,
     userService.fetchMyPermissions,
@@ -98,21 +96,6 @@ export default function MainLayout({
       item.id !== "connection-history" ||
       myPermissions?.permissionKeys.includes("users.list"),
   );
-  const { data: users, isLoading } = useSWR(
-    API_ROUTES.users.base,
-    usersService.fetcherUsers,
-  );
-
-  useEffect(() => {
-    if (isLoading) {
-      setIsLoading(true);
-    }
-    if (users) {
-      setUsers(users);
-      setIsLoading(false);
-    }
-  }, [users, isLoading, setIsLoading, setUsers]);
-
   return (
     <ApplicationAccessGuard>
       <div className="flex h-dvh flex-col overflow-hidden">

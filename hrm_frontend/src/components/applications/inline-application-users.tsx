@@ -3,7 +3,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { API_ROUTES } from "@/lib/api-routes";
 import { applicationsService } from "@/services/index.service";
-import useUsersStore from "@/store/users.store";
+import { useUserDirectory } from "@/hooks/use-user-directory";
+import DirectoryLoadStatus from "@/components/common/directory-load-status";
 import type { ApplicationUser } from "@/types/application";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -27,16 +28,24 @@ export default function ApplicationUsersInline({
 }: {
   applicationId: number;
 }) {
-  const { users, usersLoading } = useUsersStore();
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    error: usersError,
+    mutate: retryUsers,
+  } = useUserDirectory();
   const [isSaving, setIsSaving] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<number | null>(null);
   const [changedUserIds, setChangedUserIds] = useState<Set<number> | null>(
     null,
   );
   const assignedUsersKey = `${API_ROUTES.applications.base}/${applicationId}/users`;
-  const { data: assignedUsers = [], isLoading: assignedUsersLoading } = useSWR<
-    ApplicationUser[]
-  >(assignedUsersKey, () =>
+  const {
+    data: assignedUsers = [],
+    isLoading: assignedUsersLoading,
+    error: assignedUsersError,
+    mutate: retryAssignedUsers,
+  } = useSWR<ApplicationUser[]>(assignedUsersKey, () =>
     applicationsService.fetcherApplicationUsers(applicationId),
   );
   const assignedUserIds = changedUserIds ?? getAssignedUserIds(assignedUsers);
@@ -50,7 +59,7 @@ export default function ApplicationUsersInline({
   const isLoading = usersLoading || assignedUsersLoading;
 
   const toggleUser = async (userId: number) => {
-    if (isSaving) {
+    if (isSaving || usersError || assignedUsersError || isLoading) {
       return;
     }
 
@@ -100,7 +109,17 @@ export default function ApplicationUsersInline({
             <span className="text-center">Trạng thái</span>
           </div>
 
-          {isLoading ? (
+          {usersError || assignedUsersError ? (
+            <DirectoryLoadStatus
+              loading={false}
+              error={usersError || assignedUsersError}
+              label="người dùng ứng dụng"
+              onRetry={() => {
+                void retryUsers().catch(() => {});
+                void retryAssignedUsers().catch(() => {});
+              }}
+            />
+          ) : isLoading ? (
             <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-slate-500">
               <Loader2 className="size-4 animate-spin" />
               Đang tải người dùng...

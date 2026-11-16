@@ -31,7 +31,8 @@ import { API_ROUTES } from "@/lib/api-routes";
 import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import { productionOrderDeviationsService } from "@/services/index.service";
 import useUserStore from "@/store/user.store";
-import useUsersStore from "@/store/users.store";
+import { useUserDirectory } from "@/hooks/use-user-directory";
+import DirectoryLoadStatus from "@/components/common/directory-load-status";
 
 const MAX_DEVIATION_IMAGE_COUNT = 10;
 const DEVIATION_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
@@ -74,7 +75,12 @@ export default function FormAddProductionOrderDeviation({
   onClose?: () => void;
 }) {
   const { user } = useUserStore();
-  const { users } = useUsersStore();
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    error: usersError,
+    mutate: retryUsers,
+  } = useUserDirectory();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
   const productionOrderId = getProductionOrderId(productionOrder);
@@ -235,6 +241,7 @@ export default function FormAddProductionOrderDeviation({
                   <FormLabel>Người phê duyệt</FormLabel>
                   <FormControl>
                     <Combobox
+                      disabled={usersLoading || Boolean(usersError)}
                       autoHighlight
                       items={approverOptions}
                       value={
@@ -270,6 +277,12 @@ export default function FormAddProductionOrderDeviation({
                       </ComboboxContent>
                     </Combobox>
                   </FormControl>
+                  <DirectoryLoadStatus
+                    loading={usersLoading}
+                    error={usersError}
+                    label="danh sách người phê duyệt"
+                    onRetry={() => void retryUsers().catch(() => {})}
+                  />
                   <FormMessage />
                 </FormItem>
               )}

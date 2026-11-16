@@ -1,6 +1,7 @@
 "use client";
 import HeaderListDepartment from "@/components/departments/header-list-department";
-import useDepartmentStore from "@/store/department.store";
+import { useDepartmentDirectory } from "@/hooks/use-department-directory";
+import DirectoryLoadStatus from "@/components/common/directory-load-status";
 import useSearchStore from "@/store/search.store";
 import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
 import { restoreScrollableChainPosition } from "@/lib/scroll-position";
@@ -50,7 +51,12 @@ function DepartmentSkeletonList() {
 }
 
 export default function DepartmentPage() {
-  const { departments, departmentsLoading } = useDepartmentStore();
+  const {
+    data: departments = [],
+    isLoading: departmentsLoading,
+    error: departmentsError,
+    mutate: retryDepartments,
+  } = useDepartmentDirectory();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const activeDepartmentName = pathname.startsWith("/department/")
@@ -98,6 +104,13 @@ export default function DepartmentPage() {
       >
         {departmentsLoading ? (
           <DepartmentSkeletonList />
+        ) : departmentsError ? (
+          <DirectoryLoadStatus
+            loading={false}
+            error={departmentsError}
+            label="danh sách phòng ban"
+            onRetry={() => void retryDepartments().catch(() => {})}
+          />
         ) : filteredDepartments.length > 0 ? (
           <div className="flex flex-row flex-wrap gap-4 content-start">
             {filteredDepartments.map((dept) => (

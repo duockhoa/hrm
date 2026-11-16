@@ -1,5 +1,6 @@
 "use client";
-import useUsersStore from "@/store/users.store";
+import { useUserDirectory } from "@/hooks/use-user-directory";
+import DirectoryLoadStatus from "@/components/common/directory-load-status";
 import useSearchStore from "@/store/search.store";
 import ItemUser from "@/components/users/item-user";
 import ListUserHeader from "@/components/users/header-list-user";
@@ -14,7 +15,12 @@ import { useRef, useEffect, useMemo } from "react";
 const USER_LIST_SCROLL_KEY = "userListScroll";
 
 export default function HomePage() {
-  const { users, usersLoading } = useUsersStore();
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    error: usersError,
+    mutate: retryUsers,
+  } = useUserDirectory();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -41,7 +47,7 @@ export default function HomePage() {
   }, [users, searchKeyword]);
 
   // Lưu scroll position trước khi chuyển trang
-  const handleClick = (userId: string) => {
+  const handleClick = (userId: string | number) => {
     saveScrollableChainPosition(USER_LIST_SCROLL_KEY, containerRef.current);
     router.push(`/home/${userId}`, { scroll: false });
   };
@@ -64,6 +70,13 @@ export default function HomePage() {
           Array.from({ length: 10 }).map((_, idx) => (
             <ItemUser key={idx} user={null} onClick={() => {}} />
           ))
+        ) : usersError ? (
+          <DirectoryLoadStatus
+            loading={false}
+            error={usersError}
+            label="danh sách nhân sự"
+            onRetry={() => void retryUsers().catch(() => {})}
+          />
         ) : filteredUsers.length > 0 ? (
           filteredUsers.map((user) => (
             <ItemUser

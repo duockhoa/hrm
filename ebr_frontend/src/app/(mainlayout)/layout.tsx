@@ -5,9 +5,7 @@ import Header from "@/components/header/header";
 import Sidebar from "@/components/sidebar/sidebar";
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
-import { usersService } from "@/services/index.service";
 import { useSidebarStore } from "@/store/sidebar-store";
-import useUsersStore from "@/store/users.store";
 import { userService } from "@/services/index.service";
 import {
   Boxes,
@@ -136,7 +134,8 @@ export default function MainLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const isReportsPage = pathname === "/reports" || pathname.startsWith("/reports/");
+  const isReportsPage =
+    pathname === "/reports" || pathname.startsWith("/reports/");
   const isConnectionHistoryPage = pathname === "/connection-history";
   const { isOpen, toggleSidebar } = useSidebarStore();
   const isMobile = useMobile();
@@ -144,31 +143,17 @@ export default function MainLayout({
     if (isMobile) {
       toggleSidebar();
     }
-  }, [isMobile]);
+  }, [isMobile, toggleSidebar]);
 
-  const { setUsers, setIsLoading } = useUsersStore();
   const { data: myPermissions } = useSWR(
     API_ROUTES.users.myPermissions,
     userService.fetchMyPermissions,
   );
-  const menuData = data.filter((item) =>
-    item.id !== "connection-history" || myPermissions?.permissionKeys.includes("users.list"),
+  const menuData = data.filter(
+    (item) =>
+      item.id !== "connection-history" ||
+      myPermissions?.permissionKeys.includes("users.list"),
   );
-  const {
-    data: users,
-    error,
-    isLoading,
-  } = useSWR(API_ROUTES.users.base, usersService.fetcherUsers);
-
-  useEffect(() => {
-    if (isLoading) {
-      setIsLoading(true);
-    }
-    if (users) {
-      setUsers(users);
-      setIsLoading(false);
-    }
-  }, [users, isLoading]);
 
   return (
     <ApplicationAccessGuard>
