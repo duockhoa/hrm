@@ -32,6 +32,7 @@ export function useInfiniteRecordList<T extends { id: string | number }>({
   storageKey,
   fetchPage,
   observe = true,
+  revalidateOnMount,
 }: {
   url: string;
   filters: Filters;
@@ -39,6 +40,7 @@ export function useInfiniteRecordList<T extends { id: string | number }>({
   storageKey: string;
   fetchPage?: (page: number, limit: number) => Promise<RecordListPage<T>>;
   observe?: boolean;
+  revalidateOnMount?: boolean;
 }) {
   const pathname = usePathname();
   const filterKey = JSON.stringify(
@@ -80,6 +82,7 @@ export function useInfiniteRecordList<T extends { id: string | number }>({
       },
       {
         revalidateFirstPage: false,
+        revalidateOnMount,
         revalidateOnFocus: false,
         revalidateOnReconnect: false,
         shouldRetryOnError: false,

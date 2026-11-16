@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import useSWR, { useSWRConfig } from "swr";
-import { Pencil, Tags, Trash2 } from "lucide-react";
+import { FilePenLine, Pencil, Tags, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
 import FieldDisplay from "@/components/field-display/field-display";
@@ -25,15 +25,18 @@ import warehouseReceiptItemsService, {
 import ReceiptForm, { receiptError } from "./receipt-form";
 import { RECEIPT_ATTACHMENT_GROUPS } from "./receipt-attachments";
 import { ReceiptImageGallery } from "./receipt-image-picker";
+import ReceiptSamplingDraftForm from "./receipt-sampling-draft-form";
+import {
+  formatExpiryDate,
+  formatReceiptDateTime,
+  formatReceiptQuantity,
+} from "./receipt-formatters";
 
-export const formatReceiptDateTime = (value: string) =>
-  new Date(value).toLocaleString("vi-VN");
-export const formatExpiryDate = (value: string | null) =>
-  value ? value.slice(0, 10).split("-").reverse().join("/") : "";
-export const formatReceiptQuantity = (value: string | number | null) =>
-  value == null
-    ? ""
-    : Number(value).toLocaleString("vi-VN", { maximumFractionDigits: 3 });
+export {
+  formatExpiryDate,
+  formatReceiptDateTime,
+  formatReceiptQuantity,
+} from "./receipt-formatters";
 
 export default function ReceiptDetail({
   id,
@@ -54,6 +57,8 @@ export default function ReceiptDetail({
   const [deleting, setDeleting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
 
   async function handleDelete() {
     try {
@@ -158,6 +163,18 @@ export default function ReceiptDetail({
         showCloseButton={false}
       />
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-gray-200 py-3">
+        <button
+          type="button"
+          onClick={() => setDraftOpen(true)}
+          className="inline-flex cursor-pointer flex-col items-center p-0.5 md:p-1"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 md:h-10 md:w-10">
+            <FilePenLine className="size-5" />
+          </span>
+          <span className="mt-1 w-[90px] text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+            Soạn PYCLM
+          </span>
+        </button>
         <Link
           href={`/label/raw-material-label?id=${data.id}`}
           target="_blank"
@@ -191,6 +208,27 @@ export default function ReceiptDetail({
           ) : null;
         })}
       </div>
+      <Dialog
+        open={draftOpen}
+        onOpenChange={(open) => {
+          if (!draftSaving) setDraftOpen(open);
+        }}
+      >
+        <DialogContent
+          showCloseButton={!draftSaving}
+          className="max-h-[90dvh] overflow-y-auto md:max-w-[640px]"
+        >
+          <DialogHeader>
+            <DialogTitle>Soạn phiếu yêu cầu lấy mẫu</DialogTitle>
+          </DialogHeader>
+          <ReceiptSamplingDraftForm
+            receipt={data}
+            onSubmittingChange={setDraftSaving}
+            onCancel={() => setDraftOpen(false)}
+            onSaved={() => setDraftOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={editing}
         onOpenChange={(open) => {

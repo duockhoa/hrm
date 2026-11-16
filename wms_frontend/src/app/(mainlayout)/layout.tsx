@@ -10,6 +10,7 @@ import { useSidebarStore } from "@/store/sidebar-store";
 import {
   Boxes,
   ClipboardList,
+  FilePenLine,
   Info,
   Package,
   PackageMinus,
@@ -27,6 +28,12 @@ const menuItems = [
     name: "Kiểm hàng nhập kho",
     icon: <Boxes className="size-5 shrink-0" />,
     url: "/home",
+  },
+  {
+    id: "sampling-request-drafts",
+    name: "Danh sách gửi PYCLM",
+    icon: <FilePenLine className="size-5 shrink-0" />,
+    url: "/sampling-request-drafts",
   },
   {
     id: "warehouse-temperature-humidity-checks",

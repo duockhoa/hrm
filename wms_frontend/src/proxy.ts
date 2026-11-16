@@ -5,6 +5,7 @@ const authPaths = ["/login", "/register", "/forgot-password"];
 const protectedPaths = [
   "/",
   "/home",
+  "/sampling-request-drafts",
   "/stocktakes",
   "/warehouse-dispatches",
   "/finished-product-summaries",

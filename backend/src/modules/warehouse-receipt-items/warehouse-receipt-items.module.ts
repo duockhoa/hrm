@@ -4,13 +4,17 @@ import { WarehouseReceiptItemsController } from './warehouse-receipt-items.contr
 import { WarehouseReceiptItemsService } from './warehouse-receipt-items.service';
 import { WarehouseReceiptAttachmentsController } from './warehouse-receipt-attachments.controller';
 import { WarehouseReceiptAttachmentsService } from './warehouse-receipt-attachments.service';
+import { WarehouseReceiptSamplingDraftsController } from './warehouse-receipt-sampling-drafts.controller';
+import { WarehouseReceiptSamplingDraftsService } from './warehouse-receipt-sampling-drafts.service';
 
 @Module({
   controllers: [
+    WarehouseReceiptSamplingDraftsController,
     WarehouseReceiptAttachmentsController,
     WarehouseReceiptItemsController,
   ],
   providers: [
+    WarehouseReceiptSamplingDraftsService,
     WarehouseReceiptItemsService,
     WarehouseReceiptAttachmentsService,
     PrismaService,
