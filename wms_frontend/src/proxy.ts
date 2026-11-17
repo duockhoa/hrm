@@ -8,6 +8,7 @@ const protectedPaths = [
   "/sampling-request-drafts",
   "/stocktakes",
   "/warehouse-dispatches",
+  "/purchase-goods-receipts",
   "/finished-product-summaries",
   "/warehouse-temperature-humidity-checks",
   "/connection-history",

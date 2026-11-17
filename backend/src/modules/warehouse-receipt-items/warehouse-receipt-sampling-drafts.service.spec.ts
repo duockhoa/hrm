@@ -18,6 +18,8 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
   };
   const prisma = {
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
+    warehouseReceiptSamplingSendBatches: { findUnique: jest.fn() },
     warehouseReceiptItems: { findUnique: jest.fn() },
     warehouseReceiptItemSamplingRequestDrafts: {
       findUnique: jest.fn(),
@@ -62,6 +64,17 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
       create: { warehouse_receipt_item_id: 2, ...data },
       update: data,
     });
+  });
+  it('blocks edits while a batch is sending or awaiting confirmation', async () => {
+    prisma.warehouseReceiptSamplingSendBatches.findUnique.mockResolvedValue({
+      status: 'sending',
+    });
+    await expect(service.save(2, { location: 'B' })).rejects.toThrow(
+      ConflictException,
+    );
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.upsert,
+    ).not.toHaveBeenCalled();
   });
 
   it('upserts the same receipt when the draft is composed again', async () => {

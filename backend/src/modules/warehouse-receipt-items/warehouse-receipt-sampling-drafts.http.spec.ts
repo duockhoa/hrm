@@ -5,6 +5,7 @@ import request from 'supertest';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { WarehouseReceiptSamplingDraftsController } from './warehouse-receipt-sampling-drafts.controller';
 import { WarehouseReceiptSamplingDraftsService } from './warehouse-receipt-sampling-drafts.service';
+import { WarehouseReceiptSamplingSendService } from './warehouse-receipt-sampling-send.service';
 
 describe('Receipt sampling draft endpoints', () => {
   let app: INestApplication;
@@ -13,21 +14,50 @@ describe('Receipt sampling draft endpoints', () => {
     findAll: jest.fn(),
     findByReceipt: jest.fn(),
   };
+  const sendService = { send: jest.fn() };
   const route = '/warehouse-receipt-items/2/sampling-request-draft';
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [WarehouseReceiptSamplingDraftsController],
       providers: [
+        { provide: WarehouseReceiptSamplingSendService, useValue: sendService },
         { provide: WarehouseReceiptSamplingDraftsService, useValue: service },
       ],
     })
       .overrideGuard(jwtAuthGuard)
-      .useValue({ canActivate: () => true })
+      .useValue({
+        canActivate: (context: {
+          switchToHttp: () => { getRequest: () => { user: { id: number } } };
+        }) => {
+          context.switchToHttp().getRequest().user = { id: 5 };
+          return true;
+        },
+      })
       .compile();
     app = module.createNestApplication();
     await app.init();
   });
   beforeEach(() => jest.resetAllMocks());
+  it('sends using the authenticated sender and an idempotency key', async () => {
+    sendService.send.mockResolvedValue({ status: 'success', sentCount: 2 });
+    const requestId = '87c9ad62-d469-44b5-bbdf-8bc074d09c74';
+    await request(app.getHttpServer())
+      .post('/warehouse-receipt-sampling-drafts/send')
+      .send({ requestId })
+      .expect(201);
+    expect(sendService.send).toHaveBeenCalledWith(requestId, 5);
+  });
+  it.each([
+    {},
+    { requestId: 'bad' },
+    { requestId: '87c9ad62-d469-44b5-bbdf-8bc074d09c74', sender_id: 999 },
+  ])('rejects invalid send request %p', async (body) => {
+    await request(app.getHttpServer())
+      .post('/warehouse-receipt-sampling-drafts/send')
+      .send(body)
+      .expect(400);
+    expect(sendService.send).not.toHaveBeenCalled();
+  });
   afterAll(async () => {
     await app.close();
   });

@@ -25,6 +25,7 @@ import {
   formatExpiryDate,
   formatReceiptQuantity,
 } from "@/features/warehouse-receipt-items/receipt-formatters";
+import ReceiptSamplingSendButton from "@/features/warehouse-receipt-items/receipt-sampling-send-button";
 
 const columns = [
   "Mã hàng",
@@ -53,6 +54,7 @@ export default function SamplingRequestDraftsPage() {
     sentinelRef,
     loadMore,
     retry,
+    mutate,
   } = useInfiniteRecordList<ReceiptSamplingDraft>({
     url: RECEIPT_SAMPLING_DRAFTS_URL,
     filters: { search: search || undefined },
@@ -62,16 +64,28 @@ export default function SamplingRequestDraftsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white shadow-md">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b p-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b p-3">
         <div className="flex items-center gap-2">
           <AiOutlineRight />
           <h1>Danh sách gửi PYCLM</h1>
         </div>
-        {!isLoading && !error && (
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
-            {total.toLocaleString("vi-VN")} bản nháp
-          </span>
-        )}
+        <div className="flex flex-wrap items-start gap-3">
+          {!isLoading && !error && (
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
+              {total.toLocaleString("vi-VN")} bản nháp
+            </span>
+          )}
+          <ReceiptSamplingSendButton
+            disabled={isLoading || Boolean(error) || (!search && total === 0)}
+            onSent={() =>
+              mutate(
+                (pages) =>
+                  pages?.map((page) => ({ ...page, data: [], total: 0 })),
+                { revalidate: true },
+              )
+            }
+          />
+        </div>
       </div>
       <div ref={containerRef} className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-[1200px] text-[13px]">

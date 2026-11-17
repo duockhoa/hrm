@@ -717,6 +717,23 @@ model WarehouseReceiptItemSamplingRequestDrafts {
   @@map("warehouse_receipt_item_sampling_request_drafts")
 }
 
+// Durable send journal: provider confirmation is kept independently of finalizing sent rows.
+model WarehouseReceiptSamplingSendBatches {
+  id             String    @id @db.Char(36)
+  active_key     String?   @unique(map: "receipt_sampling_send_batches_active_key") @db.VarChar(64)
+  status         String    @db.VarChar(32)
+  sender_id      Int
+  payload        Json
+  draft_snapshot Json
+  google_doc_url String?   @db.Text
+  sent_at        DateTime? @db.DateTime(3)
+  last_error     String?   @db.Text
+  created_at     DateTime  @default(now()) @db.DateTime(3)
+  updated_at     DateTime  @default(now()) @updatedAt @db.DateTime(3)
+
+  @@map("warehouse_receipt_sampling_send_batches")
+}
+
 model WarehouseReceiptItemAttachments {
   id                        Int                   @id @default(autoincrement())
   warehouse_receipt_item_id Int

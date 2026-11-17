@@ -68,8 +68,8 @@ export default function ItemsPage() {
         ) : !error ? (
           <p className="p-4 text-center text-sm text-gray-500">
             {searchKeyword.trim()
-              ? "Không tìm thấy hàng hóa phù hợp."
-              : "Chưa có hàng hóa nào."}
+              ? "Không tìm thấy nguyên liệu phù hợp."
+              : "Chưa có nguyên liệu nào."}
           </p>
         ) : null}
         <InfiniteRecordLoadStatus

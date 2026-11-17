@@ -21,6 +21,21 @@ export type ReceiptSamplingDraft = {
 };
 
 export const receiptSamplingDraftsService = {
+  async send(
+    requestId: string,
+  ): Promise<{
+    status: "success";
+    requestId: string;
+    sentCount: number;
+    googleDocUrl: string | null;
+  }> {
+    const response = await axiosClient.post(
+      `${RECEIPT_SAMPLING_DRAFTS_URL}/send`,
+      { requestId },
+      { timeout: 180000 },
+    );
+    return response.data;
+  },
   async read(receiptId: number): Promise<ReceiptSamplingDraft | null> {
     const response = await axiosClient.get(receiptSamplingDraftUrl(receiptId));
     return response.data || null;

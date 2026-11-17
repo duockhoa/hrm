@@ -14,6 +14,7 @@ import {
   Info,
   Package,
   PackageMinus,
+  PackagePlus,
   PackageSearch,
   Thermometer,
   Unplug,
@@ -58,6 +59,12 @@ const menuItems = [
     name: "Kiểm Kê",
     icon: <ClipboardList className="size-5 shrink-0" />,
     url: "/stocktakes",
+  },
+  {
+    id: "purchase-goods-receipts",
+    name: "Phiếu nhập kho hàng mua",
+    icon: <PackagePlus className="size-5 shrink-0" />,
+    url: "/purchase-goods-receipts",
   },
   {
     id: "warehouse-dispatches",
