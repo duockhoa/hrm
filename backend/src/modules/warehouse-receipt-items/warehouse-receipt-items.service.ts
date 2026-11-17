@@ -22,6 +22,12 @@ import { receiptAttachmentInclude } from './warehouse-receipt-attachments.servic
 import { removeReceiptAttachments } from './receipt-attachment-files';
 
 const receiptInclude = {
+  samplingRequest: { select: { id: true, sent_at: true, google_doc_url: true } },
+  sapConfirmation: {
+    include: {
+      confirmedBy: { select: { id: true, username: true, name: true } },
+    },
+  },
   item: { select: { item_code: true, item_name: true, unit: true } },
   supplier: { select: { card_code: true, card_name: true, tax_code: true } },
   manufacturer: {
@@ -107,6 +113,46 @@ export class WarehouseReceiptItemsService {
     if (!receipt)
       throw new NotFoundException('Warehouse receipt item not found');
     return receipt;
+  }
+
+  async confirmSap(id: number, userId: number) {
+    this.validateId(id);
+    if (!Number.isSafeInteger(userId) || userId <= 0)
+      throw new UnauthorizedException();
+    const receipt = await this.prisma.warehouseReceiptItems.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!receipt)
+      throw new NotFoundException('Warehouse receipt item not found');
+    const user = await this.prisma.users.findFirst({
+      where: { id: userId, deleted_at: null },
+      select: { id: true },
+    });
+    if (!user) throw new UnauthorizedException();
+    const where = { warehouse_receipt_item_id: id };
+    const include = {
+      confirmedBy: { select: { id: true, username: true, name: true } },
+    };
+    try {
+      return await this.prisma.warehouseReceiptItemSapConfirmations.upsert({
+        where,
+        create: { warehouse_receipt_item_id: id, confirmed_by_id: userId },
+        // A repeated click must preserve the original confirmer and timestamps.
+        update: {},
+        include,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        return this.prisma.warehouseReceiptItemSapConfirmations.findUniqueOrThrow(
+          { where, include },
+        );
+      }
+      throw error;
+    }
   }
 
   async create(

@@ -54,9 +54,31 @@ const columns = [
   "Quy cách đóng gói",
   "Nhà cung cấp",
   "Nhà sản xuất",
-  "Ghi chú",
+  "Gửi PYCLM",
+  "Nhập SAP",
   "Người nhập",
 ];
+
+function ReceiptStatus({
+  done,
+  positive,
+  negative,
+}: {
+  done: boolean;
+  positive: string;
+  negative: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <span
+        aria-hidden="true"
+        className={`size-3 shrink-0 rounded-full ${done ? "bg-green-500" : "bg-red-600"}`}
+      />
+      {done ? positive : negative}
+    </span>
+  );
+}
+
 function rowValues(receipt: WarehouseReceiptItem) {
   return [
     receipt.item_code,
@@ -68,7 +90,18 @@ function rowValues(receipt: WarehouseReceiptItem) {
     receipt.packaging_specification,
     receipt.supplier?.card_name ?? receipt.supplier_name,
     receipt.manufacturer?.manufacturer_name ?? receipt.manufacturer_name,
-    receipt.note,
+    <ReceiptStatus
+      key="sampling-status"
+      done={Boolean(receipt.samplingRequest)}
+      positive="Đã gửi"
+      negative="Chưa gửi"
+    />,
+    <ReceiptStatus
+      key="sap-status"
+      done={Boolean(receipt.sapConfirmation)}
+      positive="Đã nhập"
+      negative="Chưa nhập"
+    />,
     receipt.enteredBy?.name || receipt.enteredBy?.username,
   ];
 }
@@ -162,7 +195,7 @@ export default function ReceiptPage({
             {receiptError(error, "Không thể tải danh sách hàng nhập kho.")}
           </div>
         ) : (
-          <table className="w-full min-w-[1600px] caption-bottom border-t text-[13px]">
+          <table className="w-full min-w-[1800px] caption-bottom border-t text-[13px]">
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow className="hover:bg-transparent">
                 {columns.map((label) => (

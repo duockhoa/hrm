@@ -64,6 +64,7 @@ model Users {
   reportedProductionOrderDeviations                     ProductionOrderDeviations[]                                     @relation("ProductionOrderDeviationReporter")
   productionOrderSamplingRequests                       ProductionOrderSamplingRequests[]
   warehouseReceiptItemSamplingRequests                  WarehouseReceiptItemSamplingRequests[]
+  warehouseReceiptItemSapConfirmations                  WarehouseReceiptItemSapConfirmations[]
   warehouseReceiptItemSamplingRequestDrafts             WarehouseReceiptItemSamplingRequestDrafts[]
   createdProductionOrderEnvironmentChecks               ProductionOrderEnvironmentChecks[]                              @relation("ProductionOrderEnvironmentCheckCreator")
   createdProductionOrderHygieneChecks                   ProductionOrderHygieneChecks[]                                  @relation("ProductionOrderHygieneCheckCreator")
@@ -650,6 +651,7 @@ model Items {
 }
 
 model WarehouseReceiptItems {
+  sapConfirmation         WarehouseReceiptItemSapConfirmations?
   attachments             WarehouseReceiptItemAttachments[]
   samplingRequest         WarehouseReceiptItemSamplingRequests?
   samplingRequestDraft    WarehouseReceiptItemSamplingRequestDrafts?
@@ -682,6 +684,20 @@ model WarehouseReceiptItems {
   @@index([lot_number])
   @@index([expiry_date])
   @@map("warehouse_receipt_items")
+}
+
+model WarehouseReceiptItemSapConfirmations {
+  id                        Int                    @id @default(autoincrement())
+  warehouse_receipt_item_id  Int                    @unique(map: "receipt_sap_confirmation_receipt_key")
+  receipt                   WarehouseReceiptItems  @relation(fields: [warehouse_receipt_item_id], references: [id], onDelete: Cascade, map: "receipt_sap_confirmation_receipt_fkey")
+  confirmed_by_id           Int?
+  confirmedBy               Users?                 @relation(fields: [confirmed_by_id], references: [id], onDelete: SetNull, map: "receipt_sap_confirmation_user_fkey")
+  confirmed_at              DateTime               @default(now()) @db.DateTime(3)
+  created_at                DateTime               @default(now()) @db.DateTime(3)
+  updated_at                DateTime               @default(now()) @updatedAt @db.DateTime(3)
+
+  @@index([confirmed_by_id], map: "receipt_sap_confirmation_user_idx")
+  @@map("warehouse_receipt_item_sap_confirmations")
 }
 
 model WarehouseReceiptItemSamplingRequests {

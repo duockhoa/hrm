@@ -46,6 +46,14 @@ export class WarehouseReceiptItemsController {
     return this.service.create(dto, req.user);
   }
 
+  @Post(':id/sap-confirmation')
+  confirmSap(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: { user: { id: number | string } },
+  ) {
+    return this.service.confirmSap(id, Number(req.user.id));
+  }
+
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,

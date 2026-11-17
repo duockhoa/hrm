@@ -34,10 +34,83 @@ describe('WarehouseReceiptItemsService', () => {
     businessPartners: { findUnique: jest.fn() },
     manufacturers: { findUnique: jest.fn() },
     users: { findFirst: jest.fn() },
+    warehouseReceiptItemSapConfirmations: {
+      upsert: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
+    },
   };
   const service = new WarehouseReceiptItemsService(
     prisma as unknown as PrismaService,
   );
+
+  describe('SAP confirmation', () => {
+    beforeEach(() => {
+      prisma.warehouseReceiptItems.findUnique.mockResolvedValue({ id: 1 });
+      prisma.users.findFirst.mockResolvedValue({ id: 5 });
+    });
+    it('uses the authenticated user and database timestamps, preserving any original confirmation', async () => {
+      const original = {
+        id: 9,
+        warehouse_receipt_item_id: 1,
+        confirmed_by_id: 4,
+        confirmed_at: new Date('2026-11-17T00:00:00Z'),
+      };
+      prisma.warehouseReceiptItemSapConfirmations.upsert.mockResolvedValue(
+        original,
+      );
+      await expect(service.confirmSap(1, 5)).resolves.toEqual(original);
+      expect(
+        prisma.warehouseReceiptItemSapConfirmations.upsert,
+      ).toHaveBeenCalledWith({
+        where: { warehouse_receipt_item_id: 1 },
+        create: { warehouse_receipt_item_id: 1, confirmed_by_id: 5 },
+        update: {},
+        include: {
+          confirmedBy: { select: { id: true, username: true, name: true } },
+        },
+      });
+    });
+    it('returns the first confirmation if another user wins a concurrent insert', async () => {
+      const original = { id: 9, confirmed_by_id: 4 };
+      prisma.warehouseReceiptItemSapConfirmations.upsert.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('unique', {
+          code: 'P2002',
+          clientVersion: 'test',
+        }),
+      );
+      prisma.warehouseReceiptItemSapConfirmations.findUniqueOrThrow.mockResolvedValue(
+        original,
+      );
+      await expect(service.confirmSap(1, 5)).resolves.toEqual(original);
+    });
+    it('rejects unknown receipts', async () => {
+      prisma.warehouseReceiptItems.findUnique.mockResolvedValue(null);
+      await expect(service.confirmSap(1, 5)).rejects.toThrow(NotFoundException);
+      expect(
+        prisma.warehouseReceiptItemSapConfirmations.upsert,
+      ).not.toHaveBeenCalled();
+    });
+    it.each([0, -1, NaN])(
+      'rejects invalid authenticated users: %p',
+      async (userId) => {
+        await expect(service.confirmSap(1, userId)).rejects.toThrow(
+          UnauthorizedException,
+        );
+        expect(
+          prisma.warehouseReceiptItemSapConfirmations.upsert,
+        ).not.toHaveBeenCalled();
+      },
+    );
+    it('rejects deleted users', async () => {
+      prisma.users.findFirst.mockResolvedValue(null);
+      await expect(service.confirmSap(1, 5)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(
+        prisma.warehouseReceiptItemSapConfirmations.upsert,
+      ).not.toHaveBeenCalled();
+    });
+  });
 
   it('pages and counts the same server search before returning results', async () => {
     const rows = [{ id: 301 }];

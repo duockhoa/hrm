@@ -6,7 +6,14 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import useSWR, { useSWRConfig } from "swr";
-import { FilePenLine, Pencil, Tags, Trash2 } from "lucide-react";
+import {
+  Check,
+  FilePenLine,
+  Loader2,
+  Pencil,
+  Tags,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
 import FieldDisplay from "@/components/field-display/field-display";
@@ -59,6 +66,33 @@ export default function ReceiptDetail({
   const [deleteError, setDeleteError] = useState("");
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
+  const [sapSaving, setSapSaving] = useState(false);
+  const [sapError, setSapError] = useState("");
+
+  async function handleConfirmSap() {
+    if (sapSaving || data?.sapConfirmation) return;
+    setSapSaving(true);
+    setSapError("");
+    try {
+      const confirmation = await warehouseReceiptItemsService.confirmSap(id);
+      await mutate(
+        (current) =>
+          current ? { ...current, sapConfirmation: confirmation } : current,
+        { revalidate: false },
+      );
+      void refreshItemCatalog(WAREHOUSE_RECEIPT_ITEMS_URL).catch(() => {});
+      toast.success("Đã xác nhận nhập SAP.");
+    } catch (error) {
+      setSapError(
+        receiptError(
+          error,
+          "Không thể xác nhận đã nhập SAP. Vui lòng thử lại.",
+        ),
+      );
+    } finally {
+      setSapSaving(false);
+    }
+  }
 
   async function handleDelete() {
     try {
@@ -151,6 +185,21 @@ export default function ReceiptDetail({
     ["Ghi chú", data.note],
     ["Thời điểm nhập", formatReceiptDateTime(data.received_at)],
     ["Người nhập", data.enteredBy?.name || data.enteredBy?.username],
+    ["Trạng thái SAP", data.sapConfirmation ? "Đã nhập SAP" : "Chưa nhập SAP"],
+    ...(data.sapConfirmation
+      ? ([
+          [
+            "Người xác nhận SAP",
+            data.sapConfirmation.confirmedBy?.name ||
+              data.sapConfirmation.confirmedBy?.username ||
+              "Tài khoản đã xóa",
+          ],
+          [
+            "Thời điểm xác nhận SAP",
+            formatReceiptDateTime(data.sapConfirmation.confirmed_at),
+          ],
+        ] as [string, ReactNode][])
+      : []),
   ];
   return (
     <div className="mx-auto w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
@@ -189,7 +238,34 @@ export default function ReceiptDetail({
             Tạo nhãn NL
           </span>
         </Link>
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={Boolean(data.sapConfirmation)}
+          aria-label="Đã nhập SAP"
+          disabled={sapSaving || Boolean(data.sapConfirmation)}
+          onClick={() => void handleConfirmSap()}
+          className="inline-flex cursor-pointer flex-col items-center p-0.5 disabled:cursor-default md:p-1"
+        >
+          <span
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-white md:h-10 md:w-10 ${data.sapConfirmation ? "bg-green-600" : "bg-blue-500 hover:bg-blue-600"}`}
+          >
+            {sapSaving ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <Check className="size-5" />
+            )}
+          </span>
+          <span className="mt-1 w-[90px] text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
+            {sapSaving ? "Đang lưu..." : "Đã nhập SAP"}
+          </span>
+        </button>
       </div>
+      {sapError && (
+        <p role="alert" className="mt-3 text-left text-sm text-red-600">
+          {sapError}
+        </p>
+      )}
       <div className="mt-4 flex flex-col gap-4 text-left [&_p]:whitespace-pre-wrap">
         {fields.map(([label, value]) => (
           <FieldDisplay key={label} lable={label ?? ""} value={value ?? ""} />

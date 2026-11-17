@@ -3,7 +3,23 @@ import type { ReceiptAttachment } from "@/features/warehouse-receipt-items/recei
 
 export const WAREHOUSE_RECEIPT_ITEMS_URL = "/warehouse-receipt-items";
 
+export type ReceiptSapConfirmation = {
+  id: number;
+  warehouse_receipt_item_id: number;
+  confirmed_by_id: number | null;
+  confirmed_at: string;
+  created_at: string;
+  updated_at: string;
+  confirmedBy: { id: number; username: string; name: string | null } | null;
+};
+
 export type WarehouseReceiptItem = {
+  samplingRequest: {
+    id: number;
+    sent_at: string;
+    google_doc_url: string | null;
+  } | null;
+  sapConfirmation: ReceiptSapConfirmation | null;
   id: number;
   attachments: ReceiptAttachment[];
   item_code: string;
@@ -51,6 +67,13 @@ export type WarehouseReceiptItemPayload = Pick<
 };
 
 const warehouseReceiptItemsService = {
+  async confirmSap(id: number): Promise<ReceiptSapConfirmation> {
+    return (
+      await axiosClient.post(
+        `${WAREHOUSE_RECEIPT_ITEMS_URL}/${id}/sap-confirmation`,
+      )
+    ).data;
+  },
   async list(): Promise<WarehouseReceiptItem[]> {
     return (await axiosClient.get(WAREHOUSE_RECEIPT_ITEMS_URL)).data;
   },
