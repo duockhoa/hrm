@@ -28,7 +28,15 @@ describe.each([
       providers: [{ provide: service, useValue: { findAll } }],
     })
       .overrideGuard(jwtAuthGuard)
-      .useValue({ canActivate: () => true })
+      .useValue({
+        canActivate: (context) => {
+          context.switchToHttp().getRequest().user = {
+            id: 5,
+            permissions: ['warehouse-receipt-items.read-all'],
+          };
+          return true;
+        },
+      })
       .compile();
     app = module.createNestApplication();
     await app.init();

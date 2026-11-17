@@ -4,8 +4,7 @@ import ApplicationAccessGuard from "@/components/application-access-guard/applic
 import Header from "@/components/header/header";
 import Sidebar from "@/components/sidebar/sidebar";
 import useMobile from "@/hooks/use-mobile";
-import { API_ROUTES } from "@/lib/api-routes";
-import { userService } from "@/services/index.service";
+import { useWarehouseReceiptAccess } from "@/hooks/use-warehouse-receipt-access";
 import { useSidebarStore } from "@/store/sidebar-store";
 import {
   Boxes,
@@ -21,7 +20,6 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import useSWR from "swr";
 
 const menuItems = [
   {
@@ -101,14 +99,13 @@ export default function MainLayout({
     }
   }, [isMobile, toggleSidebar]);
 
-  const { data: myPermissions } = useSWR(
-    API_ROUTES.users.myPermissions,
-    userService.fetchMyPermissions,
-  );
+  const { permissions: myPermissions, canRead: canReadReceipts } =
+    useWarehouseReceiptAccess();
   const menuData = menuItems.filter(
     (item) =>
-      item.id !== "connection-history" ||
-      myPermissions?.permissionKeys.includes("users.list"),
+      (item.id !== "1" || canReadReceipts) &&
+      (item.id !== "connection-history" ||
+        myPermissions?.permissionKeys.includes("users.list")),
   );
   return (
     <ApplicationAccessGuard>

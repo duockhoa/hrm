@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { WarehouseReceiptReadGuard } from 'src/access/warehouse-receipt-scope';
 import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
 import { SaveReceiptSamplingDraftDto } from './dto/save-receipt-sampling-draft.dto';
 import { WarehouseReceiptSamplingDraftsService } from './warehouse-receipt-sampling-drafts.service';
@@ -29,6 +30,7 @@ export class WarehouseReceiptSamplingDraftsController {
   ) {}
 
   @Get('warehouse-receipt-sampling-drafts')
+  @UseGuards(WarehouseReceiptReadGuard)
   findAll(
     @Query(new ValidationPipe({ transform: true, whitelist: true }))
     query: RecordListQueryDto = {},
@@ -52,6 +54,7 @@ export class WarehouseReceiptSamplingDraftsController {
   }
 
   @Post('warehouse-receipt-sampling-drafts/send')
+  @UseGuards(WarehouseReceiptReadGuard)
   send(
     @Body(
       new ValidationPipe({
@@ -67,6 +70,7 @@ export class WarehouseReceiptSamplingDraftsController {
   }
 
   @Get('warehouse-receipt-items/:id/sampling-request-draft')
+  @UseGuards(WarehouseReceiptReadGuard)
   findByReceipt(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: { user: { id: number | string } },
@@ -75,6 +79,7 @@ export class WarehouseReceiptSamplingDraftsController {
   }
 
   @Put('warehouse-receipt-items/:id/sampling-request-draft')
+  @UseGuards(WarehouseReceiptReadGuard)
   save(
     @Param('id', ParseIntPipe) id: number,
     @Body(

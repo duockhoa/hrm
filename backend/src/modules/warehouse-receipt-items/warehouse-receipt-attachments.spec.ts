@@ -7,6 +7,7 @@ import sharp from 'sharp';
 import request from 'supertest';
 import { PERMISSIONS_KEY } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { WarehouseReceiptReadGuard } from 'src/access/warehouse-receipt-scope';
 import { PrismaService } from 'src/prisma.service';
 import { getImageThumbnailPath } from 'src/common/utils/image-thumbnail.util';
 import {
@@ -62,7 +63,10 @@ describe('Warehouse receipt attachment API', () => {
           const req = context.switchToHttp().getRequest();
           if (req.headers.authorization !== 'Bearer test')
             throw new UnauthorizedException();
-          req.user = { id: 7 };
+          req.user = {
+            id: 7,
+            permissions: ['warehouse-receipt-items.read-all'],
+          };
           return true;
         },
       })
@@ -105,13 +109,13 @@ describe('Warehouse receipt attachment API', () => {
       .set('Authorization', 'Bearer test');
   }
 
-  it('uses only JWT and no permission metadata', () => {
+  it('requires JWT and receipt read scope', () => {
     expect(
       Reflect.getMetadata(
         GUARDS_METADATA,
         WarehouseReceiptAttachmentsController,
       ),
-    ).toEqual([jwtAuthGuard]);
+    ).toEqual([jwtAuthGuard, WarehouseReceiptReadGuard]);
     expect(
       Reflect.getMetadata(
         PERMISSIONS_KEY,

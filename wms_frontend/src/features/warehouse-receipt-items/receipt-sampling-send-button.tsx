@@ -85,14 +85,15 @@ export default function ReceiptSamplingSendButton({
           if (key[2] === 1) firstPageKeys.push(key);
           return true;
         }
+        const endpoint = Array.isArray(key) ? key[0] : key;
         return (
-          typeof key === "string" &&
-          (key === url ||
-            (key.startsWith(`${url}/`) &&
-              /^\d+$/.test(key.slice(url.length + 1))) ||
+          typeof endpoint === "string" &&
+          (endpoint === url ||
+            (endpoint.startsWith(`${url}/`) &&
+              /^\d+$/.test(endpoint.slice(url.length + 1))) ||
             (type === "TP" &&
               /^\/production-orders\/\d+\/finished-product-summaries$/.test(
-                key,
+                endpoint,
               )))
         );
       },
@@ -204,7 +205,8 @@ export default function ReceiptSamplingSendButton({
             samplingDraftListUrl("NL"),
             samplingDraftListUrl("TP"),
           ].includes(key[0]) &&
-          key[4] === String(userId),
+          (key[4] === String(userId) ||
+            String(key[4]).startsWith(`${userId}:`)),
         (page) => (page ? { ...page, data: [], total: 0 } : page),
         { revalidate: false },
       ).catch(() => {});

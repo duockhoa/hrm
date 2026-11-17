@@ -2,6 +2,7 @@
 
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSkeletonRowCount } from "@/hooks/use-skeleton-row-count";
+import { useWarehouseReceiptAccess } from "@/hooks/use-warehouse-receipt-access";
 
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
@@ -112,6 +113,7 @@ export default function ReceiptPage({
   initialId?: number | null;
 }) {
   const isMobile = useMobile();
+  const access = useWarehouseReceiptAccess();
   const skeletonRows = useSkeletonRowCount();
   const router = useRouter();
   const pathname = usePathname();
@@ -136,6 +138,8 @@ export default function ReceiptPage({
     retry,
   } = useInfiniteRecordList<WarehouseReceiptItem>({
     url: WAREHOUSE_RECEIPT_ITEMS_URL,
+    enabled: access.canRead,
+    cacheScope: access.cacheScope,
     filters: { search: serverSearch || undefined },
     observe: !isMobile || selectedId === null,
     storageKey: "warehouseReceiptListScroll",
@@ -152,8 +156,8 @@ export default function ReceiptPage({
   }, [data]);
   const selectedFromList = data.find((receipt) => receipt.id === selectedId);
   const { data: selectedDetail } = useSWR(
-    selectedId !== null && !selectedFromList
-      ? `${WAREHOUSE_RECEIPT_ITEMS_URL}/${selectedId}`
+    access.canRead && selectedId !== null && !selectedFromList
+      ? [`${WAREHOUSE_RECEIPT_ITEMS_URL}/${selectedId}`, access.cacheScope]
       : null,
     () => warehouseReceiptItemsService.read(selectedId!),
   );
@@ -165,6 +169,19 @@ export default function ReceiptPage({
     setSelectedId(null);
     if (initialId !== null) router.replace("/home");
   }
+
+  if (access.loading)
+    return (
+      <p className="p-4 text-sm text-gray-500">Đang tải quyền truy cập...</p>
+    );
+  if (access.error || !access.canRead)
+    return (
+      <p role="alert" className="p-4 text-sm text-red-600">
+        {access.error
+          ? "Không thể tải quyền truy cập. Vui lòng thử lại."
+          : "Bạn không có quyền xem kiểm hàng nhập kho."}
+      </p>
+    );
 
   const listPanel = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white shadow-md">

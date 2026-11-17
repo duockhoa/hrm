@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
 import useSWR from "swr";
+import { useWarehouseReceiptAccess } from "@/hooks/use-warehouse-receipt-access";
 import { Button } from "@/components/ui/button";
 import RawMaterialLabel from "@/features/warehouse-receipt-items/raw-material-label";
 import warehouseReceiptItemsService, {
@@ -12,6 +13,7 @@ import warehouseReceiptItemsService, {
 import styles from "@/features/warehouse-receipt-items/raw-material-label.module.css";
 
 export default function RawMaterialLabelPage() {
+  const access = useWarehouseReceiptAccess();
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? "";
   const receiptId = Number(id);
@@ -21,11 +23,13 @@ export default function RawMaterialLabelPage() {
     receiptId > 0 &&
     receiptId <= 2147483647;
   const { data, error, isLoading } = useSWR(
-    isValidId ? `${WAREHOUSE_RECEIPT_ITEMS_URL}/${receiptId}` : null,
+    isValidId && access.canRead
+      ? [`${WAREHOUSE_RECEIPT_ITEMS_URL}/${receiptId}`, access.cacheScope]
+      : null,
     () => warehouseReceiptItemsService.read(receiptId),
     { revalidateOnFocus: false },
   );
-  const canPrint = Boolean(data && !error && isValidId);
+  const canPrint = Boolean(data && !error && isValidId && access.canRead);
 
   return (
     <main className={styles.page}>
@@ -45,7 +49,15 @@ export default function RawMaterialLabelPage() {
         </Button>
       </div>
 
-      {!id ? (
+      {access.loading ? (
+        <p role="status" className={styles.message}>
+          Đang tải quyền truy cập...
+        </p>
+      ) : !access.canRead ? (
+        <p role="alert" className={styles.message}>
+          Bạn không có quyền xem kiểm hàng nhập kho.
+        </p>
+      ) : !id ? (
         <p role="alert" className={styles.message}>
           Thiếu ID hàng nhập kho.
         </p>

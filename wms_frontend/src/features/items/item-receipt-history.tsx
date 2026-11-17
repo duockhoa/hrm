@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
+import { useWarehouseReceiptAccess } from "@/hooks/use-warehouse-receipt-access";
 import {
   WAREHOUSE_RECEIPT_ITEMS_URL,
   type WarehouseReceiptItem,
@@ -32,6 +33,7 @@ const columns = [
 ];
 
 export default function ItemReceiptHistory({ itemCode }: { itemCode: string }) {
+  const access = useWarehouseReceiptAccess();
   const {
     records,
     total,
@@ -45,9 +47,13 @@ export default function ItemReceiptHistory({ itemCode }: { itemCode: string }) {
     retry,
   } = useInfiniteRecordList<WarehouseReceiptItem>({
     url: WAREHOUSE_RECEIPT_ITEMS_URL,
+    enabled: access.canRead,
+    cacheScope: access.cacheScope,
     filters: { item_code: itemCode },
     storageKey: "itemReceiptHistoryScroll",
   });
+
+  if (!access.canRead) return null;
 
   return (
     <section

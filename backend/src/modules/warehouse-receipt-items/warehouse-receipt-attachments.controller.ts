@@ -19,6 +19,7 @@ import { ApiBody, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { createReadStream } from 'node:fs';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { WarehouseReceiptReadGuard } from 'src/access/warehouse-receipt-scope';
 import {
   MAX_RECEIPT_ATTACHMENT_FILES,
   RECEIPT_ATTACHMENT_TYPES,
@@ -27,7 +28,7 @@ import {
 import { WarehouseReceiptAttachmentsService } from './warehouse-receipt-attachments.service';
 
 @ApiTags('warehouse-receipt-items')
-@UseGuards(jwtAuthGuard)
+@UseGuards(jwtAuthGuard, WarehouseReceiptReadGuard)
 @Controller('warehouse-receipt-items')
 export class WarehouseReceiptAttachmentsController {
   constructor(private readonly service: WarehouseReceiptAttachmentsService) {}
@@ -41,7 +42,7 @@ export class WarehouseReceiptAttachmentsController {
   ) {
     const file = await this.service.findFile(filename, thumbnail === 'true');
     response.set({
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
       'Content-Length': file.size,
       'Content-Type': file.contentType,
       'X-Content-Type-Options': 'nosniff',

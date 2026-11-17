@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { auditExtension } from './audit/audit.extension';
 import { productionOrderScopeExtension } from './access/production-order-scope.extension';
+import { warehouseReceiptScopeExtension } from './access/warehouse-receipt-scope.extension';
 
 const softDeleteDelegates = {
   Users: 'users',
@@ -109,7 +110,8 @@ const ExtendedPrismaClient = class extends PrismaClient {
     super();
     return this.$extends(softDeleteExtension)
       .$extends(auditExtension)
-      .$extends(productionOrderScopeExtension) as any;
+      .$extends(productionOrderScopeExtension)
+      .$extends(warehouseReceiptScopeExtension) as any;
   }
 };
 

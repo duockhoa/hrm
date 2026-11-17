@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
+import { useWarehouseReceiptAccess } from "@/hooks/use-warehouse-receipt-access";
 import { useSkeletonRowCount } from "@/hooks/use-skeleton-row-count";
 import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
@@ -40,6 +41,7 @@ const rawColumns = [
 ];
 
 export default function SamplingRequestDraftsPage() {
+  const access = useWarehouseReceiptAccess();
   const columns = rawColumns;
   const userId = useUserStore((state) => state.user?.id);
   const scope = getSearchScopePath(usePathname());
@@ -63,8 +65,8 @@ export default function SamplingRequestDraftsPage() {
     filters: { search: search || undefined },
     storageKey: "receiptSamplingDraftListScroll",
     revalidateOnMount: true,
-    enabled: Boolean(userId),
-    cacheScope: userId,
+    enabled: Boolean(userId) && !access.loading && !access.error,
+    cacheScope: access.cacheScope,
   });
 
   return (

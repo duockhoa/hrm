@@ -17,7 +17,10 @@ describe('Warehouse receipt SAP confirmation HTTP', () => {
       .overrideGuard(jwtAuthGuard)
       .useValue({
         canActivate(context) {
-          context.switchToHttp().getRequest().user = { id: 5 };
+          context.switchToHttp().getRequest().user = {
+            id: 5,
+            permissions: ['warehouse-receipt-items.read-all'],
+          };
           return authenticated;
         },
       })

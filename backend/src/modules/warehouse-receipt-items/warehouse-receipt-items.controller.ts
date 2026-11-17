@@ -15,12 +15,13 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { WarehouseReceiptReadGuard } from 'src/access/warehouse-receipt-scope';
 import { CreateWarehouseReceiptItemDto } from './dto/create-warehouse-receipt-item.dto';
 import { UpdateWarehouseReceiptItemDto } from './dto/update-warehouse-receipt-item.dto';
 import { WarehouseReceiptItemsService } from './warehouse-receipt-items.service';
 
 @ApiTags('warehouse-receipt-items')
-@UseGuards(jwtAuthGuard)
+@UseGuards(jwtAuthGuard, WarehouseReceiptReadGuard)
 @Controller('warehouse-receipt-items')
 export class WarehouseReceiptItemsController {
   constructor(private readonly service: WarehouseReceiptItemsService) {}

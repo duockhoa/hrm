@@ -1,6 +1,7 @@
 "use client";
 
 import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
+import { useWarehouseReceiptAccess } from "@/hooks/use-warehouse-receipt-access";
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -54,8 +55,11 @@ export default function ReceiptDetail({
   onClose: () => void;
   externalActionsContainer: HTMLDivElement | null;
 }) {
+  const access = useWarehouseReceiptAccess();
   const { data, error, mutate } = useSWR(
-    `${WAREHOUSE_RECEIPT_ITEMS_URL}/${id}`,
+    access.canRead
+      ? [`${WAREHOUSE_RECEIPT_ITEMS_URL}/${id}`, access.cacheScope]
+      : null,
     () => warehouseReceiptItemsService.read(id),
   );
   const { mutate: mutateGlobal } = useSWRConfig();

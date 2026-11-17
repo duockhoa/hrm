@@ -28,9 +28,14 @@ describe('Receipt sampling draft endpoints', () => {
       .overrideGuard(jwtAuthGuard)
       .useValue({
         canActivate: (context: {
-          switchToHttp: () => { getRequest: () => { user: { id: number } } };
+          switchToHttp: () => {
+            getRequest: () => { user: { id: number; permissions?: string[] } };
+          };
         }) => {
-          context.switchToHttp().getRequest().user = { id: 5 };
+          context.switchToHttp().getRequest().user = {
+            id: 5,
+            permissions: ['warehouse-receipt-items.read-all'],
+          };
           return true;
         },
       })
