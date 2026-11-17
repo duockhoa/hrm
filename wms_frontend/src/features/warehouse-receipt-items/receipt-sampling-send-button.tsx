@@ -5,6 +5,8 @@ import { isAxiosError } from "axios";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
+import { unstable_serialize as serializeInfiniteKey } from "swr/infinite";
+import { API_ROUTES } from "@/lib/api-routes";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -64,6 +66,52 @@ export default function ReceiptSamplingSendButton({
       /* Optional storage. */
     }
   }
+
+  async function refreshSourceRecords(type: SamplingRequestType) {
+    const url =
+      type === "NL"
+        ? WAREHOUSE_RECEIPT_ITEMS_URL
+        : API_ROUTES.productionOrders.finishedProductSummaries;
+    const firstPageKeys: unknown[][] = [];
+
+    // Clear every cached filter/page, including lists that are currently unmounted.
+    await mutate(
+      (key) => {
+        if (
+          Array.isArray(key) &&
+          key[0] === url &&
+          key[3] === "record-infinite"
+        ) {
+          if (key[2] === 1) firstPageKeys.push(key);
+          return true;
+        }
+        return (
+          typeof key === "string" &&
+          (key === url ||
+            (key.startsWith(`${url}/`) &&
+              /^\d+$/.test(key.slice(url.length + 1))) ||
+            (type === "TP" &&
+              /^\/production-orders\/\d+\/finished-product-summaries$/.test(
+                key,
+              )))
+        );
+      },
+      undefined,
+      { revalidate: true },
+    ).catch(() => {});
+
+    // SWR Infinite also keeps an aggregate cache, separate from its page entries.
+    await Promise.allSettled(
+      firstPageKeys.map((key) =>
+        mutate(
+          serializeInfiniteKey(() => key),
+          undefined,
+          { revalidate: true },
+        ),
+      ),
+    );
+  }
+
   async function send() {
     if (pending.current) return;
     pending.current = true;
@@ -119,6 +167,8 @@ export default function ReceiptSamplingSendButton({
           job.done = true;
           job.sentCount = result.sentCount;
           persistJobs();
+          // Cache refresh errors must never turn a confirmed email into a resend.
+          await refreshSourceRecords(job.type).catch(() => {});
           try {
             sessionStorage.removeItem(legacyKey(job.type));
           } catch {
@@ -211,11 +261,9 @@ export default function ReceiptSamplingSendButton({
           <DialogHeader>
             <DialogTitle>Xác nhận gửi PYCLM</DialogTitle>
             <DialogDescription>
-              {sendState === "confirmed" ? (
-                "Bạn có muốn tiếp tục hoàn tất đợt gửi PYCLM? Các phiếu đã gửi sẽ không bị gửi lại email."
-              ) : (
-                "Bạn có muốn gửi email PYCLM cho toàn bộ bản nháp nguyên liệu và thành phẩm của bạn? Thông tin gửi sẽ được lưu và các bản nháp của đợt gửi sẽ được xóa khi gửi thành công."
-              )}
+              {sendState === "confirmed"
+                ? "Bạn có muốn tiếp tục hoàn tất đợt gửi PYCLM? Các phiếu đã gửi sẽ không bị gửi lại email."
+                : "Bạn có muốn gửi email PYCLM cho toàn bộ bản nháp nguyên liệu và thành phẩm của bạn? Thông tin gửi sẽ được lưu và các bản nháp của đợt gửi sẽ được xóa khi gửi thành công."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

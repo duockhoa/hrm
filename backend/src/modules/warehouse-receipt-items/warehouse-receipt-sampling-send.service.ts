@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -22,8 +23,6 @@ export const receiptSamplingSendActiveKey = (
   requestType: 'NL' | 'TP' = 'NL',
 ) =>
   `${RECEIPT_SAMPLING_SEND_ACTIVE_KEY}:${userId}${requestType === 'TP' ? ':TP' : ''}`;
-const DEFAULT_SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbxeK_4cJNcud6brpFrzHoQUGjiGnpcBsoaSO6stZxSE0xrnqndFCnowCkHL5RJWd6rE/exec';
 type Snapshot = {
   id: number;
   receiptId: number | null;
@@ -72,6 +71,12 @@ export class WarehouseReceiptSamplingSendService {
         requestId,
       });
     }
+    const apiUrl = process.env.WAREHOUSE_PYCLM_API_URL?.trim();
+    if (!apiUrl)
+      throw new InternalServerErrorException(
+        'WAREHOUSE_PYCLM_API_URL is not configured',
+      );
+
     const sender = await this.prisma.users.findUnique({
       where: { id: userId },
       select: { id: true, name: true, username: true, email: true },
@@ -189,15 +194,11 @@ export class WarehouseReceiptSamplingSendService {
     let response: unknown;
     try {
       response = (
-        await axios.post<unknown>(
-          process.env.WAREHOUSE_PYCLM_API_URL?.trim() || DEFAULT_SCRIPT_URL,
-          batch.payload,
-          {
-            timeout: 120000,
-            maxRedirects: 5,
-            headers: { 'Content-Type': 'application/json' },
-          },
-        )
+        await axios.post<unknown>(apiUrl, batch.payload, {
+          timeout: 120000,
+          maxRedirects: 5,
+          headers: { 'Content-Type': 'application/json' },
+        })
       ).data;
     } catch {
       return this.markUncertain(batch.id);

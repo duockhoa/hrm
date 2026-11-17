@@ -6,7 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import type { WarehouseReceiptItem } from "@/services/warehouse-receipt-items.service";
 import {
@@ -18,6 +24,23 @@ import {
 } from "@/services/warehouse-receipt-sampling-drafts.service";
 import { receiptError } from "./receipt-form";
 import useUserStore from "@/store/user.store";
+
+const SAMPLING_LOCATIONS = [
+  "Kho NL TPBVSK",
+  "Kho NL Thuốc",
+  "Kho NL TTBYT",
+  "Kho NL Mỹ Phẩm",
+  "Kho Dược liệu",
+  "Kho Dược Liệu Thuốc",
+  "Kho BBC1 TPBVSK",
+  "Kho BBC1 Thuốc",
+  "Kho BBC1 Mỹ Phẩm",
+  "Kho BBC1 TTBYT",
+  "Kho BBC2 TPBVSK",
+  "Kho BBC2 Thuốc",
+  "Kho BBC2 Mỹ Phẩm",
+  "Kho BBC2 TTBYT",
+];
 
 type Props = {
   receipt: Pick<WarehouseReceiptItem, "id">;
@@ -81,15 +104,17 @@ function DraftEditor({
   requestType = "NL",
   userId,
 }: Props & { initialLocation: string; userId: number }) {
-  const [location, setLocation] = useState(initialLocation);
+  const [location, setLocation] = useState(
+    SAMPLING_LOCATIONS.includes(initialLocation) ? initialLocation : "",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const { mutate } = useSWRConfig();
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
-    if (!location.trim()) {
-      setError("Vui lòng nhập vị trí lấy mẫu.");
+    if (!SAMPLING_LOCATIONS.includes(location)) {
+      setError("Vui lòng chọn vị trí lấy mẫu.");
       return;
     }
     setError("");
@@ -127,16 +152,31 @@ function DraftEditor({
         <Label htmlFor="sampling-location">
           Vị trí lấy mẫu <span aria-hidden="true">*</span>
         </Label>
-        <Textarea
-          id="sampling-location"
+        <Select
           value={location}
-          onChange={(event) => setLocation(event.target.value)}
+          onValueChange={(value) => {
+            setLocation(value);
+            setError("");
+          }}
           required
-          maxLength={191}
           disabled={saving}
-          placeholder="Nhập vị trí lấy mẫu"
-          aria-describedby={error ? "sampling-draft-error" : undefined}
-        />
+        >
+          <SelectTrigger
+            id="sampling-location"
+            className="w-full"
+            aria-describedby={error ? "sampling-draft-error" : undefined}
+            aria-invalid={Boolean(error)}
+          >
+            <SelectValue placeholder="Chọn vị trí lấy mẫu" />
+          </SelectTrigger>
+          <SelectContent position="popper" className="max-h-72">
+            {SAMPLING_LOCATIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       {error && (
         <p

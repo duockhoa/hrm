@@ -17,6 +17,12 @@ const post = axios.post as jest.Mock;
 const requestId = '87c9ad62-d469-44b5-bbdf-8bc074d09c74';
 
 describe('Warehouse receipt sampling sends', () => {
+  const originalApiUrl = process.env.WAREHOUSE_PYCLM_API_URL;
+  afterAll(() => {
+    if (originalApiUrl === undefined)
+      delete process.env.WAREHOUSE_PYCLM_API_URL;
+    else process.env.WAREHOUSE_PYCLM_API_URL = originalApiUrl;
+  });
   const drafts = [1, 2].map((id) => ({
     id,
     created_by_id: 5,
@@ -61,6 +67,8 @@ describe('Warehouse receipt sampling sends', () => {
     features as unknown as FeaturesService,
   );
   beforeEach(() => {
+    process.env.WAREHOUSE_PYCLM_API_URL =
+      'https://script.google.com/macros/s/test-wms/exec';
     jest.resetAllMocks();
     batches.clear();
     prisma.$transaction.mockImplementation(
@@ -110,6 +118,28 @@ describe('Warehouse receipt sampling sends', () => {
       { count: 2 },
     );
     post.mockResolvedValue({ data: { success: true, data: {} } });
+  });
+
+  it.each([undefined, '', '   '])(
+    'rejects missing WMS API configuration before reserving drafts: %p',
+    async (value) => {
+      if (value === undefined) delete process.env.WAREHOUSE_PYCLM_API_URL;
+      else process.env.WAREHOUSE_PYCLM_API_URL = value;
+      await expect(service.send(requestId, 5)).rejects.toThrow(
+        'WAREHOUSE_PYCLM_API_URL is not configured',
+      );
+      expect(
+        prisma.warehouseReceiptSamplingSendBatches.create,
+      ).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(post).not.toHaveBeenCalled();
+    },
+  );
+
+  it('uses the configured WMS URL with surrounding whitespace removed', async () => {
+    process.env.WAREHOUSE_PYCLM_API_URL = '  https://example.test/wms-pyclm  ';
+    await service.send(requestId, 5);
+    expect(post.mock.calls[0][0]).toBe('https://example.test/wms-pyclm');
   });
 
   it('sends all snapshots using the supplied Apps Script contract, then saves and removes only those drafts', async () => {
