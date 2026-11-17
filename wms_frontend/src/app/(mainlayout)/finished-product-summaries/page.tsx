@@ -230,7 +230,6 @@ export default function FinishedProductSummariesPage() {
   const serverSearch = useDebouncedValue(searchKeyword.trim());
   const {
     records: summaries,
-    total,
     error,
     isLoading,
     isLoadingMore,
@@ -289,9 +288,6 @@ export default function FinishedProductSummariesPage() {
               Danh sách tổng kết thành phẩm
             </Link>
           </div>
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
-            {total}
-          </span>
         </div>
       </div>
 
