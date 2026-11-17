@@ -70,11 +70,6 @@ export default function SamplingRequestDraftsPage() {
           <h1>Danh sách gửi PYCLM</h1>
         </div>
         <div className="flex flex-wrap items-start gap-3">
-          {!isLoading && !error && (
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
-              {total.toLocaleString("vi-VN")} bản nháp
-            </span>
-          )}
           <ReceiptSamplingSendButton
             disabled={isLoading || Boolean(error) || (!search && total === 0)}
             onSent={() =>

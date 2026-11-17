@@ -6,6 +6,14 @@ import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import useUserStore from "@/store/user.store";
 import {
   RECEIPT_SAMPLING_DRAFTS_URL,
@@ -24,6 +32,7 @@ export default function ReceiptSamplingSendButton({
 }) {
   const userId = useUserStore((state) => state.user?.id);
   const [sending, setSending] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState("");
   const [sendState, setSendState] = useState("");
   const pending = useRef(false);
@@ -101,15 +110,49 @@ export default function ReceiptSamplingSendButton({
           sendState === "uncertain" ||
           sendState === "sending"
         }
-        onClick={() => void send()}
+        onClick={() => {
+          if (sendState === "confirmed") void send();
+          else setConfirmOpen(true);
+        }}
       >
         <Send className="size-4" />
         {sending
           ? "Đang gửi..."
           : sendState === "confirmed"
             ? "Hoàn tất lưu PYCLM"
-            : "Gửi toàn bộ PYCLM"}
+            : "Gửi PYCLM"}
       </Button>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="md:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Xác nhận gửi PYCLM</DialogTitle>
+            <DialogDescription>
+              Bạn có muốn gửi email PYCLM cho toàn bộ bản nháp hiện có? Thông
+              tin gửi sẽ được lưu và các bản nháp của đợt gửi sẽ được xóa khi
+              gửi thành công.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              disabled={sending || disabled}
+              onClick={() => {
+                setConfirmOpen(false);
+                void send();
+              }}
+            >
+              Xác nhận gửi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {error && (
         <p role="alert" className="text-right text-sm text-red-600">
           {error}
