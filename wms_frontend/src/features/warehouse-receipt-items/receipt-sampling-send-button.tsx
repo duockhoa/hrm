@@ -197,10 +197,7 @@ export default function ReceiptSamplingSendButton({
           sendState === "uncertain" ||
           sendState === "sending"
         }
-        onClick={() => {
-          if (sendState === "confirmed") void send();
-          else setConfirmOpen(true);
-        }}
+        onClick={() => setConfirmOpen(true)}
       >
         <Send className="size-4" />
         {sending
@@ -214,9 +211,11 @@ export default function ReceiptSamplingSendButton({
           <DialogHeader>
             <DialogTitle>Xác nhận gửi PYCLM</DialogTitle>
             <DialogDescription>
-              Bạn có muốn gửi email PYCLM cho toàn bộ bản nháp nguyên liệu và
-              thành phẩm của bạn? Thông tin gửi sẽ được lưu và các bản nháp của
-              đợt gửi sẽ được xóa khi gửi thành công.
+              {sendState === "confirmed" ? (
+                "Bạn có muốn tiếp tục hoàn tất đợt gửi PYCLM? Các phiếu đã gửi sẽ không bị gửi lại email."
+              ) : (
+                "Bạn có muốn gửi email PYCLM cho toàn bộ bản nháp nguyên liệu và thành phẩm của bạn? Thông tin gửi sẽ được lưu và các bản nháp của đợt gửi sẽ được xóa khi gửi thành công."
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -93,6 +93,12 @@ const DOSAGE_FORMS = {
 };
 
 export const API_ROUTES = {
+  emailSettings: {
+    types: "/email-settings/types",
+    me: "/email-settings/me",
+    personal: (emailTypeId: string | number) =>
+      `/email-settings/types/${emailTypeId}/me`,
+  },
   manufacturers: {
     base: "/manufacturers",
     detail: (id: number) => `/manufacturers/${id}`,
