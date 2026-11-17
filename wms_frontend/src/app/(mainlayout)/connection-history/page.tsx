@@ -106,30 +106,37 @@ export default function ConnectionHistoryPage() {
   ).trim();
   const serverKeyword = useDebouncedValue(keyword);
   const [status, setStatus] = useState<ConnectionStatus>();
+  const { data: user } = useSWR(API_ROUTES.users.me, userService.fetcherMe);
   const {
     data: permissions,
     error: permissionsError,
     mutate: retryPermissions,
-  } = useSWR(API_ROUTES.users.myPermissions, userService.fetchMyPermissions);
-  const canRead = permissions?.permissionKeys.includes("users.list");
+  } = useSWR(
+    user?.id ? [API_ROUTES.users.myPermissions, user.id] : null,
+    userService.fetchMyPermissions,
+  );
+  const canRead =
+    !permissionsError && permissions?.permissionKeys.includes("users.list");
   const {
-    records,
-    summary,
-    error,
+    records: loadedRecords,
+    summary: loadedSummary,
+    error: historyError,
     loading,
     loadingMore,
-    hasMore,
+    hasMore: loadedHasMore,
     containerRef,
     sentinelRef,
     loadMore,
     retry,
     refresh,
     isValidating,
-  } = useInfiniteConnectionHistory(
-    Boolean(canRead),
-    serverKeyword,
-    status,
-  );
+  } = useInfiniteConnectionHistory(Boolean(canRead), serverKeyword, status);
+  const records = canRead ? loadedRecords : [];
+  const summary = canRead
+    ? loadedSummary
+    : { connected: 0, reconnecting: 0, ended: 0 };
+  const error = canRead ? historyError : undefined;
+  const hasMore = Boolean(canRead && loadedHasMore);
   const showSkeleton = !permissions || loading;
 
   if (permissionsError)
@@ -146,15 +153,6 @@ export default function ConnectionHistoryPage() {
         >
           Thử lại
         </Button>
-      </div>
-    );
-  if (permissions && !canRead)
-    return (
-      <div
-        role="alert"
-        className="rounded-lg bg-white p-6 text-sm text-gray-600"
-      >
-        Bạn chưa có quyền xem lịch sử kết nối. Vui lòng liên hệ quản trị viên.
       </div>
     );
 

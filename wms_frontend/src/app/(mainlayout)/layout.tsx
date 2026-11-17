@@ -4,7 +4,6 @@ import ApplicationAccessGuard from "@/components/application-access-guard/applic
 import Header from "@/components/header/header";
 import Sidebar from "@/components/sidebar/sidebar";
 import useMobile from "@/hooks/use-mobile";
-import { useWarehouseReceiptAccess } from "@/hooks/use-warehouse-receipt-access";
 import { useSidebarStore } from "@/store/sidebar-store";
 import {
   Boxes,
@@ -99,20 +98,12 @@ export default function MainLayout({
     }
   }, [isMobile, toggleSidebar]);
 
-  const { permissions: myPermissions, canRead: canReadReceipts } =
-    useWarehouseReceiptAccess();
-  const menuData = menuItems.filter(
-    (item) =>
-      (item.id !== "1" || canReadReceipts) &&
-      (item.id !== "connection-history" ||
-        myPermissions?.permissionKeys.includes("users.list")),
-  );
   return (
     <ApplicationAccessGuard>
       <div className="flex h-dvh flex-col overflow-hidden">
         <Header />
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <Sidebar isOpen={isOpen} data={menuData} isMobile={isMobile} />
+          <Sidebar isOpen={isOpen} data={menuItems} isMobile={isMobile} />
           <div
             className={`min-h-0 min-w-0 flex-1 bg-blue-50 p-2 ${isConnectionHistoryPage ? "overflow-hidden" : "overflow-auto"}`}
           >

@@ -119,14 +119,15 @@ export default function ReceiptPage({
   const pathname = usePathname();
   const scope = getSearchScopePath(pathname);
   const search = useSearchStore((state) => state.searchByPath[scope] ?? "");
-  const [selectedId, setSelectedId] = useState(initialId);
+  const [requestedId, setSelectedId] = useState(initialId);
+  const selectedId = access.canRead ? requestedId : null;
   const [actionsContainer, setActionsContainer] =
     useState<HTMLDivElement | null>(null);
   const [creating, setCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const serverSearch = useDebouncedValue(search.trim());
   const {
-    records: data,
+    records,
     error,
     isLoading,
     mutate,
@@ -144,6 +145,10 @@ export default function ReceiptPage({
     observe: !isMobile || selectedId === null,
     storageKey: "warehouseReceiptListScroll",
   });
+  const data = useMemo(
+    () => (access.canRead ? records : []),
+    [access.canRead, records],
+  );
   const groups = useMemo(() => {
     const result = new Map<string, WarehouseReceiptItem[]>();
     for (const receipt of data ?? []) {
@@ -174,12 +179,10 @@ export default function ReceiptPage({
     return (
       <p className="p-4 text-sm text-gray-500">Đang tải quyền truy cập...</p>
     );
-  if (access.error || !access.canRead)
+  if (access.error)
     return (
       <p role="alert" className="p-4 text-sm text-red-600">
-        {access.error
-          ? "Không thể tải quyền truy cập. Vui lòng thử lại."
-          : "Bạn không có quyền xem kiểm hàng nhập kho."}
+        Không thể tải quyền truy cập. Vui lòng thử lại.
       </p>
     );
 
@@ -193,7 +196,7 @@ export default function ReceiptPage({
           </div>
           <Button
             size="sm"
-            disabled={isLoading}
+            disabled={isLoading || !access.canRead}
             onClick={() => setCreating(true)}
           >
             <Plus className="size-4" /> Thêm
@@ -378,7 +381,7 @@ export default function ReceiptPage({
         </div>
       )}
       <Dialog
-        open={creating}
+        open={creating && access.canRead}
         onOpenChange={(open) => {
           if (!isSaving) setCreating(open);
         }}
