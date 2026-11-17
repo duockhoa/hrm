@@ -1,4 +1,9 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { WarehouseReceiptSamplingDraftsService } from './warehouse-receipt-sampling-drafts.service';
@@ -23,7 +28,9 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
     warehouseReceiptItems: { findUnique: jest.fn() },
     warehouseReceiptItemSamplingRequestDrafts: {
       findUnique: jest.fn(),
-      upsert: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
     },
@@ -39,58 +46,119 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
     prisma.warehouseReceiptItems.findUnique.mockResolvedValue(receipt);
   });
 
-  it('copies the receipt fields from the server and trims the sample location', async () => {
-    const saved = { id: 7, warehouse_receipt_item_id: 2 };
-    prisma.warehouseReceiptItemSamplingRequestDrafts.upsert.mockResolvedValue(
-      saved,
-    );
-    await expect(
-      service.save(2, { location: '  Warehouse A  ' }),
-    ).resolves.toEqual(saved);
-    const data = {
-      item_code: 'NL001',
-      item_name: 'Material',
-      quantity: receipt.quantity,
-      unit: 'kg',
-      supplier_name: 'Current supplier',
-      lot_number: 'LOT001',
-      expiry_date: receipt.expiry_date,
-      location: 'Warehouse A',
-    };
+  it('copies receipt fields and stamps the authenticated creator', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.create.mockResolvedValue({
+      id: 7,
+      created_by_id: 5,
+    });
+    await expect(service.save(2, { location: '  A  ' }, 5)).resolves.toEqual({
+      id: 7,
+      created_by_id: 5,
+    });
     expect(
-      prisma.warehouseReceiptItemSamplingRequestDrafts.upsert,
+      prisma.warehouseReceiptItemSamplingRequestDrafts.create,
     ).toHaveBeenCalledWith({
-      where: { warehouse_receipt_item_id: 2 },
-      create: { warehouse_receipt_item_id: 2, ...data },
-      update: data,
+      data: {
+        warehouse_receipt_item_id: 2,
+        created_by_id: 5,
+        item_code: 'NL001',
+        item_name: 'Material',
+        quantity: receipt.quantity,
+        unit: 'kg',
+        supplier_name: 'Current supplier',
+        lot_number: 'LOT001',
+        expiry_date: receipt.expiry_date,
+        location: 'A',
+      },
     });
   });
-  it('blocks edits while a batch is sending or awaiting confirmation', async () => {
-    prisma.warehouseReceiptSamplingSendBatches.findUnique.mockResolvedValue({
-      status: 'sending',
-    });
-    await expect(service.save(2, { location: 'B' })).rejects.toThrow(
-      ConflictException,
+
+  it('updates only a draft owned by the same user', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findUnique.mockResolvedValue(
+      { id: 7, created_by_id: 5 },
+    );
+    await service.save(2, { location: 'B' }, 5);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { warehouse_receipt_item_id: 2, created_by_id: 5 },
+        data: expect.objectContaining({ location: 'B' }),
+      }),
     );
     expect(
-      prisma.warehouseReceiptItemSamplingRequestDrafts.upsert,
+      prisma.warehouseReceiptItemSamplingRequestDrafts.create,
     ).not.toHaveBeenCalled();
   });
 
-  it('upserts the same receipt when the draft is composed again', async () => {
-    prisma.warehouseReceiptItemSamplingRequestDrafts.upsert.mockResolvedValue({
-      id: 7,
-    });
-    await service.save(2, { location: 'A' });
-    await service.save(2, { location: 'B' });
-    for (const [query] of prisma.warehouseReceiptItemSamplingRequestDrafts
-      .upsert.mock.calls) {
-      expect(query.where).toEqual({ warehouse_receipt_item_id: 2 });
-    }
+  it.each([6, null])(
+    'never overwrites another or unassigned creator %p',
+    async (owner) => {
+      prisma.warehouseReceiptItemSamplingRequestDrafts.findUnique.mockResolvedValue(
+        { id: 7, created_by_id: owner },
+      );
+      await expect(service.save(2, { location: 'B' }, 5)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(
+        prisma.warehouseReceiptItemSamplingRequestDrafts.update,
+      ).not.toHaveBeenCalled();
+      expect(
+        prisma.warehouseReceiptItemSamplingRequestDrafts.create,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects a different user winning the concurrent unique-receipt insert', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 7, created_by_id: 6 });
+    prisma.warehouseReceiptItemSamplingRequestDrafts.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('unique', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+    await expect(service.save(2, { location: 'B' }, 5)).rejects.toThrow(
+      ForbiddenException,
+    );
     expect(
-      prisma.warehouseReceiptItemSamplingRequestDrafts.upsert.mock.calls[1][0]
-        .update.location,
-    ).toBe('B');
+      prisma.warehouseReceiptItemSamplingRequestDrafts.update,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('can finish a concurrent insert from the same creator', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 7, created_by_id: 5 });
+    prisma.warehouseReceiptItemSamplingRequestDrafts.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('unique', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+    await service.save(2, { location: 'B' }, 5);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { warehouse_receipt_item_id: 2, created_by_id: 5 },
+      }),
+    );
+  });
+
+  it('blocks edits during this users active send', async () => {
+    prisma.warehouseReceiptSamplingSendBatches.findUnique.mockResolvedValue({
+      status: 'sending',
+    });
+    await expect(service.save(2, { location: 'B' }, 5)).rejects.toThrow(
+      ConflictException,
+    );
+    expect(
+      prisma.warehouseReceiptSamplingSendBatches.findUnique,
+    ).toHaveBeenCalledWith({
+      where: { active_key: 'warehouse-receipt-sampling:5' },
+    });
   });
 
   it('falls back to the stored supplier name', async () => {
@@ -98,50 +166,44 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
       ...receipt,
       supplier: null,
     });
-    await service.save(2, { location: 'A' });
+    await service.save(2, { location: 'A' }, 5);
     expect(
-      prisma.warehouseReceiptItemSamplingRequestDrafts.upsert,
+      prisma.warehouseReceiptItemSamplingRequestDrafts.create,
     ).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: expect.objectContaining({ supplier_name: 'Old supplier' }),
+        data: expect.objectContaining({ supplier_name: 'Old supplier' }),
       }),
     );
   });
 
-  it('rejects missing receipts without writing a draft', async () => {
-    prisma.warehouseReceiptItems.findUnique.mockResolvedValue(null);
-    await expect(service.save(99, { location: 'A' })).rejects.toThrow(
+  it('rejects missing and already sent receipts without creating drafts', async () => {
+    prisma.warehouseReceiptItems.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ...receipt, samplingRequest: { id: 1 } });
+    await expect(service.save(99, { location: 'A' }, 5)).rejects.toThrow(
       NotFoundException,
     );
-    expect(
-      prisma.warehouseReceiptItemSamplingRequestDrafts.upsert,
-    ).not.toHaveBeenCalled();
-  });
-
-  it('does not recompose a request that has already been sent', async () => {
-    prisma.warehouseReceiptItems.findUnique.mockResolvedValue({
-      ...receipt,
-      samplingRequest: { id: 1 },
-    });
-    await expect(service.save(2, { location: 'A' })).rejects.toThrow(
+    await expect(service.save(2, { location: 'A' }, 5)).rejects.toThrow(
       ConflictException,
     );
     expect(
-      prisma.warehouseReceiptItemSamplingRequestDrafts.upsert,
+      prisma.warehouseReceiptItemSamplingRequestDrafts.create,
     ).not.toHaveBeenCalled();
   });
 
-  it('returns null when a receipt has no draft', async () => {
-    prisma.warehouseReceiptItemSamplingRequestDrafts.findUnique.mockResolvedValue(
+  it('reads a receipt draft only within the authenticated creators scope', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findFirst.mockResolvedValue(
       null,
     );
-    await expect(service.findByReceipt(2)).resolves.toBeNull();
+    await expect(service.findByReceipt(2, 5)).resolves.toBeNull();
     expect(
-      prisma.warehouseReceiptItemSamplingRequestDrafts.findUnique,
-    ).toHaveBeenCalledWith({ where: { warehouse_receipt_item_id: 2 } });
+      prisma.warehouseReceiptItemSamplingRequestDrafts.findFirst,
+    ).toHaveBeenCalledWith({
+      where: { warehouse_receipt_item_id: 2, created_by_id: 5 },
+    });
   });
 
-  it('paginates and counts the same search without mixing item filters', async () => {
+  it('scopes both paginated rows and total to the same creator and search', async () => {
     prisma.warehouseReceiptItemSamplingRequestDrafts.findMany.mockResolvedValue(
       [{ id: 7 }],
     );
@@ -149,27 +211,40 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
       301,
     );
     await expect(
-      service.findAll({
-        search: 'Kho_A%',
-        item_code: 'NL001',
-        page: 2,
-        limit: 300,
-      }),
+      service.findAll(
+        { search: 'Kho_A%', item_code: 'NL001', page: 2, limit: 300 },
+        5,
+      ),
     ).resolves.toEqual({ data: [{ id: 7 }], total: 301, page: 2, limit: 300 });
     const query =
       prisma.warehouseReceiptItemSamplingRequestDrafts.findMany.mock
         .calls[0][0];
     expect(query).toMatchObject({
-      where: { item_code: 'NL001' },
+      where: { created_by_id: 5, item_code: 'NL001' },
       skip: 300,
       take: 300,
-      orderBy: [{ updated_at: 'desc' }, { id: 'desc' }],
-    });
-    expect(query.where.AND[0].OR).toContainEqual({
-      location: { contains: 'Kho\\_A\\%' },
     });
     expect(
       prisma.warehouseReceiptItemSamplingRequestDrafts.count,
     ).toHaveBeenCalledWith({ where: query.where });
   });
+
+  it.each([0, NaN, -1])(
+    'rejects invalid authenticated user %p before querying private drafts',
+    async (userId) => {
+      await expect(service.findAll({}, userId)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.findByReceipt(2, userId)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.save(2, { location: 'A' }, userId)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(
+        prisma.warehouseReceiptItemSamplingRequestDrafts.findMany,
+      ).not.toHaveBeenCalled();
+    },
+  );
 });

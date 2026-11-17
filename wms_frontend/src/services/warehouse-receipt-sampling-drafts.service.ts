@@ -4,10 +4,15 @@ import { WAREHOUSE_RECEIPT_ITEMS_URL } from "./warehouse-receipt-items.service";
 export const RECEIPT_SAMPLING_DRAFTS_URL = "/warehouse-receipt-sampling-drafts";
 export const receiptSamplingDraftUrl = (receiptId: number) =>
   `${WAREHOUSE_RECEIPT_ITEMS_URL}/${receiptId}/sampling-request-draft`;
+export const receiptSamplingDraftCacheKey = (
+  receiptId: number,
+  userId: number,
+) => [receiptSamplingDraftUrl(receiptId), String(userId)] as const;
 
 export type ReceiptSamplingDraft = {
   id: number;
   warehouse_receipt_item_id: number;
+  created_by_id: number | null;
   item_code: string | null;
   item_name: string | null;
   quantity: string | number | null;
@@ -21,9 +26,7 @@ export type ReceiptSamplingDraft = {
 };
 
 export const receiptSamplingDraftsService = {
-  async send(
-    requestId: string,
-  ): Promise<{
+  async send(requestId: string): Promise<{
     status: "success";
     requestId: string;
     sentCount: number;

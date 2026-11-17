@@ -23,7 +23,7 @@ export type RecordListPage<T> = {
 };
 
 type Filters = Record<string, string | number | boolean | undefined>;
-type PageKey = readonly [string, string, number, "record-infinite"];
+type PageKey = readonly [string, string, number, "record-infinite", string?];
 
 export function useInfiniteRecordList<T extends { id: string | number }>({
   url,
@@ -33,6 +33,7 @@ export function useInfiniteRecordList<T extends { id: string | number }>({
   fetchPage,
   observe = true,
   revalidateOnMount,
+  cacheScope,
 }: {
   url: string;
   filters: Filters;
@@ -41,6 +42,7 @@ export function useInfiniteRecordList<T extends { id: string | number }>({
   fetchPage?: (page: number, limit: number) => Promise<RecordListPage<T>>;
   observe?: boolean;
   revalidateOnMount?: boolean;
+  cacheScope?: string | number;
 }) {
   const pathname = usePathname();
   const filterKey = JSON.stringify(
@@ -50,7 +52,7 @@ export function useInfiniteRecordList<T extends { id: string | number }>({
         .map((key) => [key, filters[key]]),
     ),
   );
-  const queryKey = JSON.stringify([url, filterKey]);
+  const queryKey = JSON.stringify([url, filterKey, cacheScope]);
   const scrollKey = `${storageKey}:${queryKey}`;
   const previousQuery = useRef(queryKey);
   const pending = useRef(new Set<string>());
@@ -67,7 +69,9 @@ export function useInfiniteRecordList<T extends { id: string | number }>({
               previous.page * previous.limit >= previous.total))
         )
           return null;
-        return [url, filterKey, index + 1, "record-infinite"];
+        return cacheScope === undefined
+          ? [url, filterKey, index + 1, "record-infinite"]
+          : [url, filterKey, index + 1, "record-infinite", String(cacheScope)];
       },
       async ([endpoint, serializedFilters, page]: PageKey) => {
         if (fetchPage) return fetchPage(page, RECORD_LIST_PAGE_SIZE);

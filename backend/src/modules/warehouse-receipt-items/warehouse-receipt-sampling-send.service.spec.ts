@@ -17,6 +17,7 @@ const requestId = '87c9ad62-d469-44b5-bbdf-8bc074d09c74';
 describe('Warehouse receipt sampling sends', () => {
   const drafts = [1, 2].map((id) => ({
     id,
+    created_by_id: 5,
     warehouse_receipt_item_id: id + 10,
     item_code: `NL${id}`,
     item_name: `Material ${id}`,
@@ -146,7 +147,7 @@ describe('Warehouse receipt sampling sends', () => {
     });
     expect(
       prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany,
-    ).toHaveBeenCalledWith({ where: { id: { in: [1, 2] } } });
+    ).toHaveBeenCalledWith({ where: { id: { in: [1, 2] }, created_by_id: 5 } });
     expect(batches.get(requestId)).toMatchObject({
       status: 'completed',
       active_key: null,
@@ -167,6 +168,63 @@ describe('Warehouse receipt sampling sends', () => {
           row.google_doc_url === 'https://docs.google.com/document/d/test',
       ),
     ).toBe(true);
+  });
+  it('scopes locked rows, loaded drafts, active batch and finalization to the sender', async () => {
+    await service.send(requestId, 5);
+    expect(prisma.$queryRaw.mock.calls[0][1]).toBe(5);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.findMany,
+    ).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ where: { created_by_id: 5 } }),
+    );
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.findMany,
+    ).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: { id: { in: [1, 2] }, created_by_id: 5 },
+      }),
+    );
+    expect(
+      prisma.warehouseReceiptSamplingSendBatches.create,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          active_key: 'warehouse-receipt-sampling:5',
+          sender_id: 5,
+        }),
+      }),
+    );
+  });
+  it('never sends a foreign-owned draft even if a repository returns it incorrectly', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findMany.mockResolvedValue(
+      [{ ...drafts[0], created_by_id: 6 }],
+    );
+    await expect(service.send(requestId, 5)).rejects.toThrow();
+    expect(post).not.toHaveBeenCalled();
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany,
+    ).not.toHaveBeenCalled();
+  });
+  it('never finalizes or removes a snapshot whose owner no longer matches', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findMany
+      .mockResolvedValueOnce(drafts)
+      .mockResolvedValueOnce([]);
+    await expect(service.send(requestId, 5)).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+    expect(
+      prisma.warehouseReceiptItemSamplingRequests.createMany,
+    ).not.toHaveBeenCalled();
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany,
+    ).not.toHaveBeenCalled();
+  });
+  it('does not expose or replay another users batch ID', async () => {
+    await service.send(requestId, 5);
+    await expect(service.send(requestId, 6)).rejects.toThrow(ConflictException);
+    expect(post).toHaveBeenCalledTimes(1);
   });
   it.each([
     { success: true },

@@ -17,6 +17,7 @@ import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import { useSkeletonRowCount } from "@/hooks/use-skeleton-row-count";
 import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
+import useUserStore from "@/store/user.store";
 import {
   RECEIPT_SAMPLING_DRAFTS_URL,
   type ReceiptSamplingDraft,
@@ -39,6 +40,7 @@ const columns = [
 ];
 
 export default function SamplingRequestDraftsPage() {
+  const userId = useUserStore((state) => state.user?.id);
   const scope = getSearchScopePath(usePathname());
   const keyword = useSearchStore((state) => state.searchByPath[scope] ?? "");
   const search = useDebouncedValue(keyword.trim());
@@ -60,6 +62,8 @@ export default function SamplingRequestDraftsPage() {
     filters: { search: search || undefined },
     storageKey: "receiptSamplingDraftListScroll",
     revalidateOnMount: true,
+    enabled: Boolean(userId),
+    cacheScope: userId,
   });
 
   return (
@@ -71,7 +75,10 @@ export default function SamplingRequestDraftsPage() {
         </div>
         <div className="flex flex-wrap items-start gap-3">
           <ReceiptSamplingSendButton
-            disabled={isLoading || Boolean(error) || (!search && total === 0)}
+            key={userId}
+            disabled={
+              !userId || isLoading || Boolean(error) || (!search && total === 0)
+            }
             onSent={() =>
               mutate(
                 (pages) =>

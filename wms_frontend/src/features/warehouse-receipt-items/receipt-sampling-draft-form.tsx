@@ -12,9 +12,10 @@ import type { WarehouseReceiptItem } from "@/services/warehouse-receipt-items.se
 import {
   RECEIPT_SAMPLING_DRAFTS_URL,
   receiptSamplingDraftsService,
-  receiptSamplingDraftUrl,
+  receiptSamplingDraftCacheKey,
 } from "@/services/warehouse-receipt-sampling-drafts.service";
 import { receiptError } from "./receipt-form";
+import useUserStore from "@/store/user.store";
 
 type Props = {
   receipt: WarehouseReceiptItem;
@@ -24,8 +25,9 @@ type Props = {
 };
 
 export default function ReceiptSamplingDraftForm(props: Props) {
+  const userId = useUserStore((state) => state.user?.id);
   const { data, error, isLoading, mutate } = useSWR(
-    receiptSamplingDraftUrl(props.receipt.id),
+    userId ? receiptSamplingDraftCacheKey(props.receipt.id, userId) : null,
     () => receiptSamplingDraftsService.read(props.receipt.id),
     { revalidateOnFocus: false, shouldRetryOnError: false },
   );
@@ -42,7 +44,7 @@ export default function ReceiptSamplingDraftForm(props: Props) {
         </Button>
       </div>
     );
-  if (isLoading)
+  if (!userId || isLoading)
     return (
       <div
         role="status"
@@ -54,7 +56,14 @@ export default function ReceiptSamplingDraftForm(props: Props) {
         <Skeleton className="ml-auto h-9 w-24" />
       </div>
     );
-  return <DraftEditor {...props} initialLocation={data?.location ?? ""} />;
+  return (
+    <DraftEditor
+      key={userId}
+      {...props}
+      userId={userId}
+      initialLocation={data?.location ?? ""}
+    />
+  );
 }
 
 function DraftEditor({
@@ -63,7 +72,8 @@ function DraftEditor({
   onSaved,
   onCancel,
   onSubmittingChange,
-}: Props & { initialLocation: string }) {
+  userId,
+}: Props & { initialLocation: string; userId: number }) {
   const [location, setLocation] = useState(initialLocation);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -83,7 +93,7 @@ function DraftEditor({
         receipt.id,
         location.trim(),
       );
-      await mutate(receiptSamplingDraftUrl(receipt.id), saved, {
+      await mutate(receiptSamplingDraftCacheKey(receipt.id, userId), saved, {
         revalidate: false,
       });
       void refreshItemCatalog(RECEIPT_SAMPLING_DRAFTS_URL).catch(() => {});

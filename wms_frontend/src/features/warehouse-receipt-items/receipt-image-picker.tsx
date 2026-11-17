@@ -166,10 +166,6 @@ export default function ReceiptImagePicker({
           </p>
         </div>
       )}
-      <p className="text-xs text-gray-500">
-        JPG, PNG, WEBP hoặc GIF; tối đa 5 MB/ảnh và{" "}
-        {MAX_RECEIPT_IMAGES_PER_UPLOAD} ảnh mới mỗi lần lưu.
-      </p>
       <ReceiptImageGallery
         images={images}
         disabled={disabled}

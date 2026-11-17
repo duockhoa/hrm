@@ -70,15 +70,20 @@ export default function ReceiptSamplingSendButton({
       clearRequest();
       setSendState("");
       await mutate<RecordListPage<ReceiptSamplingDraft>>(
-        (key) => Array.isArray(key) && key[0] === RECEIPT_SAMPLING_DRAFTS_URL,
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === RECEIPT_SAMPLING_DRAFTS_URL &&
+          key[4] === String(userId),
         (page) => (page ? { ...page, data: [], total: 0 } : page),
         { revalidate: false },
       ).catch(() => {});
       await mutate(
         (key) =>
-          typeof key === "string" &&
-          key.startsWith(`${WAREHOUSE_RECEIPT_ITEMS_URL}/`) &&
-          key.endsWith("/sampling-request-draft"),
+          Array.isArray(key) &&
+          typeof key[0] === "string" &&
+          key[1] === String(userId) &&
+          key[0].startsWith(`${WAREHOUSE_RECEIPT_ITEMS_URL}/`) &&
+          key[0].endsWith("/sampling-request-draft"),
         null,
         { revalidate: false },
       ).catch(() => {});
@@ -127,9 +132,9 @@ export default function ReceiptSamplingSendButton({
           <DialogHeader>
             <DialogTitle>Xác nhận gửi PYCLM</DialogTitle>
             <DialogDescription>
-              Bạn có muốn gửi email PYCLM cho toàn bộ bản nháp hiện có? Thông
-              tin gửi sẽ được lưu và các bản nháp của đợt gửi sẽ được xóa khi
-              gửi thành công.
+              Bạn có muốn gửi email PYCLM cho các bản nháp của bạn? Thông tin
+              gửi sẽ được lưu và các bản nháp của đợt gửi sẽ được xóa khi gửi
+              thành công.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

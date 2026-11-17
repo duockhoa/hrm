@@ -2,6 +2,7 @@ import {
   BadGatewayException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -13,6 +14,8 @@ import { EmailSettingsService } from '../email-settings/email-settings.service';
 import { EMAIL_TYPE_CODES } from '../email-settings/constants/email-settings.constants';
 
 export const RECEIPT_SAMPLING_SEND_ACTIVE_KEY = 'warehouse-receipt-sampling';
+export const receiptSamplingSendActiveKey = (userId: number) =>
+  `${RECEIPT_SAMPLING_SEND_ACTIVE_KEY}:${userId}`;
 const DEFAULT_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbxeK_4cJNcud6brpFrzHoQUGjiGnpcBsoaSO6stZxSE0xrnqndFCnowCkHL5RJWd6rE/exec';
 type Snapshot = { id: number; receiptId: number; location: string };
@@ -65,10 +68,11 @@ export class WarehouseReceiptSamplingSendService {
     try {
       batch = await this.prisma.$transaction(
         async (tx) => {
-          // Snapshot every draft, independent of the current search or loaded UI pages.
-          await tx.$queryRaw`SELECT id FROM warehouse_receipt_item_sampling_request_drafts ORDER BY id FOR UPDATE`;
+          // Send all of this user's drafts, independent of search and loaded UI pages.
+          await tx.$queryRaw`SELECT id FROM warehouse_receipt_item_sampling_request_drafts WHERE created_by_id = ${userId} ORDER BY id FOR UPDATE`;
           const drafts =
             await tx.warehouseReceiptItemSamplingRequestDrafts.findMany({
+              where: { created_by_id: userId },
               orderBy: { id: 'asc' },
               include: {
                 receipt: {
@@ -79,6 +83,7 @@ export class WarehouseReceiptSamplingSendService {
           if (!drafts.length)
             throw new BadRequestException('Không có bản nháp PYCLM để gửi.');
           for (const draft of drafts) {
+            if (draft.created_by_id !== userId) throw new ForbiddenException();
             if (draft.receipt.samplingRequest)
               throw new ConflictException(
                 `Bản ghi kiểm hàng #${draft.warehouse_receipt_item_id} đã gửi PYCLM.`,
@@ -126,7 +131,7 @@ export class WarehouseReceiptSamplingSendService {
           return tx.warehouseReceiptSamplingSendBatches.create({
             data: {
               id: requestId,
-              active_key: RECEIPT_SAMPLING_SEND_ACTIVE_KEY,
+              active_key: receiptSamplingSendActiveKey(userId),
               status: 'sending',
               sender_id: userId,
               payload,
@@ -258,6 +263,18 @@ export class WarehouseReceiptSamplingSendService {
           if (current.status !== 'confirmed' || !current.sent_at)
             throw new Error('Send batch is not confirmed');
           const snapshot = snapshotOf(current);
+          const owned =
+            await tx.warehouseReceiptItemSamplingRequestDrafts.findMany({
+              where: {
+                id: { in: snapshot.map((draft) => draft.id) },
+                created_by_id: current.sender_id,
+              },
+              select: { id: true },
+            });
+          if (owned.length !== snapshot.length)
+            throw new Error(
+              'Draft ownership no longer matches this send batch',
+            );
           await tx.warehouseReceiptItemSamplingRequests.createMany({
             data: snapshot.map((draft) => ({
               warehouse_receipt_item_id: draft.receiptId,
@@ -269,7 +286,10 @@ export class WarehouseReceiptSamplingSendService {
           });
           // Do not delete drafts created after this email's snapshot.
           await tx.warehouseReceiptItemSamplingRequestDrafts.deleteMany({
-            where: { id: { in: snapshot.map((draft) => draft.id) } },
+            where: {
+              id: { in: snapshot.map((draft) => draft.id) },
+              created_by_id: current.sender_id,
+            },
           });
           return tx.warehouseReceiptSamplingSendBatches.update({
             where: { id: current.id },

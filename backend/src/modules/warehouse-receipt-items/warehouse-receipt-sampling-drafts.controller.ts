@@ -32,8 +32,9 @@ export class WarehouseReceiptSamplingDraftsController {
   findAll(
     @Query(new ValidationPipe({ transform: true, whitelist: true }))
     query: RecordListQueryDto = {},
+    @Request() req: { user: { id: number | string } },
   ) {
-    return this.service.findAll(query);
+    return this.service.findAll(query, Number(req.user.id));
   }
 
   @Post('warehouse-receipt-sampling-drafts/send')
@@ -52,8 +53,11 @@ export class WarehouseReceiptSamplingDraftsController {
   }
 
   @Get('warehouse-receipt-items/:id/sampling-request-draft')
-  findByReceipt(@Param('id', ParseIntPipe) id: number) {
-    return this.service.findByReceipt(id);
+  findByReceipt(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: { user: { id: number | string } },
+  ) {
+    return this.service.findByReceipt(id, Number(req.user.id));
   }
 
   @Put('warehouse-receipt-items/:id/sampling-request-draft')
@@ -67,7 +71,8 @@ export class WarehouseReceiptSamplingDraftsController {
       }),
     )
     dto: SaveReceiptSamplingDraftDto,
+    @Request() req: { user: { id: number | string } },
   ) {
-    return this.service.save(id, dto);
+    return this.service.save(id, dto, Number(req.user.id));
   }
 }

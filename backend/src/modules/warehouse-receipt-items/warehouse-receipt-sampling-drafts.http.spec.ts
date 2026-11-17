@@ -76,7 +76,11 @@ describe('Receipt sampling draft endpoints', () => {
       .put(route)
       .send({ location: '  Warehouse A  ' })
       .expect(200);
-    expect(service.save).toHaveBeenCalledWith(2, { location: 'Warehouse A' });
+    expect(service.save).toHaveBeenCalledWith(
+      2,
+      { location: 'Warehouse A' },
+      5,
+    );
   });
   it.each([
     {},
@@ -87,6 +91,7 @@ describe('Receipt sampling draft endpoints', () => {
     { location: 'a'.repeat(192) },
     { location: 'A', item_code: 'FORGED' },
     { location: 'A', warehouse_receipt_item_id: 3 },
+    { location: 'A', created_by_id: 6 },
   ])('rejects invalid or forged body %p', async (body) => {
     await request(app.getHttpServer()).put(route).send(body).expect(400);
     expect(service.save).not.toHaveBeenCalled();
@@ -94,7 +99,7 @@ describe('Receipt sampling draft endpoints', () => {
   it('gets the draft of one receipt', async () => {
     service.findByReceipt.mockResolvedValue({ id: 1 });
     await request(app.getHttpServer()).get(route).expect(200, { id: 1 });
-    expect(service.findByReceipt).toHaveBeenCalledWith(2);
+    expect(service.findByReceipt).toHaveBeenCalledWith(2, 5);
   });
   it('transforms search pagination', async () => {
     service.findAll.mockResolvedValue({
@@ -109,6 +114,7 @@ describe('Receipt sampling draft endpoints', () => {
       .expect(200);
     expect(service.findAll).toHaveBeenCalledWith(
       expect.objectContaining({ page: 2, limit: 300, search: 'A' }),
+      5,
     );
   });
   it('rejects invalid pagination', async () => {
@@ -116,5 +122,15 @@ describe('Receipt sampling draft endpoints', () => {
       .get('/warehouse-receipt-sampling-drafts?limit=301')
       .expect(400);
     expect(service.findAll).not.toHaveBeenCalled();
+  });
+  it('ignores a forged owner query and uses the authenticated user', async () => {
+    service.findAll.mockResolvedValue([]);
+    await request(app.getHttpServer())
+      .get('/warehouse-receipt-sampling-drafts?created_by_id=6&userId=6')
+      .expect(200);
+    expect(service.findAll).toHaveBeenCalledWith(
+      expect.not.objectContaining({ created_by_id: 6 }),
+      5,
+    );
   });
 });
