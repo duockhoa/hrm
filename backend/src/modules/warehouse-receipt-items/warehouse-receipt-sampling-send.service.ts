@@ -12,13 +12,25 @@ import axios from 'axios';
 import { PrismaService } from 'src/prisma.service';
 import { EmailSettingsService } from '../email-settings/email-settings.service';
 import { EMAIL_TYPE_CODES } from '../email-settings/constants/email-settings.constants';
+import { FeaturesService } from '../features/features.service';
+import { persistProductionOrderSamplingRequest } from '../production-orders/production-order-sampling-request-persistence';
+import { FINISHED_PRODUCT_SAMPLING_SUPPLIER } from './sampling-request.constants';
 
 export const RECEIPT_SAMPLING_SEND_ACTIVE_KEY = 'warehouse-receipt-sampling';
-export const receiptSamplingSendActiveKey = (userId: number) =>
-  `${RECEIPT_SAMPLING_SEND_ACTIVE_KEY}:${userId}`;
+export const receiptSamplingSendActiveKey = (
+  userId: number,
+  requestType: 'NL' | 'TP' = 'NL',
+) =>
+  `${RECEIPT_SAMPLING_SEND_ACTIVE_KEY}:${userId}${requestType === 'TP' ? ':TP' : ''}`;
 const DEFAULT_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbxeK_4cJNcud6brpFrzHoQUGjiGnpcBsoaSO6stZxSE0xrnqndFCnowCkHL5RJWd6rE/exec';
-type Snapshot = { id: number; receiptId: number; location: string };
+type Snapshot = {
+  id: number;
+  receiptId: number | null;
+  productionOrderId?: number | null;
+  requestType?: 'NL' | 'TP';
+  location: string;
+};
 
 function snapshotOf(batch: WarehouseReceiptSamplingSendBatches): Snapshot[] {
   return batch.draft_snapshot as unknown as Snapshot[];
@@ -29,9 +41,14 @@ export class WarehouseReceiptSamplingSendService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailSettings: EmailSettingsService,
+    private readonly features: FeaturesService,
   ) {}
 
-  async send(requestId: string, userId: number) {
+  async send(
+    requestId: string,
+    userId: number,
+    requestType: 'NL' | 'TP' = 'NL',
+  ) {
     if (!Number.isSafeInteger(userId) || userId <= 0)
       throw new UnauthorizedException();
     const existing =
@@ -41,6 +58,9 @@ export class WarehouseReceiptSamplingSendService {
     if (existing) {
       if (existing.sender_id !== userId)
         throw new ConflictException('Mã đợt gửi đã được sử dụng.');
+      const existingType = (existing.payload as { type?: string }).type ?? 'NL';
+      if (existingType !== requestType)
+        throw new ConflictException('Mã đợt gửi thuộc loại PYCLM khác.');
       if (existing.status === 'completed') return this.result(existing);
       if (existing.status === 'confirmed') return this.finalize(existing);
       throw new ConflictException({
@@ -69,10 +89,10 @@ export class WarehouseReceiptSamplingSendService {
       batch = await this.prisma.$transaction(
         async (tx) => {
           // Send all of this user's drafts, independent of search and loaded UI pages.
-          await tx.$queryRaw`SELECT id FROM warehouse_receipt_item_sampling_request_drafts WHERE created_by_id = ${userId} ORDER BY id FOR UPDATE`;
+          await tx.$queryRaw`SELECT id FROM warehouse_receipt_item_sampling_request_drafts WHERE created_by_id = ${userId} AND request_type = ${requestType} ORDER BY id FOR UPDATE`;
           const drafts =
             await tx.warehouseReceiptItemSamplingRequestDrafts.findMany({
-              where: { created_by_id: userId },
+              where: { created_by_id: userId, request_type: requestType },
               orderBy: { id: 'asc' },
               include: {
                 receipt: {
@@ -84,10 +104,15 @@ export class WarehouseReceiptSamplingSendService {
             throw new BadRequestException('Không có bản nháp PYCLM để gửi.');
           for (const draft of drafts) {
             if (draft.created_by_id !== userId) throw new ForbiddenException();
-            if (draft.receipt.samplingRequest)
+            if (requestType === 'NL' && draft.receipt?.samplingRequest)
               throw new ConflictException(
                 `Bản ghi kiểm hàng #${draft.warehouse_receipt_item_id} đã gửi PYCLM.`,
               );
+            if (
+              (requestType === 'NL' && !draft.warehouse_receipt_item_id) ||
+              (requestType === 'TP' && !draft.production_order_id)
+            )
+              throw new BadRequestException('Bản nháp không có nguồn hợp lệ.');
             if (
               !draft.item_code?.trim() ||
               !draft.item_name?.trim() ||
@@ -107,7 +132,7 @@ export class WarehouseReceiptSamplingSendService {
               sender.username ||
               sender.email ||
               String(sender.id),
-            type: 'NL',
+            type: requestType,
             recipients,
             materials: drafts.map((draft) => ({
               materialCode: draft.item_code!,
@@ -115,7 +140,10 @@ export class WarehouseReceiptSamplingSendService {
               quantity: [draft.quantity!.toString(), draft.unit]
                 .filter(Boolean)
                 .join(' '),
-              supplier: draft.supplier_name ?? '',
+              supplier:
+                requestType === 'TP'
+                  ? FINISHED_PRODUCT_SAMPLING_SUPPLIER
+                  : (draft.supplier_name ?? ''),
               lotNumber: draft.lot_number!,
               expiryDate: draft.expiry_date
                 ? draft.expiry_date
@@ -124,20 +152,22 @@ export class WarehouseReceiptSamplingSendService {
                     .split('-')
                     .reverse()
                     .join('/')
-                : '',
+                : (draft.expiry_date_text ?? ''),
               samplingLocation: draft.location!.trim(),
             })),
           };
           return tx.warehouseReceiptSamplingSendBatches.create({
             data: {
               id: requestId,
-              active_key: receiptSamplingSendActiveKey(userId),
+              active_key: receiptSamplingSendActiveKey(userId, requestType),
               status: 'sending',
               sender_id: userId,
               payload,
               draft_snapshot: drafts.map((draft) => ({
                 id: draft.id,
                 receiptId: draft.warehouse_receipt_item_id,
+                productionOrderId: draft.production_order_id ?? null,
+                requestType,
                 location: draft.location!.trim(),
               })),
             },
@@ -275,15 +305,39 @@ export class WarehouseReceiptSamplingSendService {
             throw new Error(
               'Draft ownership no longer matches this send batch',
             );
-          await tx.warehouseReceiptItemSamplingRequests.createMany({
-            data: snapshot.map((draft) => ({
-              warehouse_receipt_item_id: draft.receiptId,
-              location: draft.location,
-              sender_id: current.sender_id,
-              sent_at: current.sent_at!,
-              google_doc_url: current.google_doc_url,
-            })),
-          });
+          const rawMaterials = snapshot.filter(
+            (draft) => (draft.requestType ?? 'NL') === 'NL',
+          );
+          if (rawMaterials.length)
+            await tx.warehouseReceiptItemSamplingRequests.createMany({
+              data: rawMaterials.map((draft) => ({
+                warehouse_receipt_item_id: draft.receiptId!,
+                location: draft.location,
+                sender_id: current.sender_id,
+                sent_at: current.sent_at!,
+                google_doc_url: current.google_doc_url,
+              })),
+            });
+          for (const draft of snapshot.filter(
+            (draft) => draft.requestType === 'TP',
+          )) {
+            if (!draft.productionOrderId)
+              throw new Error('Missing production order');
+            const order = await tx.productionOrders.findUnique({
+              where: { id: draft.productionOrderId },
+              include: { item: { include: { registration: true } } },
+            });
+            if (!order) throw new Error('Production order not found');
+            await persistProductionOrderSamplingRequest(
+              tx,
+              this.features,
+              order,
+              current.sender_id,
+              draft.location,
+              current.google_doc_url,
+              current.sent_at!,
+            );
+          }
           // Do not delete drafts created after this email's snapshot.
           await tx.warehouseReceiptItemSamplingRequestDrafts.deleteMany({
             where: {
@@ -296,7 +350,10 @@ export class WarehouseReceiptSamplingSendService {
             data: { status: 'completed', active_key: null },
           });
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+          timeout: 60000,
+        },
       );
       return this.result(completed);
     } catch {

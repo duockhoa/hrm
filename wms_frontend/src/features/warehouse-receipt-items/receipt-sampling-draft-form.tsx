@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import type { WarehouseReceiptItem } from "@/services/warehouse-receipt-items.service";
 import {
-  RECEIPT_SAMPLING_DRAFTS_URL,
+  samplingDraftListUrl,
+  COMBINED_SAMPLING_DRAFTS_URL,
+  type SamplingRequestType,
   receiptSamplingDraftsService,
   receiptSamplingDraftCacheKey,
 } from "@/services/warehouse-receipt-sampling-drafts.service";
@@ -18,17 +20,21 @@ import { receiptError } from "./receipt-form";
 import useUserStore from "@/store/user.store";
 
 type Props = {
-  receipt: WarehouseReceiptItem;
+  receipt: Pick<WarehouseReceiptItem, "id">;
+  requestType?: SamplingRequestType;
   onSaved: () => void;
   onCancel: () => void;
   onSubmittingChange: (saving: boolean) => void;
 };
 
 export default function ReceiptSamplingDraftForm(props: Props) {
+  const requestType = props.requestType ?? "NL";
   const userId = useUserStore((state) => state.user?.id);
   const { data, error, isLoading, mutate } = useSWR(
-    userId ? receiptSamplingDraftCacheKey(props.receipt.id, userId) : null,
-    () => receiptSamplingDraftsService.read(props.receipt.id),
+    userId
+      ? receiptSamplingDraftCacheKey(props.receipt.id, userId, requestType)
+      : null,
+    () => receiptSamplingDraftsService.read(props.receipt.id, requestType),
     { revalidateOnFocus: false, shouldRetryOnError: false },
   );
   if (error)
@@ -72,6 +78,7 @@ function DraftEditor({
   onSaved,
   onCancel,
   onSubmittingChange,
+  requestType = "NL",
   userId,
 }: Props & { initialLocation: string; userId: number }) {
   const [location, setLocation] = useState(initialLocation);
@@ -92,11 +99,19 @@ function DraftEditor({
       const saved = await receiptSamplingDraftsService.save(
         receipt.id,
         location.trim(),
+        requestType,
       );
-      await mutate(receiptSamplingDraftCacheKey(receipt.id, userId), saved, {
-        revalidate: false,
-      });
-      void refreshItemCatalog(RECEIPT_SAMPLING_DRAFTS_URL).catch(() => {});
+      await mutate(
+        receiptSamplingDraftCacheKey(receipt.id, userId, requestType),
+        saved,
+        {
+          revalidate: false,
+        },
+      );
+      void refreshItemCatalog(samplingDraftListUrl(requestType)).catch(
+        () => {},
+      );
+      void refreshItemCatalog(COMBINED_SAMPLING_DRAFTS_URL).catch(() => {});
       toast.success("Đã lưu bản nháp PYCLM.");
       onSaved();
     } catch (error) {

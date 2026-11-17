@@ -19,7 +19,7 @@ import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
 import useUserStore from "@/store/user.store";
 import {
-  RECEIPT_SAMPLING_DRAFTS_URL,
+  COMBINED_SAMPLING_DRAFTS_URL,
   type ReceiptSamplingDraft,
 } from "@/services/warehouse-receipt-sampling-drafts.service";
 import {
@@ -28,7 +28,7 @@ import {
 } from "@/features/warehouse-receipt-items/receipt-formatters";
 import ReceiptSamplingSendButton from "@/features/warehouse-receipt-items/receipt-sampling-send-button";
 
-const columns = [
+const rawColumns = [
   "Mã hàng",
   "Tên hàng",
   "Số lượng",
@@ -40,6 +40,7 @@ const columns = [
 ];
 
 export default function SamplingRequestDraftsPage() {
+  const columns = rawColumns;
   const userId = useUserStore((state) => state.user?.id);
   const scope = getSearchScopePath(usePathname());
   const keyword = useSearchStore((state) => state.searchByPath[scope] ?? "");
@@ -58,7 +59,7 @@ export default function SamplingRequestDraftsPage() {
     retry,
     mutate,
   } = useInfiniteRecordList<ReceiptSamplingDraft>({
-    url: RECEIPT_SAMPLING_DRAFTS_URL,
+    url: COMBINED_SAMPLING_DRAFTS_URL,
     filters: { search: search || undefined },
     storageKey: "receiptSamplingDraftListScroll",
     revalidateOnMount: true,
@@ -79,13 +80,7 @@ export default function SamplingRequestDraftsPage() {
             disabled={
               !userId || isLoading || Boolean(error) || (!search && total === 0)
             }
-            onSent={() =>
-              mutate(
-                (pages) =>
-                  pages?.map((page) => ({ ...page, data: [], total: 0 })),
-                { revalidate: true },
-              )
-            }
+            onSent={() => mutate()}
           />
         </div>
       </div>
@@ -118,7 +113,9 @@ export default function SamplingRequestDraftsPage() {
               records.map((draft) => (
                 <TableRow key={draft.id}>
                   <TableCell className="border-r px-3">
-                    {draft.item_code ? (
+                    {draft.request_type === "TP" ? (
+                      draft.item_code
+                    ) : draft.item_code ? (
                       <Link
                         href={`/items/${encodeURIComponent(draft.item_code)}`}
                         className="text-blue-600 hover:underline"
@@ -137,20 +134,28 @@ export default function SamplingRequestDraftsPage() {
                   </TableCell>
                   <TableCell className="border-r px-3">{draft.unit}</TableCell>
                   <TableCell className="max-w-80 whitespace-pre-wrap border-r px-3">
-                    {draft.supplier_name}
+                    {draft.request_type === "TP"
+                      ? "Cty CP Dược Khoa"
+                      : draft.supplier_name}
                   </TableCell>
                   <TableCell className="border-r px-3">
-                    <Link
-                      href={`/home/${draft.warehouse_receipt_item_id}`}
-                      className="text-blue-600 hover:underline"
-                      aria-label={`Xem kiểm hàng nhập kho ${draft.lot_number ?? draft.warehouse_receipt_item_id}`}
-                    >
-                      {draft.lot_number ||
-                        `#${draft.warehouse_receipt_item_id}`}
-                    </Link>
+                    {draft.request_type === "TP" ? (
+                      draft.lot_number
+                    ) : (
+                      <Link
+                        href={`/home/${draft.warehouse_receipt_item_id}`}
+                        className="text-blue-600 hover:underline"
+                        aria-label={`Xem kiểm hàng nhập kho ${draft.lot_number ?? draft.warehouse_receipt_item_id}`}
+                      >
+                        {draft.lot_number ||
+                          `#${draft.warehouse_receipt_item_id}`}
+                      </Link>
+                    )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap border-r px-3">
-                    {formatExpiryDate(draft.expiry_date)}
+                    {formatExpiryDate(draft.expiry_date) ||
+                      draft.expiry_date_text ||
+                      ""}
                   </TableCell>
                   <TableCell className="max-w-80 whitespace-pre-wrap px-3">
                     {draft.location}

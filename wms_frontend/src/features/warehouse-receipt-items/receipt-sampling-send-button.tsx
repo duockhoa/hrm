@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import useUserStore from "@/store/user.store";
 import {
-  RECEIPT_SAMPLING_DRAFTS_URL,
+  samplingDraftListUrl,
+  COMBINED_SAMPLING_DRAFTS_URL,
+  type SamplingRequestType,
   receiptSamplingDraftsService,
   type ReceiptSamplingDraft,
 } from "@/services/warehouse-receipt-sampling-drafts.service";
@@ -36,11 +38,26 @@ export default function ReceiptSamplingSendButton({
   const [error, setError] = useState("");
   const [sendState, setSendState] = useState("");
   const pending = useRef(false);
-  const requestId = useRef<string | null>(null);
+  type SendJob = {
+    type: SamplingRequestType;
+    requestId: string;
+    done: boolean;
+    sentCount: number;
+  };
+  const jobs = useRef<SendJob[] | null>(null);
   const { mutate } = useSWRConfig();
-  const storageKey = `receiptSamplingSendRequest:${userId}`;
+  const storageKey = `combinedSamplingSendRequest:${userId}`;
+  const legacyKey = (type: SamplingRequestType) =>
+    `receiptSamplingSendRequest:${userId}${type === "TP" ? ":TP" : ""}`;
+  function persistJobs() {
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(jobs.current));
+    } catch {
+      /* Optional storage. */
+    }
+  }
   function clearRequest() {
-    requestId.current = null;
+    jobs.current = null;
     try {
       sessionStorage.removeItem(storageKey);
     } catch {
@@ -53,26 +70,90 @@ export default function ReceiptSamplingSendButton({
     setSending(true);
     setError("");
     try {
-      if (!requestId.current) {
+      if (!jobs.current) {
         try {
-          requestId.current = sessionStorage.getItem(storageKey);
+          const stored = JSON.parse(
+            sessionStorage.getItem(storageKey) ?? "null",
+          );
+          if (
+            Array.isArray(stored) &&
+            stored.every(
+              (job) =>
+                ["NL", "TP"].includes(job.type) &&
+                typeof job.requestId === "string" &&
+                typeof job.done === "boolean" &&
+                typeof job.sentCount === "number",
+            )
+          )
+            jobs.current = stored;
         } catch {
           /* Optional storage. */
         }
-        requestId.current ||= crypto.randomUUID();
+        if (!jobs.current) {
+          const types = await receiptSamplingDraftsService.pendingTypes();
+          jobs.current = types.map((type) => {
+            let previousId: string | null = null;
+            try {
+              previousId = sessionStorage.getItem(legacyKey(type));
+            } catch {
+              /* Optional storage. */
+            }
+            return {
+              type,
+              requestId: previousId || crypto.randomUUID(),
+              done: false,
+              sentCount: 0,
+            };
+          });
+        }
+        persistJobs();
+      }
+      // Each type retains its own durable server journal. Retrying never resends a completed group.
+      for (const job of jobs.current) {
+        if (job.done) continue;
         try {
-          sessionStorage.setItem(storageKey, requestId.current);
-        } catch {
-          /* Optional storage. */
+          const result = await receiptSamplingDraftsService.send(
+            job.requestId,
+            job.type,
+          );
+          job.done = true;
+          job.sentCount = result.sentCount;
+          persistJobs();
+          try {
+            sessionStorage.removeItem(legacyKey(job.type));
+          } catch {
+            /* Optional storage. */
+          }
+        } catch (error) {
+          if (
+            isAxiosError(error) &&
+            error.response?.data?.sendState === "failed"
+          ) {
+            job.requestId = crypto.randomUUID();
+            persistJobs();
+            try {
+              sessionStorage.removeItem(legacyKey(job.type));
+            } catch {
+              /* Optional storage. */
+            }
+          }
+          throw error;
         }
       }
-      const result = await receiptSamplingDraftsService.send(requestId.current);
+      const sentCount = jobs.current.reduce(
+        (total, job) => total + job.sentCount,
+        0,
+      );
       clearRequest();
       setSendState("");
       await mutate<RecordListPage<ReceiptSamplingDraft>>(
         (key) =>
           Array.isArray(key) &&
-          key[0] === RECEIPT_SAMPLING_DRAFTS_URL &&
+          [
+            COMBINED_SAMPLING_DRAFTS_URL,
+            samplingDraftListUrl("NL"),
+            samplingDraftListUrl("TP"),
+          ].includes(key[0]) &&
           key[4] === String(userId),
         (page) => (page ? { ...page, data: [], total: 0 } : page),
         { revalidate: false },
@@ -82,19 +163,20 @@ export default function ReceiptSamplingSendButton({
           Array.isArray(key) &&
           typeof key[0] === "string" &&
           key[1] === String(userId) &&
-          key[0].startsWith(`${WAREHOUSE_RECEIPT_ITEMS_URL}/`) &&
+          (key[0].startsWith("/production-orders/") ||
+            key[0].startsWith(`${WAREHOUSE_RECEIPT_ITEMS_URL}/`)) &&
           key[0].endsWith("/sampling-request-draft"),
         null,
         { revalidate: false },
       ).catch(() => {});
-      toast.success(`Đã gửi email PYCLM cho ${result.sentCount} bản nháp.`);
+      toast.success(`Đã gửi email PYCLM cho ${sentCount} bản nháp.`);
       // Refresh failures must not turn a successful email into a resend action.
       await onSent().catch(() => {});
     } catch (error) {
       const data = isAxiosError(error) ? error.response?.data : undefined;
       const state = typeof data?.sendState === "string" ? data.sendState : "";
       setSendState(state);
-      if (state === "failed") clearRequest();
+      await onSent().catch(() => {});
       setError(
         typeof data?.message === "string"
           ? data.message
@@ -132,9 +214,9 @@ export default function ReceiptSamplingSendButton({
           <DialogHeader>
             <DialogTitle>Xác nhận gửi PYCLM</DialogTitle>
             <DialogDescription>
-              Bạn có muốn gửi email PYCLM cho các bản nháp của bạn? Thông tin
-              gửi sẽ được lưu và các bản nháp của đợt gửi sẽ được xóa khi gửi
-              thành công.
+              Bạn có muốn gửi email PYCLM cho toàn bộ bản nháp nguyên liệu và
+              thành phẩm của bạn? Thông tin gửi sẽ được lưu và các bản nháp của
+              đợt gửi sẽ được xóa khi gửi thành công.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

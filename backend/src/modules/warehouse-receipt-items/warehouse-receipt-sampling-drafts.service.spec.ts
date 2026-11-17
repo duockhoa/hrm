@@ -26,6 +26,7 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
     $queryRaw: jest.fn(),
     warehouseReceiptSamplingSendBatches: { findUnique: jest.fn() },
     warehouseReceiptItems: { findUnique: jest.fn() },
+    productionOrders: { findUnique: jest.fn() },
     warehouseReceiptItemSamplingRequestDrafts: {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
@@ -44,6 +45,71 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
       (callback: (tx: typeof prisma) => unknown) => callback(prisma),
     );
     prisma.warehouseReceiptItems.findUnique.mockResolvedValue(receipt);
+  });
+
+  it('copies finished order data into a private draft with only a location supplied', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      id: 21,
+      item_code: 'TP001',
+      item: { item_name: 'Finished product' },
+      description: 'Order',
+      planned_quatity: 1200,
+      unit: 'H?p',
+      lot_no: 'LOT-TP',
+      expire_date: '12/2028',
+      finishedProductSummaries: [{ id: 1 }],
+    });
+    await service.saveProductionOrder(21, { location: '  A1  ' }, 5);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.create,
+    ).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        production_order_id: 21,
+        created_by_id: 5,
+        request_type: 'TP',
+        item_code: 'TP001',
+        item_name: 'Finished product',
+        quantity: new Prisma.Decimal(1200),
+        unit: 'H?p',
+        lot_number: 'LOT-TP',
+        expiry_date: null,
+        expiry_date_text: '12/2028',
+        location: 'A1',
+      }),
+    });
+  });
+  it('refuses to overwrite a finished draft owned by another user', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findUnique.mockResolvedValue(
+      { id: 7, created_by_id: 6 },
+    );
+    await expect(
+      service.saveProductionOrder(21, { location: 'A' }, 5),
+    ).rejects.toThrow(ForbiddenException);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.update,
+    ).not.toHaveBeenCalled();
+  });
+  it('limits finished draft reads to the owner and request type', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 21 });
+    await service.findByProductionOrder(21, 5);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.findFirst,
+    ).toHaveBeenCalledWith({
+      where: { production_order_id: 21, created_by_id: 5, request_type: 'TP' },
+    });
+  });
+  it('requires a finished product summary before composing', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({
+      id: 21,
+      item_code: 'TP001',
+      finishedProductSummaries: [],
+    });
+    await expect(
+      service.saveProductionOrder(21, { location: 'A' }, 5),
+    ).rejects.toThrow('Chỉ soạn PYCLM');
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.create,
+    ).not.toHaveBeenCalled();
   });
 
   it('copies receipt fields and stamps the authenticated creator', async () => {
@@ -199,7 +265,11 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
     expect(
       prisma.warehouseReceiptItemSamplingRequestDrafts.findFirst,
     ).toHaveBeenCalledWith({
-      where: { warehouse_receipt_item_id: 2, created_by_id: 5 },
+      where: {
+        warehouse_receipt_item_id: 2,
+        created_by_id: 5,
+        request_type: 'NL',
+      },
     });
   });
 
@@ -227,6 +297,46 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
     expect(
       prisma.warehouseReceiptItemSamplingRequestDrafts.count,
     ).toHaveBeenCalledWith({ where: query.where });
+  });
+
+  it('combines both request types in one owner-scoped paginated query and normalizes the finished supplier', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findMany.mockResolvedValue(
+      [
+        { id: 1, request_type: 'NL', supplier_name: 'Material supplier' },
+        { id: 2, request_type: 'TP', supplier_name: 'Old supplier' },
+      ],
+    );
+    prisma.warehouseReceiptItemSamplingRequestDrafts.count.mockResolvedValue(2);
+    const result = await service.findAll({ page: 1, limit: 20 }, 5, 'ALL');
+    expect(result).toMatchObject({
+      data: [
+        { id: 1, supplier_name: 'Material supplier' },
+        { id: 2, supplier_name: 'Cty CP Dược Khoa' },
+      ],
+      total: 2,
+    });
+    const query =
+      prisma.warehouseReceiptItemSamplingRequestDrafts.findMany.mock
+        .calls[0][0];
+    expect(query.where.created_by_id).toBe(5);
+    expect(query.where).not.toHaveProperty('request_type');
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.count,
+    ).toHaveBeenCalledWith({ where: query.where });
+  });
+
+  it('returns only the pending types of the current user', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findMany.mockResolvedValue(
+      [{ request_type: 'NL' }, { request_type: 'TP' }],
+    );
+    await expect(service.pendingTypes(5)).resolves.toEqual(['NL', 'TP']);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.findMany,
+    ).toHaveBeenCalledWith({
+      where: { created_by_id: 5 },
+      select: { request_type: true },
+      distinct: ['request_type'],
+    });
   });
 
   it.each([0, NaN, -1])(

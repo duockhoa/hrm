@@ -702,13 +702,17 @@ model WarehouseReceiptItemSamplingRequests {
 
 model WarehouseReceiptItemSamplingRequestDrafts {
   id                        Int                   @id @default(autoincrement())
-  warehouse_receipt_item_id  Int                   @unique(map: "receipt_sampling_request_drafts_receipt_key")
-  receipt                   WarehouseReceiptItems @relation(fields: [warehouse_receipt_item_id], references: [id], onDelete: Cascade, map: "receipt_sampling_request_drafts_receipt_fkey")
+  warehouse_receipt_item_id  Int?                  @unique(map: "receipt_sampling_request_drafts_receipt_key")
+  receipt                   WarehouseReceiptItems? @relation(fields: [warehouse_receipt_item_id], references: [id], onDelete: Cascade, map: "receipt_sampling_request_drafts_receipt_fkey")
+  production_order_id       Int?                  @unique(map: "sampling_drafts_production_order_key")
+  productionOrder           ProductionOrders?     @relation(fields: [production_order_id], references: [id], onDelete: Cascade, map: "sampling_drafts_production_order_fkey")
+  request_type              String                @default("NL") @db.VarChar(2)
+  expiry_date_text          String?               @db.VarChar(191)
   created_by_id             Int?
   createdBy                 Users?                @relation(fields: [created_by_id], references: [id], onDelete: SetNull, map: "receipt_sampling_drafts_creator_fkey")
   item_code                 String?               @db.VarChar(191)
   item_name                 String?               @db.VarChar(255)
-  quantity                  Decimal?              @db.Decimal(12, 3)
+  quantity                  Decimal?              @db.Decimal(18, 3)
   unit                      String?               @db.VarChar(191)
   supplier_name             String?               @db.VarChar(255)
   lot_number                String?               @db.VarChar(100)
@@ -1141,6 +1145,7 @@ model ProductionWorkshopCleaningChecklists {
 }
 
 model ProductionOrders {
+  samplingRequestDraft                          WarehouseReceiptItemSamplingRequestDrafts?
   id                                            Int                                                   @id
   item_code                                     String
   item                                          Items                                                 @relation(fields: [item_code], references: [item_code])

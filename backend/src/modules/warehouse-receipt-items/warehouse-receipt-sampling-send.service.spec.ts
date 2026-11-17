@@ -7,6 +7,8 @@ import {
 import { Prisma, WarehouseReceiptSamplingSendBatches } from '@prisma/client';
 import axios from 'axios';
 import { PrismaService } from 'src/prisma.service';
+import { FeaturesService } from '../features/features.service';
+import { buildItemFeatureConfig } from '../features/item-feature-config';
 import { EmailSettingsService } from '../email-settings/email-settings.service';
 import { WarehouseReceiptSamplingSendService } from './warehouse-receipt-sampling-send.service';
 
@@ -45,11 +47,18 @@ describe('Warehouse receipt sampling sends', () => {
       deleteMany: jest.fn(),
     },
     warehouseReceiptItemSamplingRequests: { createMany: jest.fn() },
+    productionOrders: { findUnique: jest.fn() },
+    productionOrderDocumentControls: { upsert: jest.fn(), update: jest.fn() },
+    productionSpecifications: { findUnique: jest.fn() },
+    productionOrderRegistrationNumbers: { upsert: jest.fn() },
+    productionOrderSamplingRequests: { create: jest.fn() },
   };
   const email = { resolveRecipients: jest.fn() };
+  const features = { findConfigByItemCode: jest.fn() };
   const service = new WarehouseReceiptSamplingSendService(
     prisma as unknown as PrismaService,
     email as unknown as EmailSettingsService,
+    features as unknown as FeaturesService,
   );
   beforeEach(() => {
     jest.resetAllMocks();
@@ -154,6 +163,173 @@ describe('Warehouse receipt sampling sends', () => {
     });
   });
 
+  const finishedDrafts = drafts.map((draft) => ({
+    ...draft,
+    warehouse_receipt_item_id: null,
+    production_order_id: draft.id + 20,
+    request_type: 'TP',
+    item_code: 'TP001',
+    receipt: null,
+  }));
+  function prepareFinished() {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findMany.mockResolvedValue(
+      finishedDrafts,
+    );
+    prisma.productionOrders.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve({
+        id: where.id,
+        item_code: 'TP001',
+        item: { registration: { id: 7, registration_number: 'VD-123' } },
+      }),
+    );
+    prisma.productionOrderDocumentControls.upsert.mockResolvedValue({
+      feature_config_snapshot: null,
+      production_specification_snapshot: null,
+    });
+    features.findConfigByItemCode.mockResolvedValue(
+      buildItemFeatureConfig('TP001', []),
+    );
+    prisma.productionSpecifications.findUnique.mockResolvedValue(null);
+  }
+  it('sends own finished drafts together and captures both snapshots only after confirmation', async () => {
+    prepareFinished();
+    post.mockImplementation(async () => {
+      expect(
+        prisma.productionOrderDocumentControls.upsert,
+      ).not.toHaveBeenCalled();
+      expect(
+        prisma.productionOrderSamplingRequests.create,
+      ).not.toHaveBeenCalled();
+      return {
+        data: {
+          success: true,
+          data: { url: 'https://docs.google.com/document/d/tp' },
+        },
+      };
+    });
+    await service.send(requestId, 5, 'TP');
+    expect(post.mock.calls[0][1]).toMatchObject({
+      type: 'TP',
+      materials: finishedDrafts.map((draft) =>
+        expect.objectContaining({
+          materialCode: draft.item_code,
+          samplingLocation: draft.location,
+        }),
+      ),
+    });
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.findMany,
+    ).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: { created_by_id: 5, request_type: 'TP' },
+      }),
+    );
+    expect(
+      prisma.warehouseReceiptItemSamplingRequests.createMany,
+    ).not.toHaveBeenCalled();
+    expect(prisma.productionOrderDocumentControls.update).toHaveBeenCalledTimes(
+      4,
+    );
+    for (const draft of finishedDrafts) {
+      expect(
+        prisma.productionOrderDocumentControls.update,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { production_order_id: draft.production_order_id },
+          data: { feature_config_snapshot: expect.any(Object) },
+        }),
+      );
+      expect(
+        prisma.productionOrderDocumentControls.update,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { production_order_id: draft.production_order_id },
+          data: { production_specification_snapshot: expect.any(Object) },
+        }),
+      );
+      expect(
+        prisma.productionOrderSamplingRequests.create,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            production_order_id: draft.production_order_id,
+            sender_id: 5,
+            location: draft.location,
+            status: 'sent',
+            google_doc_url: 'https://docs.google.com/document/d/tp',
+          }),
+        }),
+      );
+    }
+    expect(
+      prisma.productionOrderRegistrationNumbers.upsert,
+    ).toHaveBeenCalledTimes(2);
+    expect(batches.get(requestId)).toMatchObject({
+      status: 'completed',
+      active_key: null,
+    });
+    await service.send(requestId, 5, 'TP');
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(prisma.productionOrderSamplingRequests.create).toHaveBeenCalledTimes(
+      2,
+    );
+    await expect(service.send(requestId, 5, 'NL')).rejects.toThrow(
+      ConflictException,
+    );
+  });
+  it('preserves original finished snapshots on subsequent sends', async () => {
+    prepareFinished();
+    prisma.productionOrderDocumentControls.upsert.mockResolvedValue({
+      feature_config_snapshot: { original: true },
+      production_specification_snapshot: { original: true },
+    });
+    await service.send(requestId, 5, 'TP');
+    expect(
+      post.mock.calls[0][1].materials.every(
+        (material: { supplier: string }) =>
+          material.supplier === 'Cty CP Dược Khoa',
+      ),
+    ).toBe(true);
+    expect(
+      prisma.productionOrderDocumentControls.update,
+    ).not.toHaveBeenCalled();
+    expect(features.findConfigByItemCode).not.toHaveBeenCalled();
+    expect(prisma.productionOrderSamplingRequests.create).toHaveBeenCalledTimes(
+      2,
+    );
+  });
+  it('keeps finished drafts and does not snapshot when Google rejects the email', async () => {
+    prepareFinished();
+    post.mockResolvedValue({ data: { success: false, error: 'rejected' } });
+    await expect(service.send(requestId, 5, 'TP')).rejects.toThrow();
+    expect(
+      prisma.productionOrderDocumentControls.upsert,
+    ).not.toHaveBeenCalled();
+    expect(
+      prisma.productionOrderSamplingRequests.create,
+    ).not.toHaveBeenCalled();
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany,
+    ).not.toHaveBeenCalled();
+  });
+  it('retries database finalization after snapshot failure without resending email', async () => {
+    prepareFinished();
+    prisma.productionOrderDocumentControls.upsert.mockRejectedValueOnce(
+      new Error('DB unavailable'),
+    );
+    await expect(service.send(requestId, 5, 'TP')).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+    expect(batches.get(requestId)?.status).toBe('confirmed');
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany,
+    ).not.toHaveBeenCalled();
+    await service.send(requestId, 5, 'TP');
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(batches.get(requestId)?.status).toBe('completed');
+  });
+
   it('stores the returned document URL for every sent receipt', async () => {
     post.mockResolvedValue({
       data: {
@@ -176,7 +352,9 @@ describe('Warehouse receipt sampling sends', () => {
       prisma.warehouseReceiptItemSamplingRequestDrafts.findMany,
     ).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ where: { created_by_id: 5 } }),
+      expect.objectContaining({
+        where: { created_by_id: 5, request_type: 'NL' },
+      }),
     );
     expect(
       prisma.warehouseReceiptItemSamplingRequestDrafts.findMany,

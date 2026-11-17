@@ -13,6 +13,7 @@ describe('Receipt sampling draft endpoints', () => {
     save: jest.fn(),
     findAll: jest.fn(),
     findByReceipt: jest.fn(),
+    pendingTypes: jest.fn(),
   };
   const sendService = { send: jest.fn() };
   const route = '/warehouse-receipt-items/2/sampling-request-draft';
@@ -38,6 +39,24 @@ describe('Receipt sampling draft endpoints', () => {
     await app.init();
   });
   beforeEach(() => jest.resetAllMocks());
+  it('lists both types for the authenticated creator', async () => {
+    service.findAll.mockResolvedValue({ data: [], total: 0 });
+    await request(app.getHttpServer())
+      .get('/sampling-request-drafts?page=1&limit=20')
+      .expect(200);
+    expect(service.findAll).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, limit: 20 }),
+      5,
+      'ALL',
+    );
+  });
+  it('discovers pending types only for the authenticated creator', async () => {
+    service.pendingTypes.mockResolvedValue(['NL', 'TP']);
+    await request(app.getHttpServer())
+      .get('/sampling-request-drafts/types')
+      .expect(200, ['NL', 'TP']);
+    expect(service.pendingTypes).toHaveBeenCalledWith(5);
+  });
   it('sends using the authenticated sender and an idempotency key', async () => {
     sendService.send.mockResolvedValue({ status: 'success', sentCount: 2 });
     const requestId = '87c9ad62-d469-44b5-bbdf-8bc074d09c74';

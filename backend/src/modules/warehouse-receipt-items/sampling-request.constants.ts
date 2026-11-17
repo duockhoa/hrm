@@ -1,0 +1,1 @@
+export const FINISHED_PRODUCT_SAMPLING_SUPPLIER = 'Cty CP Dược Khoa';

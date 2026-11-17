@@ -12,11 +12,10 @@ import { EmailSettingsService } from '../email-settings/email-settings.service';
 import { EMAIL_TYPE_CODES } from '../email-settings/constants/email-settings.constants';
 import { CreateProductionOrderSamplingRequestDto } from './dto/create-production-order-sampling-request.dto';
 import { FeaturesService } from '../features/features.service';
-import { createFeatureConfigSnapshot } from '../features/item-feature-config';
 import {
-  createProductionSpecificationSnapshot,
-  productionSpecificationInclude,
-} from './production-order-specification-snapshot';
+  persistProductionOrderSamplingRequest,
+  samplingRequestInclude,
+} from './production-order-sampling-request-persistence';
 
 type AppsScriptPyclmResponse = {
   status?: string;
@@ -124,30 +123,6 @@ const formatPyclmExpiryDate = (value?: string | null) => {
   return normalizedValue;
 };
 
-const samplingRequestSenderSelect = {
-  id: true,
-  username: true,
-  name: true,
-  email: true,
-  department: true,
-  position: true,
-};
-
-const samplingRequestInclude = {
-  productionOrder: {
-    include: {
-      item: {
-        include: {
-          registration: true,
-        },
-      },
-    },
-  },
-  sender: {
-    select: samplingRequestSenderSelect,
-  },
-} satisfies Prisma.ProductionOrderSamplingRequestsInclude;
-
 @Injectable()
 export class ProductionOrderSamplingRequestsService {
   constructor(
@@ -225,75 +200,16 @@ export class ProductionOrderSamplingRequestsService {
     const providerResponse = await this.sendPyclmRequest(payload);
     const sentAt = new Date();
 
-    const samplingRequest = await this.prismaService.$transaction(
-      async (tx) => {
-        // Updating the lot ID locks this row until the transaction finishes, so
-        // concurrent successful sends preserve the first snapshots.
-        const documentControl = await tx.productionOrderDocumentControls.upsert(
-          {
-            where: { production_order_id: productionOrderId },
-            create: { production_order_id: productionOrderId },
-            update: { production_order_id: productionOrderId },
-            select: {
-              feature_config_snapshot: true,
-              production_specification_snapshot: true,
-            },
-          },
-        );
-        if (documentControl.feature_config_snapshot == null) {
-          const config = await this.featuresService.findConfigByItemCode(
-            productionOrder.item_code,
-            undefined,
-            tx,
-          );
-          await tx.productionOrderDocumentControls.update({
-            where: { production_order_id: productionOrderId },
-            data: {
-              feature_config_snapshot: createFeatureConfigSnapshot(
-                config,
-                sentAt,
-              ),
-            },
-          });
-        }
-
-        if (documentControl.production_specification_snapshot == null) {
-          const specification = await tx.productionSpecifications.findUnique({
-            where: { item_code: productionOrder.item_code },
-            include: productionSpecificationInclude,
-          });
-          await tx.productionOrderDocumentControls.update({
-            where: { production_order_id: productionOrderId },
-            data: {
-              production_specification_snapshot:
-                createProductionSpecificationSnapshot(
-                  productionOrder.item_code,
-                  specification,
-                  sentAt,
-                  this.normalizeUserId(user),
-                ),
-            },
-          });
-        }
-
-        await this.saveProductionOrderRegistrationNumber(
-          productionOrderId,
-          productionOrder,
-          tx,
-        );
-
-        return tx.productionOrderSamplingRequests.create({
-          data: {
-            production_order_id: productionOrderId,
-            sender_id: this.normalizeUserId(user),
-            location: payload.location,
-            google_doc_url: providerResponse.url,
-            status: 'sent',
-            sent_at: sentAt,
-          },
-          include: samplingRequestInclude,
-        });
-      },
+    const samplingRequest = await this.prismaService.$transaction((tx) =>
+      persistProductionOrderSamplingRequest(
+        tx,
+        this.featuresService,
+        productionOrder,
+        this.normalizeUserId(user),
+        payload.location,
+        providerResponse.url,
+        sentAt,
+      ),
     );
 
     return {
@@ -394,36 +310,6 @@ export class ProductionOrderSamplingRequestsService {
     } catch (error) {
       this.handlePyclmApiError(error);
     }
-  }
-
-  private async saveProductionOrderRegistrationNumber(
-    productionOrderId: number,
-    productionOrder: Prisma.ProductionOrdersGetPayload<{
-      include: { item: { include: { registration: true } } };
-    }>,
-    tx: Prisma.TransactionClient,
-  ) {
-    const registrationNumber =
-      this.getProductionOrderRegistrationNumber(productionOrder);
-
-    if (!registrationNumber) {
-      return;
-    }
-
-    await tx.productionOrderRegistrationNumbers.upsert({
-      where: {
-        production_order_id: productionOrderId,
-      },
-      create: {
-        production_order_id: productionOrderId,
-        registration_id: productionOrder.item?.registration?.id ?? null,
-        registration_number: registrationNumber,
-      },
-      update: {
-        registration_id: productionOrder.item?.registration?.id ?? null,
-        registration_number: registrationNumber,
-      },
-    });
   }
 
   private getProductionOrderRegistrationNumber(

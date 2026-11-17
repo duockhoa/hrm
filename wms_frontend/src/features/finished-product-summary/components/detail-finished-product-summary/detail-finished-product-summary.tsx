@@ -4,24 +4,13 @@ import OpenFormButton from "@/components/button-open-form/button-open-form";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
 import FieldDisplay from "@/components/field-display/field-display";
 import FormCreateSamplingRequest from "@/components/form-create-sampling-request/form-create-sampling-request";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_ROUTES } from "@/lib/api-routes";
 import useUserStore from "@/store/user.store";
 import userService from "@/services/user.service";
 import productionOrdersService from "@/services/product-orders.service";
-import { Pencil, Trash2 } from "lucide-react";
 import { LuFileInput } from "react-icons/lu";
-import { useState } from "react";
-import { toast } from "sonner";
 import useSWR, { mutate as mutateGlobal } from "swr";
-import FormEditFinishedProductSummary from "../form-edit-finished-product-summary/form-edit-finished-product-summary";
 
 type FinishedProductSummaryUser = {
   id?: number | string;
@@ -210,11 +199,10 @@ export default function FinishedProductSummaryDetail({
   );
   const canSendSamplingRequest = Boolean(
     !permissionsError &&
-      permissions?.permissionKeys.includes("production-orders.sampling-requests.send"),
+    permissions?.permissionKeys.includes(
+      "production-orders.sampling-requests.send",
+    ),
   );
-  const [isEditing, setIsEditing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const { data, error, mutate } = useSWR<FinishedProductSummary>(
     API_ROUTES.productionOrders.finishedProductSummaryDetail(id),
     () => productionOrdersService.fetchFinishedProductSummaryById(id),
@@ -250,128 +238,23 @@ export default function FinishedProductSummaryDetail({
     pyclm?.sender?.username ??
     pyclm?.sender?.email ??
     "";
-  const summaryId = data.id;
-  const productionOrderSummaryKey =
-    productionOrderId !== null && productionOrderId !== undefined
-      ? API_ROUTES.productionOrders.finishedProductSummary(productionOrderId)
-      : null;
-
-  const refreshRelatedSummaries = async () => {
-    await Promise.all([
-      mutate(),
-      mutateGlobal(API_ROUTES.productionOrders.finishedProductSummaries),
-      ...(productionOrderSummaryKey
-        ? [mutateGlobal(productionOrderSummaryKey)]
-        : []),
-    ]);
-  };
-
-  const handleDelete = async () => {
-    if (summaryId === null || summaryId === undefined) return;
-
-    try {
-      setIsDeleting(true);
-      await productionOrdersService.deleteFinishedProductSummary(summaryId);
-      toast.success("Đã xóa tổng kết thành phẩm.");
-      await Promise.all([
-        mutateGlobal(API_ROUTES.productionOrders.finishedProductSummaries),
-        ...(productionOrderSummaryKey
-          ? [mutateGlobal(productionOrderSummaryKey)]
-          : []),
-      ]);
-      onClose();
-    } catch (deleteError: any) {
-      toast.error(
-        deleteError?.response?.data?.message ??
-          "Không thể xóa tổng kết thành phẩm.",
-      );
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   return (
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
       <DetailPanelHeader
         title={`Tổng kết thành phẩm #${data.id}`}
         subtitle={formatDateTime(data.created_at)}
-        actions={
-          <>
-            <Button size="sm" type="button" onClick={() => setIsEditing(true)}>
-              <Pencil className="size-4" /> Sửa
-            </Button>
-            <Button
-              size="sm"
-              type="button"
-              disabled={isDeleting}
-              onClick={() => setIsDeleteConfirmOpen(true)}
-              className="bg-black text-white hover:bg-gray-800"
-            >
-              <Trash2 className="size-4" /> Xóa
-            </Button>
-          </>
-        }
         onClose={onClose}
         showCloseButton={showCloseButton}
       />
 
-      {summaryId !== null && summaryId !== undefined ? (
-        <Dialog modal={false} open={isEditing} onOpenChange={setIsEditing}>
-          <DialogContent className="md:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Cập nhật tổng kết thành phẩm</DialogTitle>
-            </DialogHeader>
-            <FormEditFinishedProductSummary
-              summaryId={summaryId}
-              data={data}
-              onClose={() => setIsEditing(false)}
-              onSaved={refreshRelatedSummaries}
-            />
-          </DialogContent>
-        </Dialog>
-      ) : null}
-
-      <Dialog
-        modal={false}
-        open={isDeleteConfirmOpen}
-        onOpenChange={setIsDeleteConfirmOpen}
-      >
-        <DialogContent className="md:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>Xác nhận xóa tổng kết thành phẩm</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Bạn có chắc chắn muốn xóa bản ghi tổng kết thành phẩm này không?
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isDeleting}
-                onClick={() => setIsDeleteConfirmOpen(false)}
-              >
-                Hủy
-              </Button>
-              <Button
-                type="button"
-                disabled={isDeleting}
-                onClick={handleDelete}
-                className="bg-black text-white hover:bg-gray-800"
-              >
-                {isDeleting ? "Đang xóa..." : "Xóa"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {canSendSamplingRequest && productionOrderId !== null && productionOrderId !== undefined ? (
+      {canSendSamplingRequest &&
+      productionOrderId !== null &&
+      productionOrderId !== undefined ? (
         <div className="border-b py-3">
           <div className="flex flex-wrap justify-start gap-2">
             <OpenFormButton
               icon={<LuFileInput />}
-              name="Tạo PYCLM"
+              name="Soạn PYCLM"
               form={
                 <FormCreateSamplingRequest
                   productionOrderId={productionOrderId}
@@ -419,12 +302,18 @@ export default function FinishedProductSummaryDetail({
           lable="Hạn sử dụng"
           value={formatDate(productionOrder?.expire_date)}
         />
-        <FieldDisplay lable="Số kiện" value={formatNumber(data.package_count)} />
+        <FieldDisplay
+          lable="Số kiện"
+          value={formatNumber(data.package_count)}
+        />
         <FieldDisplay
           lable="Số hộp trên kiện"
           value={formatNumber(data.boxes_per_package)}
         />
-        <FieldDisplay lable="Số hộp lẻ" value={formatNumber(data.loose_box_count)} />
+        <FieldDisplay
+          lable="Số hộp lẻ"
+          value={formatNumber(data.loose_box_count)}
+        />
         <FieldDisplay
           lable="Tổng số lượng"
           value={formatNumber(getTotalQuantity(data))}
@@ -445,10 +334,7 @@ export default function FinishedProductSummaryDetail({
           lable="Bộ phận"
           value={formatText(createdBy?.department)}
         />
-        <FieldDisplay
-          lable="Chức vụ"
-          value={formatText(createdBy?.position)}
-        />
+        <FieldDisplay lable="Chức vụ" value={formatText(createdBy?.position)} />
         <FieldDisplay lable="Email" value={formatText(createdBy?.email)} />
         <FieldDisplay
           lable="Ngày tạo"

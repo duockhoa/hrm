@@ -37,6 +37,20 @@ export class WarehouseReceiptSamplingDraftsController {
     return this.service.findAll(query, Number(req.user.id));
   }
 
+  @Get('sampling-request-drafts')
+  findCombined(
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query: RecordListQueryDto = {},
+    @Request() req: { user: { id: number | string } },
+  ) {
+    return this.service.findAll(query, Number(req.user.id), 'ALL');
+  }
+
+  @Get('sampling-request-drafts/types')
+  pendingTypes(@Request() req: { user: { id: number | string } }) {
+    return this.service.pendingTypes(Number(req.user.id));
+  }
+
   @Post('warehouse-receipt-sampling-drafts/send')
   send(
     @Body(
