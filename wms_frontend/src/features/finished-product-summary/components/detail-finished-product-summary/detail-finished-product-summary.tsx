@@ -3,7 +3,7 @@
 import OpenFormButton from "@/components/button-open-form/button-open-form";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Check, Loader2 } from "lucide-react";
 import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
 import FieldDisplay from "@/components/field-display/field-display";
@@ -263,6 +263,8 @@ export default function FinishedProductSummaryDetail({
   const createdBy = data.createdBy;
   const productionOrder = data.productionOrder;
   const productionOrderId = productionOrder?.id ?? data.production_order_id;
+  const showSamplingAction = canSendSamplingRequest && productionOrderId != null;
+  const showWarehouseAction = canConfirmWarehouse && !data.warehouse_confirmed_at;
   const pyclm = productionOrder?.pyclm;
   const userLabel =
     createdBy?.name ?? createdBy?.username ?? createdBy?.email ?? "";
@@ -280,19 +282,9 @@ export default function FinishedProductSummaryDetail({
         showCloseButton={showCloseButton}
       />
 
-      {canConfirmWarehouse && !data.warehouse_confirmed_at && (
-        <div className="flex justify-start border-b py-3">
-          <Button disabled={confirming} onClick={() => void confirmWarehouse()}>
-            {confirming ? "Đang xác nhận..." : "Nhân viên kho xác nhận"}
-          </Button>
-        </div>
-      )}
-
-      {canSendSamplingRequest &&
-      productionOrderId !== null &&
-      productionOrderId !== undefined ? (
-        <div className="border-b py-3">
-          <div className="flex flex-wrap justify-start gap-2">
+      {(showSamplingAction || showWarehouseAction) && (
+        <div className="flex flex-wrap items-start gap-2 border-b py-3">
+          {showSamplingAction && (
             <OpenFormButton
               icon={<LuFileInput />}
               name="Soạn PYCLM"
@@ -310,9 +302,28 @@ export default function FinishedProductSummaryDetail({
                 />
               }
             />
-          </div>
+          )}
+          {showWarehouseAction && (
+            <button
+              type="button"
+              disabled={confirming}
+              onClick={() => void confirmWarehouse()}
+              className="group inline-flex cursor-pointer flex-col items-center p-0.5 disabled:cursor-default md:p-1"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white group-enabled:group-hover:bg-blue-600 md:h-10 md:w-10">
+                {confirming ? (
+                  <Loader2 aria-hidden="true" className="size-5 animate-spin" />
+                ) : (
+                  <Check aria-hidden="true" className="size-5" />
+                )}
+              </span>
+              <span className="mt-1 w-[68px] text-center text-[12px] font-semibold leading-tight text-gray-700 md:w-[90px] md:text-[14px]">
+                {confirming ? "Đang xác nhận..." : "Nhân viên kho xác nhận"}
+              </span>
+            </button>
+          )}
         </div>
-      ) : null}
+      )}
 
       <div className="mt-4 flex flex-col gap-4">
         <FieldDisplay

@@ -114,13 +114,14 @@ export default function ReceiptPage({
 }) {
   const isMobile = useMobile();
   const access = useWarehouseReceiptAccess();
+  const canRead = !access.loading && access.canRead;
   const skeletonRows = useSkeletonRowCount();
   const router = useRouter();
   const pathname = usePathname();
   const scope = getSearchScopePath(pathname);
   const search = useSearchStore((state) => state.searchByPath[scope] ?? "");
   const [requestedId, setSelectedId] = useState(initialId);
-  const selectedId = access.canRead ? requestedId : null;
+  const selectedId = canRead ? requestedId : null;
   const [actionsContainer, setActionsContainer] =
     useState<HTMLDivElement | null>(null);
   const [creating, setCreating] = useState(false);
@@ -139,16 +140,14 @@ export default function ReceiptPage({
     retry,
   } = useInfiniteRecordList<WarehouseReceiptItem>({
     url: WAREHOUSE_RECEIPT_ITEMS_URL,
-    enabled: access.canRead,
+    enabled: canRead,
     cacheScope: access.cacheScope,
     filters: { search: serverSearch || undefined },
     observe: !isMobile || selectedId === null,
     storageKey: "warehouseReceiptListScroll",
   });
-  const data = useMemo(
-    () => (access.canRead ? records : []),
-    [access.canRead, records],
-  );
+  const data = useMemo(() => (canRead ? records : []), [canRead, records]);
+  const showSkeleton = access.loading || isLoading;
   const groups = useMemo(() => {
     const result = new Map<string, WarehouseReceiptItem[]>();
     for (const receipt of data ?? []) {
@@ -161,7 +160,7 @@ export default function ReceiptPage({
   }, [data]);
   const selectedFromList = data.find((receipt) => receipt.id === selectedId);
   const { data: selectedDetail } = useSWR(
-    access.canRead && selectedId !== null && !selectedFromList
+    selectedId !== null && !selectedFromList
       ? [`${WAREHOUSE_RECEIPT_ITEMS_URL}/${selectedId}`, access.cacheScope]
       : null,
     () => warehouseReceiptItemsService.read(selectedId!),
@@ -175,11 +174,7 @@ export default function ReceiptPage({
     if (initialId !== null) router.replace("/home");
   }
 
-  if (access.loading)
-    return (
-      <p className="p-4 text-sm text-gray-500">Đang tải quyền truy cập...</p>
-    );
-  if (access.error)
+  if (!access.loading && access.error)
     return (
       <p role="alert" className="p-4 text-sm text-red-600">
         Không thể tải quyền truy cập. Vui lòng thử lại.
@@ -196,7 +191,7 @@ export default function ReceiptPage({
           </div>
           <Button
             size="sm"
-            disabled={isLoading || !access.canRead}
+            disabled={showSkeleton || !canRead}
             onClick={() => setCreating(true)}
           >
             <Plus className="size-4" /> Thêm
@@ -207,7 +202,7 @@ export default function ReceiptPage({
         ref={containerRef}
         className="min-h-0 flex-1 overflow-x-auto overflow-y-auto"
       >
-        {error && data.length === 0 ? (
+        {!showSkeleton && error && data.length === 0 ? (
           <div
             role="alert"
             className="m-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700"
@@ -215,7 +210,10 @@ export default function ReceiptPage({
             {receiptError(error, "Không thể tải danh sách hàng nhập kho.")}
           </div>
         ) : (
-          <table className="w-full min-w-[1800px] caption-bottom border-t text-[13px]">
+          <table
+            aria-busy={showSkeleton}
+            className="w-full min-w-[1800px] caption-bottom border-t text-[13px]"
+          >
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow className="hover:bg-transparent">
                 {columns.map((label) => (
@@ -229,7 +227,7 @@ export default function ReceiptPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {showSkeleton ? (
                 Array.from({ length: skeletonRows }, (_, row) => (
                   <TableRow key={row}>
                     {columns.map((label) => (
@@ -390,7 +388,7 @@ export default function ReceiptPage({
         </div>
       )}
       <Dialog
-        open={creating && access.canRead}
+        open={creating && canRead}
         onOpenChange={(open) => {
           if (!isSaving) setCreating(open);
         }}

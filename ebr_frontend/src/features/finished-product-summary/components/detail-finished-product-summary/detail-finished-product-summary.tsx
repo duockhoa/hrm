@@ -76,6 +76,7 @@ type FinishedProductSummary = {
   created_by_id?: number | string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  warehouse_confirmed_at?: string | null;
   productionOrder?: FinishedProductSummaryOrder | null;
   createdBy?: FinishedProductSummaryUser | null;
 };
@@ -261,6 +262,7 @@ export default function FinishedProductSummaryDetail({
     pyclm?.sender?.email ??
     "";
   const summaryId = data.id;
+  const warehouseConfirmed = Boolean(data.warehouse_confirmed_at);
   const productionOrderSummaryKey =
     productionOrderId !== null && productionOrderId !== undefined
       ? API_ROUTES.productionOrders.finishedProductSummary(productionOrderId)
@@ -281,8 +283,13 @@ export default function FinishedProductSummaryDetail({
     ]);
   };
 
+  const refreshConfirmation = () => {
+    void mutate().catch(() => {});
+  };
+
   const handleDelete = async () => {
-    if (summaryId === null || summaryId === undefined) return;
+    if (warehouseConfirmed || summaryId === null || summaryId === undefined)
+      return;
 
     try {
       setIsDeleting(true);
@@ -305,6 +312,7 @@ export default function FinishedProductSummaryDetail({
         deleteError?.response?.data?.message ??
           "Không thể xóa tổng kết thành phẩm.",
       );
+      if (deleteError?.response?.status === 409) refreshConfirmation();
     } finally {
       setIsDeleting(false);
     }
@@ -324,25 +332,29 @@ export default function FinishedProductSummaryDetail({
               title={`Tổng kết thành phẩm #${data.id}${productionOrder?.lot_no ? ` · Lô ${productionOrder.lot_no}` : ""}`}
               fields={summaryHistoryFields}
             />
-            <Button size="sm" type="button" onClick={() => setIsEditing(true)}>
-              <Pencil className="size-4" /> Sửa
-            </Button>
-            <Button
-              size="sm"
-              type="button"
-              disabled={isDeleting}
-              onClick={() => setIsDeleteConfirmOpen(true)}
-              className="bg-black text-white hover:bg-gray-800"
-            >
-              <Trash2 className="size-4" /> Xóa
-            </Button>
+            {!warehouseConfirmed && (
+              <>
+                <Button size="sm" type="button" onClick={() => setIsEditing(true)}>
+                  <Pencil className="size-4" /> Sửa
+                </Button>
+                <Button
+                  size="sm"
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setIsDeleteConfirmOpen(true)}
+                  className="bg-black text-white hover:bg-gray-800"
+                >
+                  <Trash2 className="size-4" /> Xóa
+                </Button>
+              </>
+            )}
           </>
         }
         onClose={onClose}
         showCloseButton={showCloseButton}
       />
 
-      {summaryId !== null && summaryId !== undefined ? (
+      {!warehouseConfirmed && summaryId !== null && summaryId !== undefined ? (
         <Dialog modal={false} open={isEditing} onOpenChange={setIsEditing}>
           <DialogContent className="md:max-w-[500px]">
             <DialogHeader>
@@ -353,6 +365,7 @@ export default function FinishedProductSummaryDetail({
               data={data}
               onClose={() => setIsEditing(false)}
               onSaved={refreshRelatedSummaries}
+              onConflict={refreshConfirmation}
             />
           </DialogContent>
         </Dialog>
@@ -360,7 +373,7 @@ export default function FinishedProductSummaryDetail({
 
       <Dialog
         modal={false}
-        open={isDeleteConfirmOpen}
+        open={!warehouseConfirmed && isDeleteConfirmOpen}
         onOpenChange={setIsDeleteConfirmOpen}
       >
         <DialogContent className="md:max-w-[420px]">
@@ -460,6 +473,12 @@ export default function FinishedProductSummaryDetail({
           value={formatNumber(getTotalQuantity(data))}
         />
         <FieldDisplay lable="Ghi chú" value={formatText(data.note)} />
+        {warehouseConfirmed && (
+          <FieldDisplay
+            lable="Xác nhận của kho"
+            value="Đã xác nhận · Đã khóa sửa, xóa"
+          />
+        )}
         <SamplingRequestStatus samplingRequest={pyclm} />
         <FieldDisplay
           lable="Vị trí lấy mẫu"

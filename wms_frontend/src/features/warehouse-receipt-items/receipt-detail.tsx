@@ -246,7 +246,7 @@ export default function ReceiptDetail({
           type="button"
           role="checkbox"
           aria-checked={Boolean(data.sapConfirmation)}
-          aria-label="Đã nhập SAP"
+          aria-label="nhập SAP"
           disabled={sapSaving || Boolean(data.sapConfirmation)}
           onClick={() => void handleConfirmSap()}
           className="inline-flex cursor-pointer flex-col items-center p-0.5 disabled:cursor-default md:p-1"
@@ -261,7 +261,7 @@ export default function ReceiptDetail({
             )}
           </span>
           <span className="mt-1 w-[90px] text-center text-[12px] font-semibold leading-tight text-gray-700 md:text-[14px]">
-            {sapSaving ? "Đang lưu..." : "Đã nhập SAP"}
+            {sapSaving ? "Đang lưu..." : "nhập SAP"}
           </span>
         </button>
       </div>

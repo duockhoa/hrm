@@ -56,11 +56,13 @@ export default function FormEditFinishedProductSummary({
   data,
   onClose,
   onSaved,
+  onConflict,
 }: {
   summaryId: string | number;
   data: SummaryValues;
   onClose?: () => void;
   onSaved?: () => void | Promise<void>;
+  onConflict?: () => void;
 }) {
   const initialValues: FormValues = {
     package_count: toTextValue(data.package_count),
@@ -136,6 +138,7 @@ export default function FormEditFinishedProductSummary({
       toast.error(
         getErrorMessage(error, "Không thể cập nhật tổng kết thành phẩm."),
       );
+      if (error?.response?.status === 409) onConflict?.();
     }
   };
 

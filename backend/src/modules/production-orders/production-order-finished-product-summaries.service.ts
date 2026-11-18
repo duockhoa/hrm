@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -313,13 +314,14 @@ export class ProductionOrderFinishedProductSummariesService {
       }
     }
 
-    return this.prismaService.productionOrderFinishedProductSummaries.update({
-      where: {
-        id: summaryId,
-      },
-      data: this.normalizeUpdateData(dto),
-      include: finishedProductSummaryInclude,
-    });
+    const data = this.normalizeUpdateData(dto);
+    return this.writeUnconfirmedSummary(summaryId, (where) =>
+      this.prismaService.productionOrderFinishedProductSummaries.update({
+        where,
+        data,
+        include: finishedProductSummaryInclude,
+      }),
+    );
   }
 
   async confirmWarehouse(summaryId: number, user?: AuthenticatedUser) {
@@ -337,14 +339,33 @@ export class ProductionOrderFinishedProductSummariesService {
   }
 
   async delete(summaryId: number) {
-    await this.ensureSummaryExists(summaryId);
+    return this.writeUnconfirmedSummary(summaryId, (where) =>
+      this.prismaService.productionOrderFinishedProductSummaries.delete({
+        where,
+        include: finishedProductSummaryInclude,
+      }),
+    );
+  }
 
-    return this.prismaService.productionOrderFinishedProductSummaries.delete({
-      where: {
-        id: summaryId,
-      },
-      include: finishedProductSummaryInclude,
-    });
+  private async writeUnconfirmedSummary<T>(
+    summaryId: number,
+    write: (where: { id: number; warehouse_confirmed_at: null }) => Promise<T>,
+  ) {
+    try {
+      // Check confirmation in the write so a concurrent confirmation locks the record.
+      return await write({ id: summaryId, warehouse_confirmed_at: null });
+    } catch (error) {
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== 'P2025'
+      ) {
+        throw error;
+      }
+      await this.ensureSummaryExists(summaryId);
+      throw new ConflictException(
+        'Kho đã xác nhận tổng kết thành phẩm. Không thể sửa hoặc xóa.',
+      );
+    }
   }
 
   private normalizeUpdateData(

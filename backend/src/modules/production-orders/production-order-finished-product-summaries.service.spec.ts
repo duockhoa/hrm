@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  ConflictException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
@@ -557,7 +559,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       prismaService.productionOrderFinishedProductSummaries.update,
     ).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 1 },
+        where: { id: 1, warehouse_confirmed_at: null },
         data: { package_count: 14, note: 'Đã kiểm tra' },
       }),
     );
@@ -602,8 +604,28 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     await expect(service.delete(1)).resolves.toBe(deletedSummary);
     expect(
       prismaService.productionOrderFinishedProductSummaries.delete,
-    ).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 1 } }));
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 1, warehouse_confirmed_at: null } }),
+    );
   });
+
+  it.each(['update', 'delete'] as const)(
+    'blocks %s when warehouse confirmation prevents the write',
+    async (operation) => {
+      const summaries = prismaService.productionOrderFinishedProductSummaries;
+      summaries.findUnique.mockResolvedValue({ id: 1 });
+      summaries[operation].mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('No matching record', {
+          code: 'P2025',
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(
+        operation === 'update' ? service.update(1, { package_count: 14 }) : service.delete(1),
+      ).rejects.toBeInstanceOf(ConflictException);
+    },
+  );
 
   it('throws BadRequestException when a count is not an integer', async () => {
     prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2031 });
