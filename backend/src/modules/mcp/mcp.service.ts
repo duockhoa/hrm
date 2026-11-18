@@ -14,6 +14,10 @@ import { join } from 'node:path';
 import * as z from 'zod/v4';
 import { McpToolsService } from './mcp-tools.service';
 import {
+  receiptReadSchema,
+  receiptSearchSchema,
+} from './mcp-warehouse-receipts';
+import {
   McpWarehouseReleaseService,
   warehouseReleaseReadSchema,
 } from './mcp-warehouse-release.service';
@@ -41,6 +45,14 @@ const readOnlyAnnotations = {
   idempotentHint: true,
   openWorldHint: false,
 };
+
+function warehouseReceiptIdentity(auth?: AuthInfo) {
+  const id = auth?.extra?.userId;
+  return {
+    id: typeof id === 'number' ? id : undefined,
+    permissions: stringArray(auth?.extra?.permissions),
+  };
+}
 
 @Injectable()
 export class McpService implements OnModuleDestroy {
@@ -80,6 +92,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
+        'Kiểm hàng nhập kho WMS: dùng search_warehouse_receipt_items để tìm dòng theo mã hàng, số lô hoặc ngày nhập giờ Việt Nam; dùng get_warehouse_receipt_item theo id để xem chi tiết, PYCLM, xác nhận SAP và tham chiếu ảnh. Quyền đọc có thể giới hạn theo người nhập. ' +
         'Phân tích lịch sử kết nối EBR/WMS: dùng get_connection_statistics để đếm phiên, người dùng, nối lại và thời lượng theo ngày/giờ/người dùng/ứng dụng; search_connection_sessions xem các phiên cụ thể. Cần users.list. Mặc định EBR (hsl), 30 ngày gần nhất theo Việt Nam; application_key=wms hoặc all khi được yêu cầu. Ngày lọc theo lúc BẮT ĐẦU phiên. Phiên khác người dùng và khác tổng số lần kết nối; thời lượng không phải thời gian làm việc. Không cộng unique_users giữa các nhóm, không suy ra đỉnh người dùng đồng thời hoặc lỗi mạng từ reconnect_count. Kiểm tra pagination để lấy đủ nhóm; không tải từng trang phiên chỉ để tự thống kê. ' +
         'Phiếu xuất kho: dùng get_warehouse_release với production_order_id từ search_production_orders. Đây là dữ liệu ProductionOrderLines lấy trực tiếp từ SAP, có phân trang, giai đoạn và đơn vị tính; không phải phiếu cân. ' +
         'Phiếu cân: dùng search_weighing_records để tìm, get_weighing_records đọc theo ids (tối đa 10). sections.weighing_records trả ids và detail_tool. Lọc lô theo phiếu cân bằng presence.weighing_records, weighing_status, weighing_qa_status, weighing_ipc_status, weighing_has_weights; include/counts hỗ trợ weighing_records. Tổng cân tính cả số âm, tách mã nguyên liệu và đơn vị; ảnh chỉ trả tham chiếu. ' +
@@ -207,6 +220,44 @@ export class McpService implements OnModuleDestroy {
       ({ item_code }) =>
         this.executeTool('get_item', auth, ITEM_PERMISSIONS.READ, () =>
           this.tools.getItem(item_code, stringArray(auth?.extra?.permissions)),
+        ),
+    );
+
+    server.registerTool(
+      'search_warehouse_receipt_items',
+      {
+        description:
+          'Tìm các dòng Kiểm hàng nhập kho WMS theo mã hàng, số lô, tên hàng hoặc khoảng ngày nhập theo giờ Việt Nam. Có phân trang. Bỏ lọc ngày để tìm toàn bộ thời gian. Kết quả theo quyền xem tất cả hoặc chỉ xem dòng do chính người dùng nhập.',
+        inputSchema: receiptSearchSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'search_warehouse_receipt_items',
+          auth,
+          undefined,
+          () =>
+            this.tools.searchWarehouseReceiptItems(
+              input,
+              warehouseReceiptIdentity(auth),
+            ),
+        ),
+    );
+
+    server.registerTool(
+      'get_warehouse_receipt_item',
+      {
+        description:
+          'Đọc chi tiết một dòng Kiểm hàng nhập kho WMS theo id từ search_warehouse_receipt_items. Trả thông tin hàng, lô, nhà cung cấp, PYCLM, xác nhận SAP và tham chiếu ảnh chứng từ, không tải ảnh. Tuân thủ phạm vi xem dòng của người dùng.',
+        inputSchema: receiptReadSchema,
+        annotations: readOnlyAnnotations,
+      },
+      ({ id }) =>
+        this.executeTool('get_warehouse_receipt_item', auth, undefined, () =>
+          this.tools.getWarehouseReceiptItem(
+            id,
+            warehouseReceiptIdentity(auth),
+          ),
         ),
     );
 

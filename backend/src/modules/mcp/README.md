@@ -35,6 +35,12 @@ SDK chính thức: `@modelcontextprotocol/server` và `@modelcontextprotocol/nod
 Chạy backend bằng `npm run start:dev` trong thư mục `backend`, rồi nhập URL trên
 vào client MCP. Không cần API key của nhà cung cấp AI để chạy module này.
 
+## Tra cứu Kiểm hàng nhập kho WMS
+
+- `search_warehouse_receipt_items`: tìm theo `item_code` chính xác, `lot_number`, cụm `search` hoặc ngày nhập (`today`, `date_from`, `date_to`). Ngày tính theo giờ Việt Nam, khoảng ngày bao gồm cả hai đầu. Mặc định 20 dòng mỗi trang, tối đa 100.
+- `get_warehouse_receipt_item`: đọc theo `id` từ kết quả tìm kiếm. Trả chi tiết nhà cung cấp, nhà sản xuất, PYCLM, xác nhận SAP và tối đa 50 tham chiếu ảnh. `attachments_total` và `attachments_truncated` cho biết còn ảnh chưa liệt kê.
+- Cả hai tool chỉ đọc, dùng OAuth `mcp:read` và quyền WMS `warehouse-receipt-items.read-all` hoặc `warehouse-receipt-items.read-own`. Quyền `read-own` chỉ đọc dòng do chính người dùng nhập. Dòng ngoài phạm vi trả cùng lỗi với dòng không tồn tại.
+
 ## Phân tích lịch sử kết nối bằng AI
 
 Hai tool kết nối dùng OAuth `mcp:read` và quyền **`users.list`**, cùng quyền xem
@@ -110,6 +116,8 @@ nhiều lần nối lại. Đối chiếu tổng summary, không cộng unique_u
 | `get_warehouse_release`              | `production_order_id`, `page?`, `limit?` | Dữ liệu **phiếu xuất kho**, lấy từ SAP `ProductionOrderLines`, kèm giai đoạn và đơn vị tính |
 | `search_items`                       | `query?`, `item_code?`, `code_prefix?`, `page?`, `limit?`                                                                                     | Tìm sản phẩm theo mã/tên/mã DK, có phân trang                |
 | `get_item`                           | `item_code`                                                                                                                                   | Thông tin và cấu hình hiện tại của một sản phẩm              |
+| `search_warehouse_receipt_items` | `item_code?`, `lot_number?`, `search?`, `today?`, `date_from?`, `date_to?`, `page?`, `limit?` | Danh sách dòng kiểm hàng nhập kho theo phạm vi được phép |
+| `get_warehouse_receipt_item` | `id` | Chi tiết dòng kiểm hàng nhập kho, PYCLM, SAP và tham chiếu ảnh |
 | `search_production_order_deviations` | `mode?`, `today?`, `date_from?`, `date_to?`, `item_code?`, `lot_no?`, `production_order_id?`, `approval_status?`, `query?`, `page?`, `limit?` | Đếm hoặc tìm sai lệch trên nhiều lô                          |
 | `search_mixing_records`              | Bộ lọc mã hàng/lệnh/lô, ngày, loại phiếu, thông số, QA/IPC và phân trang                                                                      | Danh sách nhận diện phiếu pha chế/gia công                   |
 | `get_mixing_records`                 | `ids`, `view?`                                                                                                                                | Nội dung nhiều phiếu đã chọn, tối đa 10 ID mỗi lần           |

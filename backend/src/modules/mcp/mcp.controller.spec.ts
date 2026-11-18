@@ -81,6 +81,11 @@ describe('MCP Streamable HTTP endpoint', () => {
     resolveMcpToken: jest.fn(),
   };
   const prisma = {
+    warehouseReceiptItems: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+    },
     userRoles: { findMany: jest.fn() },
     $queryRaw: jest.fn(),
     productionOrderMixingRecords: { count: jest.fn(), findMany: jest.fn() },
@@ -1728,7 +1733,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     );
   });
 
-  it('exposes exactly fifteen read-only tools', async () => {
+  it('exposes exactly seventeen read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
@@ -1737,6 +1742,8 @@ describe('MCP Streamable HTTP endpoint', () => {
       'get_warehouse_release',
       'search_items',
       'get_item',
+      'search_warehouse_receipt_items',
+      'get_warehouse_receipt_item',
       'search_production_order_deviations',
       'search_weighing_records',
       'get_weighing_records',
@@ -1752,6 +1759,112 @@ describe('MCP Streamable HTTP endpoint', () => {
         (tool) => tool.annotations.readOnlyHint,
       ),
     ).toBe(true);
+  });
+
+  function authenticateReceiptReader(...permissions: string[]) {
+    const identity = authenticated();
+    identity.auth.extra.permissions.push(...permissions);
+    identity.user.permissions.push(...permissions);
+    oauth.resolveMcpToken.mockResolvedValue(identity);
+  }
+
+  it('denies both receipt tools before querying when receipt permissions are missing', async () => {
+    for (const [name, args] of [
+      ['search_warehouse_receipt_items', {}],
+      ['get_warehouse_receipt_item', { id: 7 }],
+    ] as const) {
+      const result = body(
+        await rpc('tools/call', { name, arguments: args }).expect(200),
+      ).result;
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('không có quyền');
+    }
+    expect(prisma.warehouseReceiptItems.findMany).not.toHaveBeenCalled();
+    expect(prisma.warehouseReceiptItems.findUnique).not.toHaveBeenCalled();
+    expect(prisma.warehouseReceiptItems.count).not.toHaveBeenCalled();
+  });
+
+  it('applies own scope to both rows and count and filters dates in Vietnam time', async () => {
+    authenticateReceiptReader('warehouse-receipt-items.read-own');
+    prisma.warehouseReceiptItems.findMany.mockResolvedValue([{ id: 7 }]);
+    prisma.warehouseReceiptItems.count.mockResolvedValue(6);
+    const result = body(
+      await rpc('tools/call', {
+        name: 'search_warehouse_receipt_items',
+        arguments: {
+          item_code: 'NL001',
+          lot_number: 'LOT_1',
+          date_from: '2026-11-18',
+          date_to: '2026-11-18',
+          page: 2,
+          limit: 2,
+        },
+      }).expect(200),
+    ).result;
+    expect(result.structuredContent).toMatchObject({
+      data: [{ id: 7 }],
+      pagination: { page: 2, limit: 2, total: 6, has_more: true },
+    });
+    const where = {
+      entered_by_id: 1,
+      item_code: 'NL001',
+      received_at: {
+        gte: new Date('2026-11-17T17:00:00Z'),
+        lt: new Date('2026-11-18T17:00:00Z'),
+      },
+      AND: [
+        {
+          OR: [
+            { lot_number: { contains: 'LOT\\_1' } },
+            { manufacturer_lot_number: { contains: 'LOT\\_1' } },
+          ],
+        },
+      ],
+    };
+    expect(prisma.warehouseReceiptItems.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where, skip: 2, take: 2 }),
+    );
+    expect(prisma.warehouseReceiptItems.count).toHaveBeenCalledWith({ where });
+  });
+
+  it('hides receipt details outside own scope and allows the same id with read-all', async () => {
+    prisma.warehouseReceiptItems.findUnique.mockImplementation(
+      ({ where }: { where: { id: number; entered_by_id?: number } }) =>
+        Promise.resolve(
+          where.entered_by_id === undefined
+            ? {
+                id: where.id,
+                attachments: [{ id: 11, attachment_type: 'coa' }],
+                _count: { attachments: 51 },
+              }
+            : null,
+        ),
+    );
+    const call = () =>
+      rpc('tools/call', {
+        name: 'get_warehouse_receipt_item',
+        arguments: { id: 7 },
+      }).expect(200);
+    authenticateReceiptReader('warehouse-receipt-items.read-own');
+    expect(body(await call()).result.content[0].text).toBe(
+      'Không tìm thấy dòng Kiểm hàng nhập kho.',
+    );
+    expect(prisma.warehouseReceiptItems.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 7, entered_by_id: 1 } }),
+    );
+    authenticateReceiptReader(
+      'warehouse-receipt-items.read-own',
+      'warehouse-receipt-items.read-all',
+    );
+    expect(body(await call()).result.structuredContent).toMatchObject({
+      id: 7,
+      attachments: [{ id: 11, attachment_type: 'coa' }],
+      attachments_total: 51,
+      attachments_truncated: true,
+    });
+    expect(prisma.warehouseReceiptItems.findUnique).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { id: 7 } }),
+    );
   });
 
   it.each(['search_connection_sessions', 'get_connection_statistics'])(

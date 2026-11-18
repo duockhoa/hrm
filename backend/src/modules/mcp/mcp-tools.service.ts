@@ -1,6 +1,12 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
+import type { ReceiptScopeUser } from '../../access/warehouse-receipt-scope';
+import {
+  getWarehouseReceiptItem,
+  searchWarehouseReceiptItems,
+  type ReceiptSearchInput,
+} from './mcp-warehouse-receipts';
 import {
   getProductionOrderScope,
   productionOrderScopeMetadata,
@@ -182,6 +188,17 @@ export class McpToolsService {
     private readonly prisma: PrismaService,
     private readonly completeness: ProductionOrderLocalCompletenessService,
   ) {}
+
+  searchWarehouseReceiptItems(
+    input: ReceiptSearchInput,
+    user: ReceiptScopeUser,
+  ) {
+    return searchWarehouseReceiptItems(this.prisma, input, user);
+  }
+
+  getWarehouseReceiptItem(id: number, user: ReceiptScopeUser) {
+    return getWarehouseReceiptItem(this.prisma, id, user);
+  }
 
   searchConnectionSessions(input: ConnectionSearchInput) {
     return searchConnectionSessions(this.prisma, input);
