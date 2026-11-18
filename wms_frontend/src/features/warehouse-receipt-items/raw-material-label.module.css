@@ -17,35 +17,37 @@
 }
 
 .wrapper {
-  width: 510px;
-  border: 2px solid #000;
+  box-sizing: border-box;
+  width: 98mm;
+  border: 0.4mm solid #000;
   break-inside: avoid;
   page-break-inside: avoid;
   font-family: "Times New Roman", Times, serif;
-  font-size: 16px;
+  font-size: 10pt;
   line-height: 1.2;
   font-weight: 700;
 }
 
 .label {
   width: 100%;
+  height: 69mm;
   table-layout: fixed;
   border-collapse: collapse;
   color: #000;
   background: #fff;
 }
 
-.headingColumn { width: 104px; }
-.valueColumn { width: 185px; }
-.containerColumn { width: 117px; }
+.headingColumn { width: 23%; }
+.valueColumn { width: 30%; }
+.containerColumn { width: 25%; }
 
 .label th,
 .label td {
   /* Draw individual dots so printing cannot turn dotted borders into dashes. */
   --line-bottom: radial-gradient(circle, #666 0.45px, transparent 0.6px);
   --line-left: radial-gradient(circle, #666 0.45px, transparent 0.6px);
-  height: 35px;
-  padding: 3px 4px;
+  height: 6mm;
+  padding: 0.6mm 0.9mm;
   border-left: 1px solid transparent;
   border-bottom: 1px solid transparent;
   background-image: var(--line-bottom), var(--line-left);
@@ -61,29 +63,28 @@
 .label tbody tr:last-child > * { --line-bottom: none; border-bottom: 0; }
 
 .label .title {
-  height: 38px;
-  font-size: 28px;
+  height: 9mm;
+  font-size: 17pt;
   text-align: center;
 }
 
-.label .nameRow > * { height: 69px; }
-.label .primaryValue { font-size: 24px; }
+.label .nameRow > * { height: 12mm; }
+.label .primaryValue { font-size: 11pt; }
 
 .label .qrCell {
-  padding: 4px;
+  padding: 0.9mm;
   text-align: center;
 }
 
 .qrCell svg {
   display: block;
-  width: 168px;
-  height: 168px;
+  width: 27mm;
+  height: 27mm;
   margin: auto;
 }
 
 .label .containerHeading {
-  font-size: 15px;
-  white-space: nowrap;
+  font-size: 9pt;
 }
 
 .editable {
@@ -100,8 +101,21 @@
 }
 
 @media print {
-  .page { min-height: 0; padding: 0; }
+  @page quarantine-label {
+    size: 100mm 75mm;
+    margin: 0;
+  }
+
+  .page {
+    page: quarantine-label;
+    min-height: 0;
+    padding: 1mm 1mm 0;
+  }
   .toolbar { display: none; }
-  .wrapper { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .wrapper {
+    zoom: var(--label-print-scale, 1);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
   .editable:focus { outline: none; background: transparent; }
 }
