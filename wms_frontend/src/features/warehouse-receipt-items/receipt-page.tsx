@@ -45,6 +45,7 @@ import ReceiptDetail, {
 } from "./receipt-detail";
 import ReceiptForm, { receiptError } from "./receipt-form";
 import { BatchSamplingDraftButton } from "./receipt-sampling-draft-form";
+import BatchReceiptImagesButton from "./batch-receipt-images";
 
 const columns = [
   "Mã hàng",
@@ -207,7 +208,7 @@ export default function ReceiptPage({
   const listPanel = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white shadow-md">
       <div className="sticky top-0 z-20 w-full bg-white p-2">
-        <div className="flex w-full justify-between border-b border-gray-200 pb-2">
+        <div className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-2">
           {isSelecting ? (
             <>
               <div className="flex items-center gap-2">
@@ -223,11 +224,19 @@ export default function ReceiptPage({
                   Đã chọn {selectedRows.size} dòng
                 </span>
               </div>
-              <BatchSamplingDraftButton
-                ids={Array.from(selectedRows)}
-                requestType="NL"
-                onSaved={() => setSelection(null)}
-              />
+              <div className="ml-auto flex flex-wrap justify-end gap-2">
+                <BatchSamplingDraftButton
+                  ids={Array.from(selectedRows)}
+                  requestType="NL"
+                  onSaved={() => setSelection(null)}
+                />
+                <BatchReceiptImagesButton
+                  ids={selectedRows}
+                  cacheScope={access.cacheScope}
+                  onUploaded={() => void mutate().catch(() => {})}
+                  onFinish={() => setSelection(null)}
+                />
+              </div>
             </>
           ) : (
             <>

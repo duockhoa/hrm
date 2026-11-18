@@ -78,7 +78,7 @@ export function receiptError(error: unknown, fallback: string) {
   return fallback;
 }
 
-function receiptImageError(error: unknown) {
+export function receiptImageError(error: unknown) {
   if (isAxiosError(error)) {
     if (error.response?.status === 413) return "Ảnh vượt quá giới hạn 5 MB.";
     if (error.response?.status === 401) return "Phiên đăng nhập đã hết hạn.";

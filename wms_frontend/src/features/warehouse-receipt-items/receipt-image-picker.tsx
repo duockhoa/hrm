@@ -94,7 +94,7 @@ export default function ReceiptImagePicker({
   images: ReceiptAttachment[];
   disabled: boolean;
   onChange: (files: File[]) => void;
-  onRemove: (id: number) => void;
+  onRemove?: (id: number) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
