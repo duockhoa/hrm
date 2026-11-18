@@ -8,7 +8,7 @@ import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AiOutlineRight } from "react-icons/ai";
-import { Plus, X } from "lucide-react";
+import { Plus, SquareCheck, X } from "lucide-react";
 import useSWR from "swr";
 import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
 import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
@@ -122,6 +122,14 @@ export default function ReceiptPage({
   const search = useSearchStore((state) => state.searchByPath[scope] ?? "");
   const [requestedId, setSelectedId] = useState(initialId);
   const selectedId = canRead ? requestedId : null;
+  const [selection, setSelection] = useState<{
+    scope: string;
+    ids: Set<number>;
+  } | null>(null);
+  const selectedRows =
+    canRead && selection?.scope === access.cacheScope ? selection.ids : null;
+  const isSelecting = selectedRows !== null;
+  const columnCount = columns.length + Number(isSelecting);
   const [actionsContainer, setActionsContainer] =
     useState<HTMLDivElement | null>(null);
   const [creating, setCreating] = useState(false);
@@ -174,6 +182,20 @@ export default function ReceiptPage({
     if (initialId !== null) router.replace("/home");
   }
 
+  function startSelection() {
+    setSelectedId(null);
+    setSelection({ scope: access.cacheScope, ids: new Set() });
+  }
+
+  function toggleRow(id: number) {
+    setSelection((current) => {
+      if (!current || current.scope !== access.cacheScope) return current;
+      const ids = new Set(current.ids);
+      if (!ids.delete(id)) ids.add(id);
+      return { ...current, ids };
+    });
+  }
+
   if (!access.loading && access.error)
     return (
       <p role="alert" className="p-4 text-sm text-red-600">
@@ -185,17 +207,47 @@ export default function ReceiptPage({
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white shadow-md">
       <div className="sticky top-0 z-20 w-full bg-white p-2">
         <div className="flex w-full justify-between border-b border-gray-200 pb-2">
-          <div className="flex items-center gap-2">
-            <AiOutlineRight />
-            <Link href="/home">Kiểm hàng nhập kho</Link>
-          </div>
-          <Button
-            size="sm"
-            disabled={showSkeleton || !canRead}
-            onClick={() => setCreating(true)}
-          >
-            <Plus className="size-4" /> Thêm
-          </Button>
+          {isSelecting ? (
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label="Thoát chế độ chọn nhiều"
+                onClick={() => setSelection(null)}
+              >
+                <X className="size-4" />
+              </Button>
+              <span role="status" className="text-sm">
+                Đã chọn {selectedRows.size} dòng
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <AiOutlineRight />
+                <Link href="/home">Kiểm hàng nhập kho</Link>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  disabled={showSkeleton || !canRead}
+                  onClick={() => setCreating(true)}
+                >
+                  <Plus className="size-4" /> Thêm
+                </Button>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Chọn nhiều dòng"
+                  title="Chọn nhiều dòng"
+                  disabled={showSkeleton || data.length === 0}
+                  onClick={startSelection}
+                >
+                  <SquareCheck className="size-5" />
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </div>
       <div
@@ -216,6 +268,11 @@ export default function ReceiptPage({
           >
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow className="hover:bg-transparent">
+                {isSelecting && (
+                  <TableHead className="w-10 border-r px-2">
+                    <span className="sr-only">Chọn dòng</span>
+                  </TableHead>
+                )}
                 {columns.map((label) => (
                   <TableHead
                     key={label}
@@ -230,6 +287,11 @@ export default function ReceiptPage({
               {showSkeleton ? (
                 Array.from({ length: skeletonRows }, (_, row) => (
                   <TableRow key={row}>
+                    {isSelecting && (
+                      <TableCell className="border-r px-2">
+                        <Skeleton className="mx-auto size-4" />
+                      </TableCell>
+                    )}
                     {columns.map((label) => (
                       <TableCell key={label} className="border-r">
                         <Skeleton className="h-4 w-full min-w-16" />
@@ -242,7 +304,7 @@ export default function ReceiptPage({
                   <Fragment key={group.date}>
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
                       <TableCell
-                        colSpan={columns.length}
+                        colSpan={columnCount}
                         className="border-r px-3 font-semibold text-gray-900"
                       >
                         <span className="inline-flex items-center gap-2">
@@ -257,39 +319,58 @@ export default function ReceiptPage({
                         </span>
                       </TableCell>
                     </TableRow>
-                    {group.receipts.map((receipt) => (
-                      <TableRow
-                        key={receipt.id}
-                        tabIndex={0}
-                        aria-selected={selectedId === receipt.id}
-                        data-state={
-                          selectedId === receipt.id ? "selected" : undefined
-                        }
-                        className={`cursor-pointer ${selectedId === receipt.id ? "bg-blue-50 hover:bg-blue-100" : "hover:bg-gray-50"}`}
-                        onClick={() => setSelectedId(receipt.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelectedId(receipt.id);
-                          }
-                        }}
-                      >
-                        {rowValues(receipt).map((value, index) => (
-                          <TableCell
-                            key={columns[index]}
-                            className="max-w-72 whitespace-pre-wrap break-words border-r px-3 last:border-r-0"
-                          >
-                            {value}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
+                    {group.receipts.map((receipt) => {
+                      const rowSelected = isSelecting
+                        ? selectedRows.has(receipt.id)
+                        : selectedId === receipt.id;
+                      return (
+                        <TableRow
+                          key={receipt.id}
+                          tabIndex={isSelecting ? undefined : 0}
+                          aria-selected={rowSelected}
+                          data-state={rowSelected ? "selected" : undefined}
+                          className={`cursor-pointer ${rowSelected ? "bg-blue-50 hover:bg-blue-100" : "hover:bg-gray-50"}`}
+                          onClick={() => {
+                            if (isSelecting) toggleRow(receipt.id);
+                            else setSelectedId(receipt.id);
+                          }}
+                          onKeyDown={(event) => {
+                            if (isSelecting) return;
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedId(receipt.id);
+                            }
+                          }}
+                        >
+                          {isSelecting && (
+                            <TableCell className="border-r px-2 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`Chọn ${receipt.item_code}, lô ${receipt.lot_number}, dòng ${receipt.id}`}
+                                checked={rowSelected}
+                                onClick={(event) => event.stopPropagation()}
+                                onChange={() => toggleRow(receipt.id)}
+                                className="size-4 cursor-pointer align-middle accent-blue-600"
+                              />
+                            </TableCell>
+                          )}
+                          {rowValues(receipt).map((value, index) => (
+                            <TableCell
+                              key={columns[index]}
+                              className="max-w-72 whitespace-pre-wrap break-words border-r px-3 last:border-r-0"
+                            >
+                              {value}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      );
+                    })}
                   </Fragment>
                 ))
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={columns.length}
+                    colSpan={columnCount}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     {search.trim()
