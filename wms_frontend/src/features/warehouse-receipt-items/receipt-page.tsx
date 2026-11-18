@@ -247,7 +247,16 @@ export default function ReceiptPage({
                         colSpan={columns.length}
                         className="border-r px-3 font-semibold text-gray-900"
                       >
-                        {group.date}
+                        <span className="inline-flex items-center gap-2">
+                          {group.date}
+                          <span
+                            className="rounded bg-gray-200 px-1 text-xs font-normal text-gray-700 tabular-nums"
+                            aria-label={`${group.receipts.length} bản ghi nhập kho ngày ${group.date}`}
+                            title="Số bản ghi nhập kho đang hiển thị trong ngày"
+                          >
+                            {group.receipts.length}
+                          </span>
+                        </span>
                       </TableCell>
                     </TableRow>
                     {group.receipts.map((receipt) => (

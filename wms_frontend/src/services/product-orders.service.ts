@@ -52,6 +52,12 @@ const createSamplingRequest = async (
 };
 
 const productOrdersService = {
+  confirmFinishedProductSummaryWarehouse: async (summaryId: string | number) => {
+    const response = await axiosClient.post(
+      `${API_ROUTES.productionOrders.finishedProductSummaryDetail(summaryId)}/warehouse-confirmation`,
+    );
+    return response.data;
+  },
   fetchFinishedProductSummaries,
   fetchFinishedProductSummaryById,
   updateFinishedProductSummary,

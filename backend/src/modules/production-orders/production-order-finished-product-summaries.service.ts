@@ -42,6 +42,9 @@ const pyclmSenderSelect = {
 };
 
 const finishedProductSummaryInclude = {
+  warehouseConfirmedBy: {
+    select: finishedProductSummaryCreatorSelect,
+  },
   createdBy: {
     select: finishedProductSummaryCreatorSelect,
   },
@@ -317,6 +320,20 @@ export class ProductionOrderFinishedProductSummariesService {
       data: this.normalizeUpdateData(dto),
       include: finishedProductSummaryInclude,
     });
+  }
+
+  async confirmWarehouse(summaryId: number, user?: AuthenticatedUser) {
+    const userId = this.normalizeUserId(user);
+    await this.ensureSummaryExists(summaryId);
+    // Only the first confirmation wins, including concurrent requests/retries.
+    await this.prismaService.productionOrderFinishedProductSummaries.updateMany({
+      where: { id: summaryId, warehouse_confirmed_at: null },
+      data: {
+        warehouse_confirmed_by_id: userId,
+        warehouse_confirmed_at: new Date(),
+      },
+    });
+    return this.findById(summaryId);
   }
 
   async delete(summaryId: number) {

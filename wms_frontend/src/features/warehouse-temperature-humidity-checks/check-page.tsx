@@ -177,7 +177,16 @@ export default function CheckPage({
                         colSpan={columns.length}
                         className="border-r px-3 font-semibold text-gray-900"
                       >
-                        {group.date}
+                        <span className="inline-flex items-center gap-2">
+                          {group.date}
+                          <span
+                            className="rounded bg-gray-200 px-1 text-xs font-normal text-gray-700 tabular-nums"
+                            aria-label={`${group.checks.length} bản ghi kiểm tra nhiệt độ, độ ẩm ngày ${group.date}`}
+                            title="Số bản ghi kiểm tra nhiệt độ, độ ẩm đang hiển thị trong ngày"
+                          >
+                            {group.checks.length}
+                          </span>
+                        </span>
                       </TableCell>
                     </TableRow>
                     {group.checks.map((check) => (

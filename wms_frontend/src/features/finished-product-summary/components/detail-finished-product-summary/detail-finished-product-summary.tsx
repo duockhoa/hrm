@@ -1,6 +1,10 @@
 "use client";
 
 import OpenFormButton from "@/components/button-open-form/button-open-form";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
 import FieldDisplay from "@/components/field-display/field-display";
 import FormCreateSamplingRequest from "@/components/form-create-sampling-request/form-create-sampling-request";
@@ -56,6 +60,8 @@ type FinishedProductSummary = {
   created_by_id?: number | string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  warehouse_confirmed_at?: string | null;
+  warehouseConfirmedBy?: FinishedProductSummaryUser | null;
   productionOrder?: FinishedProductSummaryOrder | null;
   createdBy?: FinishedProductSummaryUser | null;
 };
@@ -193,6 +199,8 @@ export default function FinishedProductSummaryDetail({
   showCloseButton?: boolean;
 }) {
   const userId = useUserStore((state) => state.user?.id);
+  const [confirming, setConfirming] = useState(false);
+  const confirmingRef = useRef(false);
   const { data: permissions, error: permissionsError } = useSWR(
     userId ? [API_ROUTES.users.myPermissions, userId] : null,
     () => userService.fetchMyPermissions(),
@@ -207,6 +215,31 @@ export default function FinishedProductSummaryDetail({
     API_ROUTES.productionOrders.finishedProductSummaryDetail(id),
     () => productionOrdersService.fetchFinishedProductSummaryById(id),
   );
+  const canConfirmWarehouse = Boolean(
+    !permissionsError &&
+      permissions?.permissionKeys.includes(
+        "production-orders.finished-product-summaries.warehouse-confirm",
+      ),
+  );
+
+  async function confirmWarehouse() {
+    if (confirmingRef.current || data?.warehouse_confirmed_at) return;
+    confirmingRef.current = true;
+    setConfirming(true);
+    try {
+      const confirmed = await productionOrdersService.confirmFinishedProductSummaryWarehouse(id);
+      await mutate(confirmed, { revalidate: false });
+      toast.success("Đã xác nhận tổng kết thành phẩm.");
+      void refreshItemCatalog(
+        API_ROUTES.productionOrders.finishedProductSummaries,
+      ).catch(() => {});
+    } catch {
+      toast.error("Không thể xác nhận tổng kết thành phẩm. Vui lòng thử lại.");
+    } finally {
+      confirmingRef.current = false;
+      setConfirming(false);
+    }
+  }
 
   if (error) {
     return (
@@ -246,6 +279,14 @@ export default function FinishedProductSummaryDetail({
         onClose={onClose}
         showCloseButton={showCloseButton}
       />
+
+      {canConfirmWarehouse && !data.warehouse_confirmed_at && (
+        <div className="flex justify-start border-b py-3">
+          <Button disabled={confirming} onClick={() => void confirmWarehouse()}>
+            {confirming ? "Đang xác nhận..." : "Nhân viên kho xác nhận"}
+          </Button>
+        </div>
+      )}
 
       {canSendSamplingRequest &&
       productionOrderId !== null &&
@@ -319,6 +360,18 @@ export default function FinishedProductSummaryDetail({
           value={formatNumber(getTotalQuantity(data))}
         />
         <FieldDisplay lable="Ghi chú" value={formatText(data.note)} />
+        <FieldDisplay
+          lable="Xác nhận của kho"
+          value={data.warehouse_confirmed_at ? "Đã xác nhận" : "Chưa xác nhận"}
+        />
+        <FieldDisplay
+          lable="Nhân viên kho xác nhận"
+          value={data.warehouseConfirmedBy?.name || data.warehouseConfirmedBy?.username || ""}
+        />
+        <FieldDisplay
+          lable="Thời điểm kho xác nhận"
+          value={formatDateTime(data.warehouse_confirmed_at)}
+        />
         <SamplingRequestStatus samplingRequest={pyclm} />
         <FieldDisplay
           lable="Vị trí lấy mẫu"

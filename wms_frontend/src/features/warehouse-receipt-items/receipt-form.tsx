@@ -722,6 +722,19 @@ export default function ReceiptForm({
               </div>
               {key === "lot_number" && (
                 <div className="space-y-2">
+                  <Label htmlFor="receipt-expiry">Hạn dùng</Label>
+                  <Input
+                    id="receipt-expiry"
+                    name="expiry_date"
+                    type="date"
+                    min="1000-01-01"
+                    max="9999-12-31"
+                    defaultValue={data?.expiry_date?.slice(0, 10) ?? ""}
+                  />
+                </div>
+              )}
+              {key === "lot_number" && (
+                <div className="space-y-2">
                   <Label htmlFor="receipt-quantity">Số lượng *</Label>
                   <div className="flex items-center gap-2">
                     <Input
@@ -752,17 +765,6 @@ export default function ReceiptForm({
             </Fragment>
           ),
         )}
-        <div className="space-y-2">
-          <Label htmlFor="receipt-expiry">Hạn dùng</Label>
-          <Input
-            id="receipt-expiry"
-            name="expiry_date"
-            type="date"
-            min="1000-01-01"
-            max="9999-12-31"
-            defaultValue={data?.expiry_date?.slice(0, 10) ?? ""}
-          />
-        </div>
         {RECEIPT_ATTACHMENT_GROUPS.map(({ type, label }) => (
           <ReceiptImagePicker
             key={type}

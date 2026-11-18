@@ -16,6 +16,7 @@ import { AuditLogsService } from '../audit-logs/audit-logs.service';
 describe('Finished product summary history HTTP', () => {
   let app: INestApplication<Server>;
   const findUnique = jest.fn();
+  const updateMany = jest.fn();
   const findMany = jest.fn();
   const count = jest.fn();
   const networkAllowed = jest.fn();
@@ -42,7 +43,7 @@ describe('Finished product summary history HTTP', () => {
         {
           provide: PrismaService,
           useValue: {
-            productionOrderFinishedProductSummaries: { findUnique },
+            productionOrderFinishedProductSummaries: { findUnique, updateMany },
             auditLogs: { findMany, count },
             $transaction: (operations: Promise<unknown>[]) =>
               Promise.all(operations),
@@ -99,6 +100,54 @@ describe('Finished product summary history HTTP', () => {
     request(app.getHttpServer())
       .get('/production-orders/finished-product-summaries/7/history')
       .set('Authorization', 'test');
+
+  const confirm = () =>
+    request(app.getHttpServer())
+      .post(
+        '/production-orders/finished-product-summaries/7/warehouse-confirmation',
+      )
+      .set('Authorization', 'test');
+
+  it('requires authentication and warehouse confirmation permission', async () => {
+    await request(app.getHttpServer())
+      .post(
+        '/production-orders/finished-product-summaries/7/warehouse-confirmation',
+      )
+      .expect(401);
+    await confirm().expect(403);
+    await confirm()
+      .set('x-test-permission', 'production-orders.update')
+      .expect(403);
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('uses the signed-in employee and server time instead of forged body fields', async () => {
+    findUnique.mockResolvedValue({
+      id: 7,
+      warehouse_confirmed_by_id: 3,
+      warehouse_confirmed_at: new Date(),
+      productionOrder: { samplingRequests: [] },
+    });
+    updateMany.mockResolvedValue({ count: 1 });
+    const response = await confirm()
+      .set(
+        'x-test-permission',
+        'production-orders.finished-product-summaries.warehouse-confirm',
+      )
+      .send({
+        warehouse_confirmed_by_id: 999,
+        warehouse_confirmed_at: '2000-01-01',
+      })
+      .expect(201);
+    expect(response.body.warehouse_confirmed_by_id).toBe(3);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 7, warehouse_confirmed_at: null },
+      data: {
+        warehouse_confirmed_by_id: 3,
+        warehouse_confirmed_at: expect.any(Date),
+      },
+    });
+  });
 
   it('returns paginated history for the requested summary and ignores forged entity filters', async () => {
     const response = await get()

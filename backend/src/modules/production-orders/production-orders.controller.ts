@@ -546,6 +546,21 @@ export class ProductionOrdersController {
     );
   }
 
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.FINISHED_PRODUCT_SUMMARY_WAREHOUSE_CONFIRM,
+  )
+  @Post('finished-product-summaries/:summaryId/warehouse-confirmation')
+  @ApiOperation({ summary: 'Nhân viên kho xác nhận tổng kết thành phẩm' })
+  async confirmFinishedProductSummaryWarehouse(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Request() req: { user: { id: number } },
+  ) {
+    return this.productionOrderFinishedProductSummariesService.confirmWarehouse(
+      summaryId,
+      req.user,
+    );
+  }
+
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.DELETE)
   @Delete('finished-product-summaries/:summaryId')
   async deleteFinishedProductSummary(

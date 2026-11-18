@@ -22,6 +22,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       count: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
       delete: jest.Mock;
     };
   };
@@ -41,6 +42,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
         count: jest.fn().mockResolvedValue(0),
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
         delete: jest.fn(),
       },
     };
@@ -59,6 +61,78 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     service = module.get<ProductionOrderFinishedProductSummariesService>(
       ProductionOrderFinishedProductSummariesService,
     );
+  });
+
+  it('records the authenticated warehouse employee and server time only when unconfirmed', async () => {
+    const row = {
+      id: 7,
+      warehouse_confirmed_by_id: 3,
+      warehouse_confirmed_at: new Date(),
+      productionOrder: { samplingRequests: [] },
+    };
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      row,
+    );
+    prismaService.productionOrderFinishedProductSummaries.updateMany.mockResolvedValue(
+      { count: 1 },
+    );
+    await expect(service.confirmWarehouse(7, { id: 3 })).resolves.toMatchObject(
+      {
+        warehouse_confirmed_by_id: 3,
+        warehouse_confirmed_at: row.warehouse_confirmed_at,
+      },
+    );
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.updateMany,
+    ).toHaveBeenCalledWith({
+      where: { id: 7, warehouse_confirmed_at: null },
+      data: {
+        warehouse_confirmed_by_id: 3,
+        warehouse_confirmed_at: expect.any(Date),
+      },
+    });
+  });
+
+  it('returns the original confirmation when another employee retries', async () => {
+    const row = {
+      id: 7,
+      warehouse_confirmed_by_id: 3,
+      warehouse_confirmed_at: new Date('2026-11-18T09:00:00Z'),
+      productionOrder: { samplingRequests: [] },
+    };
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      row,
+    );
+    prismaService.productionOrderFinishedProductSummaries.updateMany.mockResolvedValue(
+      { count: 0 },
+    );
+    await expect(service.confirmWarehouse(7, { id: 4 })).resolves.toMatchObject(
+      {
+        warehouse_confirmed_by_id: 3,
+        warehouse_confirmed_at: row.warehouse_confirmed_at,
+      },
+    );
+  });
+
+  it('does not confirm a missing or inaccessible summary', async () => {
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      null,
+    );
+    await expect(service.confirmWarehouse(7, { id: 3 })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.updateMany,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('does not confirm without an authenticated employee', async () => {
+    await expect(service.confirmWarehouse(7)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    expect(
+      prismaService.productionOrderFinishedProductSummaries.updateMany,
+    ).not.toHaveBeenCalled();
   });
 
   it('checks access to the summary before reading only its audit logs', async () => {

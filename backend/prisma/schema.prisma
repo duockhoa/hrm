@@ -73,6 +73,7 @@ model Users {
   createdProductionOrderPreSecondaryPackagingChecks     ProductionOrderPreSecondaryPackagingChecks[]                    @relation("ProductionOrderPreSecondaryPackagingCheckCreator")
   createdSecondaryPackagingStageRequirements            SecondaryPackagingStageRequirements[]                           @relation("SecondaryPackagingStageRequirementCreator")
   createdProductionOrderFinishedProductSummaries        ProductionOrderFinishedProductSummaries[]                       @relation("ProductionOrderFinishedProductSummaryCreator")
+  warehouseConfirmedFinishedProductSummaries            ProductionOrderFinishedProductSummaries[]                       @relation("FinishedProductSummaryWarehouseConfirmer")
   createdProductionOrderDensityChecks                   ProductionOrderDensityChecks[]                                  @relation("ProductionOrderDensityCheckCreator")
   createdProductionOrderSamplingRecords                 ProductionOrderSamplingRecords[]                                @relation("ProductionOrderSamplingRecordCreator")
   createdProductionOrderFriabilityChecks                ProductionOrderFriabilityChecks[]                               @relation("ProductionOrderFriabilityCheckCreator")
@@ -1801,6 +1802,9 @@ model ProductionOrderFinishedProductSummaries {
   note                String?          @db.Text
   created_by_id       Int
   createdBy           Users            @relation("ProductionOrderFinishedProductSummaryCreator", fields: [created_by_id], references: [id], map: "po_finished_summary_created_by_id_fkey")
+  warehouse_confirmed_by_id Int?
+  warehouse_confirmed_at DateTime? @db.DateTime(3)
+  warehouseConfirmedBy Users? @relation("FinishedProductSummaryWarehouseConfirmer", fields: [warehouse_confirmed_by_id], references: [id], onDelete: Restrict, map: "po_finished_summary_warehouse_confirmer_fkey")
   created_at          DateTime         @default(now())
   updated_at          DateTime         @default(now()) @updatedAt
 

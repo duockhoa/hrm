@@ -42,6 +42,14 @@ const SAMPLING_LOCATIONS = [
   "Kho BBC2 TTBYT",
 ];
 
+const FINISHED_PRODUCT_SAMPLING_LOCATIONS = [
+  "Kho TP Thuốc",
+  "Kho TP Mỹ phẩm",
+  "Kho TP TTBYT",
+  "Kho TP TPVBSK",
+  "Kho TP TPBS",
+];
+
 type Props = {
   receipt: Pick<WarehouseReceiptItem, "id">;
   requestType?: SamplingRequestType;
@@ -104,8 +112,12 @@ function DraftEditor({
   requestType = "NL",
   userId,
 }: Props & { initialLocation: string; userId: number }) {
+  const samplingLocations =
+    requestType === "TP"
+      ? FINISHED_PRODUCT_SAMPLING_LOCATIONS
+      : SAMPLING_LOCATIONS;
   const [location, setLocation] = useState(
-    SAMPLING_LOCATIONS.includes(initialLocation) ? initialLocation : "",
+    samplingLocations.includes(initialLocation) ? initialLocation : "",
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -113,7 +125,7 @@ function DraftEditor({
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
-    if (!SAMPLING_LOCATIONS.includes(location)) {
+    if (!samplingLocations.includes(location)) {
       setError("Vui lòng chọn vị trí lấy mẫu.");
       return;
     }
@@ -170,7 +182,7 @@ function DraftEditor({
             <SelectValue placeholder="Chọn vị trí lấy mẫu" />
           </SelectTrigger>
           <SelectContent position="popper" className="max-h-72">
-            {SAMPLING_LOCATIONS.map((option) => (
+            {samplingLocations.map((option) => (
               <SelectItem key={option} value={option}>
                 {option}
               </SelectItem>

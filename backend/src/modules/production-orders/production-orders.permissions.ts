@@ -9,6 +9,8 @@ export const PRODUCTION_ORDER_PERMISSIONS = {
   DOCUMENT_CONTROL_UPDATE: 'production-orders.document-control.update',
   CREATE: 'production-orders.create',
   UPDATE: 'production-orders.update',
+  FINISHED_PRODUCT_SUMMARY_WAREHOUSE_CONFIRM:
+    'production-orders.finished-product-summaries.warehouse-confirm',
   DELETE: 'production-orders.delete',
   SEND_SAMPLING_REQUEST: 'production-orders.sampling-requests.send',
   STEAM_STERILIZATION_READ: 'production-orders.steam-sterilization-checks.read',
