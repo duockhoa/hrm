@@ -18,11 +18,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FinishedProductSummaryDetail } from "@/features/finished-product-summary";
+import { BatchSamplingDraftButton } from "@/features/warehouse-receipt-items/receipt-sampling-draft-form";
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
 import { getSearchScopePath } from "@/lib/search-utils";
 import useSearchStore from "@/store/search.store";
-import { X } from "lucide-react";
+import useUserStore from "@/store/user.store";
+import userService from "@/services/user.service";
+import useSWR from "swr";
+import { SquareCheck, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
@@ -145,12 +149,21 @@ function PyclmStatus({ sent }: { sent: boolean }) {
   );
 }
 
-function FinishedProductSummariesSkeleton() {
+function FinishedProductSummariesSkeleton({
+  isSelecting,
+}: {
+  isSelecting: boolean;
+}) {
   const skeletonRows = useSkeletonRowCount();
   return (
     <>
       {Array.from({ length: skeletonRows }).map((_, rowIndex) => (
         <TableRow key={rowIndex}>
+          {isSelecting && (
+            <TableCell className="border-r px-2">
+              <Skeleton className="mx-auto size-4" />
+            </TableCell>
+          )}
           {Array.from({ length: 12 }).map((__, cellIndex) => (
             <TableCell key={cellIndex} className="border-r">
               <Skeleton className="h-4 w-full min-w-16" />
@@ -222,6 +235,21 @@ export default function FinishedProductSummariesPage() {
   const [selectedSummaryId, setSelectedSummaryId] = useState<
     string | number | null
   >(null);
+  const [selectedRows, setSelectedRows] = useState<Map<string, number> | null>(
+    null,
+  );
+  const isSelecting = selectedRows !== null;
+  const columnCount = 12 + Number(isSelecting);
+  const userId = useUserStore((state) => state.user?.id);
+  const { data: permissions, error: permissionsError } = useSWR(
+    isSelecting && userId ? [API_ROUTES.users.myPermissions, userId] : null,
+    () => userService.fetchMyPermissions(),
+  );
+  const canDraft =
+    !permissionsError &&
+    permissions?.permissionKeys.includes(
+      "production-orders.sampling-requests.send",
+    );
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
@@ -278,16 +306,68 @@ export default function FinishedProductSummariesPage() {
   );
   const shouldShowMobileDetail = isMobile && selectedSummaryId !== null;
 
+  function toggleRow(id: string, orderId: number) {
+    setSelectedRows((current) => {
+      if (current === null) return current;
+      const next = new Map(current);
+      if (!next.delete(id)) next.set(id, orderId);
+      return next;
+    });
+  }
+
   const listPanel = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white shadow-md">
       <div className="sticky top-0 z-20 w-full bg-white p-2">
         <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-          <div className="flex min-w-0 items-center gap-2 font-medium text-gray-900">
-            <AiOutlineRight className="shrink-0" />
-            <Link href="/finished-product-summaries">
-              Danh sách tổng kết thành phẩm
-            </Link>
-          </div>
+          {isSelecting ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Thoát chế độ chọn nhiều"
+                  onClick={() => setSelectedRows(null)}
+                >
+                  <X className="size-4" />
+                </Button>
+                <span role="status" className="text-sm">
+                  Đã chọn {selectedRows.size} dòng
+                </span>
+              </div>
+              {canDraft && (
+                <BatchSamplingDraftButton
+                  ids={Array.from(new Set(selectedRows.values()))}
+                  requestType="TP"
+                  disabled={Array.from(selectedRows.values()).some(
+                    (id) => !Number.isSafeInteger(id) || id <= 0,
+                  )}
+                  onSaved={() => setSelectedRows(null)}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex min-w-0 items-center gap-2 font-medium text-gray-900">
+                <AiOutlineRight className="shrink-0" />
+                <Link href="/finished-product-summaries">
+                  Danh sách tổng kết thành phẩm
+                </Link>
+              </div>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label="Chọn nhiều dòng"
+                title="Chọn nhiều dòng"
+                disabled={isLoading || summaries.length === 0}
+                onClick={() => {
+                  setSelectedSummaryId(null);
+                  setSelectedRows(new Map());
+                }}
+              >
+                <SquareCheck className="size-5" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -303,6 +383,11 @@ export default function FinishedProductSummariesPage() {
           <table className="w-full min-w-[1400px] caption-bottom border-t text-[13px]">
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow className="hover:bg-transparent">
+                {isSelecting && (
+                  <TableHead className="w-10 border-r px-2">
+                    <span className="sr-only">Chọn dòng</span>
+                  </TableHead>
+                )}
                 <TableHead className="w-24 border-r px-2 font-bold text-gray-900">
                   Mã sản phẩm
                 </TableHead>
@@ -343,13 +428,13 @@ export default function FinishedProductSummariesPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <FinishedProductSummariesSkeleton />
+                <FinishedProductSummariesSkeleton isSelecting={isSelecting} />
               ) : groupedSummaries.length > 0 ? (
                 groupedSummaries.map((group) => (
                   <Fragment key={group.key}>
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
                       <TableCell
-                        colSpan={12}
+                        colSpan={columnCount}
                         className="border-r px-3 font-semibold text-gray-900"
                       >
                         {group.label}
@@ -358,14 +443,19 @@ export default function FinishedProductSummariesPage() {
                     {group.summaries.map((summary) => {
                       const productionOrder = getProductionOrder(summary);
                       const createdBy = getCreatedBy(summary);
-                      const isSelected =
-                        selectedSummaryId !== null &&
-                        String(summary.id) === String(selectedSummaryId);
+                      const rowId = String(summary.id);
+                      const orderId = Number(
+                        productionOrder?.id ?? summary.production_order_id,
+                      );
+                      const isSelected = isSelecting
+                        ? selectedRows.has(rowId)
+                        : selectedSummaryId !== null &&
+                          rowId === String(selectedSummaryId);
 
                       return (
                         <TableRow
                           key={summary.id}
-                          tabIndex={0}
+                          tabIndex={isSelecting ? undefined : 0}
                           aria-selected={isSelected}
                           data-state={isSelected ? "selected" : undefined}
                           className={`cursor-pointer ${
@@ -373,14 +463,30 @@ export default function FinishedProductSummariesPage() {
                               ? "bg-blue-50 hover:bg-blue-100"
                               : "hover:bg-gray-50"
                           }`}
-                          onClick={() => setSelectedSummaryId(summary.id)}
+                          onClick={() => {
+                            if (isSelecting) toggleRow(rowId, orderId);
+                            else setSelectedSummaryId(summary.id);
+                          }}
                           onKeyDown={(event) => {
+                            if (isSelecting) return;
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
                               setSelectedSummaryId(summary.id);
                             }
                           }}
                         >
+                          {isSelecting && (
+                            <TableCell className="border-r px-2 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`Chọn tổng kết thành phẩm #${rowId}`}
+                                checked={isSelected}
+                                onClick={(event) => event.stopPropagation()}
+                                onChange={() => toggleRow(rowId, orderId)}
+                                className="size-4 cursor-pointer align-middle accent-blue-600"
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="border-r px-2">
                             {productionOrder?.item_code ??
                               productionOrder?.item?.item_code}
@@ -437,7 +543,7 @@ export default function FinishedProductSummariesPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={12}
+                    colSpan={columnCount}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     {isSearching

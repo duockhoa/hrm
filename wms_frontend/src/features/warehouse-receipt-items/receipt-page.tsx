@@ -44,6 +44,7 @@ import ReceiptDetail, {
   formatReceiptQuantity,
 } from "./receipt-detail";
 import ReceiptForm, { receiptError } from "./receipt-form";
+import { BatchSamplingDraftButton } from "./receipt-sampling-draft-form";
 
 const columns = [
   "Mã hàng",
@@ -208,19 +209,26 @@ export default function ReceiptPage({
       <div className="sticky top-0 z-20 w-full bg-white p-2">
         <div className="flex w-full justify-between border-b border-gray-200 pb-2">
           {isSelecting ? (
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Thoát chế độ chọn nhiều"
-                onClick={() => setSelection(null)}
-              >
-                <X className="size-4" />
-              </Button>
-              <span role="status" className="text-sm">
-                Đã chọn {selectedRows.size} dòng
-              </span>
-            </div>
+            <>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Thoát chế độ chọn nhiều"
+                  onClick={() => setSelection(null)}
+                >
+                  <X className="size-4" />
+                </Button>
+                <span role="status" className="text-sm">
+                  Đã chọn {selectedRows.size} dòng
+                </span>
+              </div>
+              <BatchSamplingDraftButton
+                ids={Array.from(selectedRows)}
+                requestType="NL"
+                onSaved={() => setSelection(null)}
+              />
+            </>
           ) : (
             <>
               <div className="flex items-center gap-2">
