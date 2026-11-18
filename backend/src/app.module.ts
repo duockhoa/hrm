@@ -41,6 +41,7 @@ import { DataExportModule } from './modules/data-export/data-export.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { WarehouseReceiptItemsModule } from './modules/warehouse-receipt-items/warehouse-receipt-items.module';
 import { WarehouseTemperatureHumidityChecksModule } from './modules/warehouse-temperature-humidity-checks/warehouse-temperature-humidity-checks.module';
+import { WarehouseStocktakesModule } from './modules/warehouse-stocktakes/warehouse-stocktakes.module';
 import { McpModule } from './modules/mcp/mcp.module';
 import { NetworkPoliciesModule } from './modules/network-policies/network-policies.module';
 import { AppConnectionSessionsModule } from './modules/app-connection-sessions/app-connection-sessions.module';
@@ -90,6 +91,7 @@ import { ThumbnailProcessingModule } from './common/thumbnails/thumbnail-process
     AuditLogsModule,
     WarehouseReceiptItemsModule,
     WarehouseTemperatureHumidityChecksModule,
+    WarehouseStocktakesModule,
     McpModule,
     NetworkPoliciesModule,
   ],

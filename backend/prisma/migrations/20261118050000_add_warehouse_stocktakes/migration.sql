@@ -1,0 +1,20 @@
+CREATE TABLE `warehouse_stocktakes` (
+  `id` INTEGER NOT NULL AUTO_INCREMENT,
+  `code` VARCHAR(30) NOT NULL,
+  `stocktake_date` DATE NOT NULL,
+  `status` ENUM('DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED') NOT NULL DEFAULT 'DRAFT',
+  `note` TEXT NULL,
+  `created_by_id` INTEGER NOT NULL,
+  `started_at` DATETIME(3) NULL,
+  `completed_by_id` INTEGER NULL,
+  `completed_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `warehouse_stocktakes_code_key` (`code`),
+  INDEX `warehouse_stocktakes_date_idx` (`stocktake_date`, `id`),
+  INDEX `warehouse_stocktakes_creator_idx` (`created_by_id`),
+  INDEX `warehouse_stocktakes_completer_idx` (`completed_by_id`),
+  CONSTRAINT `warehouse_stocktakes_creator_fkey` FOREIGN KEY (`created_by_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `warehouse_stocktakes_completer_fkey` FOREIGN KEY (`completed_by_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

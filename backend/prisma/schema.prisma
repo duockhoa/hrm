@@ -29,6 +29,8 @@ model AuditLogs {
 }
 
 model Users {
+  createdWarehouseStocktakes   WarehouseStocktakes[] @relation("WarehouseStocktakeCreator")
+  completedWarehouseStocktakes WarehouseStocktakes[] @relation("WarehouseStocktakeCompleter")
   network_policy_code String @default("OPEN") @db.VarChar(20)
   networkPolicy NetworkPolicies @relation(fields: [network_policy_code], references: [code], onDelete: Restrict, onUpdate: Cascade)
   weighingRecordDetails ProductionOrderWeighingRecordDetails[] @relation("WeighingRecordDetailWeigher")
@@ -649,6 +651,34 @@ model Items {
 
   @@index([series, item_code])
   @@map("items")
+}
+
+enum WarehouseStocktakeStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model WarehouseStocktakes {
+  id              Int                      @id @default(autoincrement())
+  code            String                   @unique(map: "warehouse_stocktakes_code_key") @db.VarChar(30)
+  stocktake_date  DateTime                 @db.Date
+  status          WarehouseStocktakeStatus @default(DRAFT)
+  note            String?                  @db.Text
+  created_by_id   Int
+  started_at      DateTime?                @db.DateTime(3)
+  completed_by_id Int?
+  completed_at    DateTime?                @db.DateTime(3)
+  created_at      DateTime                 @default(now()) @db.DateTime(3)
+  updated_at      DateTime                 @default(now()) @updatedAt @db.DateTime(3)
+  createdBy       Users                    @relation("WarehouseStocktakeCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "warehouse_stocktakes_creator_fkey")
+  completedBy     Users?                   @relation("WarehouseStocktakeCompleter", fields: [completed_by_id], references: [id], onDelete: Restrict, map: "warehouse_stocktakes_completer_fkey")
+
+  @@index([stocktake_date, id], map: "warehouse_stocktakes_date_idx")
+  @@index([created_by_id], map: "warehouse_stocktakes_creator_idx")
+  @@index([completed_by_id], map: "warehouse_stocktakes_completer_idx")
+  @@map("warehouse_stocktakes")
 }
 
 model WarehouseReceiptItems {
