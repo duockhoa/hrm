@@ -44,6 +44,7 @@ import CheckDetail, {
 import CheckForm, { checkError } from "./check-form";
 
 const columns = [
+  "Ca",
   "Vị trí",
   "Nhiệt độ (°C)",
   "Độ ẩm (%RH)",
@@ -51,8 +52,23 @@ const columns = [
   "Thời điểm kiểm tra",
   "Người kiểm tra",
 ];
+
+const warehouseTimeZone = "Asia/Ho_Chi_Minh";
+const checkHourFormatter = new Intl.DateTimeFormat("en-GB", {
+  timeZone: warehouseTimeZone,
+  hour: "2-digit",
+  hourCycle: "h23",
+});
+
+function formatCheckShift(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return Number(checkHourFormatter.format(date)) < 12 ? "Sáng" : "Chiều";
+}
+
 function rowValues(check: WarehouseTemperatureHumidityCheck) {
   return [
+    formatCheckShift(check.created_at),
     check.location,
     check.temperature,
     check.humidity,
@@ -99,7 +115,7 @@ export default function CheckPage({
     const result = new Map<string, WarehouseTemperatureHumidityCheck[]>();
     for (const check of data ?? []) {
       const date = new Date(check.created_at).toLocaleDateString("vi-VN", {
-        timeZone: "Asia/Ho_Chi_Minh",
+        timeZone: warehouseTimeZone,
       });
       const group = result.get(date) ?? [];
       group.push(check);
