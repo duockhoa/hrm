@@ -105,6 +105,13 @@ export const ITEM_HISTORY_FIELDS: EditHistoryFields = {
   },
   disintegration_time_unit: { label: "Đơn vị thời gian rã", type: "text" },
   deleted_at: { label: "Thời điểm xóa", type: "date" },
+  feature_id: { label: "ID tính năng", type: "number" },
+  feature_label: { label: "Tính năng", type: "text" },
+  feature_key: { label: "Mã tính năng", type: "text" },
+  enabled: { label: "Đã chọn tính năng", type: "boolean" },
+  required: { label: "Bắt buộc", type: "boolean" },
+  order: { label: "Thứ tự", type: "number" },
+  feature_configuration: { label: "Cấu hình tính năng", type: "feature-list" },
 };
 
 export default function ItemHistoryButton({ itemCode }: { itemCode?: string }) {
@@ -118,6 +125,8 @@ export default function ItemHistoryButton({ itemCode }: { itemCode?: string }) {
       entityLabels={{
         items: "Sản phẩm",
         production_specifications: "Thông số sản xuất",
+        item_features: "Tính năng sản phẩm",
+        item_feature_config: "Sao chép cấu hình tính năng",
       }}
     />
   );

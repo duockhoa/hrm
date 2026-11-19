@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { FeaturesService } from './features.service';
+import { auditContext } from 'src/audit/audit-context';
 
 describe('FeaturesService', () => {
   let service: FeaturesService;
@@ -31,6 +32,7 @@ describe('FeaturesService', () => {
       findFirst: jest.Mock;
     };
     featureSectionActions: { findFirst: jest.Mock };
+    auditLogs: { create: jest.Mock };
     $transaction: jest.Mock;
   };
 
@@ -56,6 +58,7 @@ describe('FeaturesService', () => {
         findFirst: jest.fn(),
       },
       featureSectionActions: { findFirst: jest.fn().mockResolvedValue(null) },
+      auditLogs: { create: jest.fn().mockResolvedValue({ id: 1n }) },
       $transaction: jest.fn(),
     };
     prismaService.$transaction.mockImplementation(
@@ -78,6 +81,114 @@ describe('FeaturesService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('audits a copied configuration with before/after values and the request actor inside the transaction', async () => {
+    prismaService.items.findFirst
+      .mockResolvedValueOnce({ item_code: 'TP_SOURCE' })
+      .mockResolvedValueOnce({ item_code: 'TP_TARGET' });
+    prismaService.features.findMany.mockResolvedValue([
+      {
+        id: 1,
+        key: 'create_date_check',
+        label: 'Kiểm tra date',
+        kind: 'action',
+        default_order: 10,
+      },
+    ]);
+    prismaService.itemFeatures.findMany
+      .mockResolvedValueOnce([
+        { feature_id: 1, enabled: true, required: false, order: 20 },
+      ])
+      .mockResolvedValueOnce([
+        { feature_id: 1, enabled: false, required: false, order: 10 },
+      ]);
+    await auditContext.run(
+      {
+        requestId: 'copy-features',
+        request: { user: { id: 3, name: 'Editor' } },
+      },
+      () =>
+        service.copyItemFeatureConfig('TP_TARGET', {
+          source_item_code: 'TP_SOURCE',
+        }),
+    );
+    expect(prismaService.auditLogs.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entity_type: 'item_feature_config',
+        entity_key: 'TP_TARGET',
+        action: 'UPDATE',
+        actor_id: 3n,
+        actor_name: 'Editor',
+        request_id: 'copy-features',
+        old_values: {
+          feature_configuration: [
+            expect.objectContaining({
+              label: 'Kiểm tra date',
+              enabled: false,
+              order: 10,
+            }),
+          ],
+        },
+        new_values: {
+          feature_configuration: [
+            expect.objectContaining({
+              label: 'Kiểm tra date',
+              enabled: true,
+              order: 20,
+            }),
+          ],
+        },
+      }),
+    });
+  });
+
+  it('does not log copying identical feature settings', async () => {
+    prismaService.items.findFirst
+      .mockResolvedValueOnce({ item_code: 'TP_SOURCE' })
+      .mockResolvedValueOnce({ item_code: 'TP_TARGET' });
+    prismaService.features.findMany.mockResolvedValue([
+      {
+        id: 1,
+        key: 'create_date_check',
+        label: 'Kiểm tra date',
+        kind: 'action',
+        default_order: 10,
+      },
+    ]);
+    prismaService.itemFeatures.findMany.mockResolvedValue([
+      { feature_id: 1, enabled: true, required: false, order: 10 },
+    ]);
+    await service.copyItemFeatureConfig('TP_TARGET', {
+      source_item_code: 'TP_SOURCE',
+    });
+    expect(prismaService.auditLogs.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects the copy transaction when writing its audit snapshot fails', async () => {
+    prismaService.items.findFirst
+      .mockResolvedValueOnce({ item_code: 'TP_SOURCE' })
+      .mockResolvedValueOnce({ item_code: 'TP_TARGET' });
+    prismaService.features.findMany.mockResolvedValue([
+      {
+        id: 1,
+        key: 'create_date_check',
+        label: 'Kiểm tra date',
+        kind: 'action',
+        default_order: 10,
+      },
+    ]);
+    prismaService.itemFeatures.findMany
+      .mockResolvedValueOnce([{ feature_id: 1, enabled: true, order: 10 }])
+      .mockResolvedValueOnce([]);
+    prismaService.auditLogs.create.mockRejectedValue(
+      new Error('audit write failed'),
+    );
+    await expect(
+      service.copyItemFeatureConfig('TP_TARGET', {
+        source_item_code: 'TP_SOURCE',
+      }),
+    ).rejects.toThrow('audit write failed');
   });
 
   it('gets all features ordered for display', async () => {

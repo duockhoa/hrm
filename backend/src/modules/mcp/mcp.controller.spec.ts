@@ -98,6 +98,7 @@ describe('MCP Streamable HTTP endpoint', () => {
       findUnique: jest.fn(),
     },
     auditLogs: { findMany: jest.fn(), count: jest.fn() },
+    itemFeatures: { findMany: jest.fn() },
     features: { findMany: jest.fn() },
     productionOrders: {
       count: jest.fn(),
@@ -151,6 +152,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     prisma.items.findUnique.mockReset().mockResolvedValue(null);
     prisma.auditLogs.findMany.mockReset().mockResolvedValue([]);
     prisma.auditLogs.count.mockReset().mockResolvedValue(0);
+    prisma.itemFeatures.findMany.mockReset().mockResolvedValue([]);
     prisma.features.findMany.mockResolvedValue([]);
     oauth.resolveMcpToken.mockResolvedValue(authenticated());
     prisma.productionOrders.count.mockResolvedValue(0);
@@ -1818,6 +1820,7 @@ describe('MCP Streamable HTTP endpoint', () => {
           reason: null,
         },
       ]);
+      prisma.auditLogs.findMany.mockResolvedValueOnce([]);
       prisma.auditLogs.count.mockResolvedValue(25);
       const result = body(
         await rpc('tools/call', {
@@ -1842,8 +1845,22 @@ describe('MCP Streamable HTTP endpoint', () => {
       expect(prisma.auditLogs.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            entity_type: { in: ['items', 'production_specifications'] },
-            entity_key: item_code,
+            OR: [
+              {
+                entity_type: {
+                  in: [
+                    'items',
+                    'production_specifications',
+                    'item_feature_config',
+                  ],
+                },
+                entity_key: item_code,
+              },
+              {
+                entity_type: 'item_features',
+                OR: [{ entity_key: item_code }, { entity_id: { in: [] } }],
+              },
+            ],
           },
           skip: 10,
           take: 10,

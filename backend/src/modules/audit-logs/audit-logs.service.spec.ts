@@ -2,19 +2,73 @@ import { PrismaService } from 'src/prisma.service';
 import { AuditLogsService } from './audit-logs.service';
 
 describe('AuditLogsService', () => {
-  it('scopes item history to the exact string key and the two catalog entities', async () => {
+  it('labels old feature updates using current configuration and retains the recorded actor and values', async () => {
+    const findMany = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 20n,
+          entity_type: 'item_features',
+          entity_id: 8n,
+          entity_name: null,
+          old_values: { enabled: true },
+          new_values: { enabled: false },
+          actor_id: 3n,
+          actor_name: 'Editor',
+        },
+      ]);
+    const service = new AuditLogsService({
+      itemFeatures: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: 8, feature: { label: 'Kiểm tra date' } }]),
+      },
+      auditLogs: { findMany, count: jest.fn().mockResolvedValue(1) },
+      $transaction: (operations: Promise<unknown>[]) => Promise.all(operations),
+    } as unknown as PrismaService);
+    const history = await service.findForItem('TP0001', {});
+    expect(history.data).toEqual([
+      expect.objectContaining({
+        entity_id: '8',
+        entity_name: 'Kiểm tra date',
+        actor_id: '3',
+        actor_name: 'Editor',
+        old_values: { enabled: true },
+        new_values: { enabled: false },
+      }),
+    ]);
+  });
+
+  it('includes current and deleted feature settings without mixing product histories', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
+    findMany.mockResolvedValueOnce([{ entity_id: 9n }]);
     const count = jest.fn().mockResolvedValue(0);
     const service = new AuditLogsService({
       auditLogs: { findMany, count },
+      itemFeatures: { findMany: jest.fn().mockResolvedValue([{ id: 8 }]) },
       $transaction: (operations: Promise<unknown>[]) => Promise.all(operations),
     } as unknown as PrismaService);
     await service.findForItem('BTP0001', { page: 2, limit: 10 });
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          entity_type: { in: ['items', 'production_specifications'] },
-          entity_key: 'BTP0001',
+          OR: [
+            {
+              entity_type: {
+                in: [
+                  'items',
+                  'production_specifications',
+                  'item_feature_config',
+                ],
+              },
+              entity_key: 'BTP0001',
+            },
+            {
+              entity_type: 'item_features',
+              OR: [{ entity_key: 'BTP0001' }, { entity_id: { in: [8n, 9n] } }],
+            },
+          ],
         },
         skip: 10,
         take: 10,

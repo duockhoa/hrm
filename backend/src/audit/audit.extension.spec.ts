@@ -11,6 +11,7 @@ describe('auditExtension', () => {
     productionOrderFinishedProductSummaries: { findUnique },
     items: { findUnique },
     productionSpecifications: { findUnique },
+    itemFeatures: { findUnique },
     auditLogs: { create: createLog },
     $extends: jest.fn((extension) => extension),
   };
@@ -22,6 +23,96 @@ describe('auditExtension', () => {
     createLog.mockResolvedValue({ id: 1n });
     const extension = (auditExtension as any)(client);
     auditOperation = extension.query.$allModels.$allOperations;
+  });
+
+  it.each(['upsert', 'update', 'delete'])(
+    'records feature identity, label and actor on %s',
+    async (operation) => {
+      const before = {
+        id: 10,
+        item_code: 'TP0001',
+        feature_id: 4,
+        enabled: true,
+        required: false,
+        order: 1,
+        feature: { label: 'Kiểm tra date', key: 'date_checks' },
+      };
+      findUnique.mockResolvedValueOnce(before);
+      await auditContext.run(
+        {
+          requestId: 'feature-edit',
+          request: { user: { id: 3, name: 'Editor' } },
+        },
+        () =>
+          auditOperation({
+            model: 'ItemFeatures',
+            operation,
+            args: {
+              where: {
+                item_code_feature_id: { item_code: 'TP0001', feature_id: 4 },
+              },
+            },
+            query: async () => ({ ...before, enabled: false, order: 2 }),
+          }),
+      );
+      expect(createLog).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          entity_type: 'item_features',
+          entity_id: 10n,
+          entity_key: 'TP0001',
+          entity_name: 'Kiểm tra date',
+          actor_id: 3n,
+          actor_name: 'Editor',
+          action: operation === 'delete' ? 'DELETE' : 'UPDATE',
+          old_values:
+            operation === 'delete'
+              ? expect.objectContaining({
+                  enabled: true,
+                  feature_label: 'Kiểm tra date',
+                })
+              : { enabled: true, order: 1 },
+          new_values:
+            operation === 'delete'
+              ? Prisma.DbNull
+              : { enabled: false, order: 2 },
+        }),
+      });
+    },
+  );
+
+  it('records a newly selected feature and its display name', async () => {
+    findUnique.mockResolvedValueOnce(null);
+    await auditOperation({
+      model: 'ItemFeatures',
+      operation: 'upsert',
+      args: {
+        where: {
+          item_code_feature_id: { item_code: 'BTP0001', feature_id: 4 },
+        },
+      },
+      query: async () => ({
+        id: 11,
+        item_code: 'BTP0001',
+        feature_id: 4,
+        enabled: true,
+        required: true,
+        order: 0,
+        feature: { label: 'Kiểm tra date', key: 'date_checks' },
+      }),
+    });
+    expect(createLog).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'CREATE',
+        entity_key: 'BTP0001',
+        entity_name: 'Kiểm tra date',
+        new_values: expect.objectContaining({
+          enabled: true,
+          required: true,
+          order: 0,
+          feature_label: 'Kiểm tra date',
+        }),
+      }),
+    });
   });
 
   it('records only changed fields and request actor on update', async () => {

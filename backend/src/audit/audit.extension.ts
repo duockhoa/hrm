@@ -53,7 +53,12 @@ function snapshot(modelName: string, value: unknown): RecordData | null {
             ['productLine', 'name', 'product_line_name'],
             ['dosageForm', 'name', 'dosage_form_name'],
           ]
-        : [];
+        : modelName === 'ItemFeatures'
+          ? [
+              ['feature', 'label', 'feature_label'],
+              ['feature', 'key', 'feature_key'],
+            ]
+          : [];
   for (const [relation, field, target] of displayRelations) {
     if (relation in source) {
       const related = source[relation] as RecordData | null;
@@ -87,6 +92,7 @@ function changedValues(
 
 function entityName(data: RecordData): string | undefined {
   const candidate = [
+    'feature_label',
     'name',
     'item_name',
     'production_order_code',
@@ -139,6 +145,9 @@ export const auditExtension = Prisma.defineExtension((client) =>
                     : {}),
                   ...(model === 'ProductionSpecifications'
                     ? { include: { productLine: true, dosageForm: true } }
+                    : {}),
+                  ...(model === 'ItemFeatures'
+                    ? { include: { feature: true } }
                     : {}),
                 }),
               );
@@ -194,6 +203,9 @@ export const auditExtension = Prisma.defineExtension((client) =>
                 // Numeric entities retain their existing ID; string identities use entity_key.
                 entity_id: stringKey ? 0n : BigInt(id as number | bigint),
                 ...(stringKey ? { entity_key: id as string } : {}),
+                ...(model === 'ItemFeatures'
+                  ? { entity_key: String((after ?? before)?.item_code ?? '') }
+                  : {}),
                 entity_name: entityName(after ?? before ?? {}),
                 action,
                 old_values: oldValues

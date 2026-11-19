@@ -83,14 +83,63 @@ export class AuditLogsService {
   }
 
   async findForItem(itemCode: string, query: GetAuditLogPageDto) {
-    return this.findMatching(
+    // Old UPDATE logs contain only changed fields. Recover ownership from
+    // current rows and earlier CREATE/DELETE snapshots, including removed rows.
+    const [settings, historical] = await Promise.all([
+      this.prisma.itemFeatures.findMany({
+        where: { item_code: itemCode },
+        select: { id: true, feature: { select: { label: true } } },
+      }),
+      this.prisma.auditLogs.findMany({
+        where: {
+          entity_type: 'item_features',
+          OR: [
+            { old_values: { path: '$.item_code', equals: itemCode } },
+            { new_values: { path: '$.item_code', equals: itemCode } },
+          ],
+        },
+        select: { entity_id: true },
+        distinct: ['entity_id'],
+      }),
+    ]);
+    const featureIds = [
+      ...new Set([
+        ...settings.map((setting) => BigInt(setting.id)),
+        ...historical.map((log) => log.entity_id),
+      ]),
+    ];
+    const result = await this.findMatching(
       {
-        entity_type: { in: ['items', 'production_specifications'] },
-        entity_key: itemCode,
+        OR: [
+          {
+            entity_type: {
+              in: ['items', 'production_specifications', 'item_feature_config'],
+            },
+            entity_key: itemCode,
+          },
+          {
+            entity_type: 'item_features',
+            OR: [{ entity_key: itemCode }, { entity_id: { in: featureIds } }],
+          },
+        ],
       },
       query.page ?? 1,
       query.limit ?? 20,
     );
+    const featureNames = new Map(
+      settings.map((setting) => [String(setting.id), setting.feature?.label]),
+    );
+    return {
+      ...result,
+      data: result.data.map((entry) => ({
+        ...entry,
+        entity_name:
+          entry.entity_name ||
+          (entry.entity_type === 'item_features'
+            ? (featureNames.get(entry.entity_id) ?? null)
+            : null),
+      })),
+    };
   }
 
   private async findMatching(

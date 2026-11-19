@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { auditContext } from 'src/audit/audit-context';
 import { CreateFeatureDto } from './dto/create-feature.dto';
 import { CreateItemFeatureDto } from './dto/create-item-feature.dto';
 import { CopyItemFeatureConfigDto } from './dto/copy-item-feature-config.dto';
@@ -386,22 +387,28 @@ export class FeaturesService {
     }
 
     return this.prismaService.$transaction(async (tx) => {
-      const [sourceItem, targetItem, features, sourceItemFeatures] =
-        await Promise.all([
-          tx.items.findFirst({
-            where: { item_code: sourceItemCode, deleted_at: null },
-          }),
-          tx.items.findFirst({
-            where: { item_code: targetItemCode, deleted_at: null },
-          }),
-          tx.features.findMany({
-            orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
-            include: FEATURE_LINK_INCLUDE,
-          }),
-          tx.itemFeatures.findMany({
-            where: { item_code: sourceItemCode },
-          }),
-        ]);
+      const [
+        sourceItem,
+        targetItem,
+        features,
+        sourceItemFeatures,
+        targetItemFeatures,
+      ] = await Promise.all([
+        tx.items.findFirst({
+          where: { item_code: sourceItemCode, deleted_at: null },
+        }),
+        tx.items.findFirst({
+          where: { item_code: targetItemCode, deleted_at: null },
+        }),
+        tx.features.findMany({
+          orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
+          include: FEATURE_LINK_INCLUDE,
+        }),
+        tx.itemFeatures.findMany({
+          where: { item_code: sourceItemCode },
+        }),
+        tx.itemFeatures.findMany({ where: { item_code: targetItemCode } }),
+      ]);
 
       if (!sourceItem) {
         throw new NotFoundException('Source item not found');
@@ -457,6 +464,54 @@ export class FeaturesService {
               order,
             }),
           ),
+        });
+      }
+
+      const snapshot = (
+        settings: {
+          feature_id: number;
+          enabled: boolean;
+          required: boolean;
+          order: number | null;
+        }[],
+      ) =>
+        features.map((feature) => {
+          const setting = settings.find((row) => row.feature_id === feature.id);
+          return {
+            feature_id: feature.id,
+            key: feature.key,
+            label: feature.label,
+            enabled: setting?.enabled ?? false,
+            required: setting?.required ?? false,
+            order: setting?.order ?? feature.default_order,
+          };
+        });
+      const before = snapshot(targetItemFeatures);
+      const after = snapshot(copiedFeatures);
+      if (JSON.stringify(before) !== JSON.stringify(after)) {
+        const context = auditContext.getStore();
+        const user = context?.request.user;
+        const reason = context?.request.body?.reason;
+        // Bulk replacement bypasses the per-row audit extension. Keep the
+        // configuration snapshot in the SAME transaction as the copy.
+        await tx.auditLogs.create({
+          data: {
+            entity_type: 'item_feature_config',
+            entity_id: 0n,
+            entity_key: targetItem.item_code,
+            entity_name: `Sao chép từ ${sourceItem.item_code}`,
+            action: 'UPDATE',
+            old_values: { feature_configuration: before },
+            new_values: { feature_configuration: after },
+            actor_id:
+              typeof user?.id === 'number' ? BigInt(user.id) : undefined,
+            actor_name: user?.name ?? user?.username,
+            request_id: context?.requestId,
+            reason:
+              typeof reason === 'string'
+                ? reason.trim() || undefined
+                : undefined,
+          },
         });
       }
 

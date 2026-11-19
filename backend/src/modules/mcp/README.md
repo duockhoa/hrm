@@ -113,7 +113,7 @@ Ba tool lịch sử chỉnh sửa:
 | Tool | Tham số | Quyền và kết quả |
 | --- | --- | --- |
 | `search_audit_logs` | `entity_type?`, `entity_id?` (chuỗi số), `entity_key?`, `action?`, `keyword?`, `page?`, `limit?` | `permissions.list`, giống `GET /audit-logs`; tìm audit toàn hệ thống, kể cả bản ghi đã xóa |
-| `get_item_edit_history` | `item_code`, `page?`, `limit?` | `items.read`; lịch sử số đăng ký và thông số sản xuất của danh mục thành phẩm/bán thành phẩm còn tồn tại |
+| `get_item_edit_history` | `item_code`, `page?`, `limit?` | `items.read`; lịch sử số đăng ký, thông số sản xuất và tính năng đã chọn (kể cả sao chép cấu hình) của danh mục thành phẩm/bán thành phẩm còn tồn tại |
 | `get_production_order_edit_history` | `resource`, `record_id`, `scope?`, `page?`, `limit?` | Quyền đọc đúng resource và phạm vi lô như detail; dùng lại `ProductionOrderHistoryService` |
 
 Mặc định `page=1`, `limit=20`, tối đa 100 dòng mỗi trang; mới nhất trước, trả `data` và `meta` (`page`, `limit`, `total`, `total_pages`). Kiểm tra `meta` trước khi kết luận đã đọc hết lịch sử. Nội dung gồm `action`, `old_values`, `new_values`, `actor_id`, `actor_name`, `created_at`, `reason` và định danh bản ghi. Thời điểm trả dạng ISO UTC; đổi sang giờ Việt Nam khi trình bày. Không trả IP/user agent. Các tool chỉ đọc dữ liệu đã ghi, không khôi phục được thay đổi trước khi bật audit. Lịch sử rỗng không chứng minh bản ghi chưa từng được sửa.

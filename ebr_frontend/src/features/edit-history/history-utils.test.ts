@@ -11,6 +11,26 @@ const fields = {
   package_count: { label: "Số kiện", type: "number" },
   note: { label: "Ghi chú", type: "text" },
 } as const;
+
+test("renders feature configuration with selected, required and order values", () => {
+  assert.equal(
+    formatHistoryValue(
+      [
+        { label: "Kiểm tra date", enabled: true, required: true, order: 0 },
+        { label: "Nhiệt độ", enabled: false, required: false, order: 2 },
+      ],
+      { label: "Cấu hình tính năng", type: "feature-list" },
+    ),
+    "Kiểm tra date: Đã chọn; Bắt buộc; thứ tự 0\nNhiệt độ: Không chọn; Không bắt buộc; thứ tự 2",
+  );
+  assert.equal(
+    formatHistoryValue([], {
+      label: "Cấu hình tính năng",
+      type: "feature-list",
+    }),
+    "Chưa chọn tính năng",
+  );
+});
 const entry: EditHistoryEntry = {
   id: "1",
   entity_id: "7",

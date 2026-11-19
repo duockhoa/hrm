@@ -34,6 +34,17 @@ export function getHistoryChanges(
 
 export function formatHistoryValue(value: unknown, field: EditHistoryField) {
   if (value === null || value === undefined || value === "") return "—";
+  if (field.type === "feature-list" && Array.isArray(value)) {
+    return (
+      value
+        .map((setting: unknown) => {
+          if (!setting || typeof setting !== "object") return String(setting);
+          const row = setting as Record<string, unknown>;
+          return `${row.label ?? row.key ?? row.feature_id}: ${row.enabled ? "Đã chọn" : "Không chọn"}; ${row.required ? "Bắt buộc" : "Không bắt buộc"}; thứ tự ${row.order ?? "—"}`;
+        })
+        .join("\n") || "Chưa chọn tính năng"
+    );
+  }
   if (field.type === "boolean" && typeof value === "boolean") {
     return value ? "Có" : "Không";
   }

@@ -79,6 +79,7 @@ function HistoryEntry({
         <p className="mt-2 text-xs text-gray-500">
           {entityLabels[entry.entity_type] ?? "Bản ghi"} #
           {entry.entity_key ?? entry.entity_id}
+          {entry.entity_name ? ` — ${entry.entity_name}` : ""}
         </p>
       ) : null}
 

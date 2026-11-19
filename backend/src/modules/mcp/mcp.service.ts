@@ -460,7 +460,7 @@ export class McpService implements OnModuleDestroy {
       'get_item_edit_history',
       {
         description:
-          'Lịch sử chỉnh sửa danh mục thành phẩm/bán thành phẩm theo item_code từ search_items/get_item. Cần items.read. Gồm số đăng ký và thông số sản xuất, người sửa, thời điểm, giá trị trước/sau và lý do; phân trang mới nhất trước. Không gồm cấu hình thiết bị/tính năng/biểu mẫu. Chỉ có thay đổi sau khi bật ghi audit cho danh mục; rỗng không đồng nghĩa chưa từng sửa.',
+          'Lịch sử chỉnh sửa danh mục thành phẩm/bán thành phẩm theo item_code từ search_items/get_item. Cần items.read. Gồm số đăng ký, thông số sản xuất và tính năng đã chọn (bật/tắt, bắt buộc, thứ tự, sao chép cấu hình); có người sửa, thời điểm, giá trị trước/sau và lý do, phân trang mới nhất trước. Không gồm cấu hình thiết bị/biểu mẫu. Chỉ trả lịch sử đã ghi audit; rỗng không đồng nghĩa chưa từng sửa.',
         inputSchema: itemEditHistorySchema,
         annotations: readOnlyAnnotations,
       },
