@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import type { WarehouseReceiptItem } from "@/services/warehouse-receipt-items.service";
 import styles from "./raw-material-label.module.css";
@@ -66,25 +66,8 @@ export default function RawMaterialLabel({
 }: {
   receipt: WarehouseReceiptItem;
 }) {
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const [itemCode, setItemCode] = useState(receipt.item_code);
   const [lotNumber, setLotNumber] = useState(receipt.lot_number);
-  useEffect(() => {
-    const label = wrapperRef.current;
-    if (!label) return;
-
-    function fitPrintedLabel() {
-      if (!label) return;
-      label.style.removeProperty("--label-print-scale");
-      // Leave room for the top inset and the print engine's page rounding.
-      const availableHeight = (72 * 96) / 25.4;
-      const scale = Math.min(1, availableHeight / label.offsetHeight);
-      label.style.setProperty("--label-print-scale", String(scale));
-    }
-
-    window.addEventListener("beforeprint", fitPrintedLabel);
-    return () => window.removeEventListener("beforeprint", fitPrintedLabel);
-  }, []);
   const userName = (
     receipt.enteredBy?.name ||
     receipt.enteredBy?.username ||
@@ -100,7 +83,7 @@ export default function RawMaterialLabel({
   const qrValue = `${itemCode}$${lotNumber}`;
 
   return (
-    <div ref={wrapperRef} className={styles.wrapper}>
+    <div className={styles.wrapper}>
       <table className={styles.label} aria-label="Nhãn biệt trữ nguyên liệu">
         <colgroup>
           <col className={styles.headingColumn} />

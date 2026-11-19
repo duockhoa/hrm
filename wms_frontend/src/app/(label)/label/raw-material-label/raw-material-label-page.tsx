@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Printer } from "lucide-react";
 import useSWR from "swr";
 import { useWarehouseReceiptAccess } from "@/hooks/use-warehouse-receipt-access";
-import { Button } from "@/components/ui/button";
 import RawMaterialLabel from "@/features/warehouse-receipt-items/raw-material-label";
 import warehouseReceiptItemsService, {
   WAREHOUSE_RECEIPT_ITEMS_URL,
@@ -29,26 +26,9 @@ export default function RawMaterialLabelPage() {
     () => warehouseReceiptItemsService.read(receiptId),
     { revalidateOnFocus: false },
   );
-  const canPrint = Boolean(data && !error && isValidId && access.canRead);
 
   return (
     <main className={styles.page}>
-      <div className={styles.toolbar}>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={isValidId ? `/home/${receiptId}` : "/home"}>
-            <ArrowLeft className="size-4" /> Kiểm hàng nhập kho
-          </Link>
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={!canPrint}
-          onClick={() => window.print()}
-        >
-          <Printer className="size-4" /> In nhãn
-        </Button>
-      </div>
-
       {access.loading ? (
         <p role="status" className={styles.message}>
           Đang tải quyền truy cập...
