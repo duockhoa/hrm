@@ -38,6 +38,13 @@ import {
   connectionStatisticsSchema,
 } from './mcp-connection-history';
 import { USER_PERMISSIONS } from '../users/users.permissions';
+import { PERMISSION_MANAGEMENT_PERMISSIONS } from '../permissions/permissions.permissions';
+import {
+  McpAuditHistoryService,
+  auditSearchSchema,
+  itemEditHistorySchema,
+  productionOrderEditHistorySchema,
+} from './mcp-audit-history.service';
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
@@ -78,6 +85,7 @@ export class McpService implements OnModuleDestroy {
   constructor(
     private readonly tools: McpToolsService,
     private readonly warehouseRelease: McpWarehouseReleaseService,
+    private readonly auditHistory: McpAuditHistoryService,
   ) {}
 
   handleRequest(request: Request, response: Response) {
@@ -92,6 +100,7 @@ export class McpService implements OnModuleDestroy {
   private createServer(auth?: AuthInfo) {
     const server = new McpServer(this.serverInfo, {
       instructions:
+        'Lịch sử chỉnh sửa: dùng get_item_edit_history theo item_code cho danh mục sản phẩm (items.read), get_production_order_edit_history theo resource/record_id cho lệnh hoặc phiếu (quyền đọc đúng loại phiếu, giữ phạm vi lô). scope=production-order lấy lịch sử một nhóm phiếu trong lệnh, record_id là ID lệnh; scope=record lấy một phiếu. search_audit_logs tra cứu toàn bộ audit khi có permissions.list. Kết quả có người sửa, thời điểm, giá trị trước/sau, lý do và phân trang; dữ liệu không ghi audit trước đây không thể khôi phục, lịch sử rỗng không chứng minh chưa từng sửa. ' +
         'Kiểm hàng nhập kho WMS: dùng search_warehouse_receipt_items để tìm dòng theo mã hàng, số lô hoặc ngày nhập giờ Việt Nam; dùng get_warehouse_receipt_item theo id để xem chi tiết, PYCLM, xác nhận SAP và tham chiếu ảnh. Quyền đọc có thể giới hạn theo người nhập. ' +
         'Phân tích lịch sử kết nối EBR/WMS: dùng get_connection_statistics để đếm phiên, người dùng, nối lại và thời lượng theo ngày/giờ/người dùng/ứng dụng; search_connection_sessions xem các phiên cụ thể. Cần users.list. Mặc định EBR (hsl), 30 ngày gần nhất theo Việt Nam; application_key=wms hoặc all khi được yêu cầu. Ngày lọc theo lúc BẮT ĐẦU phiên. Phiên khác người dùng và khác tổng số lần kết nối; thời lượng không phải thời gian làm việc. Không cộng unique_users giữa các nhóm, không suy ra đỉnh người dùng đồng thời hoặc lỗi mạng từ reconnect_count. Kiểm tra pagination để lấy đủ nhóm; không tải từng trang phiên chỉ để tự thống kê. ' +
         'Phiếu xuất kho: dùng get_warehouse_release với production_order_id từ search_production_orders. Đây là dữ liệu ProductionOrderLines lấy trực tiếp từ SAP, có phân trang, giai đoạn và đơn vị tính; không phải phiếu cân. ' +
@@ -428,6 +437,59 @@ export class McpService implements OnModuleDestroy {
           auth,
           USER_PERMISSIONS.LIST,
           () => this.tools.getConnectionStatistics(input),
+        ),
+    );
+
+    server.registerTool(
+      'search_audit_logs',
+      {
+        description:
+          'Tra cứu audit log toàn hệ thống, cần permissions.list giống API audit-logs. Lọc entity_type (tên bảng), entity_id dạng chuỗi số cho ID số, entity_key cho mã sản phẩm dạng chuỗi, action CREATE/UPDATE/DELETE và keyword (loại bản ghi, mã, tên, người sửa, lý do). Không lọc ngày nghĩa là toàn bộ lịch sử đã ghi. Mới nhất trước, phân trang tối đa 100 dòng; trả old_values/new_values, người sửa, thời điểm và lý do. Không trả IP/user agent. Khi chỉ cần lịch sử một sản phẩm hoặc phiếu và có quyền đọc tương ứng, dùng hai tool get_*_edit_history.',
+        inputSchema: auditSearchSchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'search_audit_logs',
+          auth,
+          PERMISSION_MANAGEMENT_PERMISSIONS.LIST,
+          () => this.auditHistory.search(input),
+        ),
+    );
+    server.registerTool(
+      'get_item_edit_history',
+      {
+        description:
+          'Lịch sử chỉnh sửa danh mục thành phẩm/bán thành phẩm theo item_code từ search_items/get_item. Cần items.read. Gồm số đăng ký và thông số sản xuất, người sửa, thời điểm, giá trị trước/sau và lý do; phân trang mới nhất trước. Không gồm cấu hình thiết bị/tính năng/biểu mẫu. Chỉ có thay đổi sau khi bật ghi audit cho danh mục; rỗng không đồng nghĩa chưa từng sửa.',
+        inputSchema: itemEditHistorySchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'get_item_edit_history',
+          auth,
+          ITEM_PERMISSIONS.READ,
+          () => this.auditHistory.itemHistory(input),
+        ),
+    );
+    server.registerTool(
+      'get_production_order_edit_history',
+      {
+        description:
+          'Lịch sử chỉnh sửa thông tin lệnh hoặc phiếu trong hồ sơ lô. resource=production-order, record_id=ID lệnh, scope=record đọc thông tin chung lệnh. Với từng loại phiếu: scope=record và record_id=ID phiếu; scope=production-order và record_id=ID lệnh đọc cả nhóm phiếu, gồm phiếu con đã xóa có audit. Không gộp toàn bộ nhóm vào lịch sử thông tin chung lệnh. Cần quyền đọc đúng resource, tuân thủ phạm vi lô như detail. Trả trước/sau, người sửa, thời điểm, lý do; mới nhất trước, có phân trang.',
+        inputSchema: productionOrderEditHistorySchema,
+        annotations: readOnlyAnnotations,
+      },
+      (input) =>
+        this.executeTool(
+          'get_production_order_edit_history',
+          auth,
+          undefined,
+          () =>
+            this.auditHistory.productionOrderHistory(
+              input,
+              stringArray(auth?.extra?.permissions),
+            ),
         ),
     );
 

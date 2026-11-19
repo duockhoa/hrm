@@ -108,6 +108,44 @@ nhiều lần nối lại. Đối chiếu tổng summary, không cộng unique_u
 
 ## Các tool hiện có
 
+Ba tool lịch sử chỉnh sửa:
+
+| Tool | Tham số | Quyền và kết quả |
+| --- | --- | --- |
+| `search_audit_logs` | `entity_type?`, `entity_id?` (chuỗi số), `entity_key?`, `action?`, `keyword?`, `page?`, `limit?` | `permissions.list`, giống `GET /audit-logs`; tìm audit toàn hệ thống, kể cả bản ghi đã xóa |
+| `get_item_edit_history` | `item_code`, `page?`, `limit?` | `items.read`; lịch sử số đăng ký và thông số sản xuất của danh mục thành phẩm/bán thành phẩm còn tồn tại |
+| `get_production_order_edit_history` | `resource`, `record_id`, `scope?`, `page?`, `limit?` | Quyền đọc đúng resource và phạm vi lô như detail; dùng lại `ProductionOrderHistoryService` |
+
+Mặc định `page=1`, `limit=20`, tối đa 100 dòng mỗi trang; mới nhất trước, trả `data` và `meta` (`page`, `limit`, `total`, `total_pages`). Kiểm tra `meta` trước khi kết luận đã đọc hết lịch sử. Nội dung gồm `action`, `old_values`, `new_values`, `actor_id`, `actor_name`, `created_at`, `reason` và định danh bản ghi. Thời điểm trả dạng ISO UTC; đổi sang giờ Việt Nam khi trình bày. Không trả IP/user agent. Các tool chỉ đọc dữ liệu đã ghi, không khôi phục được thay đổi trước khi bật audit. Lịch sử rỗng không chứng minh bản ghi chưa từng được sửa.
+
+`search_audit_logs` dùng `entity_id` cho khóa số, `entity_key` cho mã sản phẩm (khóa chuỗi); `entity_type` là tên bảng như `items`, `production_specifications`, `production_orders`. `keyword` tìm trong loại bản ghi, mã chuỗi, tên bản ghi, tên người sửa và lý do. Không truyền bộ lọc nghĩa là toàn bộ lịch sử đã ghi, không mặc định giới hạn ngày. Chỉ người có quyền quản trị audit mới được dùng tool này; quyền xem một sản phẩm/lô không cấp quyền tìm toàn hệ thống.
+
+Ví dụ xem thay đổi danh mục sản phẩm:
+
+```json
+{"name":"get_item_edit_history","arguments":{"item_code":"TP00001","page":1,"limit":20}}
+```
+
+Ví dụ lịch sử thông tin chung của lệnh:
+
+```json
+{"name":"get_production_order_edit_history","arguments":{"resource":"production-order","record_id":7}}
+```
+
+Với phiếu: `scope=record` (mặc định), `record_id` là ID phiếu; hoặc `scope=production-order`, `record_id` là ID lệnh để xem cả nhóm phiếu. `resource` được giới hạn theo registry lịch sử (schema tool liệt kê các giá trị hợp lệ), không nhận tên bảng tùy ý. Lịch sử phiếu gồm bản ghi con đã xóa có audit theo cơ chế API hiện tại. Lịch sử `resource=production-order` chỉ gồm thông tin chung lệnh, không gộp các nhóm phiếu có quyền riêng.
+
+```json
+{"name":"get_production_order_edit_history","arguments":{"resource":"mixing-record","record_id":7,"scope":"production-order"}}
+```
+
+Ví dụ quản trị tra cứu theo mã sản phẩm và thao tác:
+
+```json
+{"name":"search_audit_logs","arguments":{"entity_type":"production_specifications","entity_key":"TP00001","action":"UPDATE"}}
+```
+
+Sau khi triển khai backend, làm mới danh sách tool MCP trên client để nhận ba tool mới; không cần thêm OAuth scope ngoài `mcp:read`.
+
 | Tool                                 | Tham số                                                                                                                                       | Kết quả                                                      |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `get_server_info`                    | `{}`                                                                                                                                          | Thông tin server và kiểm tra kết nối                         |

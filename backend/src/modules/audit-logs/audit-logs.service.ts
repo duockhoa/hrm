@@ -27,11 +27,13 @@ export class AuditLogsService {
         entity_type: query.entity_type.trim(),
       }),
       ...(entityId !== undefined && { entity_id: entityId }),
+      ...(query.entity_key?.trim() && { entity_key: query.entity_key.trim() }),
       ...(query.action && { action: query.action }),
       ...(keyword && {
         OR: [
           { entity_type: { contains: keyword } },
           { entity_name: { contains: keyword } },
+          { entity_key: { contains: keyword } },
           { actor_name: { contains: keyword } },
           { reason: { contains: keyword } },
         ],

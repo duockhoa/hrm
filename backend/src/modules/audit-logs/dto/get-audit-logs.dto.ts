@@ -36,6 +36,11 @@ export class GetAuditLogsDto {
   entity_id?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(191)
+  entity_key?: string;
+
+  @IsOptional()
   @IsIn(['CREATE', 'UPDATE', 'DELETE'])
   action?: 'CREATE' | 'UPDATE' | 'DELETE';
 

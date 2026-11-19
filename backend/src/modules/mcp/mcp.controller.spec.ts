@@ -91,7 +91,13 @@ describe('MCP Streamable HTTP endpoint', () => {
     productionOrderMixingRecords: { count: jest.fn(), findMany: jest.fn() },
     productionOrderWeighingRecords: { count: jest.fn(), findMany: jest.fn() },
     productionOrderDeviations: { count: jest.fn(), findMany: jest.fn() },
-    items: { count: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
+    items: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    auditLogs: { findMany: jest.fn(), count: jest.fn() },
     features: { findMany: jest.fn() },
     productionOrders: {
       count: jest.fn(),
@@ -142,6 +148,9 @@ describe('MCP Streamable HTTP endpoint', () => {
     prisma.items.count.mockResolvedValue(0);
     prisma.items.findMany.mockResolvedValue([]);
     prisma.items.findFirst.mockResolvedValue(null);
+    prisma.items.findUnique.mockReset().mockResolvedValue(null);
+    prisma.auditLogs.findMany.mockReset().mockResolvedValue([]);
+    prisma.auditLogs.count.mockReset().mockResolvedValue(0);
     prisma.features.findMany.mockResolvedValue([]);
     oauth.resolveMcpToken.mockResolvedValue(authenticated());
     prisma.productionOrders.count.mockResolvedValue(0);
@@ -1733,7 +1742,7 @@ describe('MCP Streamable HTTP endpoint', () => {
     );
   });
 
-  it('exposes exactly seventeen read-only tools', async () => {
+  it('exposes exactly twenty read-only tools', async () => {
     const response = await rpc('tools/list').expect(200);
     expect(body(response).result.tools.map((tool) => tool.name)).toEqual([
       'get_server_info',
@@ -1753,6 +1762,9 @@ describe('MCP Streamable HTTP endpoint', () => {
       'get_production_statistics',
       'search_connection_sessions',
       'get_connection_statistics',
+      'search_audit_logs',
+      'get_item_edit_history',
+      'get_production_order_edit_history',
     ]);
     expect(
       body(response).result.tools.every(
@@ -1767,6 +1779,185 @@ describe('MCP Streamable HTTP endpoint', () => {
     identity.user.permissions.push(...permissions);
     oauth.resolveMcpToken.mockResolvedValue(identity);
   }
+
+  it('blocks global and item audit access without the exact permission before querying', async () => {
+    for (const [name, args] of [
+      ['search_audit_logs', {}],
+      ['get_item_edit_history', { item_code: 'TP0001' }],
+    ] as const) {
+      const result = body(
+        await rpc('tools/call', { name, arguments: args }).expect(200),
+      ).result;
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('không có quyền');
+    }
+    expect(prisma.items.findUnique).not.toHaveBeenCalled();
+    expect(prisma.auditLogs.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['TP0001', 'BTP0001'])(
+    'returns paginated item audit for the selected code %s',
+    async (item_code) => {
+      authenticateReceiptReader('items.read');
+      prisma.items.findUnique.mockResolvedValue({
+        item_code,
+        deleted_at: null,
+      });
+      prisma.auditLogs.findMany.mockResolvedValue([
+        {
+          id: 42n,
+          entity_type: 'production_specifications',
+          entity_id: 0n,
+          entity_key: item_code,
+          action: 'UPDATE',
+          old_values: { lower_control_limit: '1.250000' },
+          new_values: { lower_control_limit: '2.500000' },
+          actor_id: 1n,
+          actor_name: 'Test',
+          created_at: new Date('2026-11-19T01:00:00Z'),
+          reason: null,
+        },
+      ]);
+      prisma.auditLogs.count.mockResolvedValue(25);
+      const result = body(
+        await rpc('tools/call', {
+          name: 'get_item_edit_history',
+          arguments: { item_code, page: 2, limit: 10 },
+        }).expect(200),
+      ).result;
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).toMatchObject({
+        data: [
+          {
+            id: '42',
+            entity_id: '0',
+            entity_key: item_code,
+            actor_id: '1',
+            old_values: { lower_control_limit: '1.250000' },
+            new_values: { lower_control_limit: '2.500000' },
+          },
+        ],
+        meta: { page: 2, limit: 10, total: 25, total_pages: 3 },
+      });
+      expect(prisma.auditLogs.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            entity_type: { in: ['items', 'production_specifications'] },
+            entity_key: item_code,
+          },
+          skip: 10,
+          take: 10,
+          select: expect.not.objectContaining({
+            ip_address: true,
+            user_agent: true,
+          }),
+        }),
+      );
+    },
+  );
+
+  it.each([null, { item_code: 'TP0001', deleted_at: new Date() }])(
+    'rejects missing/deleted item history',
+    async (item) => {
+      authenticateReceiptReader('items.read');
+      prisma.items.findUnique.mockResolvedValue(item);
+      const result = body(
+        await rpc('tools/call', {
+          name: 'get_item_edit_history',
+          arguments: { item_code: 'TP0001' },
+        }).expect(200),
+      ).result;
+      expect(result.isError).toBe(true);
+      expect(prisma.auditLogs.findMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it('uses the existing admin audit permission and filters string identities exactly', async () => {
+    authenticateReceiptReader('permissions.list');
+    const result = body(
+      await rpc('tools/call', {
+        name: 'search_audit_logs',
+        arguments: {
+          entity_type: 'items',
+          entity_key: 'TP0001',
+          action: 'UPDATE',
+        },
+      }).expect(200),
+    ).result;
+    expect(result.isError).toBeUndefined();
+    expect(prisma.auditLogs.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { entity_type: 'items', entity_key: 'TP0001', action: 'UPDATE' },
+        skip: 0,
+        take: 20,
+      }),
+    );
+  });
+
+  it('reads order audit using scoped detail visibility and numeric identity', async () => {
+    prisma.productionOrders.findUnique.mockResolvedValue({ id: 7 });
+    const result = body(
+      await rpc('tools/call', {
+        name: 'get_production_order_edit_history',
+        arguments: { resource: 'production-order', record_id: 7 },
+      }).expect(200),
+    ).result;
+    expect(result.isError).toBeUndefined();
+    expect(prisma.productionOrders.findUnique).toHaveBeenCalledWith({
+      where: { id: 7 },
+      select: { id: true },
+    });
+    expect(prisma.auditLogs.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [{ entity_type: 'production_orders', entity_id: { in: [7n] } }],
+        },
+      }),
+    );
+  });
+
+  it('rejects history of an unavailable order before querying audit', async () => {
+    const result = body(
+      await rpc('tools/call', {
+        name: 'get_production_order_edit_history',
+        arguments: { resource: 'production-order', record_id: 7 },
+      }).expect(200),
+    ).result;
+    expect(result.isError).toBe(true);
+    expect(prisma.auditLogs.findMany).not.toHaveBeenCalled();
+  });
+
+  it('requires dedicated form permission even when general order read is present', async () => {
+    const result = body(
+      await rpc('tools/call', {
+        name: 'get_production_order_edit_history',
+        arguments: { resource: 'date-check', record_id: 7 },
+      }).expect(200),
+    ).result;
+    expect(result.isError).toBe(true);
+    expect(prisma.auditLogs.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['get_item_edit_history', { item_code: 'TP0001', entity_type: 'users' }],
+    ['get_item_edit_history', { item_code: 'TP0001', limit: 101 }],
+    ['search_audit_logs', { entity_id: '9223372036854775808' }],
+    ['search_audit_logs', { entity_id: 'abc' }],
+    ['search_audit_logs', { entity_id: 7 }],
+    ['search_audit_logs', { page: 0 }],
+    ['get_production_order_edit_history', { resource: 'users', record_id: 7 }],
+    [
+      'get_production_order_edit_history',
+      { resource: 'production-order', record_id: 2147483648 },
+    ],
+  ])('validates audit tool %s input before querying', async (name, args) => {
+    authenticateReceiptReader('permissions.list', 'items.read');
+    const result = body(
+      await rpc('tools/call', { name, arguments: args }).expect(200),
+    ).result;
+    expect(result.isError).toBe(true);
+    expect(prisma.auditLogs.findMany).not.toHaveBeenCalled();
+  });
 
   it('denies both receipt tools before querying when receipt permissions are missing', async () => {
     for (const [name, args] of [
