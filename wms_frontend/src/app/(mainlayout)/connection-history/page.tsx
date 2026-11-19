@@ -7,7 +7,7 @@ import { useInfiniteConnectionHistory } from "@/features/connection-history/use-
 import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
 import useSWR from "swr";
 import { isAxiosError } from "axios";
-import { Activity, RefreshCw, Clock3, Unplug } from "lucide-react";
+import { Activity, Clock3, Unplug } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -128,8 +128,6 @@ export default function ConnectionHistoryPage() {
     sentinelRef,
     loadMore,
     retry,
-    refresh,
-    isValidating,
   } = useInfiniteConnectionHistory(Boolean(canRead), serverKeyword, status);
   const records = canRead ? loadedRecords : [];
   const summary = canRead
@@ -341,16 +339,6 @@ export default function ConnectionHistoryPage() {
             onRetry={retry}
             onLoadMore={loadMore}
           />
-        </div>
-        <div className="flex shrink-0 justify-end border-t p-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isValidating || !canRead}
-            onClick={() => void refresh().catch(() => {})}
-          >
-            <RefreshCw className="size-4" /> Làm mới
-          </Button>
         </div>
       </div>
     </div>
