@@ -29,9 +29,9 @@ import type {
 } from "./types";
 
 const actionLabels = {
-  CREATE: "Đã tạo phiếu",
+  CREATE: "Đã tạo",
   UPDATE: "Đã chỉnh sửa",
-  DELETE: "Đã xóa phiếu",
+  DELETE: "Đã xóa",
 };
 
 function HistoryValue({ children }: { children: string }) {
@@ -77,7 +77,8 @@ function HistoryEntry({
 
       {entityLabels ? (
         <p className="mt-2 text-xs text-gray-500">
-          {entityLabels[entry.entity_type] ?? "Bản ghi"} #{entry.entity_id}
+          {entityLabels[entry.entity_type] ?? "Bản ghi"} #
+          {entry.entity_key ?? entry.entity_id}
         </p>
       ) : null}
 
@@ -202,7 +203,7 @@ function HistoryList({
         >
           <p>
             {accessDenied
-              ? "Phiếu không còn tồn tại hoặc bạn không có quyền xem lịch sử."
+              ? "Bản ghi không còn tồn tại hoặc bạn không có quyền xem lịch sử."
               : "Không thể tải lịch sử chỉnh sửa."}
           </p>
           <Button
@@ -230,7 +231,7 @@ function HistoryList({
         </div>
       ) : !error && entries.length === 0 ? (
         <div className="rounded-lg border border-dashed bg-white p-8 text-center text-sm text-gray-500">
-          Chưa có lịch sử chỉnh sửa được ghi nhận cho phiếu này.
+          Chưa có lịch sử chỉnh sửa được ghi nhận cho bản ghi này.
         </div>
       ) : null}
 

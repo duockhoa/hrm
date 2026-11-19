@@ -2,6 +2,7 @@ export type EditHistoryEntry = {
   id: string;
   entity_type: string;
   entity_id: string;
+  entity_key?: string | null;
   action: "CREATE" | "UPDATE" | "DELETE";
   old_values: Record<string, unknown> | null;
   new_values: Record<string, unknown> | null;

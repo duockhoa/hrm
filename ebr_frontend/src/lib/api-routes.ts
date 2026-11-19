@@ -28,6 +28,7 @@ const COMPANY = {
 
 const ITEMS = {
   base: "/items",
+  history: (itemCode: string) => `/items/${encodeURIComponent(itemCode)}/history`,
   finishedProducts: "/items/finished-products",
   semiFinishedProducts: "/items/semi-finished-products",
   rawMaterials: "/items/raw-materials",

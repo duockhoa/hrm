@@ -12,6 +12,7 @@ const excludedModels = new Set([
   'Notifications',
 ]);
 const sensitiveField = /password|token|secret|otp|hash|session_key|api_key/i;
+const stringKeyModels = new Set(['Items', 'ProductionSpecifications']);
 const models = new Map(
   Prisma.dmmf.datamodel.models.map((model) => [model.name, model]),
 );
@@ -43,14 +44,39 @@ function snapshot(modelName: string, value: unknown): RecordData | null {
       data[field.name] = source[field.name];
     }
   }
+  // Keep display names as they were at the time of the edit.
+  const displayRelations =
+    modelName === 'Items'
+      ? [['registration', 'registration_number', 'registration_number']]
+      : modelName === 'ProductionSpecifications'
+        ? [
+            ['productLine', 'name', 'product_line_name'],
+            ['dosageForm', 'name', 'dosage_form_name'],
+          ]
+        : [];
+  for (const [relation, field, target] of displayRelations) {
+    if (relation in source) {
+      const related = source[relation] as RecordData | null;
+      data[target] = related?.[field] ?? null;
+    }
+  }
   return toJson(data) as RecordData;
 }
 
-function changedValues(before: RecordData, after: RecordData) {
+function changedValues(
+  before: RecordData,
+  after: RecordData,
+  modelName: string,
+) {
   const oldValues: RecordData = {};
   const newValues: RecordData = {};
   for (const [key, value] of Object.entries(after)) {
     if (key === 'created_at' || key === 'updated_at') continue;
+    if (
+      stringKeyModels.has(modelName) &&
+      ['update_at', 'updated_by_id'].includes(key)
+    )
+      continue;
     if (JSON.stringify(before[key]) !== JSON.stringify(value)) {
       oldValues[key] = before[key] ?? null;
       newValues[key] = value;
@@ -89,7 +115,11 @@ export const auditExtension = Prisma.defineExtension((client) =>
 
           const modelMeta = models.get(model);
           const idField = modelMeta?.fields.find((field) => field.isId);
-          if (!idField || !['Int', 'BigInt'].includes(idField.type)) {
+          if (
+            !idField ||
+            (!['Int', 'BigInt'].includes(idField.type) &&
+              !stringKeyModels.has(model))
+          ) {
             return query(args);
           }
 
@@ -102,7 +132,15 @@ export const auditExtension = Prisma.defineExtension((client) =>
             try {
               before = snapshot(
                 model,
-                await delegate.findUnique({ where: queryArgs.where }),
+                await delegate.findUnique({
+                  where: queryArgs.where,
+                  ...(model === 'Items'
+                    ? { include: { registration: true } }
+                    : {}),
+                  ...(model === 'ProductionSpecifications'
+                    ? { include: { productLine: true, dosageForm: true } }
+                    : {}),
+                }),
               );
             } catch (error) {
               logger.error(
@@ -114,7 +152,10 @@ export const auditExtension = Prisma.defineExtension((client) =>
           const result = await query(args);
           const resultId = (result as RecordData | null)?.[idField.name];
           const id = resultId ?? before?.[idField.name];
-          if (typeof id !== 'number' && typeof id !== 'bigint') return result;
+          const stringKey =
+            stringKeyModels.has(model) && typeof id === 'string';
+          if (!stringKey && typeof id !== 'number' && typeof id !== 'bigint')
+            return result;
 
           try {
             const after =
@@ -135,7 +176,7 @@ export const auditExtension = Prisma.defineExtension((client) =>
             if (action === 'DELETE')
               oldValues = before ?? snapshot(model, result);
             if (action === 'UPDATE' && before && after) {
-              const changes = changedValues(before, after);
+              const changes = changedValues(before, after, model);
               if (!Object.keys(changes.newValues).length) return result;
               oldValues = changes.oldValues;
               newValues = changes.newValues;
@@ -150,7 +191,9 @@ export const auditExtension = Prisma.defineExtension((client) =>
             await client.auditLogs.create({
               data: {
                 entity_type: (modelMeta?.dbName ?? model).slice(0, 100),
-                entity_id: BigInt(id),
+                // Numeric entities retain their existing ID; string identities use entity_key.
+                entity_id: stringKey ? 0n : BigInt(id as number | bigint),
+                ...(stringKey ? { entity_key: id as string } : {}),
                 entity_name: entityName(after ?? before ?? {}),
                 action,
                 old_values: oldValues

@@ -2,6 +2,25 @@ import { PrismaService } from 'src/prisma.service';
 import { AuditLogsService } from './audit-logs.service';
 
 describe('AuditLogsService', () => {
+  it('scopes item history to the exact string key and the two catalog entities', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const service = new AuditLogsService({
+      auditLogs: { findMany, count },
+      $transaction: (operations: Promise<unknown>[]) => Promise.all(operations),
+    } as unknown as PrismaService);
+    await service.findForItem('BTP0001', { page: 2, limit: 10 });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          entity_type: { in: ['items', 'production_specifications'] },
+          entity_key: 'BTP0001',
+        },
+        skip: 10,
+        take: 10,
+      }),
+    );
+  });
   it('keeps resource types paired with their IDs when reading multiple records', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
     const count = jest.fn().mockResolvedValue(0);

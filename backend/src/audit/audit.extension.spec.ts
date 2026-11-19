@@ -9,6 +9,8 @@ describe('auditExtension', () => {
     filterCatalogs: { findUnique },
     users: { findUnique },
     productionOrderFinishedProductSummaries: { findUnique },
+    items: { findUnique },
+    productionSpecifications: { findUnique },
     auditLogs: { create: createLog },
     $extends: jest.fn((extension) => extension),
   };
@@ -148,6 +150,71 @@ describe('auditExtension', () => {
         new_values: { id: 9, username: 'editor' },
       }),
     });
+  });
+
+  it.each(['Items', 'ProductionSpecifications'])(
+    'records string identity and before/after values for %s',
+    async (model) => {
+      const values =
+        model === 'Items'
+          ? [
+              {
+                registration_id: 1,
+                registration: { registration_number: 'OLD' },
+              },
+              {
+                registration_id: 2,
+                registration: { registration_number: 'NEW' },
+              },
+            ]
+          : [
+              { lower_control_limit: '1.250000', updated_by_id: 1 },
+              { lower_control_limit: '2.500000', updated_by_id: 2 },
+            ];
+      findUnique.mockResolvedValueOnce({ item_code: 'TP0001', ...values[0] });
+      await auditOperation({
+        model,
+        operation: 'update',
+        args: { where: { item_code: 'TP0001' } },
+        query: async () => ({ item_code: 'TP0001', ...values[1] }),
+      });
+      expect(createLog).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          entity_key: 'TP0001',
+          entity_id: 0n,
+          action: 'UPDATE',
+          old_values:
+            model === 'Items'
+              ? { registration_id: 1, registration_number: 'OLD' }
+              : { lower_control_limit: '1.250000' },
+          new_values:
+            model === 'Items'
+              ? { registration_id: 2, registration_number: 'NEW' }
+              : { lower_control_limit: '2.500000' },
+        }),
+      });
+    },
+  );
+
+  it('does not log an unchanged item or specification when only metadata changes', async () => {
+    for (const model of ['Items', 'ProductionSpecifications']) {
+      findUnique.mockResolvedValueOnce({
+        item_code: 'BTP0001',
+        updated_by_id: 1,
+        update_at: new Date(0),
+      });
+      await auditOperation({
+        model,
+        operation: 'update',
+        args: { where: { item_code: 'BTP0001' } },
+        query: async () => ({
+          item_code: 'BTP0001',
+          updated_by_id: 2,
+          update_at: new Date(1),
+        }),
+      });
+    }
+    expect(createLog).not.toHaveBeenCalled();
   });
 
   it('records the removed row and no new value on delete', async () => {

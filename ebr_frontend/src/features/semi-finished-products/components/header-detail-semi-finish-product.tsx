@@ -2,6 +2,7 @@
 
 import EditSemiFinishedProductForm from "./form-edit-semi-finished-product";
 import { Button } from "@/components/ui/button";
+import ItemHistoryButton from "@/features/edit-history/item-history-button";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ export default function DetailSemiFinishProductHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        <ItemHistoryButton itemCode={semiFinishProduct?.item_code} />
         <Button
           type="button"
           className="h-9 bg-gray-950 px-3 text-white hover:bg-gray-800"

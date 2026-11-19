@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
+import { ItemHistoryController } from './item-history.controller';
 import { NetworkPoliciesModule } from '../network-policies/network-policies.module';
 import { ItemsService } from './items.service';
 import { ItemsController } from './items.controller';
@@ -13,8 +15,8 @@ import { MixingActivityTemplateStageStepsService } from './mixing-activity-templ
 import { MixingActivityTemplateStageStepParametersService } from './mixing-activity-template-stage-step-parameters.service';
 
 @Module({
-  imports: [NetworkPoliciesModule],
-  controllers: [ItemsController],
+  imports: [NetworkPoliciesModule, AuditLogsModule],
+  controllers: [ItemsController, ItemHistoryController],
   providers: [
     ItemsService,
     ItemEquipmentService,

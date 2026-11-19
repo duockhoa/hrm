@@ -80,6 +80,17 @@ export class AuditLogsService {
       .filter((id) => Number.isSafeInteger(id) && id > 0 && id <= 2147483647);
   }
 
+  async findForItem(itemCode: string, query: GetAuditLogPageDto) {
+    return this.findMatching(
+      {
+        entity_type: { in: ['items', 'production_specifications'] },
+        entity_key: itemCode,
+      },
+      query.page ?? 1,
+      query.limit ?? 20,
+    );
+  }
+
   private async findMatching(
     where: Prisma.AuditLogsWhereInput,
     page: number,
@@ -95,6 +106,7 @@ export class AuditLogsService {
           id: true,
           entity_type: true,
           entity_id: true,
+          entity_key: true,
           entity_name: true,
           action: true,
           old_values: true,
