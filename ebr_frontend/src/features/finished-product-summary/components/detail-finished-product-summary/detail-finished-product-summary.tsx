@@ -1,10 +1,8 @@
 "use client";
 import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 
-import OpenFormButton from "@/components/button-open-form/button-open-form";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
 import FieldDisplay from "@/components/field-display/field-display";
-import FormCreateSamplingRequest from "@/components/form-create-sampling-request/form-create-sampling-request";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,11 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_ROUTES } from "@/lib/api-routes";
-import useUserStore from "@/store/user.store";
-import userService from "@/services/user.service";
 import productionOrdersService from "@/services/product-orders.service";
 import { Pencil, Trash2 } from "lucide-react";
-import { LuFileInput } from "react-icons/lu";
 import { useState } from "react";
 import { toast } from "sonner";
 import useSWR, { mutate as mutateGlobal } from "swr";
@@ -213,15 +208,6 @@ export default function FinishedProductSummaryDetail({
   onClose: () => void;
   showCloseButton?: boolean;
 }) {
-  const userId = useUserStore((state) => state.user?.id);
-  const { data: permissions, error: permissionsError } = useSWR(
-    userId ? [API_ROUTES.users.myPermissions, userId] : null,
-    () => userService.fetchMyPermissions(),
-  );
-  const canSendSamplingRequest = Boolean(
-    !permissionsError &&
-      permissions?.permissionKeys.includes("production-orders.sampling-requests.send"),
-  );
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -405,33 +391,6 @@ export default function FinishedProductSummaryDetail({
           </div>
         </DialogContent>
       </Dialog>
-
-      {canSendSamplingRequest && productionOrderId !== null && productionOrderId !== undefined ? (
-        <div className="border-b py-3">
-          <div className="flex flex-wrap justify-start gap-2">
-            <OpenFormButton
-              icon={<LuFileInput />}
-              name="Tạo PYCLM"
-              form={
-                <FormCreateSamplingRequest
-                  productionOrderId={productionOrderId}
-                  onCreated={async () => {
-                    await Promise.all([
-                      refreshItemCatalog(API_ROUTES.productionOrders.finishedProductSummaries),
-                      mutate(),
-                      mutateGlobal(
-                        (key) =>
-                          (Array.isArray(key) ? key[0] : key) ===
-                          API_ROUTES.productionOrders.finishedProductSummaries,
-                      ),
-                    ]);
-                  }}
-                />
-              }
-            />
-          </div>
-        </div>
-      ) : null}
 
       <div className="mt-4 flex flex-col gap-4">
         <FieldDisplay
