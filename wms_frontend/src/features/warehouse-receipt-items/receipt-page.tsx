@@ -55,8 +55,9 @@ const columns = [
   "Số lô",
   "Hạn dùng",
   "Quy cách đóng gói",
-  "Nhà cung cấp",
-  "Nhà sản xuất",
+  "Ảnh PXK",
+  "Ảnh COA",
+  "Ảnh HĐ",
   "Gửi PYCLM",
   "Nhập SAP",
   "Người nhập",
@@ -91,8 +92,16 @@ function rowValues(receipt: WarehouseReceiptItem) {
     receipt.lot_number,
     formatExpiryDate(receipt.expiry_date),
     receipt.packaging_specification,
-    receipt.supplier?.card_name ?? receipt.supplier_name,
-    receipt.manufacturer?.manufacturer_name ?? receipt.manufacturer_name,
+    ...(["dispatch_note", "coa", "invoice"] as const).map((type) => (
+      <ReceiptStatus
+        key={`image-status-${type}`}
+        done={Boolean(
+          receipt.attachments?.some((image) => image.attachment_type === type),
+        )}
+        positive="Đã có"
+        negative="Chưa có"
+      />
+    )),
     <ReceiptStatus
       key="sampling-status"
       done={Boolean(receipt.samplingRequest)}
@@ -281,7 +290,7 @@ export default function ReceiptPage({
         ) : (
           <table
             aria-busy={showSkeleton}
-            className="w-full min-w-[1800px] caption-bottom border-t text-[13px]"
+            className="w-full min-w-[1750px] caption-bottom border-t text-[13px]"
           >
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow className="hover:bg-transparent">
