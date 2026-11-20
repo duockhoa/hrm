@@ -164,12 +164,41 @@ describe('SapB1ConnectorService', () => {
     expect(prismaService.items.create).not.toHaveBeenCalled();
   });
 
+  it.each([false, true])(
+    'uses inventory UOM when syncing an item (existing: %s)',
+    async (existing) => {
+      sapB1Client.getItems.mockResolvedValue([
+        {
+          ItemCode: 'NL01484',
+          ItemName: 'Calcium glycerolphosphate - Macco',
+          InventoryUOM: 'Gam',
+          SalesUnit: null,
+          PurchaseUnit: 'Kg',
+        },
+      ]);
+      prismaService.items.findUnique.mockResolvedValue(
+        existing ? { item_code: 'NL01484', unit: null } : null,
+      );
+
+      await service.handleCronSyncItems();
+
+      const write = existing
+        ? prismaService.items.update
+        : prismaService.items.create;
+      expect(write).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ unit: 'Gam' }),
+        }),
+      );
+    },
+  );
+
   it('skips SAP items without item name', async () => {
     sapB1Client.getItems.mockResolvedValue([
       {
         ItemCode: 'BTP00606',
         ItemName: null,
-        SalesUnit: 'Gói',
+        InventoryUOM: 'Gói',
         U_MDK: null,
       },
     ]);
@@ -186,7 +215,7 @@ describe('SapB1ConnectorService', () => {
       {
         ItemCode: 'A'.repeat(192),
         ItemName: 'Item name',
-        SalesUnit: 'Hộp',
+        InventoryUOM: 'Hộp',
         U_MDK: null,
       },
     ]);

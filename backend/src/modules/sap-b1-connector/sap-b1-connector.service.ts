@@ -158,7 +158,7 @@ export class SapB1ConnectorService {
           try {
             const sapItemCode = item.ItemCode;
             const sapItemName = item.ItemName;
-            const unit = item.SalesUnit;
+            const unit = item.InventoryUOM;
             const dk_code = item.U_MDK;
             const series: number | null = item.Series ?? null;
 
