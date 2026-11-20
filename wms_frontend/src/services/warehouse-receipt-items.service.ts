@@ -67,6 +67,15 @@ export type WarehouseReceiptItemPayload = Pick<
 };
 
 const warehouseReceiptItemsService = {
+  async createQuarantineLabel(
+    id: number,
+  ): Promise<{ status: string; user_name: string }> {
+    return (
+      await axiosClient.post(
+        `${WAREHOUSE_RECEIPT_ITEMS_URL}/${id}/quarantine-label`,
+      )
+    ).data;
+  },
   async confirmSap(id: number): Promise<ReceiptSapConfirmation> {
     return (
       await axiosClient.post(

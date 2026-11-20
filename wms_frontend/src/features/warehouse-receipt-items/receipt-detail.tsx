@@ -72,6 +72,25 @@ export default function ReceiptDetail({
   const [draftSaving, setDraftSaving] = useState(false);
   const [sapSaving, setSapSaving] = useState(false);
   const [sapError, setSapError] = useState("");
+  const [labelSaving, setLabelSaving] = useState(false);
+  const [labelError, setLabelError] = useState("");
+
+  async function handleCreateLabel() {
+    if (labelSaving) return;
+    setLabelSaving(true);
+    setLabelError("");
+    try {
+      const result =
+        await warehouseReceiptItemsService.createQuarantineLabel(id);
+      toast.success(
+        `Đã điền thông tin nhãn biệt trữ vào sheet ${result.user_name}.`,
+      );
+    } catch (error) {
+      setLabelError(receiptError(error, "Không thể tạo nhãn biệt trữ."));
+    } finally {
+      setLabelSaving(false);
+    }
+  }
 
   async function handleConfirmSap() {
     if (sapSaving || data?.sapConfirmation) return;
@@ -228,20 +247,25 @@ export default function ReceiptDetail({
             Soạn PYCLM
           </span>
         </button>
-        <Link
-          href={`/label/raw-material-label?id=${data.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex flex-col items-center p-0.5 md:p-1"
-          aria-label="Tạo nhãn nguyên liệu"
+        <button
+          type="button"
+          onClick={() => void handleCreateLabel()}
+          disabled={labelSaving}
+          className="inline-flex cursor-pointer flex-col items-center p-0.5 disabled:cursor-wait disabled:opacity-60 md:p-1"
+          aria-label="Tạo nhãn biệt trữ"
+          aria-busy={labelSaving}
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 md:h-10 md:w-10">
-            <Tags className="size-5" />
+            {labelSaving ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <Tags className="size-5" />
+            )}
           </span>
           <span className="mt-1 w-[68px] text-center text-[12px] font-semibold leading-tight text-gray-700 md:w-[90px] md:text-[14px]">
-            Tạo nhãn NL
+            {labelSaving ? "Đang tạo..." : "Tạo nhãn biệt trữ"}
           </span>
-        </Link>
+        </button>
         <button
           type="button"
           role="checkbox"
@@ -268,6 +292,11 @@ export default function ReceiptDetail({
       {sapError && (
         <p role="alert" className="mt-3 text-left text-sm text-red-600">
           {sapError}
+        </p>
+      )}
+      {labelError && (
+        <p role="alert" className="mt-3 text-left text-sm text-red-600">
+          {labelError}
         </p>
       )}
       <div className="mt-4 flex flex-col gap-4 text-left [&_p]:whitespace-pre-wrap">

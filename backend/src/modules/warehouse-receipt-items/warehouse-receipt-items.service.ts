@@ -1,11 +1,14 @@
 import {
+  BadGatewayException,
   BadRequestException,
   ConflictException,
+  InternalServerErrorException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import axios from 'axios';
 import { isISO8601 } from 'class-validator';
 import { PrismaService } from 'src/prisma.service';
 import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
@@ -22,7 +25,9 @@ import { receiptAttachmentInclude } from './warehouse-receipt-attachments.servic
 import { removeReceiptAttachments } from './receipt-attachment-files';
 
 const receiptInclude = {
-  samplingRequest: { select: { id: true, sent_at: true, google_doc_url: true } },
+  samplingRequest: {
+    select: { id: true, sent_at: true, google_doc_url: true },
+  },
   sapConfirmation: {
     include: {
       confirmedBy: { select: { id: true, username: true, name: true } },
@@ -153,6 +158,62 @@ export class WarehouseReceiptItemsService {
       }
       throw error;
     }
+  }
+
+  async createQuarantineLabel(id: number, userId: number) {
+    if (!Number.isSafeInteger(userId) || userId <= 0)
+      throw new UnauthorizedException();
+    const apiUrl = process.env.WAREHOUSE_QUARANTINE_LABEL_API_URL?.trim();
+    if (!apiUrl)
+      throw new InternalServerErrorException(
+        'WAREHOUSE_QUARANTINE_LABEL_API_URL is not configured',
+      );
+    const receipt = await this.findById(id);
+    const user = await this.prisma.users.findFirst({
+      where: { id: userId, deleted_at: null },
+      select: { name: true },
+    });
+    if (!user) throw new UnauthorizedException();
+    const userName = user.name?.trim();
+    if (!userName)
+      throw new BadRequestException(
+        'Tài khoản chưa có họ tên để chọn sheet nhãn.',
+      );
+
+    const payload = {
+      material_name: receipt.item?.item_name ?? '',
+      batch_number: receipt.lot_number,
+      material_code: receipt.item_code,
+      expiry_date: receipt.expiry_date
+        ? receipt.expiry_date
+            .toISOString()
+            .slice(0, 10)
+            .split('-')
+            .reverse()
+            .join('/')
+        : '',
+      user_name: userName,
+    };
+    let result: { status?: string; message?: string };
+    try {
+      const response = await axios.post<{ status?: string; message?: string }>(
+        apiUrl,
+        payload,
+        { timeout: 30000, headers: { 'Content-Type': 'application/json' } },
+      );
+      result = response.data;
+    } catch {
+      throw new BadGatewayException(
+        'Không nhận được kết quả tạo nhãn. Vui lòng kiểm tra sheet trước khi thử lại.',
+      );
+    }
+    if (result?.status !== 'success')
+      throw new BadGatewayException(
+        typeof result?.message === 'string'
+          ? result.message
+          : 'Apps Script trả về kết quả không hợp lệ.',
+      );
+    return { status: 'success', user_name: userName };
   }
 
   async create(

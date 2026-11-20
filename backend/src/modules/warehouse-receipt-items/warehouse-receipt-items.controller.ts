@@ -55,6 +55,14 @@ export class WarehouseReceiptItemsController {
     return this.service.confirmSap(id, Number(req.user.id));
   }
 
+  @Post(':id/quarantine-label')
+  createQuarantineLabel(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: { user: { id: number | string } },
+  ) {
+    return this.service.createQuarantineLabel(id, Number(req.user.id));
+  }
+
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
