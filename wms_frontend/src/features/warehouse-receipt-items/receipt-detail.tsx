@@ -252,7 +252,7 @@ export default function ReceiptDetail({
           onClick={() => void handleCreateLabel()}
           disabled={labelSaving}
           className="inline-flex cursor-pointer flex-col items-center p-0.5 disabled:cursor-wait disabled:opacity-60 md:p-1"
-          aria-label="Tạo nhãn biệt trữ"
+          aria-label="Tạo Nhãn BT"
           aria-busy={labelSaving}
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 md:h-10 md:w-10">
@@ -263,7 +263,7 @@ export default function ReceiptDetail({
             )}
           </span>
           <span className="mt-1 w-[68px] text-center text-[12px] font-semibold leading-tight text-gray-700 md:w-[90px] md:text-[14px]">
-            {labelSaving ? "Đang tạo..." : "Tạo nhãn biệt trữ"}
+            {labelSaving ? "Đang tạo..." : "Tạo Nhãn BT"}
           </span>
         </button>
         <button
