@@ -138,21 +138,22 @@ function xuatThanhPham() {
       totalSampleQuantity(po.samplingRecords), // AB: Số lượng lấy mẫu
       formatDateTime(po.lineClearanceChecks?.[0]?.created_at), // AC: Ngày dọn quang dây chuyền
       formatDateTime(po.factoryReleaseReviews?.[0]?.created_at), // AD: Ngày duyệt xuất xưởng
+      po.packing_specification ?? "", // AE: Quy cách đóng gói
     ];
   });
 
-  // Giữ header dòng 1; chỉ xoá và ghi dữ liệu từ dòng 2, cột A:AD.
+  // Giữ header dòng 1; chỉ xoá và ghi dữ liệu từ dòng 2, cột A:AE.
   const oldRowCount = sheet.getLastRow() - 1;
 
   if (oldRowCount > 0) {
-    sheet.getRange(2, 1, oldRowCount, 30).clearContent();
+    sheet.getRange(2, 1, oldRowCount, 31).clearContent();
   }
 
   if (output.length > 0) {
     // Cột E giữ định dạng text để không mất số 0 đầu số lô.
     sheet.getRange(2, 5, output.length, 1).setNumberFormat("@");
 
-    // Ghi dữ liệu A:AD.
-    sheet.getRange(2, 1, output.length, 30).setValues(output);
+    // Ghi dữ liệu A:AE.
+    sheet.getRange(2, 1, output.length, 31).setValues(output);
   }
 }
