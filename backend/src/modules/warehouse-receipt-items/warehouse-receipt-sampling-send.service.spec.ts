@@ -52,7 +52,7 @@ describe('Warehouse receipt sampling sends', () => {
       findMany: jest.fn(),
       deleteMany: jest.fn(),
     },
-    warehouseReceiptItemSamplingRequests: { createMany: jest.fn() },
+    warehouseReceiptItemSamplingRequests: { upsert: jest.fn() },
     productionOrders: { findUnique: jest.fn() },
     productionOrderDocumentControls: { upsert: jest.fn(), update: jest.fn() },
     productionSpecifications: { findUnique: jest.fn() },
@@ -111,7 +111,7 @@ describe('Warehouse receipt sampling sends', () => {
         return Promise.resolve(row);
       },
     );
-    prisma.warehouseReceiptItemSamplingRequests.createMany.mockResolvedValue({
+    prisma.warehouseReceiptItemSamplingRequests.upsert.mockResolvedValue({
       count: 2,
     });
     prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany.mockResolvedValue(
@@ -174,16 +174,26 @@ describe('Warehouse receipt sampling sends', () => {
     );
     expect(email.resolveRecipients).toHaveBeenCalledWith('sampling_request', 5);
     expect(
-      prisma.warehouseReceiptItemSamplingRequests.createMany,
-    ).toHaveBeenCalledWith({
-      data: drafts.map((draft) => ({
-        warehouse_receipt_item_id: draft.warehouse_receipt_item_id,
+      prisma.warehouseReceiptItemSamplingRequests.upsert,
+    ).toHaveBeenCalledTimes(2);
+    for (const draft of drafts) {
+      const data = {
         location: draft.location,
         sender_id: 5,
         sent_at: expect.any(Date),
         google_doc_url: null,
-      })),
-    });
+      };
+      expect(
+        prisma.warehouseReceiptItemSamplingRequests.upsert,
+      ).toHaveBeenCalledWith({
+        where: { warehouse_receipt_item_id: draft.warehouse_receipt_item_id },
+        create: {
+          warehouse_receipt_item_id: draft.warehouse_receipt_item_id,
+          ...data,
+        },
+        update: data,
+      });
+    }
     expect(
       prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany,
     ).toHaveBeenCalledWith({ where: { id: { in: [1, 2] }, created_by_id: 5 } });
@@ -256,7 +266,7 @@ describe('Warehouse receipt sampling sends', () => {
       }),
     );
     expect(
-      prisma.warehouseReceiptItemSamplingRequests.createMany,
+      prisma.warehouseReceiptItemSamplingRequests.upsert,
     ).not.toHaveBeenCalled();
     expect(prisma.productionOrderDocumentControls.update).toHaveBeenCalledTimes(
       4,
@@ -369,9 +379,12 @@ describe('Warehouse receipt sampling sends', () => {
     });
     await service.send(requestId, 5);
     expect(
-      prisma.warehouseReceiptItemSamplingRequests.createMany.mock.calls[0][0].data.every(
-        (row: { google_doc_url: string }) =>
-          row.google_doc_url === 'https://docs.google.com/document/d/test',
+      prisma.warehouseReceiptItemSamplingRequests.upsert.mock.calls.every(
+        ([args]) =>
+          args.create.google_doc_url ===
+            'https://docs.google.com/document/d/test' &&
+          args.update.google_doc_url ===
+            'https://docs.google.com/document/d/test',
       ),
     ).toBe(true);
   });
@@ -423,7 +436,7 @@ describe('Warehouse receipt sampling sends', () => {
       ServiceUnavailableException,
     );
     expect(
-      prisma.warehouseReceiptItemSamplingRequests.createMany,
+      prisma.warehouseReceiptItemSamplingRequests.upsert,
     ).not.toHaveBeenCalled();
     expect(
       prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany,
@@ -459,7 +472,7 @@ describe('Warehouse receipt sampling sends', () => {
       BadGatewayException,
     );
     expect(
-      prisma.warehouseReceiptItemSamplingRequests.createMany,
+      prisma.warehouseReceiptItemSamplingRequests.upsert,
     ).not.toHaveBeenCalled();
     expect(
       prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany,
@@ -494,12 +507,12 @@ describe('Warehouse receipt sampling sends', () => {
     await service.send(requestId, 5);
     expect(post).toHaveBeenCalledTimes(1);
     expect(
-      prisma.warehouseReceiptItemSamplingRequests.createMany,
-    ).toHaveBeenCalledTimes(1);
+      prisma.warehouseReceiptItemSamplingRequests.upsert,
+    ).toHaveBeenCalledTimes(2);
   });
 
   it('retries only local finalization after Google confirmation and a database failure', async () => {
-    prisma.warehouseReceiptItemSamplingRequests.createMany.mockRejectedValueOnce(
+    prisma.warehouseReceiptItemSamplingRequests.upsert.mockRejectedValueOnce(
       new Error('Database unavailable'),
     );
     await expect(service.send(requestId, 5)).rejects.toThrow(
@@ -531,12 +544,52 @@ describe('Warehouse receipt sampling sends', () => {
     expect(post).not.toHaveBeenCalled();
   });
 
-  it('rejects an already sent receipt without contacting Google', async () => {
-    prisma.warehouseReceiptItemSamplingRequestDrafts.findMany.mockResolvedValueOnce(
-      [{ ...drafts[0], receipt: { samplingRequest: { id: 8 } } }],
-    );
-    await expect(service.send(requestId, 5)).rejects.toThrow(ConflictException);
-    expect(post).not.toHaveBeenCalled();
+  it('sends an already sent receipt again and updates its latest send metadata', async () => {
+    prisma.warehouseReceiptItemSamplingRequestDrafts.findMany
+      .mockResolvedValueOnce([
+        { ...drafts[0], receipt: { samplingRequest: { id: 8 } } },
+      ])
+      .mockResolvedValueOnce([{ id: drafts[0].id }]);
+    post.mockResolvedValue({
+      data: {
+        success: true,
+        data: { url: 'https://docs.google.com/document/d/resend' },
+      },
+    });
+    await expect(service.send(requestId, 5)).resolves.toMatchObject({
+      sentCount: 1,
+    });
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequests.upsert,
+    ).toHaveBeenCalledWith({
+      where: { warehouse_receipt_item_id: drafts[0].warehouse_receipt_item_id },
+      create: expect.objectContaining({
+        warehouse_receipt_item_id: drafts[0].warehouse_receipt_item_id,
+      }),
+      update: {
+        location: drafts[0].location,
+        sender_id: 5,
+        sent_at: expect.any(Date),
+        google_doc_url: 'https://docs.google.com/document/d/resend',
+      },
+    });
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.deleteMany,
+    ).toHaveBeenCalledWith({
+      where: { id: { in: [drafts[0].id] }, created_by_id: 5 },
+    });
+  });
+
+  it('allows a new send batch for the same receipts after completing the previous batch', async () => {
+    await service.send(requestId, 5);
+    await service.send('new-resend-batch', 5);
+    expect(post).toHaveBeenCalledTimes(2);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequests.upsert,
+    ).toHaveBeenCalledTimes(4);
+    expect(batches.get(requestId)?.status).toBe('completed');
+    expect(batches.get('new-resend-batch')?.status).toBe('completed');
   });
 
   it('rejects missing recipients without contacting Google', async () => {

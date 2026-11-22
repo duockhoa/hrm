@@ -242,19 +242,32 @@ describe('WarehouseReceiptSamplingDraftsService', () => {
     );
   });
 
-  it('rejects missing and already sent receipts without creating drafts', async () => {
-    prisma.warehouseReceiptItems.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ ...receipt, samplingRequest: { id: 1 } });
+  it('rejects missing receipts without creating drafts', async () => {
+    prisma.warehouseReceiptItems.findUnique.mockResolvedValueOnce(null);
     await expect(service.save(99, { location: 'A' }, 5)).rejects.toThrow(
       NotFoundException,
-    );
-    await expect(service.save(2, { location: 'A' }, 5)).rejects.toThrow(
-      ConflictException,
     );
     expect(
       prisma.warehouseReceiptItemSamplingRequestDrafts.create,
     ).not.toHaveBeenCalled();
+  });
+
+  it('creates a new draft for a receipt that has already sent a sampling request', async () => {
+    prisma.warehouseReceiptItems.findUnique.mockResolvedValue({
+      ...receipt,
+      samplingRequest: { id: 1 },
+    });
+    await service.save(2, { location: 'New location' }, 5);
+    expect(
+      prisma.warehouseReceiptItemSamplingRequestDrafts.create,
+    ).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        warehouse_receipt_item_id: 2,
+        created_by_id: 5,
+        location: 'New location',
+        item_code: receipt.item_code,
+      }),
+    });
   });
 
   it('reads a receipt draft only within the authenticated creators scope', async () => {

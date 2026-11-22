@@ -136,13 +136,10 @@ export class WarehouseReceiptSamplingDraftsService {
             supplier_name: true,
             item: { select: { item_name: true } },
             supplier: { select: { card_name: true } },
-            samplingRequest: { select: { id: true } },
           },
         });
         if (!receipt)
           throw new NotFoundException('Warehouse receipt item not found');
-        if (receipt.samplingRequest)
-          throw new ConflictException('Phiếu yêu cầu lấy mẫu đã được gửi.');
 
         // Copy the receipt on the server so submitted item/lot data cannot be forged.
         const data = {

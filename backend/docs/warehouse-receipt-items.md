@@ -55,6 +55,12 @@ Migration `20261006020000_link_receipt_suppliers` thêm khóa ngoại nullable `
 
 Swagger có các endpoint và schema body trong nhóm `warehouse-receipt-items` tại `/api-docs`.
 
+## Soạn và gửi lại PYCLM nguyên liệu
+
+Một bản ghi kiểm hàng nhập kho đã gửi PYCLM vẫn có thể soạn bản nháp mới và gửi lại. Mỗi đợt gửi mới tạo email mới; sau khi gửi thành công, thông tin `samplingRequest` của bản ghi được cập nhật theo lần gửi mới nhất (`sent_at`, `sender_id`, `location`, `google_doc_url`). Báo cáo Google Sheets lấy thời điểm gửi mới nhất này. Các đợt gửi trước vẫn được giữ trong `warehouse_receipt_sampling_send_batches`.
+
+Gửi thất bại không thay đổi thông tin gửi thành công trước đó và không xóa bản nháp. Gọi lại cùng mã đợt gửi đã hoàn tất chỉ trả kết quả cũ; nếu email đã được xác nhận nhưng lưu dữ liệu lỗi, thao tác thử lại chỉ hoàn tất lưu. Việc soạn lại tiếp tục tuân theo quyền sở hữu bản nháp và chặn sửa khi người dùng đang xử lý một đợt gửi.
+
 Migration `20261009000000_link_receipt_manufacturers` thêm khóa ngoại nullable `manufacturer_code` và ghép tên nhà sản xuất cũ khi tên chỉ khớp một bản ghi trong danh mục. Giữ `manufacturer_name` để hiển thị dữ liệu lịch sử chưa ghép được. Chọn hoặc bỏ nhà sản xuất sẽ xoá tên nhập tay cũ; PATCH không gửi `manufacturer_code` giữ nguyên dữ liệu đã lưu. Đổi tên trong danh mục sẽ cập nhật tên hiển thị của các phiếu đã liên kết. Không thể xoá nhà sản xuất đang được hàng nhập kho tham chiếu (HTTP 409).
 
 Ảnh phiếu xuất kho, COA và hoá đơn được quản lý bằng API riêng;

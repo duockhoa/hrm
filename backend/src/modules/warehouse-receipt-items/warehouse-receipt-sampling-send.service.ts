@@ -99,20 +99,11 @@ export class WarehouseReceiptSamplingSendService {
             await tx.warehouseReceiptItemSamplingRequestDrafts.findMany({
               where: { created_by_id: userId, request_type: requestType },
               orderBy: { id: 'asc' },
-              include: {
-                receipt: {
-                  select: { samplingRequest: { select: { id: true } } },
-                },
-              },
             });
           if (!drafts.length)
             throw new BadRequestException('Không có bản nháp PYCLM để gửi.');
           for (const draft of drafts) {
             if (draft.created_by_id !== userId) throw new ForbiddenException();
-            if (requestType === 'NL' && draft.receipt?.samplingRequest)
-              throw new ConflictException(
-                `Bản ghi kiểm hàng #${draft.warehouse_receipt_item_id} đã gửi PYCLM.`,
-              );
             if (
               (requestType === 'NL' && !draft.warehouse_receipt_item_id) ||
               (requestType === 'TP' && !draft.production_order_id)
@@ -309,16 +300,20 @@ export class WarehouseReceiptSamplingSendService {
           const rawMaterials = snapshot.filter(
             (draft) => (draft.requestType ?? 'NL') === 'NL',
           );
-          if (rawMaterials.length)
-            await tx.warehouseReceiptItemSamplingRequests.createMany({
-              data: rawMaterials.map((draft) => ({
-                warehouse_receipt_item_id: draft.receiptId!,
-                location: draft.location,
-                sender_id: current.sender_id,
-                sent_at: current.sent_at!,
-                google_doc_url: current.google_doc_url,
-              })),
+          for (const draft of rawMaterials) {
+            const data = {
+              location: draft.location,
+              sender_id: current.sender_id,
+              sent_at: current.sent_at!,
+              google_doc_url: current.google_doc_url,
+            };
+            // Keep the receipt's latest successful send; batches retain each send.
+            await tx.warehouseReceiptItemSamplingRequests.upsert({
+              where: { warehouse_receipt_item_id: draft.receiptId! },
+              create: { warehouse_receipt_item_id: draft.receiptId!, ...data },
+              update: data,
             });
+          }
           for (const draft of snapshot.filter(
             (draft) => draft.requestType === 'TP',
           )) {
