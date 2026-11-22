@@ -24,6 +24,7 @@ import { ExportSemiFinishedWeightChecksQueryDto } from './dto/export-semi-finish
 import { ExportVolumeChecksQueryDto } from './dto/export-volume-checks.query.dto';
 import { ExportShellWeightChecksQueryDto } from './dto/export-shell-weight-checks.query.dto';
 import { DataExportService } from './data-export.service';
+import { ExportWarehouseReceiptItemsQueryDto } from './dto/export-warehouse-receipt-items.query.dto';
 import { ExportWarehouseTemperatureHumidityChecksQueryDto } from './dto/export-warehouse-temperature-humidity-checks.query.dto';
 import { ExportDensityChecksQueryDto } from './dto/export-density-checks.query.dto';
 import { ExportCylinderCalibrationsQueryDto } from './dto/export-cylinder-calibrations.query.dto';
@@ -39,6 +40,18 @@ import { ExportCylinderCalibrationsQueryDto } from './dto/export-cylinder-calibr
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class DataExportController {
   constructor(private readonly dataExportService: DataExportService) {}
+
+  @Get('warehouse-receipt-items')
+  @ApiOperation({
+    summary: 'Xuất dữ liệu kiểm hàng nhập kho cho Google Sheets',
+  })
+  @ApiOkResponse({ description: 'Danh sách kiểm hàng nhập kho theo trang' })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportWarehouseReceiptItems(
+    @Query() query: ExportWarehouseReceiptItemsQueryDto,
+  ) {
+    return this.dataExportService.exportWarehouseReceiptItems(query);
+  }
 
   @Get('warehouse-temperature-humidity-checks')
   @ApiOperation({

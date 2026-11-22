@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ExportWarehouseReceiptItemsQueryDto } from './dto/export-warehouse-receipt-items.query.dto';
 import { ExportWarehouseTemperatureHumidityChecksQueryDto } from './dto/export-warehouse-temperature-humidity-checks.query.dto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
@@ -966,6 +967,69 @@ export class DataExportService {
         ...check,
         temperature: Number(check.temperature),
         humidity: Number(check.humidity),
+      })),
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  async exportWarehouseReceiptItems(
+    query: ExportWarehouseReceiptItemsQueryDto,
+  ) {
+    const where: Prisma.WarehouseReceiptItemsWhereInput = {};
+    if (query.updated_from) {
+      const updatedAt = { gte: new Date(query.updated_from) };
+      where.OR = [
+        { updated_at: updatedAt },
+        { samplingRequest: { is: { updated_at: updatedAt } } },
+        { sapConfirmation: { is: { updated_at: updatedAt } } },
+      ];
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.warehouseReceiptItems.count({ where }),
+      this.prisma.warehouseReceiptItems.findMany({
+        where,
+        select: {
+          id: true,
+          received_at: true,
+          item_code: true,
+          lot_number: true,
+          expiry_date: true,
+          quantity: true,
+          unit: true,
+          packaging_specification: true,
+          manufacturer_name: true,
+          supplier_name: true,
+          note: true,
+          updated_at: true,
+          item: { select: { item_name: true } },
+          manufacturer: { select: { manufacturer_name: true } },
+          supplier: { select: { card_name: true } },
+          samplingRequest: { select: { sent_at: true } },
+          sapConfirmation: {
+            select: {
+              confirmed_at: true,
+              confirmedBy: { select: { name: true, username: true } },
+            },
+          },
+        },
+        orderBy: [{ received_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+      }),
+    ]);
+
+    return {
+      data: data.map((receipt) => ({
+        ...receipt,
+        quantity: receipt.quantity === null ? null : Number(receipt.quantity),
       })),
       pagination: {
         page: query.page,

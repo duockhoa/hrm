@@ -102,6 +102,36 @@ Mỗi bản ghi gồm `id`, `location`, `temperature`, `humidity`, `is_passed`, 
 
 Thêm file `apps-script/warehouse_temperature_humidity_checks.gs` vào dự án Apps Script đang dùng `DATA_EXPORT_ENV` trong `apps-script/configs.gs`, rồi chạy `xuatNhietDoDoAmKho()`. Hàm ghi vào tab **NHIỆT ĐỘ ĐỘ ẨM KHO**, giữ dòng tiêu đề và ghi A:F: Thời điểm (`created_at`, múi giờ cấu hình), Vị trí, Nhiệt độ (°C), Độ ẩm (%RH), Kết quả (`Đạt`/`Không đạt`, trống nếu chưa có), Người kiểm tra (tên, dự phòng username). Hàm tải đủ các trang trước khi xóa dữ liệu cũ và tự thêm dòng khi cần. Cấu hình `spreadsheetId` trỏ tới file Google Sheets chứa tab này.
 
+### Kiểm hàng nhập kho (WMS)
+
+```http
+GET /data-export/warehouse-receipt-items?page=1&limit=10000
+GET /data-export/warehouse-receipt-items?updated_from=2026-11-01T00:00:00.000Z
+```
+
+Dùng header `x-data-export-api-key`. Hỗ trợ `page` (mặc định 1), `limit` (mặc định 500, tối đa 10000), `updated_from` (ISO 8601). Bộ lọc `updated_from` lấy phiếu có thay đổi ở bản ghi nhập kho, gửi PYCLM hoặc xác nhận SAP. Response gồm `data` và `pagination` theo định dạng chung; sắp xếp `received_at`, `id` tăng dần. Mỗi lần nhập là một dòng, không gộp theo mã hàng/số lô. `quantity` là số hoặc `null` cho dữ liệu lịch sử chưa có số lượng.
+
+Thêm `apps-script/warehouse_receipt_items.gs` vào dự án Apps Script có `DATA_EXPORT_ENV`, cấu hình `spreadsheetId` trỏ tới file Google Sheets và chạy `xuatKiemHangNhapKho()`. Hàm tải đủ các trang rồi ghi tab **Kiểm hàng nhập kho**, giữ tiêu đề dòng 1, tự thêm dòng khi cần. Cột A:N theo thứ tự:
+
+| Cột | Nội dung | Nguồn |
+| --- | --- | --- |
+| A | Thời điểm | `received_at`, múi giờ cấu hình |
+| B | Mã hàng | `item_code`, giữ dạng text |
+| C | Tên hàng | `item.item_name` |
+| D | Số lô | `lot_number`, giữ số 0 đầu |
+| E | Hạn dùng | `expiry_date`, dd/MM/yyyy |
+| F | Số lượng | `quantity`, tối đa 3 chữ số thập phân |
+| G | Đơn vị tính | `unit` lưu riêng cho lần nhập |
+| H | Quy cách | `packaging_specification` |
+| I | Nhà sản xuất | `manufacturer.manufacturer_name`, dự phòng `manufacturer_name` cũ |
+| J | Nhà cung cấp | `supplier.card_name`, dự phòng `supplier_name` cũ |
+| K | Ghi chú | `note` |
+| L | Thời điểm gửi PYCLM | `samplingRequest.sent_at` |
+| M | Thời điểm nhập SAP | `sapConfirmation.confirmed_at` (xác nhận trên WMS) |
+| N | Người nhập SAP | `sapConfirmation.confirmedBy.name`, dự phòng `username` |
+
+Thông tin chưa có để trống. Lấy tên nhà sản xuất/nhà cung cấp hiện tại từ danh mục khi đã liên kết. Apps Script đồng bộ toàn bộ dữ liệu mỗi lần chạy; chưa thay đổi dữ liệu cũ nếu tải API thất bại.
+
 ## Cleaning Objects và Cleaning Requirements
 
 Tất cả endpoint bên dưới yêu cầu `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`. Trường `created_by_id` được lấy tự động từ access token và không cần (cũng không nên) gửi từ client.

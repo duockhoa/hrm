@@ -3,6 +3,10 @@ import { Prisma } from '@prisma/client';
 
 describe('DataExportService', () => {
   const prisma = {
+    warehouseReceiptItems: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
     warehouseTemperatureHumidityChecks: {
       count: jest.fn(),
       findMany: jest.fn(),
@@ -53,6 +57,96 @@ describe('DataExportService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('exports receipts with decimal quantities and optional sampling/SAP data', async () => {
+    const receipt = {
+      id: 1,
+      quantity: new Prisma.Decimal('123.456'),
+      lot_number: '00123',
+      item: { item_name: 'Nguyên liệu' },
+      samplingRequest: { sent_at: new Date('2026-11-01T00:00:00Z') },
+      sapConfirmation: {
+        confirmed_at: new Date('2026-11-02T00:00:00Z'),
+        confirmedBy: { name: null, username: 'checker' },
+      },
+    };
+    prisma.$transaction.mockResolvedValue([
+      5,
+      [
+        receipt,
+        {
+          ...receipt,
+          id: 2,
+          quantity: null,
+          samplingRequest: null,
+          sapConfirmation: null,
+        },
+      ],
+    ]);
+
+    const result = await service.exportWarehouseReceiptItems({
+      page: 2,
+      limit: 2,
+    });
+    expect(result.data).toEqual([
+      { ...receipt, quantity: 123.456 },
+      {
+        ...receipt,
+        id: 2,
+        quantity: null,
+        samplingRequest: null,
+        sapConfirmation: null,
+      },
+    ]);
+    expect(result.pagination).toEqual({
+      page: 2,
+      limit: 2,
+      total: 5,
+      total_pages: 3,
+      has_next_page: true,
+    });
+    expect(prisma.warehouseReceiptItems.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {},
+        skip: 2,
+        take: 2,
+        orderBy: [{ received_at: 'asc' }, { id: 'asc' }],
+        select: expect.objectContaining({
+          samplingRequest: { select: { sent_at: true } },
+          sapConfirmation: {
+            select: {
+              confirmed_at: true,
+              confirmedBy: { select: { name: true, username: true } },
+            },
+          },
+        }),
+      }),
+    );
+  });
+
+  it('includes sampling and SAP updates in the receipt incremental filter', async () => {
+    prisma.$transaction.mockResolvedValue([0, []]);
+    const updated_from = '2026-11-01T00:00:00.000Z';
+    const result = await service.exportWarehouseReceiptItems({
+      page: 1,
+      limit: 500,
+      updated_from,
+    });
+    const updated_at = { gte: new Date(updated_from) };
+    const where = {
+      OR: [
+        { updated_at },
+        { samplingRequest: { is: { updated_at } } },
+        { sapConfirmation: { is: { updated_at } } },
+      ],
+    };
+    expect(prisma.warehouseReceiptItems.count).toHaveBeenCalledWith({ where });
+    expect(prisma.warehouseReceiptItems.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where }),
+    );
+    expect(result.data).toEqual([]);
+    expect(result.pagination.has_next_page).toBe(false);
   });
 
   it('exports warehouse checks with numeric measurements, stored results and pagination', async () => {
