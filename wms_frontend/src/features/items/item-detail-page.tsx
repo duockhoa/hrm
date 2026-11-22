@@ -19,6 +19,7 @@ import { API_ROUTES } from "@/lib/api-routes";
 import itemsService from "@/services/items.service";
 import ItemsPage from "./items-page";
 import ItemReceiptHistory from "./item-receipt-history";
+import ItemHistoryButton from "@/features/edit-history/item-history-button";
 import type { Item } from "./types";
 
 export default function ItemDetailPage() {
@@ -57,15 +58,23 @@ export default function ItemDetailPage() {
               <AiOutlineRight className="shrink-0" />
               <p className="truncate">{data?.item_code ?? id}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 shrink-0"
-              onClick={() => router.push("/items")}
-              aria-label="Đóng chi tiết hàng hóa"
-            >
-              <X className="size-5" />
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              {data && (
+                <ItemHistoryButton
+                  key={data.item_code}
+                  itemCode={data.item_code}
+                />
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 shrink-0"
+                onClick={() => router.push("/items")}
+                aria-label="Đóng chi tiết hàng hóa"
+              >
+                <X className="size-5" />
+              </Button>
+            </div>
           </div>
           <div className="mt-4 flex flex-col items-center gap-4">
             {isLoading ? (

@@ -8,6 +8,8 @@ import useSWR, { useSWRConfig } from "swr";
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
+import EditHistoryButton from "@/features/edit-history/edit-history-button";
+import { CHECK_HISTORY_FIELDS } from "@/features/edit-history/warehouse-history-fields";
 import FieldDisplay from "@/components/field-display/field-display";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -94,6 +96,12 @@ export default function CheckDetail({
 
   const actions = (
     <>
+      <EditHistoryButton
+        key={`check-history-${id}`}
+        historyUrl={`${WAREHOUSE_TEMPERATURE_HUMIDITY_CHECKS_URL}/${id}/history`}
+        title={`Kiểm tra nhiệt độ, độ ẩm kho #${id} · ${data.location}`}
+        fields={CHECK_HISTORY_FIELDS}
+      />
       <Button size="sm" onClick={() => setEditing(true)}>
         <Pencil className="size-4" /> Sửa
       </Button>
@@ -129,6 +137,7 @@ export default function CheckDetail({
         subtitle={formatCheckDateTime(data.created_at)}
         onClose={onClose}
         showCloseButton={false}
+        actions={!externalActionsContainer ? actions : undefined}
       />
       <div className="mt-4 flex flex-col gap-4 text-left [&_p]:whitespace-pre-wrap">
         {fields.map(([label, value]) => (

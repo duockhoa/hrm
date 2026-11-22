@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Check, Loader2 } from "lucide-react";
 import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
+import EditHistoryButton from "@/features/edit-history/edit-history-button";
+import { SUMMARY_HISTORY_FIELDS } from "@/features/edit-history/warehouse-history-fields";
 import FieldDisplay from "@/components/field-display/field-display";
 import FormCreateSamplingRequest from "@/components/form-create-sampling-request/form-create-sampling-request";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -217,9 +219,9 @@ export default function FinishedProductSummaryDetail({
   );
   const canConfirmWarehouse = Boolean(
     !permissionsError &&
-      permissions?.permissionKeys.includes(
-        "production-orders.finished-product-summaries.warehouse-confirm",
-      ),
+    permissions?.permissionKeys.includes(
+      "production-orders.finished-product-summaries.warehouse-confirm",
+    ),
   );
 
   async function confirmWarehouse() {
@@ -227,7 +229,10 @@ export default function FinishedProductSummaryDetail({
     confirmingRef.current = true;
     setConfirming(true);
     try {
-      const confirmed = await productionOrdersService.confirmFinishedProductSummaryWarehouse(id);
+      const confirmed =
+        await productionOrdersService.confirmFinishedProductSummaryWarehouse(
+          id,
+        );
       await mutate(confirmed, { revalidate: false });
       toast.success("Đã xác nhận tổng kết thành phẩm.");
       void refreshItemCatalog(
@@ -263,8 +268,10 @@ export default function FinishedProductSummaryDetail({
   const createdBy = data.createdBy;
   const productionOrder = data.productionOrder;
   const productionOrderId = productionOrder?.id ?? data.production_order_id;
-  const showSamplingAction = canSendSamplingRequest && productionOrderId != null;
-  const showWarehouseAction = canConfirmWarehouse && !data.warehouse_confirmed_at;
+  const showSamplingAction =
+    canSendSamplingRequest && productionOrderId != null;
+  const showWarehouseAction =
+    canConfirmWarehouse && !data.warehouse_confirmed_at;
   const pyclm = productionOrder?.pyclm;
   const userLabel =
     createdBy?.name ?? createdBy?.username ?? createdBy?.email ?? "";
@@ -277,6 +284,14 @@ export default function FinishedProductSummaryDetail({
     <div className="w-full max-w-4xl rounded border bg-white p-4 text-center shadow-md">
       <DetailPanelHeader
         title={`Tổng kết thành phẩm #${data.id}`}
+        actions={
+          <EditHistoryButton
+            key={`summary-history-${id}`}
+            historyUrl={`${API_ROUTES.productionOrders.finishedProductSummaryDetail(id)}/history`}
+            title={`Tổng kết thành phẩm #${data.id}`}
+            fields={SUMMARY_HISTORY_FIELDS}
+          />
+        }
         subtitle={formatDateTime(data.created_at)}
         onClose={onClose}
         showCloseButton={showCloseButton}
@@ -377,7 +392,11 @@ export default function FinishedProductSummaryDetail({
         />
         <FieldDisplay
           lable="Nhân viên kho xác nhận"
-          value={data.warehouseConfirmedBy?.name || data.warehouseConfirmedBy?.username || ""}
+          value={
+            data.warehouseConfirmedBy?.name ||
+            data.warehouseConfirmedBy?.username ||
+            ""
+          }
         />
         <FieldDisplay
           lable="Thời điểm kho xác nhận"

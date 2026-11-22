@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
+import { WarehouseReceiptHistoryController } from './warehouse-receipt-history.controller';
 import { PrismaService } from 'src/prisma.service';
 import { WarehouseReceiptItemsController } from './warehouse-receipt-items.controller';
 import { WarehouseReceiptItemsService } from './warehouse-receipt-items.service';
@@ -12,8 +14,9 @@ import { FeaturesModule } from '../features/features.module';
 import { FinishedProductSamplingDraftsController } from './finished-product-sampling-drafts.controller';
 
 @Module({
-  imports: [EmailSettingsModule, FeaturesModule],
+  imports: [EmailSettingsModule, FeaturesModule, AuditLogsModule],
   controllers: [
+    WarehouseReceiptHistoryController,
     FinishedProductSamplingDraftsController,
     WarehouseReceiptSamplingDraftsController,
     WarehouseReceiptAttachmentsController,

@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import DetailPanelHeader from "@/components/detail-panel-header/detail-panel-header";
+import EditHistoryButton from "@/features/edit-history/edit-history-button";
+import { RECEIPT_HISTORY_FIELDS } from "@/features/edit-history/warehouse-history-fields";
 import FieldDisplay from "@/components/field-display/field-display";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -159,6 +161,17 @@ export default function ReceiptDetail({
 
   const actions = (
     <>
+      <EditHistoryButton
+        key={`receipt-history-${id}`}
+        historyUrl={`${WAREHOUSE_RECEIPT_ITEMS_URL}/${id}/history`}
+        title={`Kiểm hàng nhập kho #${id} · ${data.item_code} · ${data.lot_number}`}
+        fields={RECEIPT_HISTORY_FIELDS}
+        entityLabels={{
+          warehouse_receipt_items: "Kiểm hàng nhập kho",
+          warehouse_receipt_item_attachments: "Ảnh chứng từ",
+          warehouse_receipt_item_sap_confirmations: "Xác nhận SAP",
+        }}
+      />
       <Button size="sm" onClick={() => setEditing(true)}>
         <Pencil className="size-4" /> Sửa
       </Button>
@@ -233,6 +246,7 @@ export default function ReceiptDetail({
         subtitle={formatReceiptDateTime(data.received_at)}
         onClose={onClose}
         showCloseButton={false}
+        actions={!externalActionsContainer ? actions : undefined}
       />
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-gray-200 py-3">
         <button
