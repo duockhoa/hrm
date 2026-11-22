@@ -89,6 +89,19 @@ Trong `productionOrder` có thêm:
 - `documentControl`: thông tin cấp/nhận HSL giấy và nhận phiếu kiểm nghiệm. Các trường `batch_record_issued_at`, `batch_record_received_at`, `test_certificate_received_at` khác `null` tương ứng với đã cấp HSL, đã nhận HSL và đã nhận phiếu kiểm nghiệm.
 - `deviations`: danh sách sai lệch chưa xóa, kèm người báo cáo, người phê duyệt và ảnh sai lệch.
 
+### Kiểm tra nhiệt độ độ ẩm kho (WMS)
+
+```http
+GET /data-export/warehouse-temperature-humidity-checks?page=1&limit=10000
+GET /data-export/warehouse-temperature-humidity-checks?updated_from=2026-11-01T00:00:00.000Z
+```
+
+Dùng header `x-data-export-api-key` như các endpoint xuất dữ liệu khác. Hỗ trợ `page` (mặc định 1), `limit` (mặc định 500, tối đa 10000), `updated_from` (ISO 8601). Response gồm `data` và `pagination` theo định dạng chung, sắp xếp `created_at`, `id` tăng dần.
+
+Mỗi bản ghi gồm `id`, `location`, `temperature`, `humidity`, `is_passed`, `created_at`, `updated_at`, `checkedBy` (`id`, `username`, `name`). Nhiệt độ và độ ẩm trả về dạng số; kết quả lấy trực tiếp từ bản ghi đã lưu.
+
+Thêm file `apps-script/warehouse_temperature_humidity_checks.gs` vào dự án Apps Script đang dùng `DATA_EXPORT_ENV` trong `apps-script/configs.gs`, rồi chạy `xuatNhietDoDoAmKho()`. Hàm ghi vào tab **NHIỆT ĐỘ ĐỘ ẨM KHO**, giữ dòng tiêu đề và ghi A:F: Thời điểm (`created_at`, múi giờ cấu hình), Vị trí, Nhiệt độ (°C), Độ ẩm (%RH), Kết quả (`Đạt`/`Không đạt`, trống nếu chưa có), Người kiểm tra (tên, dự phòng username). Hàm tải đủ các trang trước khi xóa dữ liệu cũ và tự thêm dòng khi cần. Cấu hình `spreadsheetId` trỏ tới file Google Sheets chứa tab này.
+
 ## Cleaning Objects và Cleaning Requirements
 
 Tất cả endpoint bên dưới yêu cầu `Auth: Bearer` và permission tương ứng; quyền được lấy từ role của user. Nếu thiếu key, API trả về `403 Forbidden`. Trường `created_by_id` được lấy tự động từ access token và không cần (cũng không nên) gửi từ client.

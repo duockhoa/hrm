@@ -3,6 +3,10 @@ import { Prisma } from '@prisma/client';
 
 describe('DataExportService', () => {
   const prisma = {
+    warehouseTemperatureHumidityChecks: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
     productionOrderCylinderCalibrations: {
       count: jest.fn(),
       findMany: jest.fn(),
@@ -49,6 +53,68 @@ describe('DataExportService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('exports warehouse checks with numeric measurements, stored results and pagination', async () => {
+    const check = {
+      id: 3,
+      location: 'Kho TP',
+      temperature: new Prisma.Decimal('-1.25'),
+      humidity: new Prisma.Decimal('0'),
+      is_passed: false,
+      checkedBy: { id: 1, name: 'Người kiểm tra', username: 'checker' },
+    };
+    prisma.$transaction.mockResolvedValue([5, [check]]);
+    const query = {
+      page: 2,
+      limit: 2,
+      updated_from: '2026-11-01T00:00:00.000Z',
+    };
+
+    const result =
+      await service.exportWarehouseTemperatureHumidityChecks(query);
+
+    expect(result.data).toEqual([
+      { ...check, temperature: -1.25, humidity: 0 },
+    ]);
+    expect(result.pagination).toEqual({
+      page: 2,
+      limit: 2,
+      total: 5,
+      total_pages: 3,
+      has_next_page: true,
+    });
+    expect(
+      prisma.warehouseTemperatureHumidityChecks.count,
+    ).toHaveBeenCalledWith({
+      where: { updated_at: { gte: new Date(query.updated_from) } },
+    });
+    expect(
+      prisma.warehouseTemperatureHumidityChecks.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { updated_at: { gte: new Date(query.updated_from) } },
+        skip: 2,
+        take: 2,
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        select: expect.objectContaining({
+          checkedBy: { select: { id: true, username: true, name: true } },
+        }),
+      }),
+    );
+  });
+
+  it('exports an empty warehouse report without a next page', async () => {
+    prisma.$transaction.mockResolvedValue([0, []]);
+    const result = await service.exportWarehouseTemperatureHumidityChecks({
+      page: 1,
+      limit: 500,
+    });
+    expect(result.data).toEqual([]);
+    expect(result.pagination.has_next_page).toBe(false);
+    expect(
+      prisma.warehouseTemperatureHumidityChecks.count,
+    ).toHaveBeenCalledWith({ where: {} });
   });
 
   it('exports cylinder calibrations as numbers including negative and zero values', async () => {

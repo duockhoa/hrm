@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ExportWarehouseTemperatureHumidityChecksQueryDto } from './dto/export-warehouse-temperature-humidity-checks.query.dto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ExportFinishedProductSummariesQueryDto } from './dto/export-finished-product-summaries.query.dto';
@@ -921,6 +922,51 @@ export class DataExportService {
 
     return {
       data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: Math.ceil(total / query.limit),
+        has_next_page: skip + data.length < total,
+      },
+    };
+  }
+
+  async exportWarehouseTemperatureHumidityChecks(
+    query: ExportWarehouseTemperatureHumidityChecksQueryDto,
+  ) {
+    const where: Prisma.WarehouseTemperatureHumidityChecksWhereInput = {};
+    if (query.updated_from) {
+      where.updated_at = { gte: new Date(query.updated_from) };
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.warehouseTemperatureHumidityChecks.count({ where }),
+      this.prisma.warehouseTemperatureHumidityChecks.findMany({
+        where,
+        select: {
+          id: true,
+          location: true,
+          temperature: true,
+          humidity: true,
+          is_passed: true,
+          created_at: true,
+          updated_at: true,
+          checkedBy: { select: { id: true, username: true, name: true } },
+        },
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take: query.limit,
+      }),
+    ]);
+
+    return {
+      data: data.map((check) => ({
+        ...check,
+        temperature: Number(check.temperature),
+        humidity: Number(check.humidity),
+      })),
       pagination: {
         page: query.page,
         limit: query.limit,

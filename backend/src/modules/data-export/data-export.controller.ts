@@ -24,6 +24,7 @@ import { ExportSemiFinishedWeightChecksQueryDto } from './dto/export-semi-finish
 import { ExportVolumeChecksQueryDto } from './dto/export-volume-checks.query.dto';
 import { ExportShellWeightChecksQueryDto } from './dto/export-shell-weight-checks.query.dto';
 import { DataExportService } from './data-export.service';
+import { ExportWarehouseTemperatureHumidityChecksQueryDto } from './dto/export-warehouse-temperature-humidity-checks.query.dto';
 import { ExportDensityChecksQueryDto } from './dto/export-density-checks.query.dto';
 import { ExportCylinderCalibrationsQueryDto } from './dto/export-cylinder-calibrations.query.dto';
 
@@ -38,6 +39,22 @@ import { ExportCylinderCalibrationsQueryDto } from './dto/export-cylinder-calibr
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class DataExportController {
   constructor(private readonly dataExportService: DataExportService) {}
+
+  @Get('warehouse-temperature-humidity-checks')
+  @ApiOperation({
+    summary: 'Xuất kiểm tra nhiệt độ độ ẩm kho cho Google Sheets',
+  })
+  @ApiOkResponse({
+    description: 'Danh sách kiểm tra nhiệt độ độ ẩm kho theo trang',
+  })
+  @ApiUnauthorizedResponse({ description: 'API key không hợp lệ' })
+  exportWarehouseTemperatureHumidityChecks(
+    @Query() query: ExportWarehouseTemperatureHumidityChecksQueryDto,
+  ) {
+    return this.dataExportService.exportWarehouseTemperatureHumidityChecks(
+      query,
+    );
+  }
 
   @Get('cylinder-calibrations')
   @ApiOperation({
