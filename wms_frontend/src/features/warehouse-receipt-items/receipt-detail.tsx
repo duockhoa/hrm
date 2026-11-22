@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -73,6 +74,7 @@ export default function ReceiptDetail({
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
   const [sapSaving, setSapSaving] = useState(false);
+  const [sapConfirmOpen, setSapConfirmOpen] = useState(false);
   const [sapError, setSapError] = useState("");
   const [labelSaving, setLabelSaving] = useState(false);
   const [labelError, setLabelError] = useState("");
@@ -106,6 +108,7 @@ export default function ReceiptDetail({
         { revalidate: false },
       );
       void refreshItemCatalog(WAREHOUSE_RECEIPT_ITEMS_URL).catch(() => {});
+      setSapConfirmOpen(false);
       toast.success("Đã xác nhận nhập SAP.");
     } catch (error) {
       setSapError(
@@ -286,7 +289,10 @@ export default function ReceiptDetail({
           aria-checked={Boolean(data.sapConfirmation)}
           aria-label="nhập SAP"
           disabled={sapSaving || Boolean(data.sapConfirmation)}
-          onClick={() => void handleConfirmSap()}
+          onClick={() => {
+            setSapError("");
+            setSapConfirmOpen(true);
+          }}
           className="inline-flex cursor-pointer flex-col items-center p-0.5 disabled:cursor-default md:p-1"
         >
           <span
@@ -303,11 +309,6 @@ export default function ReceiptDetail({
           </span>
         </button>
       </div>
-      {sapError && (
-        <p role="alert" className="mt-3 text-left text-sm text-red-600">
-          {sapError}
-        </p>
-      )}
       {labelError && (
         <p role="alert" className="mt-3 text-left text-sm text-red-600">
           {labelError}
@@ -331,6 +332,39 @@ export default function ReceiptDetail({
           ) : null;
         })}
       </div>
+      <Dialog
+        open={sapConfirmOpen}
+        onOpenChange={(open) => {
+          if (!sapSaving) setSapConfirmOpen(open);
+        }}
+      >
+        <DialogContent showCloseButton={!sapSaving} className="md:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Xác nhận nhập SAP</DialogTitle>
+            <DialogDescription>
+              Bạn xác nhận đã nhập SAP cho hàng {data.item_code}, số lô{" "}
+              {data.lot_number} (phiếu #{data.id})?
+            </DialogDescription>
+          </DialogHeader>
+          {sapError && (
+            <p role="alert" className="text-sm text-red-600">
+              {sapError}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              disabled={sapSaving}
+              onClick={() => setSapConfirmOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button disabled={sapSaving} onClick={() => void handleConfirmSap()}>
+              {sapSaving ? "Đang lưu..." : "Xác nhận"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={draftOpen}
         onOpenChange={(open) => {
