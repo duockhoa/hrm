@@ -79,6 +79,8 @@ type FinishedProductSummary = {
   total_quantity?: string | number | null;
   created_at?: string | null;
   updated_at?: string | null;
+  warehouse_confirmed_at?: string | null;
+  warehouseConfirmedBy?: FinishedProductSummaryUser | null;
   productionOrder?: FinishedProductSummaryOrder | null;
   production_order?: FinishedProductSummaryOrder | null;
   createdBy?: FinishedProductSummaryUser | null;
@@ -136,15 +138,18 @@ const isPyclmSent = (pyclm: FinishedProductSummaryOrder["pyclm"]) => {
   return ["sent", "done", "completed"].includes(status ?? "");
 };
 
-function PyclmStatus({ sent }: { sent: boolean }) {
+const SUMMARY_COLUMN_COUNT = 13;
+
+function SummaryStatus({ done, label }: { done: boolean; label: string }) {
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
       <span
+        aria-hidden="true"
         className={`size-3 shrink-0 rounded-full ${
-          sent ? "bg-green-600" : "bg-red-600"
+          done ? "bg-green-600" : "bg-red-600"
         }`}
       />
-      <span>{sent ? "Đã gửi" : "Chưa gửi"}</span>
+      <span>{label}</span>
     </span>
   );
 }
@@ -164,7 +169,7 @@ function FinishedProductSummariesSkeleton({
               <Skeleton className="mx-auto size-4" />
             </TableCell>
           )}
-          {Array.from({ length: 12 }).map((__, cellIndex) => (
+          {Array.from({ length: SUMMARY_COLUMN_COUNT }).map((__, cellIndex) => (
             <TableCell key={cellIndex} className="border-r">
               <Skeleton className="h-4 w-full min-w-16" />
             </TableCell>
@@ -239,7 +244,7 @@ export default function FinishedProductSummariesPage() {
     null,
   );
   const isSelecting = selectedRows !== null;
-  const columnCount = 12 + Number(isSelecting);
+  const columnCount = SUMMARY_COLUMN_COUNT + Number(isSelecting);
   const userId = useUserStore((state) => state.user?.id);
   const { data: permissions, error: permissionsError } = useSWR(
     isSelecting && userId ? [API_ROUTES.users.myPermissions, userId] : null,
@@ -422,6 +427,9 @@ export default function FinishedProductSummariesPage() {
                   Gửi PYCLM
                 </TableHead>
                 <TableHead className="border-r px-3 font-bold text-gray-900">
+                  NV Kho Xác Nhận
+                </TableHead>
+                <TableHead className="border-r px-3 font-bold text-gray-900">
                   Người tạo
                 </TableHead>
               </TableRow>
@@ -443,6 +451,7 @@ export default function FinishedProductSummariesPage() {
                     {group.summaries.map((summary) => {
                       const productionOrder = getProductionOrder(summary);
                       const createdBy = getCreatedBy(summary);
+                      const sentPyclm = isPyclmSent(productionOrder?.pyclm);
                       const rowId = String(summary.id);
                       const orderId = Number(
                         productionOrder?.id ?? summary.production_order_id,
@@ -528,9 +537,17 @@ export default function FinishedProductSummariesPage() {
                             {formatNumber(getTotalQuantity(summary))}
                           </TableCell>
                           <TableCell className="border-r px-3">
-                            <PyclmStatus
-                              sent={isPyclmSent(productionOrder?.pyclm)}
+                            <SummaryStatus
+                              done={sentPyclm}
+                              label={sentPyclm ? "Đã gửi" : "Chưa gửi"}
                             />
+                          </TableCell>
+                          <TableCell className="border-r px-3">
+                            {summary.warehouse_confirmed_at
+                              ? summary.warehouseConfirmedBy?.name ||
+                                summary.warehouseConfirmedBy?.username ||
+                                ""
+                              : ""}
                           </TableCell>
                           <TableCell className="border-r px-3">
                             {getUserLabel(createdBy)}
