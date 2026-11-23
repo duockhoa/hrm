@@ -6,11 +6,6 @@ import type {
 import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 
-const restore = async (id: string | number): Promise<FilterCatalog> => {
-  const response = await axiosClient.patch(`${API_ROUTES.filterCatalogs.base}/${id}/restore`);
-  return response.data;
-};
-
 const fetchFilterCatalogs = async (includeInactive = false): Promise<FilterCatalog[]> => {
   const response = await axiosClient.get(API_ROUTES.filterCatalogs.base, {
     params: includeInactive ? { include_inactive: true } : undefined,
@@ -54,7 +49,6 @@ const deleteFilterCatalog = async (id: string | number): Promise<FilterCatalog> 
 const filterCatalogsService = {
   fetchFilterCatalogs: () => fetchFilterCatalogs(),
   fetchIncludingInactive: () => fetchFilterCatalogs(true),
-  restore,
   fetchFilterCatalogById,
   createFilterCatalog,
   updateFilterCatalog,

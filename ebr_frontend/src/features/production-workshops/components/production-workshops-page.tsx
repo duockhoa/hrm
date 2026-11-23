@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { productionWorkshopsService } from "@/services/index.service";
-import { Ban, Edit2, Plus, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { Ban, Edit2, Plus, RefreshCw, Search } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
 import useSWR, { useSWRConfig } from "swr";
@@ -109,8 +109,8 @@ export default function ProductionWorkshopsPage() {
     isLoading,
     mutate,
   } = useSWR(
-    "/production-workshops?include_inactive=true",
-    productionWorkshopsService.fetchIncludingInactive,
+    "/production-workshops",
+    productionWorkshopsService.fetchProductionWorkshops,
   );
   const { mutate: revalidate } = useSWRConfig();
 
@@ -191,7 +191,7 @@ export default function ProductionWorkshopsPage() {
       }
 
       setIsFormOpen(false);
-      await Promise.all([mutate(), revalidate("/production-workshops")]);
+      await Promise.all([mutate(), revalidate("/production-workshops?include_inactive=true")]);
     } catch (error) {
       toast.error(getErrorMessage(error, "Không thể lưu nhà xưởng."));
     } finally {
@@ -206,19 +206,12 @@ export default function ProductionWorkshopsPage() {
 
     setIsSubmitting(true);
     try {
-      if (statusTarget.deleted_at) {
-        await productionWorkshopsService.restore(statusTarget.id);
-        toast.success("Đã kích hoạt lại nhà xưởng.");
-      } else {
-        await productionWorkshopsService.deleteProductionWorkshop(
-          statusTarget.id,
-        );
-        toast.success("Đã ngừng sử dụng nhà xưởng.");
-      }
+      await productionWorkshopsService.deleteProductionWorkshop(statusTarget.id);
+      toast.success("Đã ngừng sử dụng nhà xưởng.");
       setStatusTarget(null);
-      await Promise.all([mutate(), revalidate("/production-workshops")]);
+      await Promise.all([mutate(), revalidate("/production-workshops?include_inactive=true")]);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể đổi trạng thái nhà xưởng."));
+      toast.error(getErrorMessage(error, "Không thể ngừng sử dụng nhà xưởng."));
     } finally {
       setIsSubmitting(false);
     }
@@ -277,7 +270,6 @@ export default function ProductionWorkshopsPage() {
                 <TableHead>Mô tả</TableHead>
                 <TableHead>Địa chỉ</TableHead>
                 <TableHead className="w-44">Cập nhật</TableHead>
-                <TableHead>Trạng thái</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -285,7 +277,7 @@ export default function ProductionWorkshopsPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={8}>
+                    <TableCell colSpan={7}>
                       <div className="h-8 animate-pulse rounded bg-gray-100" />
                     </TableCell>
                   </TableRow>
@@ -312,9 +304,6 @@ export default function ProductionWorkshopsPage() {
                       {formatDateTime(workshop.updated_at)}
                     </TableCell>
                     <TableCell>
-                      {workshop.deleted_at ? "Ngừng sử dụng" : "Đang sử dụng"}
-                    </TableCell>
-                    <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -328,18 +317,10 @@ export default function ProductionWorkshopsPage() {
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => setStatusTarget(workshop)}
-                          title={
-                            workshop.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
-                          }
-                          aria-label={
-                            workshop.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
-                          }
+                          title="Ngừng sử dụng"
+                          aria-label="Ngừng sử dụng"
                         >
-                          {workshop.deleted_at ? (
-                            <RotateCcw className="size-4" />
-                          ) : (
-                            <Ban className="size-4 text-red-600" />
-                          )}
+                          <Ban className="size-4 text-red-600" />
                         </Button>
                       </div>
                     </TableCell>
@@ -348,7 +329,7 @@ export default function ProductionWorkshopsPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={7}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     Chưa có nhà xưởng phù hợp.
@@ -468,14 +449,9 @@ export default function ProductionWorkshopsPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {statusTarget?.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"}{" "}
-              nhà xưởng
-            </DialogTitle>
+            <DialogTitle>Ngừng sử dụng nhà xưởng</DialogTitle>
             <DialogDescription>
-              {statusTarget?.deleted_at
-                ? "Mục này sẽ xuất hiện lại trong danh sách chọn."
-                : "Mục này sẽ ẩn khỏi danh sách chọn mới. Hồ sơ cũ vẫn giữ liên kết."}
+              Mục này sẽ ẩn khỏi danh mục và danh sách chọn mới. Hồ sơ cũ vẫn giữ liên kết.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded border bg-gray-50 p-3">
@@ -497,11 +473,7 @@ export default function ProductionWorkshopsPage() {
               onClick={handleStatusChange}
               disabled={isSubmitting}
             >
-              {isSubmitting
-                ? "Đang lưu..."
-                : statusTarget?.deleted_at
-                  ? "Kích hoạt lại"
-                  : "Ngừng sử dụng"}
+              {isSubmitting ? "Đang lưu..." : "Ngừng sử dụng"}
             </Button>
           </DialogFooter>
         </DialogContent>

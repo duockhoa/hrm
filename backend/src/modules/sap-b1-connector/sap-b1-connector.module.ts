@@ -4,8 +4,10 @@ import { PrismaService } from 'src/prisma.service';
 import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
 import { SapB1ConnectorController } from './sap-b1-connector.controller';
 import { SapItemSeriesSyncService } from './sap-item-series-sync.service';
+import { NetworkPoliciesModule } from '../network-policies/network-policies.module';
 
 @Module({
+  imports: [NetworkPoliciesModule],
   controllers: [SapB1ConnectorController],
   providers: [
     SapB1ConnectorService,

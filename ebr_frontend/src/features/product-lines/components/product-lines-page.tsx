@@ -19,10 +19,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { productLinesService } from "@/services/index.service";
-import { Ban, Edit2, Plus, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { Ban, Edit2, Plus, RefreshCw, Search } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
 import type {
   CreateProductLinePayload,
   ProductLine,
@@ -89,10 +89,9 @@ export default function ProductLinesPage() {
     isLoading,
     mutate,
   } = useSWR(
-    "/product-lines?include_inactive=true",
-    productLinesService.fetchIncludingInactive,
+    "/product-lines",
+    productLinesService.fetchProductLines,
   );
-  const { mutate: revalidate } = useSWRConfig();
 
   const filteredProductLines = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -147,7 +146,7 @@ export default function ProductLinesPage() {
       }
 
       setIsFormOpen(false);
-      await Promise.all([mutate(), revalidate("/product-lines")]);
+      await mutate();
     } catch (error) {
       toast.error(getErrorMessage(error, "Không thể lưu dòng sản phẩm."));
     } finally {
@@ -162,17 +161,12 @@ export default function ProductLinesPage() {
 
     setIsSubmitting(true);
     try {
-      if (statusTarget.deleted_at) {
-        await productLinesService.restore(statusTarget.id);
-        toast.success("Đã kích hoạt lại dòng sản phẩm.");
-      } else {
-        await productLinesService.deleteProductLine(statusTarget.id);
-        toast.success("Đã ngừng sử dụng dòng sản phẩm.");
-      }
+      await productLinesService.deleteProductLine(statusTarget.id);
+      toast.success("Đã ngừng sử dụng dòng sản phẩm.");
       setStatusTarget(null);
-      await Promise.all([mutate(), revalidate("/product-lines")]);
+      await mutate();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể đổi trạng thái dòng sản phẩm."));
+      toast.error(getErrorMessage(error, "Không thể ngừng sử dụng dòng sản phẩm."));
     } finally {
       setIsSubmitting(false);
     }
@@ -228,7 +222,6 @@ export default function ProductLinesPage() {
                 <TableHead className="w-48">Code</TableHead>
                 <TableHead>Tên dòng</TableHead>
                 <TableHead className="w-44">Cập nhật</TableHead>
-                <TableHead>Trạng thái</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -236,7 +229,7 @@ export default function ProductLinesPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={6}>
+                    <TableCell colSpan={5}>
                       <div className="h-8 animate-pulse rounded bg-gray-100" />
                     </TableCell>
                   </TableRow>
@@ -257,9 +250,6 @@ export default function ProductLinesPage() {
                       {formatDateTime(productLine.updated_at)}
                     </TableCell>
                     <TableCell>
-                      {productLine.deleted_at ? "Ngừng sử dụng" : "Đang sử dụng"}
-                    </TableCell>
-                    <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -273,18 +263,10 @@ export default function ProductLinesPage() {
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => setStatusTarget(productLine)}
-                          title={
-                            productLine.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
-                          }
-                          aria-label={
-                            productLine.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
-                          }
+                          title="Ngừng sử dụng"
+                          aria-label="Ngừng sử dụng"
                         >
-                          {productLine.deleted_at ? (
-                            <RotateCcw className="size-4" />
-                          ) : (
-                            <Ban className="size-4 text-red-600" />
-                          )}
+                          <Ban className="size-4 text-red-600" />
                         </Button>
                       </div>
                     </TableCell>
@@ -293,7 +275,7 @@ export default function ProductLinesPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={5}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     Chưa có dòng sản phẩm phù hợp.
@@ -371,14 +353,9 @@ export default function ProductLinesPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {statusTarget?.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"}{" "}
-              dòng sản phẩm
-            </DialogTitle>
+            <DialogTitle>Ngừng sử dụng dòng sản phẩm</DialogTitle>
             <DialogDescription>
-              {statusTarget?.deleted_at
-                ? "Mục này sẽ xuất hiện lại trong danh sách chọn."
-                : "Mục này sẽ ẩn khỏi danh sách chọn mới. Hồ sơ cũ vẫn giữ liên kết."}
+              Mục này sẽ ẩn khỏi danh mục và danh sách chọn mới. Hồ sơ cũ vẫn giữ liên kết.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded border bg-gray-50 p-3">
@@ -400,11 +377,7 @@ export default function ProductLinesPage() {
               onClick={handleStatusChange}
               disabled={isSubmitting}
             >
-              {isSubmitting
-                ? "Đang lưu..."
-                : statusTarget?.deleted_at
-                  ? "Kích hoạt lại"
-                  : "Ngừng sử dụng"}
+              {isSubmitting ? "Đang lưu..." : "Ngừng sử dụng"}
             </Button>
           </DialogFooter>
         </DialogContent>

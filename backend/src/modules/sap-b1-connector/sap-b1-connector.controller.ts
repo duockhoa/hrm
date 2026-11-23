@@ -2,12 +2,19 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { Permissions } from 'src/decorators/permissions.decorator';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
+import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
+import { ITEM_PERMISSIONS } from '../items/items.permissions';
 import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
 import { SapB1ConnectorService } from './sap-b1-connector.service';
 import { ApiBody } from '@nestjs/swagger';
@@ -23,6 +30,14 @@ export class SapB1ConnectorController {
   @Get('items')
   async getItems() {
     return this.sapB1Client.getItems();
+  }
+
+  @Post('items/sync')
+  @HttpCode(HttpStatus.OK)
+  @Permissions(ITEM_PERMISSIONS.UPDATE)
+  @UseGuards(PermissionsGuard, NetworkPolicyGuard)
+  async syncItems() {
+    return this.sapB1ConnectorService.syncItems();
   }
 
   @Get('production-orders')

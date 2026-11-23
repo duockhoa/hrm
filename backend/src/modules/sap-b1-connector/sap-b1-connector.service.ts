@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma.service';
 import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
@@ -12,6 +12,15 @@ import {
 
 const SAP_ITEM_CODE_MAX_LENGTH = 191;
 
+export type ItemSyncResult = {
+  fetched: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
+  failed: number;
+};
+
 type SyncProductionOrderOptions = {
   throwOnSkip?: boolean;
 };
@@ -24,6 +33,7 @@ export class SapB1ConnectorService {
   ) {}
   private readonly logger = new Logger(SapB1ConnectorService.name);
   private businessPartnersSyncRunning = false;
+  private itemSync: Promise<ItemSyncResult> | null = null;
 
   @Cron('0 */30 * * * *')
   async handleCronSyncBusinessPartners() {
@@ -151,87 +161,124 @@ export class SapB1ConnectorService {
 
   @Cron('0 */15 * * * *')
   async handleCronSyncItems() {
+    // A manual run may already be in progress when the schedule fires.
+    if (this.itemSync) return;
     try {
-      const items = await this.sapB1Client.getItems();
-      if (Array.isArray(items)) {
-        for (const item of items) {
-          try {
-            const sapItemCode = item.ItemCode;
-            const sapItemName = item.ItemName;
-            const unit = item.InventoryUOM;
-            const dk_code = item.U_MDK;
-            const series: number | null = item.Series ?? null;
-
-            if (this.isMissingSapValue(sapItemCode)) {
-              this.logger.warn('Skipped item with missing ItemCode');
-              continue;
-            }
-
-            const item_code = String(sapItemCode);
-
-            if (item_code.length > SAP_ITEM_CODE_MAX_LENGTH) {
-              this.logger.warn(
-                `Skipped item ${item_code}: ItemCode is longer than ${SAP_ITEM_CODE_MAX_LENGTH} characters`,
-              );
-              continue;
-            }
-
-            if (this.isMissingSapValue(sapItemName)) {
-              this.logger.warn(`Skipped item ${item_code}: missing ItemName`);
-              continue;
-            }
-
-            const item_name = String(sapItemName);
-
-            const existingItem = await this.prismaService.items.findUnique({
-              where: { item_code: item_code },
-            });
-
-            if (existingItem) {
-              if (
-                existingItem.item_name !== item_name ||
-                existingItem.unit !== unit ||
-                existingItem.dk_code !== dk_code ||
-                existingItem.series !== series
-              ) {
-                await this.prismaService.items.update({
-                  where: { item_code: item_code },
-                  data: {
-                    item_name: item_name,
-                    unit: unit,
-                    dk_code: dk_code,
-                    series,
-                  },
-                });
-                this.logger.log(`Updated product: ${item_code}`);
-              }
-            } else {
-              await this.prismaService.items.create({
-                data: {
-                  item_code: item_code,
-                  item_name: item_name,
-                  unit: unit,
-                  dk_code: dk_code,
-                  series,
-                },
-              });
-              this.logger.log(`Created new product: ${item_code}`);
-            }
-          } catch (itemError) {
-            this.logger.warn(
-              `Failed to sync item: ${
-                itemError instanceof Error ? itemError.message : itemError
-              }`,
-            );
-          }
-        }
-      }
-    } catch (error) {
-      console.log(
-        'Failed to fetch/sync items',
-        error instanceof Error ? error.message : error,
-      );
+      await this.syncItems();
+    } catch {
+      // syncItems logs the failure and also reports it to manual callers.
     }
+  }
+
+  syncItems() {
+    this.itemSync ??= this.runItemSync().finally(() => {
+      this.itemSync = null;
+    });
+    return this.itemSync;
+  }
+
+  private async runItemSync(): Promise<ItemSyncResult> {
+    let items: Awaited<ReturnType<SapB1ServiceLayerClient['getItems']>>;
+    try {
+      items = await this.sapB1Client.getItems();
+      if (!Array.isArray(items))
+        throw new Error('Unexpected SAP items response');
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch SAP items: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new BadGatewayException('Không thể lấy danh sách mặt hàng từ SAP.');
+    }
+
+    const result: ItemSyncResult = {
+      fetched: items.length,
+      created: 0,
+      updated: 0,
+      unchanged: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    for (const item of items) {
+      try {
+        const sapItemCode = item.ItemCode;
+        const sapItemName = item.ItemName;
+        const unit = item.InventoryUOM;
+        const dk_code = item.U_MDK;
+        const series: number | null = item.Series ?? null;
+
+        if (this.isMissingSapValue(sapItemCode)) {
+          result.skipped += 1;
+          this.logger.warn('Skipped item with missing ItemCode');
+          continue;
+        }
+
+        const item_code = String(sapItemCode);
+
+        if (item_code.length > SAP_ITEM_CODE_MAX_LENGTH) {
+          result.skipped += 1;
+          this.logger.warn(
+            `Skipped item ${item_code}: ItemCode is longer than ${SAP_ITEM_CODE_MAX_LENGTH} characters`,
+          );
+          continue;
+        }
+
+        if (this.isMissingSapValue(sapItemName)) {
+          result.skipped += 1;
+          this.logger.warn(`Skipped item ${item_code}: missing ItemName`);
+          continue;
+        }
+
+        const item_name = String(sapItemName);
+
+        const existingItem = await this.prismaService.items.findUnique({
+          where: { item_code: item_code },
+        });
+
+        if (existingItem) {
+          if (
+            existingItem.item_name !== item_name ||
+            existingItem.unit !== unit ||
+            existingItem.dk_code !== dk_code ||
+            existingItem.series !== series
+          ) {
+            await this.prismaService.items.update({
+              where: { item_code: item_code },
+              data: {
+                item_name: item_name,
+                unit: unit,
+                dk_code: dk_code,
+                series,
+              },
+            });
+            result.updated += 1;
+            this.logger.log(`Updated product: ${item_code}`);
+          } else {
+            result.unchanged += 1;
+          }
+        } else {
+          await this.prismaService.items.create({
+            data: {
+              item_code: item_code,
+              item_name: item_name,
+              unit: unit,
+              dk_code: dk_code,
+              series,
+            },
+          });
+          result.created += 1;
+          this.logger.log(`Created new product: ${item_code}`);
+        }
+      } catch (itemError) {
+        result.failed += 1;
+        this.logger.warn(
+          `Failed to sync item: ${
+            itemError instanceof Error ? itemError.message : itemError
+          }`,
+        );
+      }
+    }
+    return result;
   }
 
   @Cron(process.env.SAP_B1_LOT_LIST_SYNC_CRON || '0 * * * * *')

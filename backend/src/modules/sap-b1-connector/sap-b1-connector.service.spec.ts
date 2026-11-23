@@ -164,6 +164,48 @@ describe('SapB1ConnectorService', () => {
     expect(prismaService.items.create).not.toHaveBeenCalled();
   });
 
+  it('shares a scheduled sync with manual callers and reports partial failures', async () => {
+    sapB1Client.getItems.mockResolvedValue([
+      { ItemCode: 'NL001', ItemName: 'New item' },
+      { ItemCode: 'NL002', ItemName: 'Updated item' },
+      { ItemCode: 'NL003', ItemName: 'Same item' },
+      { ItemCode: 'NL004', ItemName: null },
+      { ItemCode: 'NL005', ItemName: 'Failed item' },
+    ]);
+    prismaService.items.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ item_name: 'Previous name' })
+      .mockResolvedValueOnce({ item_name: 'Same item', series: null })
+      .mockRejectedValueOnce(new Error('Database write failed'));
+
+    const scheduled = service.handleCronSyncItems();
+    const manual = service.syncItems();
+    expect(service.syncItems()).toBe(manual);
+    await expect(manual).resolves.toEqual({
+      fetched: 5,
+      created: 1,
+      updated: 1,
+      unchanged: 1,
+      skipped: 1,
+      failed: 1,
+    });
+    await scheduled;
+    expect(sapB1Client.getItems).toHaveBeenCalledTimes(1);
+    expect(prismaService.items.create).toHaveBeenCalledTimes(1);
+    expect(prismaService.items.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows a new run after SAP retrieval fails', async () => {
+    sapB1Client.getItems
+      .mockRejectedValueOnce(new Error('SAP timeout'))
+      .mockResolvedValueOnce([]);
+
+    await expect(service.syncItems()).rejects.toMatchObject({ status: 502 });
+    expect(prismaService.items.findUnique).not.toHaveBeenCalled();
+    await expect(service.syncItems()).resolves.toMatchObject({ fetched: 0 });
+    expect(sapB1Client.getItems).toHaveBeenCalledTimes(2);
+  });
+
   it.each([false, true])(
     'uses inventory UOM when syncing an item (existing: %s)',
     async (existing) => {

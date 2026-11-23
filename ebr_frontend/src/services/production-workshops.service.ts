@@ -16,11 +16,6 @@ import type {
   UpdateProductionWorkshopCleaningChecklistPayload,
 } from "@/features/production-workshop-cleaning-checklists/types";
 
-const restore = async (id: string | number): Promise<ProductionWorkshop> => {
-  const response = await axiosClient.patch(`${API_ROUTES.productionWorkshops.base}/${id}/restore`);
-  return response.data;
-};
-
 const fetchProductionWorkshops = async (includeInactive = false): Promise<ProductionWorkshop[]> => {
   const response = await axiosClient.get(API_ROUTES.productionWorkshops.base, {
     params: includeInactive ? { include_inactive: true } : undefined,
@@ -172,7 +167,6 @@ const deleteCleaningChecklist = async (
 export default {
   fetchProductionWorkshops: () => fetchProductionWorkshops(),
   fetchIncludingInactive: () => fetchProductionWorkshops(true),
-  restore,
   fetchProductionWorkshopById,
   createProductionWorkshop,
   updateProductionWorkshop,

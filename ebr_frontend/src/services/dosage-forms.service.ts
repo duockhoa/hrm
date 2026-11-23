@@ -6,15 +6,8 @@ import type {
 import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 
-const restore = async (id: string | number): Promise<DosageForm> => {
-  const response = await axiosClient.patch(`${API_ROUTES.dosageForms.base}/${id}/restore`);
-  return response.data;
-};
-
-const fetchAll = async (includeInactive = false): Promise<DosageForm[]> => {
-  const response = await axiosClient.get(API_ROUTES.dosageForms.base, {
-    params: includeInactive ? { include_inactive: true } : undefined,
-  });
+const fetchAll = async (): Promise<DosageForm[]> => {
+  const response = await axiosClient.get(API_ROUTES.dosageForms.base);
   return response.data;
 };
 
@@ -45,9 +38,7 @@ const remove = async (id: string | number): Promise<DosageForm> => {
 };
 
 const dosageFormsService = {
-  fetchAll: () => fetchAll(),
-  fetchIncludingInactive: () => fetchAll(true),
-  restore,
+  fetchAll,
   fetchById,
   create,
   update,

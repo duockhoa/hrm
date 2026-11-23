@@ -31,6 +31,7 @@ const ITEMS = {
   finishedProducts: "/items/finished-products",
   semiFinishedProducts: "/items/semi-finished-products",
   rawMaterials: "/items/raw-materials",
+  syncFromSap: "/sap-b1-connector/items/sync",
   equipment: (itemCode: string) =>
     `/items/${encodeURIComponent(itemCode)}/equipment`,
   equipmentDetail: (itemEquipmentId: string | number) =>

@@ -51,13 +51,6 @@ const deleteFeature = async (id: string | number) => {
   return response.data;
 };
 
-const restoreFeature = async (id: number): Promise<Feature> => {
-  const response = await axiosClient.patch(
-    `${API_ROUTES.features.base}/${id}/restore`,
-  );
-  return response.data;
-};
-
 const fetchItemFeatureConfig = async (
   itemCode: string,
   includeDisabled = true,
@@ -113,7 +106,6 @@ const featuresService = {
   createFeature,
   updateFeature,
   deleteFeature,
-  restoreFeature,
   fetchItemFeatureConfig,
   upsertItemFeature,
   updateItemFeature,

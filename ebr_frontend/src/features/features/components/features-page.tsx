@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { featuresService } from "@/services/index.service";
 import { isAxiosError } from "axios";
-import { Ban, Edit2, Plus, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { Ban, Edit2, Plus, RefreshCw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import useSWR, { useSWRConfig } from "swr";
@@ -92,6 +92,7 @@ export default function FeaturesPage() {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
     return (features ?? [])
+      .filter((feature) => !feature.deleted_at)
       .filter((feature) =>
         kindFilter === "all" ? true : feature.kind === kindFilter,
       )
@@ -165,18 +166,13 @@ export default function FeaturesPage() {
 
     setIsSubmitting(true);
     try {
-      if (statusTarget.deleted_at) {
-        await featuresService.restoreFeature(statusTarget.id);
-        toast.success("Đã kích hoạt lại tính năng.");
-      } else {
-        await featuresService.deleteFeature(statusTarget.id);
-        toast.success("Đã ngừng sử dụng tính năng.");
-      }
+      await featuresService.deleteFeature(statusTarget.id);
+      toast.success("Đã ngừng sử dụng tính năng.");
       setStatusTarget(null);
       await refreshFeatureLists();
     } catch (error) {
       toast.error(
-        getErrorMessage(error, "Không thể đổi trạng thái tính năng."),
+        getErrorMessage(error, "Không thể ngừng sử dụng tính năng."),
       );
     } finally {
       setIsSubmitting(false);
@@ -252,7 +248,6 @@ export default function FeaturesPage() {
                 <TableHead className="w-48">Nhóm tính năng</TableHead>
                 <TableHead>Liên kết dữ liệu</TableHead>
                 <TableHead className="w-28 text-right">Thứ tự</TableHead>
-                <TableHead>Trạng thái</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -260,7 +255,7 @@ export default function FeaturesPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={8}>
                       <div className="h-8 animate-pulse rounded bg-gray-100" />
                     </TableCell>
                   </TableRow>
@@ -304,9 +299,6 @@ export default function FeaturesPage() {
                       {feature.default_order}
                     </TableCell>
                     <TableCell>
-                      {feature.deleted_at ? "Ngừng sử dụng" : "Đang sử dụng"}
-                    </TableCell>
-                    <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -320,22 +312,10 @@ export default function FeaturesPage() {
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => setStatusTarget(feature)}
-                          title={
-                            feature.deleted_at
-                              ? "Kích hoạt lại"
-                              : "Ngừng sử dụng"
-                          }
-                          aria-label={
-                            feature.deleted_at
-                              ? "Kích hoạt lại"
-                              : "Ngừng sử dụng"
-                          }
+                          title="Ngừng sử dụng"
+                          aria-label="Ngừng sử dụng"
                         >
-                          {feature.deleted_at ? (
-                            <RotateCcw className="size-4" />
-                          ) : (
-                            <Ban className="size-4 text-red-600" />
-                          )}
+                          <Ban className="size-4 text-red-600" />
                         </Button>
                       </div>
                     </TableCell>
@@ -344,7 +324,7 @@ export default function FeaturesPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={8}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     Chưa có tính năng phù hợp.
@@ -372,15 +352,9 @@ export default function FeaturesPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {statusTarget?.deleted_at
-                ? "Kích hoạt lại tính năng"
-                : "Ngừng sử dụng tính năng"}
-            </DialogTitle>
+            <DialogTitle>Ngừng sử dụng tính năng</DialogTitle>
             <DialogDescription>
-              {statusTarget?.deleted_at
-                ? "Tính năng sẽ được áp dụng lại theo cấu hình đã lưu của từng mã hàng."
-                : "Tính năng sẽ ngừng áp dụng trong cấu hình hiện tại của mọi mã hàng. Hồ sơ lô đã chốt vẫn giữ cấu hình đã lưu."}
+              Tính năng sẽ ẩn khỏi danh mục và ngừng áp dụng cho cấu hình hiện tại của các mã hàng. Hồ sơ lô đã chốt vẫn dùng cấu hình đã lưu.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded border bg-gray-50 p-3">
@@ -398,15 +372,11 @@ export default function FeaturesPage() {
               Hủy
             </Button>
             <Button
-              variant={statusTarget?.deleted_at ? "default" : "destructive"}
+              variant="destructive"
               onClick={handleStatusChange}
               disabled={isSubmitting}
             >
-              {isSubmitting
-                ? "Đang lưu..."
-                : statusTarget?.deleted_at
-                  ? "Kích hoạt lại"
-                  : "Ngừng sử dụng"}
+              {isSubmitting ? "Đang lưu..." : "Ngừng sử dụng"}
             </Button>
           </DialogFooter>
         </DialogContent>
