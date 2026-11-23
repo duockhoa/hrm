@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Put,
   Query,
@@ -27,8 +28,8 @@ export class FeaturesController {
   constructor(private readonly featuresService: FeaturesService) {}
 
   @Get()
-  async findAll() {
-    return this.featuresService.findAll();
+  async findAll(@Query('include_inactive') includeInactive?: string) {
+    return this.featuresService.findAll(includeInactive === 'true');
   }
 
   @Get('items/:item_code')
@@ -79,6 +80,12 @@ export class FeaturesController {
   @Permissions(FEATURE_PERMISSIONS.MANAGE)
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.featuresService.delete(id);
+  }
+
+  @Patch(':id/restore')
+  @Permissions(FEATURE_PERMISSIONS.MANAGE)
+  async restore(@Param('id', ParseIntPipe) id: number) {
+    return this.featuresService.restore(id);
   }
 
   @Post('items/:item_code')

@@ -548,7 +548,11 @@ export class McpToolsService {
     const catalog = await this.prisma.features.findMany({
       include: {
         sourceActions: {
-          include: { action: { select: { id: true, key: true, label: true } } },
+          include: {
+            action: {
+              select: { id: true, key: true, label: true, deleted_at: true },
+            },
+          },
           orderBy: { order: 'asc' },
         },
       },

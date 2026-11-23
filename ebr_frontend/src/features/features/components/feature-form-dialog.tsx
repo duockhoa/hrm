@@ -80,7 +80,12 @@ export default function FeatureFormDialog({
     feature ? createFormFromFeature(feature) : emptyForm,
   );
   const [actionSearch, setActionSearch] = useState("");
-  const availableActions = features.filter((entry) => entry.kind === "action");
+  const availableActions = features.filter(
+    (entry) =>
+      entry.kind === "action" &&
+      (!entry.deleted_at ||
+        feature?.source_actions?.some(({ id }) => id === entry.id)),
+  );
   const getOtherSection = (action: Feature) =>
     action.target_sections?.find((section) => section.id !== feature?.id);
 
@@ -146,6 +151,7 @@ export default function FeatureFormDialog({
                         />
                         <span>
                           {action.label}
+                          {action.deleted_at ? " (Ngừng sử dụng)" : ""}
                           <span className="block text-xs text-gray-500">
                             {action.key}
                           </span>

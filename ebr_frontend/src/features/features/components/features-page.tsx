@@ -28,10 +28,10 @@ import {
 } from "@/components/ui/table";
 import { featuresService } from "@/services/index.service";
 import { isAxiosError } from "axios";
-import { Edit2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Ban, Edit2, Plus, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { FEATURE_KINDS, getFeatureKindOrder } from "../constants";
 import type { CreateFeaturePayload, Feature } from "../types";
 import FeatureFormDialog from "./feature-form-dialog";
@@ -64,7 +64,7 @@ export default function FeaturesPage() {
   const [kindFilter, setKindFilter] = useState("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
-  const [deletingFeature, setDeletingFeature] = useState<Feature | null>(null);
+  const [statusTarget, setStatusTarget] = useState<Feature | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -72,7 +72,21 @@ export default function FeaturesPage() {
     error,
     isLoading,
     mutate,
-  } = useSWR("/features", featuresService.fetchFeatures);
+  } = useSWR(
+    "/features?include_inactive=true",
+    featuresService.fetchIncludingInactive,
+  );
+  const { mutate: revalidate } = useSWRConfig();
+
+  const refreshFeatureLists = () =>
+    Promise.all([
+      mutate(),
+      revalidate(
+        (key) =>
+          typeof key === "string" &&
+          (key === "/features" || key.startsWith("/features/items/")),
+      ),
+    ]);
 
   const filteredFeatures = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -136,7 +150,7 @@ export default function FeaturesPage() {
       }
 
       setIsFormOpen(false);
-      await mutate();
+      await refreshFeatureLists();
     } catch (error) {
       toast.error(getErrorMessage(error, "Không thể lưu tính năng."));
     } finally {
@@ -144,19 +158,26 @@ export default function FeaturesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingFeature) {
+  const handleStatusChange = async () => {
+    if (!statusTarget) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await featuresService.deleteFeature(deletingFeature.id);
-      toast.success("Đã xóa tính năng.");
-      setDeletingFeature(null);
-      await mutate();
+      if (statusTarget.deleted_at) {
+        await featuresService.restoreFeature(statusTarget.id);
+        toast.success("Đã kích hoạt lại tính năng.");
+      } else {
+        await featuresService.deleteFeature(statusTarget.id);
+        toast.success("Đã ngừng sử dụng tính năng.");
+      }
+      setStatusTarget(null);
+      await refreshFeatureLists();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể xóa tính năng."));
+      toast.error(
+        getErrorMessage(error, "Không thể đổi trạng thái tính năng."),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -231,6 +252,7 @@ export default function FeaturesPage() {
                 <TableHead className="w-48">Nhóm tính năng</TableHead>
                 <TableHead>Liên kết dữ liệu</TableHead>
                 <TableHead className="w-28 text-right">Thứ tự</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -238,7 +260,7 @@ export default function FeaturesPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={8}>
+                    <TableCell colSpan={9}>
                       <div className="h-8 animate-pulse rounded bg-gray-100" />
                     </TableCell>
                   </TableRow>
@@ -282,6 +304,9 @@ export default function FeaturesPage() {
                       {feature.default_order}
                     </TableCell>
                     <TableCell>
+                      {feature.deleted_at ? "Ngừng sử dụng" : "Đang sử dụng"}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -294,10 +319,23 @@ export default function FeaturesPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          onClick={() => setDeletingFeature(feature)}
-                          title="Xóa"
+                          onClick={() => setStatusTarget(feature)}
+                          title={
+                            feature.deleted_at
+                              ? "Kích hoạt lại"
+                              : "Ngừng sử dụng"
+                          }
+                          aria-label={
+                            feature.deleted_at
+                              ? "Kích hoạt lại"
+                              : "Ngừng sử dụng"
+                          }
                         >
-                          <Trash2 className="size-4 text-red-600" />
+                          {feature.deleted_at ? (
+                            <RotateCcw className="size-4" />
+                          ) : (
+                            <Ban className="size-4 text-red-600" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -306,7 +344,7 @@ export default function FeaturesPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     Chưa có tính năng phù hợp.
@@ -329,38 +367,46 @@ export default function FeaturesPage() {
       />
 
       <Dialog
-        open={Boolean(deletingFeature)}
-        onOpenChange={(open) =>
-          !open && !isSubmitting && setDeletingFeature(null)
-        }
+        open={Boolean(statusTarget)}
+        onOpenChange={(open) => !open && !isSubmitting && setStatusTarget(null)}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xóa tính năng</DialogTitle>
+            <DialogTitle>
+              {statusTarget?.deleted_at
+                ? "Kích hoạt lại tính năng"
+                : "Ngừng sử dụng tính năng"}
+            </DialogTitle>
             <DialogDescription>
-              Bạn có chắc muốn xóa tính năng này khỏi danh mục?
+              {statusTarget?.deleted_at
+                ? "Tính năng sẽ được áp dụng lại theo cấu hình đã lưu của từng mã hàng."
+                : "Tính năng sẽ ngừng áp dụng trong cấu hình hiện tại của mọi mã hàng. Hồ sơ lô đã chốt vẫn giữ cấu hình đã lưu."}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded border bg-gray-50 p-3">
-            <div className="font-medium">{deletingFeature?.label}</div>
+            <div className="font-medium">{statusTarget?.label}</div>
             <div className="mt-1 font-mono text-xs text-gray-500">
-              {deletingFeature?.key}
+              {statusTarget?.key}
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDeletingFeature(null)}
+              onClick={() => setStatusTarget(null)}
               disabled={isSubmitting}
             >
               Hủy
             </Button>
             <Button
-              variant="destructive"
-              onClick={handleDelete}
+              variant={statusTarget?.deleted_at ? "default" : "destructive"}
+              onClick={handleStatusChange}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Đang xóa..." : "Xóa"}
+              {isSubmitting
+                ? "Đang lưu..."
+                : statusTarget?.deleted_at
+                  ? "Kích hoạt lại"
+                  : "Ngừng sử dụng"}
             </Button>
           </DialogFooter>
         </DialogContent>

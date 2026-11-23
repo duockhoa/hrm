@@ -79,6 +79,9 @@ describe('FeaturesController', () => {
     expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.delete)).toEqual([
       FEATURE_PERMISSIONS.MANAGE,
     ]);
+    expect(Reflect.getMetadata(PERMISSIONS_KEY, controller.restore)).toEqual([
+      FEATURE_PERMISSIONS.MANAGE,
+    ]);
     expect(
       Reflect.getMetadata(PERMISSIONS_KEY, controller.upsertItemFeature),
     ).toEqual([FEATURE_PERMISSIONS.MANAGE]);
@@ -98,7 +101,9 @@ describe('FeaturesController', () => {
     featuresService.findAll.mockResolvedValue(features);
 
     await expect(controller.findAll()).resolves.toBe(features);
-    expect(featuresService.findAll).toHaveBeenCalledWith();
+    expect(featuresService.findAll).toHaveBeenLastCalledWith(false);
+    await expect(controller.findAll('true')).resolves.toBe(features);
+    expect(featuresService.findAll).toHaveBeenLastCalledWith(true);
   });
 
   it('passes item code and includeDisabled query when getting item features', async () => {

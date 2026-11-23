@@ -19,6 +19,7 @@ export type Feature = {
   target_sections?: FeatureReference[];
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
 };
 
 export type CreateFeaturePayload = {

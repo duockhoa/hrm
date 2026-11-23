@@ -69,24 +69,35 @@ const ITEM_FEATURE_INCLUDE = {
 export class FeaturesService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll() {
+  async findAll(includeInactive = false) {
     const features = await this.prismaService.features.findMany({
+      where: includeInactive ? undefined : { deleted_at: null },
       orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
       include: FEATURE_LINK_INCLUDE,
     });
-    return features.map((feature) => ({
-      ...feature,
-      source_actions: linkedActions(feature) ?? [],
-      target_sections:
-        feature.targetSections?.map(({ section }) =>
-          actionReference(section),
-        ) ?? [],
-      supports_required:
-        feature.kind === 'action' &&
-        (feature.targetSections ?? []).some(({ section }) =>
-          supportsRequiredSection(section.key),
-        ),
-    }));
+    return features.map((feature) => {
+      const activeTargets = feature.targetSections?.filter(
+        ({ section }) => !section.deleted_at,
+      );
+      const catalogEntry = includeInactive
+        ? feature
+        : {
+            ...feature,
+            sourceActions: feature.sourceActions?.filter(
+              ({ action }) => !action.deleted_at,
+            ),
+            targetSections: activeTargets,
+          };
+      return {
+        ...catalogEntry,
+        ...featureLinks(catalogEntry),
+        supports_required:
+          feature.kind === 'action' &&
+          (activeTargets ?? []).some(({ section }) =>
+            supportsRequiredSection(section.key),
+          ),
+      };
+    });
   }
 
   async findById(id: number) {
@@ -195,6 +206,7 @@ export class FeaturesService {
             nextKind,
             tx,
             id,
+            existing.sourceActions?.map(({ action_id }) => action_id),
           );
           if (actionIds?.includes(id)) {
             throw new BadRequestException(
@@ -257,10 +269,26 @@ export class FeaturesService {
   }
 
   async delete(id: number) {
-    await this.findById(id);
-
-    return this.prismaService.features.delete({
+    const feature = await this.prismaService.features.findUnique({
       where: { id },
+    });
+    if (!feature) throw new NotFoundException('Feature not found');
+    if (feature.deleted_at) return feature;
+    return this.prismaService.features.update({
+      where: { id },
+      data: { deleted_at: new Date() },
+    });
+  }
+
+  async restore(id: number) {
+    const feature = await this.prismaService.features.findUnique({
+      where: { id },
+    });
+    if (!feature) throw new NotFoundException('Feature not found');
+    if (!feature.deleted_at) return feature;
+    return this.prismaService.features.update({
+      where: { id },
+      data: { deleted_at: null },
     });
   }
 
@@ -282,6 +310,7 @@ export class FeaturesService {
     return client.itemFeatures.findMany({
       where: {
         item_code: normalizedItemCode,
+        feature: { deleted_at: null },
         ...(shouldIncludeDisabled ? {} : { enabled: true }),
       },
       include: ITEM_FEATURE_INCLUDE,
@@ -401,6 +430,7 @@ export class FeaturesService {
           where: { item_code: targetItemCode, deleted_at: null },
         }),
         tx.features.findMany({
+          where: { deleted_at: null },
           orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
           include: FEATURE_LINK_INCLUDE,
         }),
@@ -434,15 +464,21 @@ export class FeaturesService {
             kind: feature.kind,
             label: feature.label,
             group_name: feature.group_name,
-            source_actions: linkedActions(feature) ?? [],
+            source_actions:
+              linkedActions({
+                sourceActions: feature.sourceActions?.filter(
+                  ({ action }) => !action.deleted_at,
+                ),
+              }) ?? [],
             order: sourceFeature?.order ?? feature.default_order,
             enabled: sourceFeature?.enabled ?? false,
             required: Boolean(
               sourceFeature?.required &&
               sourceFeature.enabled &&
               feature.kind === 'action' &&
-              (feature.targetSections ?? []).some(({ section }) =>
-                supportsRequiredSection(section.key),
+              (feature.targetSections ?? []).some(
+                ({ section }) =>
+                  !section.deleted_at && supportsRequiredSection(section.key),
               ),
             ),
           };
@@ -450,7 +486,10 @@ export class FeaturesService {
       );
 
       await tx.itemFeatures.deleteMany({
-        where: { item_code: targetItemCode },
+        where: {
+          item_code: targetItemCode,
+          feature_id: { in: features.map((feature) => feature.id) },
+        },
       });
 
       if (copiedFeatures.length > 0) {
@@ -533,6 +572,7 @@ export class FeaturesService {
       feature_id,
     );
     const feature = await this.findById(feature_id);
+    this.ensureFeatureActive(feature);
     if (feature.kind === 'section' && Object.keys(updateDto).length > 0) {
       updateDto = { ...updateDto, enabled: true, required: false };
     }
@@ -576,11 +616,14 @@ export class FeaturesService {
   private assertRequiredAction(
     feature: { kind: string },
     enabled: boolean,
-    links: { section: { key: string } }[],
+    links: { section: { key: string; deleted_at?: Date | null } }[],
   ) {
     if (
       feature.kind !== 'action' ||
-      !links.some(({ section }) => supportsRequiredSection(section.key))
+      !links.some(
+        ({ section }) =>
+          !section.deleted_at && supportsRequiredSection(section.key),
+      )
     ) {
       throw new BadRequestException(
         'Chỉ action liên kết với section có quy tắc kiểm tra dữ liệu mới được đặt bắt buộc.',
@@ -597,6 +640,7 @@ export class FeaturesService {
     kind: string,
     tx: Prisma.TransactionClient,
     sectionId?: number,
+    existingActionIds: number[] = [],
   ) {
     if (value === undefined) return undefined;
     if (
@@ -620,6 +664,16 @@ export class FeaturesService {
         throw new BadRequestException(
           'Source actions must exist and have kind action.',
         );
+      if (
+        actions.some(
+          (action) =>
+            action.deleted_at && !existingActionIds.includes(action.id),
+        )
+      ) {
+        throw new BadRequestException(
+          'Không thể liên kết action đã ngừng sử dụng.',
+        );
+      }
       const existingLink = await tx.featureSectionActions.findFirst({
         where: {
           action_id: { in: ids },
@@ -799,6 +853,7 @@ export class FeaturesService {
         throw new NotFoundException('Feature not found');
       }
 
+      this.ensureFeatureActive(feature);
       return feature;
     }
 
@@ -816,10 +871,17 @@ export class FeaturesService {
         throw new NotFoundException('Feature not found');
       }
 
+      this.ensureFeatureActive(feature);
       return feature;
     }
 
     throw new BadRequestException('feature_id or feature_key is required');
+  }
+
+  private ensureFeatureActive(feature: { deleted_at?: Date | null }) {
+    if (feature.deleted_at) {
+      throw new BadRequestException('Tính năng đã ngừng sử dụng.');
+    }
   }
 
   private async ensureItemExists(

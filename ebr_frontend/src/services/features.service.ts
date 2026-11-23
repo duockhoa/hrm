@@ -9,8 +9,10 @@ import type {
   UpsertItemFeaturePayload,
 } from "@/features/features/types";
 
-const fetchFeatures = async (): Promise<Feature[]> => {
-  const response = await axiosClient.get(API_ROUTES.features.base);
+const fetchFeatures = async (includeInactive = false): Promise<Feature[]> => {
+  const response = await axiosClient.get(API_ROUTES.features.base, {
+    params: includeInactive ? { include_inactive: true } : undefined,
+  });
   return response.data;
 };
 
@@ -45,6 +47,13 @@ const updateFeature = async (
 const deleteFeature = async (id: string | number) => {
   const response = await axiosClient.delete(
     `${API_ROUTES.features.base}/${id}`,
+  );
+  return response.data;
+};
+
+const restoreFeature = async (id: number): Promise<Feature> => {
+  const response = await axiosClient.patch(
+    `${API_ROUTES.features.base}/${id}/restore`,
   );
   return response.data;
 };
@@ -97,12 +106,14 @@ const copyItemFeatureConfig = async (
 };
 
 const featuresService = {
-  fetchFeatures,
+  fetchFeatures: () => fetchFeatures(),
+  fetchIncludingInactive: () => fetchFeatures(true),
   fetchFeatureById,
   fetchFeatureByKey,
   createFeature,
   updateFeature,
   deleteFeature,
+  restoreFeature,
   fetchItemFeatureConfig,
   upsertItemFeature,
   updateItemFeature,

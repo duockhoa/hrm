@@ -204,9 +204,31 @@ describe('FeaturesService', () => {
       },
     ]);
     expect(prismaService.features.findMany).toHaveBeenCalledWith({
+      where: { deleted_at: null },
       orderBy: [{ default_order: 'asc' }, { key: 'asc' }],
       include: expect.any(Object),
     });
+  });
+
+  it('retires and restores a feature without removing item settings or links', async () => {
+    const active = { id: 2, deleted_at: null };
+    const retired = { ...active, deleted_at: new Date() };
+    prismaService.features.findUnique
+      .mockResolvedValueOnce(active)
+      .mockResolvedValue(retired);
+    prismaService.features.update
+      .mockResolvedValueOnce(retired)
+      .mockResolvedValueOnce(active);
+
+    await expect(service.delete(2)).resolves.toEqual(retired);
+    await expect(service.delete(2)).resolves.toEqual(retired);
+    await expect(service.restore(2)).resolves.toEqual(active);
+    expect(prismaService.features.update.mock.calls).toEqual([
+      [{ where: { id: 2 }, data: { deleted_at: expect.any(Date) } }],
+      [{ where: { id: 2 }, data: { deleted_at: null } }],
+    ]);
+    expect(prismaService.features.delete).not.toHaveBeenCalled();
+    expect(prismaService.itemFeatures.deleteMany).not.toHaveBeenCalled();
   });
 
   it('creates a feature with normalized data', async () => {
@@ -369,6 +391,7 @@ describe('FeaturesService', () => {
       expect.objectContaining({
         where: {
           item_code: 'TP00001',
+          feature: { deleted_at: null },
         },
       }),
     );
@@ -467,7 +490,7 @@ describe('FeaturesService', () => {
     );
   });
 
-  it('copies every feature from the source in one transaction', async () => {
+  it('copies active features in one transaction and preserves retired feature settings', async () => {
     prismaService.items.findFirst
       .mockResolvedValueOnce({ item_code: 'TP00001' })
       .mockResolvedValueOnce({ item_code: 'TP00002' });
@@ -492,6 +515,7 @@ describe('FeaturesService', () => {
     prismaService.itemFeatures.findMany.mockResolvedValue([
       { feature_id: 1, enabled: true, order: null },
       { feature_id: 2, enabled: false, order: 30 },
+      { feature_id: 3, enabled: true, order: 40 },
     ]);
     prismaService.itemFeatures.deleteMany.mockResolvedValue({ count: 1 });
     prismaService.itemFeatures.createMany.mockResolvedValue({ count: 2 });
@@ -532,8 +556,11 @@ describe('FeaturesService', () => {
     });
     expect(prismaService.$transaction).toHaveBeenCalledTimes(1);
     expect(prismaService.itemFeatures.deleteMany).toHaveBeenCalledWith({
-      where: { item_code: 'TP00002' },
+      where: { item_code: 'TP00002', feature_id: { in: [1, 2] } },
     });
+    expect(prismaService.features.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { deleted_at: null } }),
+    );
     expect(prismaService.itemFeatures.createMany).toHaveBeenCalledWith({
       data: [
         {

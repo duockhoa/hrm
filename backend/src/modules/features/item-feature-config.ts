@@ -76,8 +76,14 @@ export const buildCurrentItemFeatureConfig = (
     label: string;
     group_name: string | null;
     default_order: number;
+    deleted_at?: Date | null;
     sourceActions?: {
-      action: { id: number; key: string; label: string };
+      action: {
+        id: number;
+        key: string;
+        label: string;
+        deleted_at?: Date | null;
+      };
       order: number;
     }[];
   }[],
@@ -91,27 +97,29 @@ export const buildCurrentItemFeatureConfig = (
 ) => {
   const byId = new Map(settings.map((entry) => [entry.feature_id, entry]));
   const features = deriveSectionActivation(
-    catalog.map((feature) => {
-      const setting = byId.get(feature.id);
-      return {
-        feature_id: feature.id,
-        key: feature.key,
-        kind: feature.kind,
-        label: feature.label,
-        group_name: feature.group_name,
-        order: setting?.order ?? feature.default_order,
-        enabled: setting?.enabled ?? false,
-        required: setting?.required ?? false,
-        source_actions: (feature.sourceActions ?? []).map(
-          ({ action, order }) => ({
-            id: action.id,
-            key: action.key,
-            label: action.label,
-            order,
-          }),
-        ),
-      };
-    }),
+    catalog
+      .filter((feature) => !feature.deleted_at)
+      .map((feature) => {
+        const setting = byId.get(feature.id);
+        return {
+          feature_id: feature.id,
+          key: feature.key,
+          kind: feature.kind,
+          label: feature.label,
+          group_name: feature.group_name,
+          order: setting?.order ?? feature.default_order,
+          enabled: setting?.enabled ?? false,
+          required: setting?.required ?? false,
+          source_actions: (feature.sourceActions ?? [])
+            .filter(({ action }) => !action.deleted_at)
+            .map(({ action, order }) => ({
+              id: action.id,
+              key: action.key,
+              label: action.label,
+              order,
+            })),
+        };
+      }),
   ).sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
   return buildItemFeatureConfig(
     itemCode,

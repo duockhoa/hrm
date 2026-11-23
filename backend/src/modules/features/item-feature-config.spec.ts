@@ -1,6 +1,7 @@
 import { InternalServerErrorException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  buildCurrentItemFeatureConfig,
   buildItemFeatureConfig,
   createFeatureConfigSnapshot,
   readFeatureConfigSnapshot,
@@ -21,6 +22,59 @@ describe('section action snapshots', () => {
   const sourceActions = [
     { id: 2, key: 'create_check', label: 'Create check', order: 0 },
   ];
+
+  it('hides retired features in the live config while keeping saved links and snapshots usable', () => {
+    const action = {
+      id: 2,
+      key: 'create_check',
+      kind: 'action',
+      label: 'Create check',
+      group_name: null,
+      default_order: 0,
+      deleted_at: null as Date | null,
+    };
+    const currentConfig = () =>
+      buildCurrentItemFeatureConfig(
+        'TP01',
+        [
+          action,
+          {
+            id: 10,
+            key: section.key,
+            kind: 'section',
+            label: section.label,
+            group_name: null,
+            default_order: 0,
+            sourceActions: [{ action, order: 0 }],
+          },
+        ],
+        [{ feature_id: 2, order: null, enabled: true, required: true }],
+        true,
+      );
+    const snapshot = createFeatureConfigSnapshot(currentConfig(), new Date());
+
+    action.deleted_at = new Date();
+    expect(currentConfig().actions).toEqual([]);
+    expect(currentConfig().sections[0]).toMatchObject({
+      enabled: false,
+      required: false,
+      source_actions: [],
+    });
+    expect(
+      readFeatureConfigSnapshot(snapshot, 'TP01')?.sections[0],
+    ).toMatchObject({
+      enabled: true,
+      required: true,
+      source_actions: sourceActions,
+    });
+
+    action.deleted_at = null;
+    expect(currentConfig().sections[0]).toMatchObject({
+      enabled: true,
+      required: true,
+      source_actions: sourceActions,
+    });
+  });
 
   it('derives section activation from any enabled linked action, ignoring old section flags', () => {
     const action = {

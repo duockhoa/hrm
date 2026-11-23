@@ -837,6 +837,7 @@ model Features {
   default_order Int            @default(0)
   created_at    DateTime       @default(now())
   updated_at    DateTime       @default(now()) @updatedAt
+  deleted_at    DateTime?
   itemFeatures  ItemFeatures[]
   sourceActions FeatureSectionActions[] @relation("SectionSourceActions")
   targetSections FeatureSectionActions[] @relation("ActionTargetSections")
