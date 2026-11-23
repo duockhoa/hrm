@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { isAxiosError } from "axios";
 import { RefreshCw, Search } from "lucide-react";
+import { toast } from "sonner";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,16 +16,55 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { matchesSearchKeyword } from "@/lib/search-utils";
+import { API_ROUTES } from "@/lib/api-routes";
 import businessPartnersService, {
   SUPPLIERS_URL,
 } from "@/services/business-partners.service";
+import userService from "@/services/user.service";
 
 export default function SuppliersPage() {
   const [keyword, setKeyword] = useState("");
-  const { data, error, isLoading, isValidating, mutate } = useSWR(
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { data: user } = useSWR(API_ROUTES.users.me, userService.fetcherMe);
+  const { data: permissions, error: permissionError } = useSWR(
+    user?.id ? [API_ROUTES.users.myPermissions, user.id] : null,
+    userService.fetchMyPermissions,
+  );
+  const canSync =
+    !permissionError && permissions?.permissionKeys.includes("items.update");
+  const { data, error, isLoading, mutate } = useSWR(
     SUPPLIERS_URL,
     businessPartnersService.listSuppliers,
   );
+
+  const syncSuppliers = async () => {
+    if (!canSync || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      const { synced, failed } = await businessPartnersService.syncSuppliers();
+      if (failed) {
+        toast.warning(
+          `Đã đồng bộ ${synced} nhà cung cấp. Có ${failed} bản ghi lỗi.`,
+        );
+      } else {
+        toast.success(`Đã đồng bộ ${synced} nhà cung cấp từ SAP.`);
+      }
+      await mutate().catch(() => {
+        toast.error(
+          "Đã đồng bộ SAP nhưng chưa tải lại được danh sách nhà cung cấp.",
+        );
+      });
+    } catch (error) {
+      const message = isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message
+        : undefined;
+      toast.error(
+        message || "Không nhận được kết quả đồng bộ SAP. Vui lòng thử lại.",
+      );
+    } finally {
+      setIsSyncing(false);
+    }
+  };
   const suppliers = useMemo(
     () =>
       (data ?? []).filter(({ card_code, card_name, tax_code }) =>
@@ -42,19 +83,20 @@ export default function SuppliersPage() {
               Danh sách nhà cung cấp được đồng bộ từ SAP.
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            disabled={isValidating}
-            onClick={() => void mutate()}
-            title="Tải lại"
-            aria-label="Tải lại danh sách nhà cung cấp"
-          >
-            <RefreshCw
-              className={isValidating ? "size-4 animate-spin" : "size-4"}
-            />
-          </Button>
+          {canSync && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSyncing}
+              aria-busy={isSyncing}
+              onClick={() => void syncSuppliers()}
+            >
+              <RefreshCw
+                className={isSyncing ? "size-4 animate-spin" : "size-4"}
+              />
+              {isSyncing ? "Đang đồng bộ…" : "Đồng bộ SAP"}
+            </Button>
+          )}
         </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
@@ -73,7 +115,7 @@ export default function SuppliersPage() {
             role="alert"
             className="mb-3 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700"
           >
-            Không thể tải danh sách nhà cung cấp. Vui lòng nhấn Tải lại.
+            Không thể tải danh sách nhà cung cấp. Vui lòng thử lại.
           </p>
         )}
         <Table aria-label="Danh sách nhà cung cấp">

@@ -40,6 +40,14 @@ export class SapB1ConnectorController {
     return this.sapB1ConnectorService.syncItems();
   }
 
+  @Post('suppliers/sync')
+  @HttpCode(HttpStatus.OK)
+  @Permissions(ITEM_PERMISSIONS.UPDATE)
+  @UseGuards(PermissionsGuard, NetworkPolicyGuard)
+  async syncSuppliers() {
+    return this.sapB1ConnectorService.syncSuppliers();
+  }
+
   @Get('production-orders')
   async getProductionOrders() {
     return this.sapB1Client.getProductionOrders();

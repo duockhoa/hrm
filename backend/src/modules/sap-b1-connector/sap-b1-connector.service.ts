@@ -1,4 +1,9 @@
-import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadGatewayException,
+  ConflictException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma.service';
 import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
@@ -25,6 +30,11 @@ type SyncProductionOrderOptions = {
   throwOnSkip?: boolean;
 };
 
+export type BusinessPartnerSyncResult = {
+  synced: number;
+  failed: number;
+};
+
 @Injectable()
 export class SapB1ConnectorService {
   constructor(
@@ -38,30 +48,57 @@ export class SapB1ConnectorService {
   @Cron('0 */30 * * * *')
   async handleCronSyncBusinessPartners() {
     if (this.businessPartnersSyncRunning) return;
+    try {
+      await this.syncBusinessPartners();
+    } catch {
+      // The sync logs failures before returning them to manual callers.
+    }
+  }
+
+  syncSuppliers() {
+    return this.syncBusinessPartners('cSupplier');
+  }
+
+  private async syncBusinessPartners(
+    cardType?: 'cSupplier',
+  ): Promise<BusinessPartnerSyncResult> {
+    if (this.businessPartnersSyncRunning) {
+      throw new ConflictException(
+        'Đang có đợt đồng bộ đối tác SAP. Vui lòng thử lại sau.',
+      );
+    }
     this.businessPartnersSyncRunning = true;
     try {
-      const partners = await this.sapB1Client.getBusinessPartners();
+      const partners = await this.sapB1Client.getBusinessPartners(cardType);
+      const result: BusinessPartnerSyncResult = { synced: 0, failed: 0 };
       for (const partner of partners) {
         try {
           const data = this.mapBusinessPartner(partner);
+          if (cardType && data.card_type !== cardType) {
+            throw new Error('Unexpected partner type in supplier sync');
+          }
           await this.prismaService.businessPartners.upsert({
             where: { card_code: data.card_code },
             create: data,
             update: data,
           });
+          result.synced += 1;
         } catch (error) {
+          result.failed += 1;
           this.logger.warn(
-            `Failed to sync business partner ${partner.CardCode ?? '(missing code)'}: ${error instanceof Error ? error.message : error}`,
+            `Failed to sync business partner ${partner?.CardCode ?? '(missing code)'}: ${error instanceof Error ? error.message : error}`,
           );
         }
       }
       this.logger.log(
         `Business partner sync finished: ${partners.length} records fetched`,
       );
+      return result;
     } catch (error) {
       this.logger.error(
         `Failed to fetch/sync business partners: ${error instanceof Error ? error.message : error}`,
       );
+      throw new BadGatewayException('Không thể tải danh sách đối tác từ SAP.');
     } finally {
       this.businessPartnersSyncRunning = false;
     }

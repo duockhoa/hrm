@@ -12,6 +12,12 @@ const businessPartnersService = {
   async listSuppliers(): Promise<Supplier[]> {
     return (await axiosClient.get(SUPPLIERS_URL)).data;
   },
+  async syncSuppliers() {
+    const response = await axiosClient.post<{ synced: number; failed: number }>(
+      "/sap-b1-connector/suppliers/sync",
+    );
+    return response.data;
+  },
 };
 
 export default businessPartnersService;

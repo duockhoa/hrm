@@ -81,6 +81,25 @@ describe('SAP business partner sync', () => {
     expect(upsert.mock.calls[2][0].where.card_code).toBe('LEAD001');
   });
 
+  it('syncs suppliers on demand and leaves other SAP partner types untouched', async () => {
+    getBusinessPartners.mockResolvedValue([
+      partner,
+      { ...partner, CardCode: 'KH001', CardType: 'cCustomer' },
+    ]);
+
+    await expect(service.syncSuppliers()).resolves.toEqual({
+      synced: 1,
+      failed: 1,
+    });
+    expect(getBusinessPartners).toHaveBeenCalledWith('cSupplier');
+    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { card_code: partner.CardCode },
+      }),
+    );
+  });
+
   it('prevents overlapping runs and releases the lock after fetch failure', async () => {
     let rejectFetch!: (error: Error) => void;
     getBusinessPartners.mockReturnValueOnce(
@@ -90,6 +109,9 @@ describe('SAP business partner sync', () => {
     );
     const running = service.handleCronSyncBusinessPartners();
     await service.handleCronSyncBusinessPartners();
+    await expect(service.syncSuppliers()).rejects.toMatchObject({
+      status: 409,
+    });
     expect(getBusinessPartners).toHaveBeenCalledTimes(1);
     rejectFetch(new Error('SAP unavailable'));
     await running;

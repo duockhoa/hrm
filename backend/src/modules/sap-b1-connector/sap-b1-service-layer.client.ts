@@ -51,9 +51,10 @@ export class SapB1ServiceLayerClient {
     );
   }
 
-  async getBusinessPartners() {
+  async getBusinessPartners(cardType?: 'cSupplier') {
+    const filter = cardType ? `&$filter=CardType eq '${cardType}'` : '';
     return this.fetchAllPages<SapBusinessPartner>(
-      `BusinessPartners?$select=${SAP_BP_SELECT}&$orderby=CardCode`,
+      `BusinessPartners?$select=${SAP_BP_SELECT}&$orderby=CardCode${filter}`,
     );
   }
 
