@@ -28,7 +28,7 @@ Tất cả API yêu cầu `Authorization: Bearer <access_token>`, không gắn p
 POST sử dụng `multipart/form-data`:
 
 - `attachment_type`: một trong ba giá trị trên, bắt buộc.
-- `files`: từ 1 đến 10 file/lần, tối đa 5 MB/file.
+- `files`: từ 1 đến 10 file/lần, tối đa 20 MB/file.
 - Chấp nhận JPG/JPEG, PNG, WEBP, GIF. Kiểm tra nội dung ảnh thực tế và MIME type.
 - Không gửi trường khác; không gửi đường dẫn file hoặc ID người tải.
 - POST trả HTTP 201 với mảng bản ghi ảnh đã tạo; các API còn lại trả 200.
@@ -57,7 +57,7 @@ API chỉ nhận ảnh; không nhận PDF ở phiên bản này.
 Form WMS đặt ba khu vực ảnh phiếu xuất kho, COA và hoá đơn ngay trước ghi chú,
 có nút **Chọn file** và **Chụp ảnh** như form sai lệch của EBR. Người dùng có thể
 xem ảnh, bỏ chọn ảnh mới, đánh dấu bỏ ảnh đã lưu và hoàn tác trước khi lưu.
-Mỗi nhóm cho chọn tối đa 10 ảnh mới, tối đa 5 MB/ảnh, trong một lần lưu.
+Mỗi nhóm cho chọn tối đa 10 ảnh mới, tối đa 20 MB/ảnh, trong một lần lưu.
 Ảnh được tải lên sau khi lưu hàng nhập kho; ảnh cũ chỉ xoá sau khi các nhóm ảnh
 mới tải thành công. Nếu một bước tải/xoá lỗi, form giữ ID hàng đã lưu và các
 thay đổi ảnh còn lại để thử lại; các bước đã nhận phản hồi thành công không lặp lại.

@@ -77,11 +77,11 @@ const attachment = (
   created_at: "2026-10-09T00:00:00Z",
 });
 
-test("accepts each supported format and ten images up to 5 MB", () => {
+test("accepts each supported format and ten images up to 20 MB", () => {
   for (const type of ["image/jpeg", "image/png", "image/webp", "image/gif"])
     assert.equal(validateReceiptImages([image("image", type)]), null);
   assert.equal(
-    validateReceiptImages([image("image.jpg", "image/jpeg", 5 * 1024 * 1024)]),
+    validateReceiptImages([image("image.jpg", "image/jpeg", 20 * 1024 * 1024)]),
     null,
   );
   assert.equal(
@@ -102,9 +102,9 @@ test("rejects unsupported, empty, oversized images and excessive counts before s
   );
   assert.match(
     validateReceiptImages([
-      image("large.jpg", "image/jpeg", 5 * 1024 * 1024 + 1),
+      image("large.jpg", "image/jpeg", 20 * 1024 * 1024 + 1),
     ])!,
-    /5 MB/,
+    /20 MB/,
   );
   assert.match(
     validateReceiptImages(Array.from({ length: 11 }, () => image()))!,

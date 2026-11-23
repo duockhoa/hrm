@@ -57,7 +57,6 @@ const columns = [
   "Quy cách đóng gói",
   "Ảnh PXK",
   "Ảnh COA",
-  "Ảnh HĐ",
   "Gửi PYCLM",
   "Nhập SAP",
   "Người nhập",
@@ -92,7 +91,7 @@ function rowValues(receipt: WarehouseReceiptItem) {
     receipt.lot_number,
     formatExpiryDate(receipt.expiry_date),
     receipt.packaging_specification,
-    ...(["dispatch_note", "coa", "invoice"] as const).map((type) => (
+    ...(["dispatch_note", "coa"] as const).map((type) => (
       <ReceiptStatus
         key={`image-status-${type}`}
         done={Boolean(

@@ -29,6 +29,7 @@ export const emptyReceiptImages = (): PendingReceiptImages => ({
 });
 
 export const MAX_RECEIPT_IMAGES_PER_UPLOAD = 10;
+export const MAX_RECEIPT_IMAGE_SIZE_MB = 20;
 export const RECEIPT_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 
 // Each effect setup owns a fresh URL; a cancelled setup must not publish it.
@@ -56,8 +57,8 @@ export function validateReceiptImages(files: File[]) {
     if (!RECEIPT_IMAGE_ACCEPT.split(",").includes(file.type))
       return `Ảnh "${file.name}" phải là JPG, PNG, WEBP hoặc GIF.`;
     if (file.size === 0) return `Ảnh "${file.name}" không có dữ liệu.`;
-    if (file.size > 5 * 1024 * 1024)
-      return `Ảnh "${file.name}" vượt quá giới hạn 5 MB.`;
+    if (file.size > MAX_RECEIPT_IMAGE_SIZE_MB * 1024 * 1024)
+      return `Ảnh "${file.name}" vượt quá giới hạn ${MAX_RECEIPT_IMAGE_SIZE_MB} MB.`;
   }
   return null;
 }

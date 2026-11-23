@@ -49,6 +49,7 @@ import warehouseReceiptItemsService, {
 } from "@/services/warehouse-receipt-items.service";
 import ReceiptImagePicker from "./receipt-image-picker";
 import {
+  MAX_RECEIPT_IMAGE_SIZE_MB,
   RECEIPT_ATTACHMENT_GROUPS,
   emptyReceiptImages,
   saveReceiptImages,
@@ -80,7 +81,8 @@ export function receiptError(error: unknown, fallback: string) {
 
 export function receiptImageError(error: unknown) {
   if (isAxiosError(error)) {
-    if (error.response?.status === 413) return "Ảnh vượt quá giới hạn 5 MB.";
+    if (error.response?.status === 413)
+      return `Ảnh vượt quá giới hạn ${MAX_RECEIPT_IMAGE_SIZE_MB} MB.`;
     if (error.response?.status === 401) return "Phiên đăng nhập đã hết hạn.";
     if (error.response?.status === 404)
       return "Không tìm thấy hàng nhập kho hoặc ảnh cần xoá.";
@@ -92,8 +94,8 @@ export function receiptImageError(error: unknown) {
         "Định dạng ảnh không khớp với nội dung file.",
       "files must be JPG, PNG, WEBP or GIF images":
         "Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF.",
-      "Invalid image or image exceeds 5 MB":
-        "Ảnh không hợp lệ hoặc vượt quá giới hạn 5 MB.",
+      [`Invalid image or image exceeds ${MAX_RECEIPT_IMAGE_SIZE_MB} MB`]:
+        `Ảnh không hợp lệ hoặc vượt quá giới hạn ${MAX_RECEIPT_IMAGE_SIZE_MB} MB.`,
     };
     if (typeof message === "string" && messages[message])
       return messages[message];

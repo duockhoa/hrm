@@ -23,7 +23,8 @@ export const RECEIPT_ATTACHMENT_TYPES = [
   'invoice',
 ] as const;
 export const MAX_RECEIPT_ATTACHMENT_FILES = 10;
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE_MB = 20;
+const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
 const formats = {
   'image/jpeg': { format: 'jpeg', extension: '.jpg' },
   'image/png': { format: 'png', extension: '.png' },
@@ -34,7 +35,8 @@ const formats = {
 export const receiptAttachmentUploadOptions = {
   storage: memoryStorage(),
   limits: {
-    fileSize: MAX_FILE_SIZE,
+    // Busboy emits a limit event at the threshold. Accept the full 20 MB.
+    fileSize: MAX_FILE_SIZE + 1,
     files: MAX_RECEIPT_ATTACHMENT_FILES,
     fields: 1,
     fieldSize: 100,
@@ -69,7 +71,9 @@ export function resolveReceiptAttachmentPath(filePath: string) {
 export async function validateReceiptAttachment(file: Express.Multer.File) {
   const format = formats[file.mimetype as keyof typeof formats];
   if (!format || !file.buffer?.length || file.buffer.length > MAX_FILE_SIZE) {
-    throw new BadRequestException('Invalid image or image exceeds 5 MB');
+    throw new BadRequestException(
+      `Invalid image or image exceeds ${MAX_FILE_SIZE_MB} MB`,
+    );
   }
   let detected: string | undefined;
   try {

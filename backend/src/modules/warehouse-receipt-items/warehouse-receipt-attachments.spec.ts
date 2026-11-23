@@ -237,10 +237,24 @@ describe('Warehouse receipt attachment API', () => {
     expect(attachments.create).not.toHaveBeenCalled();
   });
 
-  it('rejects files over 5 MB', async () => {
+  it('accepts a valid image of exactly 20 MB', async () => {
+    const size = 20 * 1024 * 1024;
+    const paddedImage = Buffer.alloc(size);
+    image.copy(paddedImage);
+    const response = await upload()
+      .field('attachment_type', 'invoice')
+      .attach('files', paddedImage, {
+        filename: 'scan.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+    expect(response.body).toMatchObject([{ file_size: size }]);
+  });
+
+  it('rejects files over 20 MB', async () => {
     await upload()
       .field('attachment_type', 'invoice')
-      .attach('files', Buffer.alloc(5 * 1024 * 1024 + 1), {
+      .attach('files', Buffer.alloc(20 * 1024 * 1024 + 1), {
         filename: 'scan.png',
         contentType: 'image/png',
       })
