@@ -81,7 +81,7 @@ export default function ItemDetailPage() {
               <div className="w-full max-w-4xl rounded border bg-white p-4 shadow-md">
                 <Skeleton className="mx-auto h-10 w-3/4" />
                 <div className="mt-6 space-y-4">
-                  {Array.from({ length: 5 }, (_, index) => (
+                  {Array.from({ length: 4 }, (_, index) => (
                     <Skeleton key={index} className="h-5 w-full" />
                   ))}
                 </div>
@@ -114,15 +114,6 @@ export default function ItemDetailPage() {
                   />
                   <FieldDisplay lable="Mã DK" value={data.dk_code ?? ""} />
                   <FieldDisplay lable="Đơn vị tính" value={data.unit ?? ""} />
-                  <FieldDisplay
-                    lable="Số đăng ký"
-                    value={[
-                      data.registration?.registration_number,
-                      data.registration?.product_name,
-                    ]
-                      .filter(Boolean)
-                      .join(" - ")}
-                  />
                 </div>
                 <ItemReceiptHistory
                   key={data.item_code}
