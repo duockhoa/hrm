@@ -85,9 +85,12 @@ export class ProductionOrderFiltrationChecksService {
   }
 
   async update(checkId: number, dto: UpdateProductionOrderFiltrationCheckDto) {
-    await this.ensureCheckExists(checkId);
+    const existing = await this.ensureCheckExists(checkId);
     const data = this.normalizeUpdateData(dto);
-    await this.ensureReferencesExist(data as Record<string, unknown>);
+    await this.ensureReferencesExist(
+      data as Record<string, unknown>,
+      existing.filter_membrane_id,
+    );
 
     return this.prismaService.productionOrderFiltrationChecks.update({
       where: { id: checkId },
@@ -191,16 +194,24 @@ export class ProductionOrderFiltrationChecksService {
     return data;
   }
 
-  private async ensureReferencesExist(data: Record<string, unknown>) {
-    if (typeof data.filter_membrane_id === 'number') {
+  private async ensureReferencesExist(
+    data: Record<string, unknown>,
+    currentFilterId?: number | null,
+  ) {
+    if (
+      typeof data.filter_membrane_id === 'number' &&
+      data.filter_membrane_id !== currentFilterId
+    ) {
       const filter = await this.prismaService.filterCatalogs.findUnique({
         where: { id: data.filter_membrane_id },
-        select: { id: true },
+        select: { id: true, deleted_at: true },
       });
 
       if (!filter) {
         throw new NotFoundException('Filter membrane not found');
       }
+      if (filter.deleted_at)
+        throw new BadRequestException('Cột lọc đã ngừng sử dụng.');
     }
 
     for (const field of [
@@ -239,12 +250,13 @@ export class ProductionOrderFiltrationChecksService {
     const check =
       await this.prismaService.productionOrderFiltrationChecks.findUnique({
         where: { id: checkId },
-        select: { id: true },
+        select: { id: true, filter_membrane_id: true },
       });
 
     if (!check) {
       throw new NotFoundException('Filtration check not found');
     }
+    return check;
   }
 
   private normalizeOptionalText(value: unknown) {

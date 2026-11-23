@@ -63,8 +63,8 @@ export default function FiltrationCheckDetail({
     id?: number;
   }>(API_ROUTES.users.me, userService.fetcherMe);
   const { data: filterCatalogs } = useSWR<FilterCatalog[]>(
-    API_ROUTES.filterCatalogs.base,
-    filterCatalogsService.fetchFilterCatalogs,
+    `${API_ROUTES.filterCatalogs.base}?include_inactive=true`,
+    filterCatalogsService.fetchIncludingInactive,
   );
   const selectedFilterCatalog = (filterCatalogs ?? []).find(
     (filterCatalog) => filterCatalog.id === data?.filter_membrane_id,

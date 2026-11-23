@@ -26,10 +26,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { filterCatalogsService } from "@/services/index.service";
-import { Edit2, Eye, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Ban, Edit2, Eye, Plus, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type {
   CreateFilterCatalogPayload,
   FilterCatalog,
@@ -132,7 +132,7 @@ export default function FilterCatalogsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFilterCatalog, setEditingFilterCatalog] =
     useState<FilterCatalog | null>(null);
-  const [deletingFilterCatalog, setDeletingFilterCatalog] =
+  const [statusTarget, setStatusTarget] =
     useState<FilterCatalog | null>(null);
   const [detailFilterCatalogId, setDetailFilterCatalogId] = useState<
     number | null
@@ -145,7 +145,11 @@ export default function FilterCatalogsPage() {
     error,
     isLoading,
     mutate,
-  } = useSWR("/filter-catalogs", filterCatalogsService.fetchFilterCatalogs);
+  } = useSWR(
+    "/filter-catalogs?include_inactive=true",
+    filterCatalogsService.fetchIncludingInactive,
+  );
+  const { mutate: revalidate } = useSWRConfig();
 
   const filteredFilterCatalogs = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -227,7 +231,7 @@ export default function FilterCatalogsPage() {
       }
 
       setIsFormOpen(false);
-      await mutate();
+      await Promise.all([mutate(), revalidate("/filter-catalogs")]);
     } catch (error) {
       toast.error(getErrorMessage(error, "Không thể lưu danh mục cột lọc."));
     } finally {
@@ -235,19 +239,24 @@ export default function FilterCatalogsPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingFilterCatalog) {
+  const handleStatusChange = async () => {
+    if (!statusTarget) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await filterCatalogsService.deleteFilterCatalog(deletingFilterCatalog.id);
-      toast.success("Đã xóa danh mục cột lọc.");
-      setDeletingFilterCatalog(null);
-      await mutate();
+      if (statusTarget.deleted_at) {
+        await filterCatalogsService.restore(statusTarget.id);
+        toast.success("Đã kích hoạt lại cột lọc.");
+      } else {
+        await filterCatalogsService.deleteFilterCatalog(statusTarget.id);
+        toast.success("Đã ngừng sử dụng cột lọc.");
+      }
+      setStatusTarget(null);
+      await Promise.all([mutate(), revalidate("/filter-catalogs")]);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể xóa danh mục cột lọc."));
+      toast.error(getErrorMessage(error, "Không thể đổi trạng thái danh mục cột lọc."));
     } finally {
       setIsSubmitting(false);
     }
@@ -313,6 +322,7 @@ export default function FilterCatalogsPage() {
                 <TableHead>Yêu cầu cảm quan sau lọc</TableHead>
                 <TableHead>Yêu cầu toàn vẹn</TableHead>
                 <TableHead>Mô tả</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -320,7 +330,7 @@ export default function FilterCatalogsPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={10}>
+                    <TableCell colSpan={11}>
                       <div className="h-8 animate-pulse rounded bg-gray-100" />
                     </TableCell>
                   </TableRow>
@@ -360,6 +370,9 @@ export default function FilterCatalogsPage() {
                       {filterCatalog.description ?? ""}
                     </TableCell>
                     <TableCell>
+                      {filterCatalog.deleted_at ? "Ngừng sử dụng" : "Đang sử dụng"}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -380,10 +393,19 @@ export default function FilterCatalogsPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          onClick={() => setDeletingFilterCatalog(filterCatalog)}
-                          title="Xóa"
+                          onClick={() => setStatusTarget(filterCatalog)}
+                          title={
+                            filterCatalog.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
+                          }
+                          aria-label={
+                            filterCatalog.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
+                          }
                         >
-                          <Trash2 className="size-4 text-red-600" />
+                          {filterCatalog.deleted_at ? (
+                            <RotateCcw className="size-4" />
+                          ) : (
+                            <Ban className="size-4 text-red-600" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -392,7 +414,7 @@ export default function FilterCatalogsPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={11}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     Chưa có danh mục cột lọc phù hợp.
@@ -656,36 +678,45 @@ export default function FilterCatalogsPage() {
       </Dialog>
 
       <Dialog
-        open={Boolean(deletingFilterCatalog)}
-        onOpenChange={(open) => !open && setDeletingFilterCatalog(null)}
+        open={Boolean(statusTarget)}
+        onOpenChange={(open) => !open && setStatusTarget(null)}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xóa danh mục cột lọc</DialogTitle>
+            <DialogTitle>
+              {statusTarget?.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"}{" "}
+              cột lọc
+            </DialogTitle>
             <DialogDescription>
-              Bạn có chắc muốn xóa danh mục cột lọc này?
+              {statusTarget?.deleted_at
+                ? "Mục này sẽ xuất hiện lại trong danh sách chọn."
+                : "Mục này sẽ ẩn khỏi danh sách chọn mới. Hồ sơ cũ vẫn giữ liên kết."}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded border bg-gray-50 p-3">
-            <div className="font-medium">{deletingFilterCatalog?.filter_type}</div>
+            <div className="font-medium">{statusTarget?.filter_type}</div>
             <div className="mt-1 font-mono text-xs text-gray-500">
-              {deletingFilterCatalog?.filter_code}
+              {statusTarget?.filter_code}
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDeletingFilterCatalog(null)}
+              onClick={() => setStatusTarget(null)}
               disabled={isSubmitting}
             >
               Hủy
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDelete}
+              onClick={handleStatusChange}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Đang xóa..." : "Xóa"}
+              {isSubmitting
+                ? "Đang lưu..."
+                : statusTarget?.deleted_at
+                  ? "Kích hoạt lại"
+                  : "Ngừng sử dụng"}
             </Button>
           </DialogFooter>
         </DialogContent>

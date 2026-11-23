@@ -168,7 +168,7 @@ export class ProductionSpecificationsService {
       });
     }
 
-    const data = await this.buildUpdateData(updateDto);
+    const data = await this.buildUpdateData(updateDto, existing);
     data.updated_by_id = userId;
 
     return this.prismaService.productionSpecifications.update({
@@ -344,15 +344,24 @@ export class ProductionSpecificationsService {
     };
   }
 
-  private async buildUpdateData(dto: UpdateProductionSpecificationDto) {
+  private async buildUpdateData(
+    dto: UpdateProductionSpecificationDto,
+    existing: { product_line_id: number | null; dosage_form_id: number | null },
+  ) {
     const data: Prisma.ProductionSpecificationsUncheckedUpdateInput = {};
 
     if (this.hasProductLineInput(dto)) {
-      data.product_line_id = await this.resolveProductLineId(dto);
+      data.product_line_id = await this.resolveProductLineId(
+        dto,
+        existing.product_line_id,
+      );
     }
 
     if (dto.dosage_form_id !== undefined) {
-      data.dosage_form_id = await this.resolveDosageFormId(dto);
+      data.dosage_form_id = await this.resolveDosageFormId(
+        dto,
+        existing.dosage_form_id,
+      );
     }
 
     if (dto.lower_control_limit !== undefined) {
@@ -581,6 +590,7 @@ export class ProductionSpecificationsService {
 
   private async resolveProductLineId(
     dto: CreateProductionSpecificationDto | UpdateProductionSpecificationDto,
+    currentId?: number | null,
   ) {
     if (dto.product_line_id !== undefined || dto.productLineId !== undefined) {
       const productLineId = this.normalizeOptionalInt(
@@ -592,7 +602,8 @@ export class ProductionSpecificationsService {
         return null;
       }
 
-      await this.ensureProductLineExists(productLineId);
+      if (productLineId !== currentId)
+        await this.ensureProductLineExists(productLineId);
 
       return productLineId;
     }
@@ -606,7 +617,7 @@ export class ProductionSpecificationsService {
       return null;
     }
 
-    return this.findOrCreateProductLineId(productLineName);
+    return this.findOrCreateProductLineId(productLineName, currentId);
   }
 
   private async ensureProductLineExists(id: number) {
@@ -617,10 +628,14 @@ export class ProductionSpecificationsService {
     if (!productLine) {
       throw new NotFoundException('Product line not found');
     }
+    if (productLine.deleted_at) {
+      throw new BadRequestException('Dòng sản phẩm đã ngừng sử dụng.');
+    }
   }
 
   private async resolveDosageFormId(
     dto: CreateProductionSpecificationDto | UpdateProductionSpecificationDto,
+    currentId?: number | null,
   ) {
     const dosageFormId = this.normalizeOptionalInt(
       dto.dosage_form_id,
@@ -631,6 +646,8 @@ export class ProductionSpecificationsService {
       return null;
     }
 
+    if (dosageFormId === currentId) return dosageFormId;
+
     const dosageForm = await this.prismaService.dosageForms.findUnique({
       where: { id: dosageFormId },
     });
@@ -639,15 +656,25 @@ export class ProductionSpecificationsService {
       throw new NotFoundException('Dosage form not found');
     }
 
+    if (dosageForm.deleted_at) {
+      throw new BadRequestException('Dạng bào chế đã ngừng sử dụng.');
+    }
     return dosageFormId;
   }
 
-  private async findOrCreateProductLineId(name: string) {
+  private async findOrCreateProductLineId(
+    name: string,
+    currentId?: number | null,
+  ) {
     const existing = await this.prismaService.productLines.findFirst({
       where: { name },
+      orderBy: [{ deleted_at: 'asc' }, { id: 'asc' }],
     });
 
     if (existing) {
+      if (existing.deleted_at && existing.id !== currentId) {
+        throw new BadRequestException('Dòng sản phẩm đã ngừng sử dụng.');
+      }
       return existing.id;
     }
 

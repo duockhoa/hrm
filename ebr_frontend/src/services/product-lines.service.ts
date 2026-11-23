@@ -6,8 +6,15 @@ import type {
   UpdateProductLinePayload,
 } from "@/features/product-lines/types";
 
-const fetchProductLines = async (): Promise<ProductLine[]> => {
-  const response = await axiosClient.get(API_ROUTES.productLines.base);
+const restore = async (id: string | number): Promise<ProductLine> => {
+  const response = await axiosClient.patch(`${API_ROUTES.productLines.base}/${id}/restore`);
+  return response.data;
+};
+
+const fetchProductLines = async (includeInactive = false): Promise<ProductLine[]> => {
+  const response = await axiosClient.get(API_ROUTES.productLines.base, {
+    params: includeInactive ? { include_inactive: true } : undefined,
+  });
   return response.data;
 };
 
@@ -49,7 +56,9 @@ const deleteProductLine = async (id: string | number) => {
 };
 
 export default {
-  fetchProductLines,
+  fetchProductLines: () => fetchProductLines(),
+  fetchIncludingInactive: () => fetchProductLines(true),
+  restore,
   fetchProductLineById,
   fetchProductLineByCode,
   createProductLine,

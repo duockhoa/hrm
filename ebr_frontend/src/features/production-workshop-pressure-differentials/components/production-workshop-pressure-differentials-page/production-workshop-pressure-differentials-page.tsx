@@ -205,7 +205,7 @@ export default function ProductionWorkshopPressureDifferentialsPage({
       <HeaderDetailProductionWorkshop
         workshop={workshop}
         action={
-          <Button size="sm" onClick={openCreateForm}>
+          <Button disabled={Boolean(workshop?.deleted_at)} size="sm" onClick={openCreateForm}>
             <Plus className="size-4" />
             Thêm
           </Button>

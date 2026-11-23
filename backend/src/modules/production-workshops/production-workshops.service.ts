@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService, withSoftDeleted } from 'src/prisma.service';
 import { CreateProductionWorkshopDto } from './dto/create-production-workshop.dto';
 import { UpdateProductionWorkshopDto } from './dto/update-production-workshop.dto';
 
@@ -13,17 +13,20 @@ import { UpdateProductionWorkshopDto } from './dto/update-production-workshop.dt
 export class ProductionWorkshopsService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll() {
-    return this.prismaService.productionWorkshops.findMany({
-      orderBy: [{ name: 'asc' }, { code: 'asc' }],
-    });
+  async findAll(includeInactive = false) {
+    return this.prismaService.productionWorkshops.findMany(
+      withSoftDeleted<Prisma.ProductionWorkshopsFindManyArgs>(
+        { orderBy: [{ name: 'asc' }, { code: 'asc' }] },
+        includeInactive,
+      ),
+    );
   }
 
   async findById(id: number) {
     const productionWorkshop =
-      await this.prismaService.productionWorkshops.findUnique({
-        where: { id },
-      });
+      await this.prismaService.productionWorkshops.findUnique(
+        withSoftDeleted({ where: { id } }),
+      );
 
     if (!productionWorkshop) {
       throw new NotFoundException('Production workshop not found');
@@ -45,18 +48,28 @@ export class ProductionWorkshopsService {
     await this.findById(id);
     const data = await this.buildUpdateData(id, updateDto);
 
-    return this.prismaService.productionWorkshops.update({
-      where: { id },
-      data,
-    });
+    return this.prismaService.productionWorkshops.update(
+      withSoftDeleted({ where: { id }, data }),
+    );
   }
 
   async delete(id: number) {
-    await this.findById(id);
+    const existing = await this.findById(id);
+    if (existing.deleted_at) return existing;
 
-    return this.prismaService.productionWorkshops.delete({
+    return this.prismaService.productionWorkshops.update({
       where: { id },
+      data: { deleted_at: new Date() },
     });
+  }
+
+  async restore(id: number) {
+    const existing = await this.findById(id);
+    if (!existing.deleted_at) return existing;
+
+    return this.prismaService.productionWorkshops.update(
+      withSoftDeleted({ where: { id }, data: { deleted_at: null } }),
+    );
   }
 
   private buildCreateData(
@@ -99,12 +112,9 @@ export class ProductionWorkshopsService {
   }
 
   private async ensureCodeIsAvailable(code: string, currentId?: number) {
-    const productionWorkshopsDelegate = this.prismaService
-      .productionWorkshops as any;
-    const existing = await productionWorkshopsDelegate.findUnique({
-      where: { code },
-      withDeleted: true,
-    });
+    const existing = await this.prismaService.productionWorkshops.findUnique(
+      withSoftDeleted({ where: { code } }),
+    );
 
     if (existing && existing.id !== currentId) {
       throw new ConflictException('Production workshop code already exists');

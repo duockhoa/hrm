@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService, withSoftDeleted } from 'src/prisma.service';
 import { CreateProductionOrderDisinfectantPreparationDto } from './dto/create-production-order-disinfectant-preparation.dto';
 import { UpdateProductionOrderDisinfectantPreparationDto } from './dto/update-production-order-disinfectant-preparation.dto';
 
@@ -140,7 +140,7 @@ export class ProductionOrderDisinfectantPreparationsService {
     preparationId: number,
     dto: UpdateProductionOrderDisinfectantPreparationDto,
   ) {
-    await this.findById(preparationId);
+    const existing = await this.findById(preparationId);
 
     const data: Prisma.ProductionOrderDisinfectantPreparationsUncheckedUpdateInput =
       {};
@@ -150,7 +150,8 @@ export class ProductionOrderDisinfectantPreparationsService {
         dto.workshop_id,
         'workshop_id',
       );
-      await this.ensureProductionWorkshopExists(workshopId);
+      if (workshopId !== existing.workshop_id)
+        await this.ensureProductionWorkshopExists(workshopId);
       data.workshop_id = workshopId;
     }
 
@@ -257,18 +258,23 @@ export class ProductionOrderDisinfectantPreparationsService {
 
   private async ensureProductionWorkshopExists(workshopId: number) {
     const productionWorkshop =
-      await this.prismaService.productionWorkshops.findUnique({
-        where: {
-          id: workshopId,
-        },
-        select: {
-          id: true,
-        },
-      });
+      await this.prismaService.productionWorkshops.findUnique(
+        withSoftDeleted({
+          where: {
+            id: workshopId,
+          },
+          select: {
+            id: true,
+            deleted_at: true,
+          },
+        }),
+      );
 
     if (!productionWorkshop) {
       throw new NotFoundException('Production workshop not found');
     }
+    if (productionWorkshop.deleted_at)
+      throw new BadRequestException('Nhà xưởng đã ngừng sử dụng.');
   }
 
   private normalizeRequiredString(

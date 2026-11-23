@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Query,
   ParseIntPipe,
   Patch,
   Post,
@@ -25,8 +26,8 @@ export class FilterCatalogsController {
 
   @Get()
   @Permissions(FILTER_CATALOG_PERMISSIONS.LIST)
-  async findAll() {
-    return this.filterCatalogsService.findAll();
+  async findAll(@Query('include_inactive') includeInactive?: string) {
+    return this.filterCatalogsService.findAll(includeInactive === 'true');
   }
 
   @Get(':id')
@@ -48,6 +49,12 @@ export class FilterCatalogsController {
     @Body() dto: UpdateFilterCatalogDto,
   ) {
     return this.filterCatalogsService.update(id, dto);
+  }
+
+  @Patch(':id/restore')
+  @Permissions(FILTER_CATALOG_PERMISSIONS.DELETE)
+  async restore(@Param('id', ParseIntPipe) id: number) {
+    return this.filterCatalogsService.restore(id);
   }
 
   @Delete(':id')

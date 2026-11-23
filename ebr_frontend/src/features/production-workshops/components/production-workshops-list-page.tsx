@@ -35,8 +35,8 @@ export default function ProductionWorkshopsListPage({
     : null;
 
   const { data, error, isLoading } = useSWR(
-    API_ROUTES.productionWorkshops.base,
-    productionWorkshopsService.fetchProductionWorkshops,
+    `${API_ROUTES.productionWorkshops.base}?include_inactive=true`,
+    productionWorkshopsService.fetchIncludingInactive,
   );
 
   const filteredWorkshops = useMemo(() => {

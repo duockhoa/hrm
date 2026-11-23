@@ -168,6 +168,12 @@ export default function FormProductionOrderDisinfectantPreparation({
     productionWorkshopsService.fetchProductionWorkshops,
   );
 
+  const currentWorkshop = data?.workshop;
+  const workshopOptions =
+    currentWorkshop && !workshops?.some((workshop) => workshop.id === currentWorkshop.id)
+      ? [currentWorkshop, ...(workshops ?? [])]
+      : (workshops ?? []);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: toFormValues(data),
@@ -306,7 +312,7 @@ export default function FormProductionOrderDisinfectantPreparation({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(workshops ?? []).map((workshop) => (
+                        {workshopOptions.map((workshop) => (
                           <SelectItem
                             key={workshop.id}
                             value={String(workshop.id)}
@@ -314,6 +320,7 @@ export default function FormProductionOrderDisinfectantPreparation({
                             {workshop.code
                               ? `${workshop.code} - ${workshop.name}`
                               : workshop.name}
+                            {workshop.deleted_at ? " (Ngừng sử dụng)" : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>

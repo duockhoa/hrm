@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Query,
   ParseIntPipe,
   Patch,
   Post,
@@ -25,8 +26,8 @@ export class DosageFormsController {
 
   @Get()
   @Permissions(DOSAGE_FORM_PERMISSIONS.LIST)
-  async findAll() {
-    return this.dosageFormsService.findAll();
+  async findAll(@Query('include_inactive') includeInactive?: string) {
+    return this.dosageFormsService.findAll(includeInactive === 'true');
   }
 
   @Get(':id')
@@ -48,6 +49,12 @@ export class DosageFormsController {
     @Body() dto: UpdateDosageFormDto,
   ) {
     return this.dosageFormsService.update(id, dto);
+  }
+
+  @Patch(':id/restore')
+  @Permissions(DOSAGE_FORM_PERMISSIONS.DELETE)
+  async restore(@Param('id', ParseIntPipe) id: number) {
+    return this.dosageFormsService.restore(id);
   }
 
   @Delete(':id')

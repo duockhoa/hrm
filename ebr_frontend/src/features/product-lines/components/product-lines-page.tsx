@@ -19,10 +19,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { productLinesService } from "@/services/index.service";
-import { Edit2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Ban, Edit2, Plus, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type {
   CreateProductLinePayload,
   ProductLine,
@@ -78,7 +78,7 @@ export default function ProductLinesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProductLine, setEditingProductLine] =
     useState<ProductLine | null>(null);
-  const [deletingProductLine, setDeletingProductLine] =
+  const [statusTarget, setStatusTarget] =
     useState<ProductLine | null>(null);
   const [form, setForm] = useState<ProductLineFormState>(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,7 +88,11 @@ export default function ProductLinesPage() {
     error,
     isLoading,
     mutate,
-  } = useSWR("/product-lines", productLinesService.fetchProductLines);
+  } = useSWR(
+    "/product-lines?include_inactive=true",
+    productLinesService.fetchIncludingInactive,
+  );
+  const { mutate: revalidate } = useSWRConfig();
 
   const filteredProductLines = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -143,7 +147,7 @@ export default function ProductLinesPage() {
       }
 
       setIsFormOpen(false);
-      await mutate();
+      await Promise.all([mutate(), revalidate("/product-lines")]);
     } catch (error) {
       toast.error(getErrorMessage(error, "Không thể lưu dòng sản phẩm."));
     } finally {
@@ -151,19 +155,24 @@ export default function ProductLinesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingProductLine) {
+  const handleStatusChange = async () => {
+    if (!statusTarget) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await productLinesService.deleteProductLine(deletingProductLine.id);
-      toast.success("Đã xóa dòng sản phẩm.");
-      setDeletingProductLine(null);
-      await mutate();
+      if (statusTarget.deleted_at) {
+        await productLinesService.restore(statusTarget.id);
+        toast.success("Đã kích hoạt lại dòng sản phẩm.");
+      } else {
+        await productLinesService.deleteProductLine(statusTarget.id);
+        toast.success("Đã ngừng sử dụng dòng sản phẩm.");
+      }
+      setStatusTarget(null);
+      await Promise.all([mutate(), revalidate("/product-lines")]);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể xóa dòng sản phẩm."));
+      toast.error(getErrorMessage(error, "Không thể đổi trạng thái dòng sản phẩm."));
     } finally {
       setIsSubmitting(false);
     }
@@ -219,6 +228,7 @@ export default function ProductLinesPage() {
                 <TableHead className="w-48">Code</TableHead>
                 <TableHead>Tên dòng</TableHead>
                 <TableHead className="w-44">Cập nhật</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -226,7 +236,7 @@ export default function ProductLinesPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={6}>
                       <div className="h-8 animate-pulse rounded bg-gray-100" />
                     </TableCell>
                   </TableRow>
@@ -247,6 +257,9 @@ export default function ProductLinesPage() {
                       {formatDateTime(productLine.updated_at)}
                     </TableCell>
                     <TableCell>
+                      {productLine.deleted_at ? "Ngừng sử dụng" : "Đang sử dụng"}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -259,10 +272,19 @@ export default function ProductLinesPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          onClick={() => setDeletingProductLine(productLine)}
-                          title="Xóa"
+                          onClick={() => setStatusTarget(productLine)}
+                          title={
+                            productLine.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
+                          }
+                          aria-label={
+                            productLine.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
+                          }
                         >
-                          <Trash2 className="size-4 text-red-600" />
+                          {productLine.deleted_at ? (
+                            <RotateCcw className="size-4" />
+                          ) : (
+                            <Ban className="size-4 text-red-600" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -271,7 +293,7 @@ export default function ProductLinesPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     Chưa có dòng sản phẩm phù hợp.
@@ -344,36 +366,45 @@ export default function ProductLinesPage() {
       </Dialog>
 
       <Dialog
-        open={Boolean(deletingProductLine)}
-        onOpenChange={(open) => !open && setDeletingProductLine(null)}
+        open={Boolean(statusTarget)}
+        onOpenChange={(open) => !open && setStatusTarget(null)}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xóa dòng sản phẩm</DialogTitle>
+            <DialogTitle>
+              {statusTarget?.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"}{" "}
+              dòng sản phẩm
+            </DialogTitle>
             <DialogDescription>
-              API sẽ set deleted_at và không xóa cứng bản ghi.
+              {statusTarget?.deleted_at
+                ? "Mục này sẽ xuất hiện lại trong danh sách chọn."
+                : "Mục này sẽ ẩn khỏi danh sách chọn mới. Hồ sơ cũ vẫn giữ liên kết."}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded border bg-gray-50 p-3">
-            <div className="font-medium">{deletingProductLine?.name}</div>
+            <div className="font-medium">{statusTarget?.name}</div>
             <div className="mt-1 font-mono text-xs text-gray-500">
-              {deletingProductLine?.code}
+              {statusTarget?.code}
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDeletingProductLine(null)}
+              onClick={() => setStatusTarget(null)}
               disabled={isSubmitting}
             >
               Hủy
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDelete}
+              onClick={handleStatusChange}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Đang xóa..." : "Xóa"}
+              {isSubmitting
+                ? "Đang lưu..."
+                : statusTarget?.deleted_at
+                  ? "Kích hoạt lại"
+                  : "Ngừng sử dụng"}
             </Button>
           </DialogFooter>
         </DialogContent>

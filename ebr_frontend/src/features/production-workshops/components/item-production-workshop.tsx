@@ -53,6 +53,7 @@ export default function ItemProductionWorkshop({
           </div>
           <div className="mt-1 truncate text-sm font-semibold">
             {workshop.name}
+            {workshop.deleted_at ? " (Ngừng sử dụng)" : ""}
           </div>
           {workshop.address ? (
             <div className="mt-1 flex min-w-0 items-center gap-1 text-xs text-gray-500">

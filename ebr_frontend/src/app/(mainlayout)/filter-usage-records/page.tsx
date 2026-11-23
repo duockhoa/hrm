@@ -92,8 +92,8 @@ export default function FilterUsageRecordsPage() {
   );
   const isSearching = searchKeyword.trim().length > 0;
   const { data, error, isLoading } = useSWR<FilterCatalog[]>(
-    API_ROUTES.filterCatalogs.base,
-    filterCatalogsService.fetchFilterCatalogs,
+    `${API_ROUTES.filterCatalogs.base}?include_inactive=true`,
+    filterCatalogsService.fetchIncludingInactive,
   );
 
   const filterCatalogs = useMemo(() => data ?? [], [data]);
@@ -225,6 +225,7 @@ export default function FilterUsageRecordsPage() {
                         >
                           <TableCell className="border-r px-3 font-mono text-xs font-medium text-gray-900">
                             {filterCatalog.filter_code}
+                            {filterCatalog.deleted_at ? " (Ngừng sử dụng)" : ""}
                           </TableCell>
                           <TableCell className="border-r px-3 font-medium text-gray-900">
                             {filterCatalog.filter_type}

@@ -20,10 +20,10 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { productionWorkshopsService } from "@/services/index.service";
-import { Edit2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Ban, Edit2, Plus, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type {
   CreateProductionWorkshopPayload,
   ProductionWorkshop,
@@ -98,7 +98,7 @@ export default function ProductionWorkshopsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingWorkshop, setEditingWorkshop] =
     useState<ProductionWorkshop | null>(null);
-  const [deletingWorkshop, setDeletingWorkshop] =
+  const [statusTarget, setStatusTarget] =
     useState<ProductionWorkshop | null>(null);
   const [form, setForm] = useState<WorkshopFormState>(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,7 +108,11 @@ export default function ProductionWorkshopsPage() {
     error,
     isLoading,
     mutate,
-  } = useSWR("/production-workshops", productionWorkshopsService.fetchProductionWorkshops);
+  } = useSWR(
+    "/production-workshops?include_inactive=true",
+    productionWorkshopsService.fetchIncludingInactive,
+  );
+  const { mutate: revalidate } = useSWRConfig();
 
   const filteredWorkshops = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -187,7 +191,7 @@ export default function ProductionWorkshopsPage() {
       }
 
       setIsFormOpen(false);
-      await mutate();
+      await Promise.all([mutate(), revalidate("/production-workshops")]);
     } catch (error) {
       toast.error(getErrorMessage(error, "Không thể lưu nhà xưởng."));
     } finally {
@@ -195,21 +199,26 @@ export default function ProductionWorkshopsPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingWorkshop) {
+  const handleStatusChange = async () => {
+    if (!statusTarget) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await productionWorkshopsService.deleteProductionWorkshop(
-        deletingWorkshop.id,
-      );
-      toast.success("Đã xóa nhà xưởng.");
-      setDeletingWorkshop(null);
-      await mutate();
+      if (statusTarget.deleted_at) {
+        await productionWorkshopsService.restore(statusTarget.id);
+        toast.success("Đã kích hoạt lại nhà xưởng.");
+      } else {
+        await productionWorkshopsService.deleteProductionWorkshop(
+          statusTarget.id,
+        );
+        toast.success("Đã ngừng sử dụng nhà xưởng.");
+      }
+      setStatusTarget(null);
+      await Promise.all([mutate(), revalidate("/production-workshops")]);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể xóa nhà xưởng."));
+      toast.error(getErrorMessage(error, "Không thể đổi trạng thái nhà xưởng."));
     } finally {
       setIsSubmitting(false);
     }
@@ -268,6 +277,7 @@ export default function ProductionWorkshopsPage() {
                 <TableHead>Mô tả</TableHead>
                 <TableHead>Địa chỉ</TableHead>
                 <TableHead className="w-44">Cập nhật</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -275,7 +285,7 @@ export default function ProductionWorkshopsPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <div className="h-8 animate-pulse rounded bg-gray-100" />
                     </TableCell>
                   </TableRow>
@@ -302,6 +312,9 @@ export default function ProductionWorkshopsPage() {
                       {formatDateTime(workshop.updated_at)}
                     </TableCell>
                     <TableCell>
+                      {workshop.deleted_at ? "Ngừng sử dụng" : "Đang sử dụng"}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -314,10 +327,19 @@ export default function ProductionWorkshopsPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          onClick={() => setDeletingWorkshop(workshop)}
-                          title="Xóa"
+                          onClick={() => setStatusTarget(workshop)}
+                          title={
+                            workshop.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
+                          }
+                          aria-label={
+                            workshop.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
+                          }
                         >
-                          <Trash2 className="size-4 text-red-600" />
+                          {workshop.deleted_at ? (
+                            <RotateCcw className="size-4" />
+                          ) : (
+                            <Ban className="size-4 text-red-600" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -326,7 +348,7 @@ export default function ProductionWorkshopsPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     Chưa có nhà xưởng phù hợp.
@@ -439,38 +461,47 @@ export default function ProductionWorkshopsPage() {
       </Dialog>
 
       <Dialog
-        open={Boolean(deletingWorkshop)}
+        open={Boolean(statusTarget)}
         onOpenChange={(open) =>
-          !open && !isSubmitting && setDeletingWorkshop(null)
+          !open && !isSubmitting && setStatusTarget(null)
         }
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xóa nhà xưởng</DialogTitle>
+            <DialogTitle>
+              {statusTarget?.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"}{" "}
+              nhà xưởng
+            </DialogTitle>
             <DialogDescription>
-              Bạn có chắc muốn xóa nhà xưởng này khỏi danh mục?
+              {statusTarget?.deleted_at
+                ? "Mục này sẽ xuất hiện lại trong danh sách chọn."
+                : "Mục này sẽ ẩn khỏi danh sách chọn mới. Hồ sơ cũ vẫn giữ liên kết."}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded border bg-gray-50 p-3">
-            <div className="font-medium">{deletingWorkshop?.name}</div>
+            <div className="font-medium">{statusTarget?.name}</div>
             <div className="mt-1 font-mono text-xs text-gray-500">
-              {deletingWorkshop?.code}
+              {statusTarget?.code}
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDeletingWorkshop(null)}
+              onClick={() => setStatusTarget(null)}
               disabled={isSubmitting}
             >
               Hủy
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDelete}
+              onClick={handleStatusChange}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Đang xóa..." : "Xóa"}
+              {isSubmitting
+                ? "Đang lưu..."
+                : statusTarget?.deleted_at
+                  ? "Kích hoạt lại"
+                  : "Ngừng sử dụng"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -72,19 +72,18 @@ const filterCatalogDetailInclude = {
 export class FilterCatalogsService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll() {
+  async findAll(includeInactive = false) {
     const filterCatalogs = await this.prismaService.filterCatalogs.findMany({
+      where: includeInactive ? undefined : { deleted_at: null },
       include: filterCatalogListInclude,
       orderBy: [{ filter_code: 'asc' }, { id: 'asc' }],
     });
 
-    return filterCatalogs.map(
-      ({ _count, ...filterCatalog }) => ({
-        ...filterCatalog,
-        production_order_filtration_checks_count:
-          _count.productionOrderFiltrationChecks,
-      }),
-    );
+    return filterCatalogs.map(({ _count, ...filterCatalog }) => ({
+      ...filterCatalog,
+      production_order_filtration_checks_count:
+        _count.productionOrderFiltrationChecks,
+    }));
   }
 
   async findById(id: number) {
@@ -125,10 +124,23 @@ export class FilterCatalogsService {
   }
 
   async delete(id: number) {
-    await this.findById(id);
+    const existing = await this.findById(id);
+    if (existing.deleted_at) return existing;
 
-    return this.prismaService.filterCatalogs.delete({
+    return this.prismaService.filterCatalogs.update({
       where: { id },
+      data: { deleted_at: new Date() },
+      include: filterCatalogInclude,
+    });
+  }
+
+  async restore(id: number) {
+    const existing = await this.findById(id);
+    if (!existing.deleted_at) return existing;
+
+    return this.prismaService.filterCatalogs.update({
+      where: { id },
+      data: { deleted_at: null },
       include: filterCatalogInclude,
     });
   }

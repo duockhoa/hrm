@@ -90,8 +90,8 @@ export default function FiltrationCheckForm({
     [data],
   );
   const { data: filters } = useSWR<FilterCatalog[]>(
-    API_ROUTES.filterCatalogs.base,
-    filterCatalogsService.fetchFilterCatalogs,
+    `${API_ROUTES.filterCatalogs.base}?include_inactive=true`,
+    filterCatalogsService.fetchIncludingInactive,
   );
   const { data: currentUser, isLoading: isLoadingCurrentUser } = useSWR<{
     id?: number;
@@ -99,17 +99,20 @@ export default function FiltrationCheckForm({
   const filterComboboxOptions = useMemo<FilterComboboxOption[]>(
     () =>
       [...(filters ?? [])]
-        .filter(isFilterCatalogUsable)
+        .filter((filter) =>
+          filter.id === data?.filter_membrane_id ||
+          (!filter.deleted_at && isFilterCatalogUsable(filter)),
+        )
         .sort((first, second) => second.id - first.id)
         .map((filter) => ({
         value: String(filter.id),
-        label: `${filter.filter_code} — ${filter.filter_type}`,
+        label: `${filter.filter_code} — ${filter.filter_type}${filter.deleted_at ? " (Ngừng sử dụng)" : ""}`,
         searchValue: `${filter.filter_code} ${filter.filter_type}`,
         sensoryRequirement: filter.pre_filter_sensory_requirement ?? "",
         integrityRequirement: filter.integrity_requirement ?? "",
         remainingUsageCount: getRemainingFilterCatalogUsageCount(filter),
         })),
-    [filters],
+    [filters, data?.filter_membrane_id],
   );
   const selectedFilterOption = filterComboboxOptions.find(
     (option) => option.value === filterMembraneId,

@@ -13,8 +13,9 @@ import { UpdateProductLineDto } from './dto/update-product-line.dto';
 export class ProductLinesService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll() {
+  async findAll(includeInactive = false) {
     return this.prismaService.productLines.findMany({
+      where: includeInactive ? undefined : { deleted_at: null },
       orderBy: [{ name: 'asc' }, { code: 'asc' }],
     });
   }
@@ -70,10 +71,22 @@ export class ProductLinesService {
   }
 
   async delete(id: number) {
-    await this.findById(id);
+    const existing = await this.findById(id);
+    if (existing.deleted_at) return existing;
 
-    return this.prismaService.productLines.delete({
+    return this.prismaService.productLines.update({
       where: { id },
+      data: { deleted_at: new Date() },
+    });
+  }
+
+  async restore(id: number) {
+    const existing = await this.findById(id);
+    if (!existing.deleted_at) return existing;
+
+    return this.prismaService.productLines.update({
+      where: { id },
+      data: { deleted_at: null },
     });
   }
 

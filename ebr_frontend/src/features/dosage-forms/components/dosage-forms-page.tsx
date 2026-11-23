@@ -23,10 +23,10 @@ import {
 import { API_ROUTES } from "@/lib/api-routes";
 import { dosageFormsService } from "@/services/index.service";
 import axios from "axios";
-import { Edit2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Ban, Edit2, Plus, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type { DosageForm } from "../types";
 
 const getCreatorLabel = (item: DosageForm) =>
@@ -67,15 +67,16 @@ export default function DosageFormsPage() {
   const [keyword, setKeyword] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DosageForm | null>(null);
-  const [deletingItem, setDeletingItem] = useState<DosageForm | null>(null);
+  const [statusTarget, setStatusTarget] = useState<DosageForm | null>(null);
   const [name, setName] = useState("");
   const [sensoryRequirement, setSensoryRequirement] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data = [], error, isLoading, mutate } = useSWR(
     API_ROUTES.dosageForms.base,
-    dosageFormsService.fetchAll,
+    dosageFormsService.fetchIncludingInactive,
   );
+  const { mutate: revalidate } = useSWRConfig();
 
   const filteredItems = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLocaleLowerCase("vi-VN");
@@ -126,7 +127,7 @@ export default function DosageFormsPage() {
       }
 
       setIsFormOpen(false);
-      await mutate();
+      await Promise.all([mutate(), revalidate("/dosage-forms")]);
     } catch (submitError) {
       toast.error(getErrorMessage(submitError, "Không thể lưu dạng bào chế."));
     } finally {
@@ -134,17 +135,22 @@ export default function DosageFormsPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingItem) return;
+  const handleStatusChange = async () => {
+    if (!statusTarget) return;
 
     setIsSubmitting(true);
     try {
-      await dosageFormsService.delete(deletingItem.id);
-      toast.success("Đã xóa dạng bào chế.");
-      setDeletingItem(null);
-      await mutate();
+      if (statusTarget.deleted_at) {
+        await dosageFormsService.restore(statusTarget.id);
+        toast.success("Đã kích hoạt lại dạng bào chế.");
+      } else {
+        await dosageFormsService.delete(statusTarget.id);
+        toast.success("Đã ngừng sử dụng dạng bào chế.");
+      }
+      setStatusTarget(null);
+      await Promise.all([mutate(), revalidate("/dosage-forms")]);
     } catch (deleteError) {
-      toast.error(getErrorMessage(deleteError, "Không thể xóa dạng bào chế."));
+      toast.error(getErrorMessage(deleteError, "Không thể đổi trạng thái dạng bào chế."));
     } finally {
       setIsSubmitting(false);
     }
@@ -199,6 +205,7 @@ export default function DosageFormsPage() {
                 <TableHead>Tên dạng bào chế</TableHead>
                 <TableHead>Yêu cầu cảm quan</TableHead>
                 <TableHead className="w-56">Người tạo</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -206,7 +213,7 @@ export default function DosageFormsPage() {
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={6}>
                       <div className="h-10 animate-pulse rounded bg-gray-100" />
                     </TableCell>
                   </TableRow>
@@ -223,6 +230,9 @@ export default function DosageFormsPage() {
                       {getCreatorLabel(item)}
                     </TableCell>
                     <TableCell>
+                      {item.deleted_at ? "Ngừng sử dụng" : "Đang sử dụng"}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -235,10 +245,19 @@ export default function DosageFormsPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          onClick={() => setDeletingItem(item)}
-                          title="Xóa"
+                          onClick={() => setStatusTarget(item)}
+                          title={
+                            item.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
+                          }
+                          aria-label={
+                            item.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"
+                          }
                         >
-                          <Trash2 className="size-4 text-red-600" />
+                          {item.deleted_at ? (
+                            <RotateCcw className="size-4" />
+                          ) : (
+                            <Ban className="size-4 text-red-600" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -247,7 +266,7 @@ export default function DosageFormsPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="h-32 text-center text-sm text-gray-500"
                   >
                     Chưa có dạng bào chế phù hợp.
@@ -315,33 +334,42 @@ export default function DosageFormsPage() {
       </Dialog>
 
       <Dialog
-        open={Boolean(deletingItem)}
-        onOpenChange={(open) => !open && !isSubmitting && setDeletingItem(null)}
+        open={Boolean(statusTarget)}
+        onOpenChange={(open) => !open && !isSubmitting && setStatusTarget(null)}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xóa dạng bào chế</DialogTitle>
+            <DialogTitle>
+              {statusTarget?.deleted_at ? "Kích hoạt lại" : "Ngừng sử dụng"}{" "}
+              dạng bào chế
+            </DialogTitle>
             <DialogDescription>
-              Bạn có chắc muốn xóa dạng bào chế này khỏi danh mục?
+              {statusTarget?.deleted_at
+                ? "Mục này sẽ xuất hiện lại trong danh sách chọn."
+                : "Mục này sẽ ẩn khỏi danh sách chọn mới. Hồ sơ cũ vẫn giữ liên kết."}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded border bg-gray-50 p-3 font-medium">
-            {deletingItem?.name}
+            {statusTarget?.name}
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDeletingItem(null)}
+              onClick={() => setStatusTarget(null)}
               disabled={isSubmitting}
             >
               Hủy
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDelete}
+              onClick={handleStatusChange}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Đang xóa..." : "Xóa"}
+              {isSubmitting
+                ? "Đang lưu..."
+                : statusTarget?.deleted_at
+                  ? "Kích hoạt lại"
+                  : "Ngừng sử dụng"}
             </Button>
           </DialogFooter>
         </DialogContent>

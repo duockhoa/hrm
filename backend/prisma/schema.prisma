@@ -250,6 +250,7 @@ model FilterCatalogs {
   productionOrderFiltrationChecks ProductionOrderFiltrationChecks[]
   created_at                      DateTime                          @default(now())
   updated_at                      DateTime                          @default(now()) @updatedAt
+  deleted_at                      DateTime?
 
   @@index([created_by_id], map: "filter_catalogs_created_by_id_idx")
   @@map("filter_catalogs")
@@ -264,6 +265,7 @@ model DosageForms {
   productionSpecifications ProductionSpecifications[]
   created_at               DateTime                   @default(now())
   updated_at               DateTime                   @default(now()) @updatedAt
+  deleted_at               DateTime?
 
   @@index([created_by_id], map: "dosage_forms_created_by_id_idx")
   @@map("dosage_forms")
@@ -908,6 +910,7 @@ model ProductLines {
   created_at               DateTime                   @default(now())
   updated_at               DateTime                   @default(now()) @updatedAt
   productionSpecifications ProductionSpecifications[]
+  deleted_at               DateTime?
 
   @@map("product_lines")
 }

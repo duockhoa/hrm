@@ -1,4 +1,5 @@
 export type FilterCatalog = {
+  deleted_at?: string | null;
   id: number;
   filter_code: string;
   filter_type: string;

@@ -29,8 +29,9 @@ const dosageFormInclude = {
 export class DosageFormsService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll() {
+  async findAll(includeInactive = false) {
     return this.prismaService.dosageForms.findMany({
+      where: includeInactive ? undefined : { deleted_at: null },
       include: dosageFormInclude,
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
     });
@@ -96,10 +97,23 @@ export class DosageFormsService {
   }
 
   async delete(id: number) {
-    await this.findById(id);
+    const existing = await this.findById(id);
+    if (existing.deleted_at) return existing;
 
-    return this.prismaService.dosageForms.delete({
+    return this.prismaService.dosageForms.update({
       where: { id },
+      data: { deleted_at: new Date() },
+      include: dosageFormInclude,
+    });
+  }
+
+  async restore(id: number) {
+    const existing = await this.findById(id);
+    if (!existing.deleted_at) return existing;
+
+    return this.prismaService.dosageForms.update({
+      where: { id },
+      data: { deleted_at: null },
       include: dosageFormInclude,
     });
   }

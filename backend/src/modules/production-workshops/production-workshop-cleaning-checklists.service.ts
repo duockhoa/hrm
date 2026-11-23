@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService, withSoftDeleted } from 'src/prisma.service';
 import { CreateProductionWorkshopCleaningChecklistDto } from './dto/create-production-workshop-cleaning-checklist.dto';
 import { UpdateProductionWorkshopCleaningChecklistDto } from './dto/update-production-workshop-cleaning-checklist.dto';
 
@@ -58,7 +58,7 @@ export class ProductionWorkshopCleaningChecklistsService {
     workshopId: number,
     dto: CreateProductionWorkshopCleaningChecklistDto,
   ) {
-    await this.ensureProductionWorkshopExists(workshopId);
+    await this.ensureProductionWorkshopExists(workshopId, true);
 
     const cleanedById = this.normalizeRequiredInteger(
       dto?.cleaned_by_id,
@@ -71,7 +71,10 @@ export class ProductionWorkshopCleaningChecklistsService {
         workshop_id: workshopId,
         subject: this.normalizeRequiredString(dto?.subject, 'subject', 255),
         category: this.normalizeRequiredString(dto?.category, 'category', 100),
-        requirement: this.normalizeRequiredString(dto?.requirement, 'requirement'),
+        requirement: this.normalizeRequiredString(
+          dto?.requirement,
+          'requirement',
+        ),
         result: this.normalizeRequiredString(dto?.result, 'result', 100),
         note: this.normalizeOptionalString(dto?.note, 'note'),
         cleaned_by_id: cleanedById,
@@ -94,7 +97,11 @@ export class ProductionWorkshopCleaningChecklistsService {
     }
 
     if (dto.category !== undefined) {
-      data.category = this.normalizeRequiredString(dto.category, 'category', 100);
+      data.category = this.normalizeRequiredString(
+        dto.category,
+        'category',
+        100,
+      );
     }
 
     if (dto.requirement !== undefined) {
@@ -142,15 +149,22 @@ export class ProductionWorkshopCleaningChecklistsService {
     return cleaningChecklist;
   }
 
-  private async ensureProductionWorkshopExists(workshopId: number) {
-    const workshop = await this.prismaService.productionWorkshops.findUnique({
-      where: { id: workshopId },
-      select: { id: true },
-    });
+  private async ensureProductionWorkshopExists(
+    workshopId: number,
+    requireActive = false,
+  ) {
+    const workshop = await this.prismaService.productionWorkshops.findUnique(
+      withSoftDeleted({
+        where: { id: workshopId },
+        select: { id: true, deleted_at: true },
+      }),
+    );
 
     if (!workshop) {
       throw new NotFoundException('Production workshop not found');
     }
+    if (requireActive && workshop.deleted_at)
+      throw new BadRequestException('Nhà xưởng đã ngừng sử dụng.');
   }
 
   private async ensureUserExists(userId: number) {

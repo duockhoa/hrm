@@ -96,6 +96,41 @@ describe('ProductionWorkshopsService', () => {
       data: {
         address: 'Khu B',
       },
+      withDeleted: true,
+    });
+  });
+
+  it('keeps a stopped workshop available to historical reads and reactivation', async () => {
+    const workshop = { id: 1, deleted_at: null };
+    const stopped = { ...workshop, deleted_at: new Date() };
+    const delegate = prismaService.productionWorkshops;
+    delegate.findUnique
+      .mockResolvedValueOnce(workshop)
+      .mockResolvedValue(stopped);
+    delegate.update
+      .mockResolvedValueOnce(stopped)
+      .mockResolvedValueOnce(workshop);
+
+    await expect(service.delete(1)).resolves.toEqual(stopped);
+    expect(delegate.delete).not.toHaveBeenCalled();
+    expect(delegate.update).toHaveBeenNthCalledWith(1, {
+      where: { id: 1 },
+      data: { deleted_at: expect.any(Date) },
+    });
+    await expect(service.findById(1)).resolves.toEqual(stopped);
+    expect(delegate.findUnique).toHaveBeenLastCalledWith({
+      where: { id: 1 },
+      withDeleted: true,
+    });
+    await service.findAll(true);
+    expect(delegate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ withDeleted: true }),
+    );
+    await expect(service.restore(1)).resolves.toEqual(workshop);
+    expect(delegate.update).toHaveBeenNthCalledWith(2, {
+      where: { id: 1 },
+      data: { deleted_at: null },
+      withDeleted: true,
     });
   });
 });

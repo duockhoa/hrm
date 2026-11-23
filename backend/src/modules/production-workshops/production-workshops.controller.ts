@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   ParseIntPipe,
   Post,
   Put,
@@ -38,8 +39,8 @@ export class ProductionWorkshopsController {
 
   @Get()
   @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.LIST)
-  async findAll() {
-    return this.productionWorkshopsService.findAll();
+  async findAll(@Query('include_inactive') includeInactive?: string) {
+    return this.productionWorkshopsService.findAll(includeInactive === 'true');
   }
 
   @Get('pressure-differentials/:pressureDifferentialId')
@@ -153,7 +154,10 @@ export class ProductionWorkshopsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() createDto: CreateProductionWorkshopCleaningChecklistDto,
   ) {
-    return this.productionWorkshopCleaningChecklistsService.create(id, createDto);
+    return this.productionWorkshopCleaningChecklistsService.create(
+      id,
+      createDto,
+    );
   }
 
   @Get(':id')
@@ -175,6 +179,12 @@ export class ProductionWorkshopsController {
     @Body() updateDto: UpdateProductionWorkshopDto,
   ) {
     return this.productionWorkshopsService.update(id, updateDto);
+  }
+
+  @Patch(':id/restore')
+  @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.DELETE)
+  async restore(@Param('id', ParseIntPipe) id: number) {
+    return this.productionWorkshopsService.restore(id);
   }
 
   @Delete(':id')

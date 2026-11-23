@@ -23,6 +23,11 @@ type PrismaArgsWithWhere = {
   withDeleted?: boolean;
 };
 
+// The extension strips this flag before calling Prisma's generated delegate.
+export function withSoftDeleted<T>(args: T, withDeleted = true): T {
+  return { ...args, withDeleted };
+}
+
 function withNotDeleted<T>(args: T): T & PrismaArgsWithWhere {
   const typedArgs = (args ?? {}) as PrismaArgsWithWhere;
   const { withDeleted, ...argsWithoutSoftDeleteControl } = typedArgs;

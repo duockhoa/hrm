@@ -4,6 +4,8 @@ import {
   Delete,
   Get,
   Param,
+  Query,
+  Patch,
   ParseIntPipe,
   Post,
   Put,
@@ -24,8 +26,8 @@ export class ProductLinesController {
 
   @Get()
   @Permissions(PRODUCT_LINE_PERMISSIONS.LIST)
-  async findAll() {
-    return this.productLinesService.findAll();
+  async findAll(@Query('include_inactive') includeInactive?: string) {
+    return this.productLinesService.findAll(includeInactive === 'true');
   }
 
   @Get('code/:code')
@@ -53,6 +55,12 @@ export class ProductLinesController {
     @Body() updateProductLineDto: UpdateProductLineDto,
   ) {
     return this.productLinesService.update(id, updateProductLineDto);
+  }
+
+  @Patch(':id/restore')
+  @Permissions(PRODUCT_LINE_PERMISSIONS.DELETE)
+  async restore(@Param('id', ParseIntPipe) id: number) {
+    return this.productLinesService.restore(id);
   }
 
   @Delete(':id')

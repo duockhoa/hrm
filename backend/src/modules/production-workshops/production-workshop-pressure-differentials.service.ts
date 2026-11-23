@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService, withSoftDeleted } from 'src/prisma.service';
 import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
 import { recordPagination } from '../../common/utils/record-list-query';
 import { CreateProductionWorkshopPressureDifferentialDto } from './dto/create-production-workshop-pressure-differential.dto';
@@ -95,7 +95,7 @@ export class ProductionWorkshopPressureDifferentialsService {
     dto: CreateProductionWorkshopPressureDifferentialDto,
     user?: AuthenticatedUser,
   ) {
-    await this.ensureProductionWorkshopExists(workshopId);
+    await this.ensureProductionWorkshopExists(workshopId, true);
 
     return this.prismaService.productionWorkshopPressureDifferentials.create({
       data: {
@@ -173,20 +173,28 @@ export class ProductionWorkshopPressureDifferentialsService {
     return pressureDifferential;
   }
 
-  private async ensureProductionWorkshopExists(workshopId: number) {
+  private async ensureProductionWorkshopExists(
+    workshopId: number,
+    requireActive = false,
+  ) {
     const productionWorkshop =
-      await this.prismaService.productionWorkshops.findUnique({
-        where: {
-          id: workshopId,
-        },
-        select: {
-          id: true,
-        },
-      });
+      await this.prismaService.productionWorkshops.findUnique(
+        withSoftDeleted({
+          where: {
+            id: workshopId,
+          },
+          select: {
+            id: true,
+            deleted_at: true,
+          },
+        }),
+      );
 
     if (!productionWorkshop) {
       throw new NotFoundException('Production workshop not found');
     }
+    if (requireActive && productionWorkshop.deleted_at)
+      throw new BadRequestException('Nhà xưởng đã ngừng sử dụng.');
   }
 
   private normalizeRequiredString(
