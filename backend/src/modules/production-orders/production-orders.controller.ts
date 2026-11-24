@@ -62,6 +62,7 @@ import { CreateProductionOrderPreSecondaryPackagingCheckDto } from './dto/create
 import { UpdateProductionOrderPreSecondaryPackagingCheckDto } from './dto/update-production-order-pre-secondary-packaging-check.dto';
 import { ProductionOrderPreSecondaryPackagingChecksService } from './production-order-pre-secondary-packaging-checks.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
+import { CreateSapProductionReceiptDto } from './dto/create-sap-production-receipt.dto';
 import { UpdateProductionOrderFinishedProductSummaryDto } from './dto/update-production-order-finished-product-summary.dto';
 import { GetAuditLogPageDto } from '../audit-logs/dto/get-audit-log-page.dto';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
@@ -531,6 +532,28 @@ export class ProductionOrdersController {
   ) {
     return this.productionOrderFinishedProductSummariesService.findSapProductionReceipts(
       summaryId,
+    );
+  }
+
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.FINISHED_PRODUCT_SUMMARY_WAREHOUSE_CONFIRM,
+  )
+  @Post('finished-product-summaries/:summaryId/sap-production-receipts')
+  @ApiOperation({ summary: 'Tạo phiếu nhập kho sản xuất trên SAP' })
+  async createFinishedProductSummarySapProductionReceipt(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Body(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    )
+    dto: CreateSapProductionReceiptDto,
+  ) {
+    return this.productionOrderFinishedProductSummariesService.createSapProductionReceipt(
+      summaryId,
+      dto,
     );
   }
 

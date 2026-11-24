@@ -4,9 +4,13 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type SapProductionReceiptRequests } from '@prisma/client';
+import { isAxiosError } from 'axios';
+import { createHash } from 'node:crypto';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderFinishedProductSummaryDto } from './dto/create-production-order-finished-product-summary.dto';
 import { UpdateProductionOrderFinishedProductSummaryDto } from './dto/update-production-order-finished-product-summary.dto';
@@ -16,6 +20,13 @@ import { GetFinishedProductSummariesDto } from './dto/get-finished-product-summa
 import { normalizeLotSearch } from './production-order-list-query';
 import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 import type { SapProductionReceipt } from '../sap-b1-connector/sap-production-receipt';
+import { SAP_PRODUCTION_ORDER_BASE_TYPE } from '../sap-b1-connector/sap-production-receipt';
+import { CreateSapProductionReceiptDto } from './dto/create-sap-production-receipt.dto';
+
+function sapReceiptReference(requestId: string) {
+  const hash = createHash('sha256').update(requestId).digest();
+  return `W${hash.readUIntBE(0, 6).toString(36).padStart(10, '0').toUpperCase()}`;
+}
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -65,6 +76,7 @@ const finishedProductSummaryListInclude = {
       type: true,
       planned_quatity: true,
       unit: true,
+      warehouse: true,
       lot_no: true,
       date_manufacture: true,
       expire_date: true,
@@ -129,7 +141,7 @@ export class ProductionOrderFinishedProductSummariesService {
     private readonly sapB1Client: SapB1ServiceLayerClient,
   ) {}
 
-  async findSapProductionReceipts(summaryId: number) {
+  private async findSapReceiptOrder(summaryId: number) {
     const summary =
       await this.prismaService.productionOrderFinishedProductSummaries.findUnique(
         {
@@ -149,12 +161,14 @@ export class ProductionOrderFinishedProductSummariesService {
     if (!summary) {
       throw new NotFoundException('Không tìm thấy tổng kết thành phẩm');
     }
+    return summary.productionOrder;
+  }
 
+  async findSapProductionReceipts(summaryId: number) {
+    const order = await this.findSapReceiptOrder(summaryId);
     let receipts: SapProductionReceipt[] | null;
     try {
-      receipts = await this.sapB1Client.getProductionReceipts(
-        summary.productionOrder,
-      );
+      receipts = await this.sapB1Client.getProductionReceipts(order);
     } catch {
       throw new BadGatewayException('Không thể đọc phiếu nhập kho từ SAP');
     }
@@ -164,6 +178,269 @@ export class ProductionOrderFinishedProductSummariesService {
       );
     }
     return receipts;
+  }
+
+  async createSapProductionReceipt(
+    summaryId: number,
+    dto: CreateSapProductionReceiptDto,
+  ) {
+    const order = await this.findSapReceiptOrder(summaryId);
+    const {
+      requestId,
+      postingDate,
+      quantity,
+      warehouseCode,
+      lotNumber,
+      manufacturingDate,
+      expiryDate,
+      comments,
+    } = dto;
+    const departmentCode = dto.departmentCode ?? 'KHKV';
+    const costItemCode = dto.costItemCode ?? 'CP004';
+    if (new Prisma.Decimal(quantity).decimalPlaces() > 6) {
+      throw new BadRequestException(
+        'Số lượng chỉ được có tối đa 6 chữ số thập phân.',
+      );
+    }
+    if (expiryDate < manufacturingDate) {
+      throw new BadRequestException(
+        'Hạn sử dụng phải từ ngày sản xuất trở đi.',
+      );
+    }
+    const payloadHash = createHash('sha256')
+      .update(
+        JSON.stringify([
+          postingDate,
+          quantity,
+          warehouseCode,
+          lotNumber,
+          manufacturingDate,
+          expiryDate,
+          comments ?? '',
+          // Preserve the request hash for drafts saved before costing fields were added.
+          ...(dto.departmentCode != null || dto.costItemCode != null
+            ? [departmentCode, costItemCode]
+            : []),
+        ]),
+      )
+      .digest('hex');
+    const requests = this.prismaService.sapProductionReceiptRequests;
+    const where = { request_id: requestId.toLowerCase() };
+    const activeWhere = { active_summary_id: summaryId };
+    const existing = await requests.findUnique({ where });
+    if (existing)
+      return this.recoverSapProductionReceipt(existing, summaryId, payloadHash);
+
+    const active = await requests.findUnique({ where: activeWhere });
+    if (active)
+      return this.rejectDuplicateSapProductionReceipt(active, summaryId);
+
+    let entry: number | null;
+    let tracking: Awaited<
+      ReturnType<SapB1ServiceLayerClient['getReceiptItemTracking']>
+    >;
+    let distributionRules: Awaited<
+      ReturnType<
+        SapB1ServiceLayerClient['getProductionReceiptDistributionRules']
+      >
+    >;
+    try {
+      [entry, tracking, distributionRules] = await Promise.all([
+        this.sapB1Client.resolveProductionOrderEntry(order),
+        this.sapB1Client.getReceiptItemTracking(order.item_code),
+        this.sapB1Client.getProductionReceiptDistributionRules(
+          departmentCode,
+          costItemCode,
+        ),
+      ]);
+    } catch {
+      throw new BadGatewayException(
+        'Không thể kiểm tra lệnh, mặt hàng hoặc mã phân bổ trên SAP.',
+      );
+    }
+    if (entry === null) {
+      throw new NotFoundException(
+        'Không tìm thấy lệnh sản xuất tương ứng trên SAP.',
+      );
+    }
+    if (tracking.ManageSerialNumbers === 'tYES') {
+      throw new UnprocessableEntityException(
+        'Mặt hàng quản lý theo số sê-ri cần được nhập trực tiếp trên SAP.',
+      );
+    }
+    if (
+      tracking.ManageBatchNumbers !== 'tYES' &&
+      tracking.ManageBatchNumbers !== 'tNO'
+    ) {
+      throw new BadGatewayException(
+        'SAP chưa trả về thông tin quản lý lô của mặt hàng.',
+      );
+    }
+    const hasActiveRule = (code: string, dimension: number) =>
+      distributionRules.some(
+        (rule) =>
+          rule.FactorCode === code &&
+          rule.InWhichDimension === dimension &&
+          rule.Active === 'tYES',
+      );
+    if (!hasActiveRule(departmentCode, 1)) {
+      throw new UnprocessableEntityException(
+        `Mã Phòng ban - Bộ phận ${departmentCode} không hợp lệ hoặc chưa được kích hoạt trên SAP.`,
+      );
+    }
+    if (!hasActiveRule(costItemCode, 2)) {
+      throw new UnprocessableEntityException(
+        `Mã Khoản mục chi phí ${costItemCode} không hợp lệ hoặc chưa được kích hoạt trên SAP.`,
+      );
+    }
+
+    let request: SapProductionReceiptRequests;
+    try {
+      request = await requests.create({
+        data: {
+          ...where,
+          summary_id: summaryId,
+          active_summary_id: summaryId,
+          payload_hash: payloadHash,
+          sap_order_entry: entry,
+        },
+      });
+    } catch (error) {
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== 'P2002'
+      )
+        throw error;
+      const concurrent = await requests.findUnique({ where });
+      if (concurrent) {
+        return this.recoverSapProductionReceipt(
+          concurrent,
+          summaryId,
+          payloadHash,
+        );
+      }
+      const winner = await requests.findUnique({ where: activeWhere });
+      if (winner)
+        return this.rejectDuplicateSapProductionReceipt(winner, summaryId);
+      throw new ConflictException(
+        'Yêu cầu nhập kho vừa thay đổi. Vui lòng thử lại.',
+      );
+    }
+
+    const reference = sapReceiptReference(request.request_id);
+    let receipt: { DocEntry: number; DocNum: number };
+    try {
+      receipt = await this.sapB1Client.postProductionReceipt({
+        DocDate: postingDate,
+        JournalMemo: 'Nhập kho sản xuất',
+        Reference2: reference,
+        Comments: comments || undefined,
+        DocumentLines: [
+          {
+            BaseType: SAP_PRODUCTION_ORDER_BASE_TYPE,
+            BaseEntry: entry,
+            Quantity: quantity,
+            WarehouseCode: warehouseCode,
+            CostingCode: departmentCode,
+            CostingCode2: costItemCode,
+            U_SL: lotNumber,
+            U_NSX: manufacturingDate,
+            U_HSD: expiryDate,
+            BatchNumbers:
+              tracking.ManageBatchNumbers === 'tYES'
+                ? [
+                    {
+                      BatchNumber: lotNumber,
+                      Quantity: quantity,
+                      ManufacturingDate: manufacturingDate,
+                      ExpiryDate: expiryDate,
+                    },
+                  ]
+                : undefined,
+          },
+        ],
+      });
+    } catch (error) {
+      if (
+        isAxiosError(error) &&
+        [400, 422].includes(error.response?.status ?? 0)
+      ) {
+        const sapError: unknown = error.response?.data?.error?.message;
+        const message: unknown =
+          typeof sapError === 'object' &&
+          sapError !== null &&
+          'value' in sapError
+            ? sapError.value
+            : sapError;
+        if (typeof message === 'string' && message.trim()) {
+          await requests.delete({ where: { id: request.id } });
+          throw new UnprocessableEntityException(message.trim().slice(0, 400));
+        }
+      }
+      return this.recoverSapProductionReceipt(request, summaryId, payloadHash);
+    }
+    return this.recordSapProductionReceipt(request.id, receipt);
+  }
+
+  private async rejectDuplicateSapProductionReceipt(
+    active: SapProductionReceiptRequests,
+    summaryId: number,
+  ): Promise<never> {
+    const receipt = await this.recoverSapProductionReceipt(
+      active,
+      summaryId,
+      active.payload_hash,
+    ).catch((error: unknown) => {
+      if (error instanceof ServiceUnavailableException) {
+        throw new ConflictException(
+          'Bản tổng kết đang chờ kết quả nhập kho từ SAP.',
+        );
+      }
+      throw error;
+    });
+    throw new ConflictException(
+      `Bản tổng kết đã nhập kho từ WMS qua phiếu SAP #${receipt.DocNum}.`,
+    );
+  }
+
+  private async recoverSapProductionReceipt(
+    request: SapProductionReceiptRequests,
+    summaryId: number,
+    payloadHash: string,
+  ) {
+    if (
+      request.summary_id !== summaryId ||
+      request.payload_hash !== payloadHash
+    ) {
+      throw new ConflictException('Mã yêu cầu đã được dùng cho dữ liệu khác.');
+    }
+    if (request.sap_doc_entry !== null && request.sap_doc_num !== null) {
+      return { DocEntry: request.sap_doc_entry, DocNum: request.sap_doc_num };
+    }
+    const reference = sapReceiptReference(request.request_id);
+    const receipts = await this.sapB1Client
+      .getProductionReceiptsForEntry(request.sap_order_entry, reference)
+      .catch((): SapProductionReceipt[] => []);
+    const matches = receipts.filter(
+      (receipt) => receipt.Reference2 === reference,
+    );
+    if (matches.length !== 1) {
+      throw new ServiceUnavailableException(
+        `Chưa xác nhận được kết quả trên SAP. Hãy bấm Kiểm tra kết quả. Mã tham chiếu: ${reference}.`,
+      );
+    }
+    return this.recordSapProductionReceipt(request.id, matches[0]);
+  }
+
+  private async recordSapProductionReceipt(
+    requestId: number,
+    receipt: { DocEntry: number; DocNum: number },
+  ) {
+    await this.prismaService.sapProductionReceiptRequests.update({
+      where: { id: requestId },
+      data: { sap_doc_entry: receipt.DocEntry, sap_doc_num: receipt.DocNum },
+    });
+    return { DocEntry: receipt.DocEntry, DocNum: receipt.DocNum };
   }
 
   async findHistory(summaryId: number, query: GetAuditLogPageDto) {
@@ -266,7 +543,14 @@ export class ProductionOrderFinishedProductSummariesService {
           where: {
             id: summaryId,
           },
-          include: finishedProductSummaryListInclude,
+          include: {
+            ...finishedProductSummaryListInclude,
+            sapProductionReceiptRequests: {
+              where: { active_summary_id: summaryId },
+              select: { sap_doc_num: true },
+              take: 1,
+            },
+          },
         },
       );
 
@@ -274,11 +558,14 @@ export class ProductionOrderFinishedProductSummariesService {
       throw new NotFoundException('Finished product summary not found');
     }
 
+    const { sapProductionReceiptRequests = [], ...summaryData } = summary;
     const { samplingRequests, ...productionOrder } = summary.productionOrder;
     const latestSamplingRequest = samplingRequests[0] ?? null;
 
     return {
-      ...summary,
+      ...summaryData,
+      sap_production_receipt_number:
+        sapProductionReceiptRequests[0]?.sap_doc_num ?? null,
       productionOrder: {
         ...productionOrder,
         pyclm: {
@@ -369,13 +656,15 @@ export class ProductionOrderFinishedProductSummariesService {
     const userId = this.normalizeUserId(user);
     await this.ensureSummaryExists(summaryId);
     // Only the first confirmation wins, including concurrent requests/retries.
-    await this.prismaService.productionOrderFinishedProductSummaries.updateMany({
-      where: { id: summaryId, warehouse_confirmed_at: null },
-      data: {
-        warehouse_confirmed_by_id: userId,
-        warehouse_confirmed_at: new Date(),
+    await this.prismaService.productionOrderFinishedProductSummaries.updateMany(
+      {
+        where: { id: summaryId, warehouse_confirmed_at: null },
+        data: {
+          warehouse_confirmed_by_id: userId,
+          warehouse_confirmed_at: new Date(),
+        },
       },
-    });
+    );
     return this.findById(summaryId);
   }
 

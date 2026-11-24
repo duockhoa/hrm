@@ -115,7 +115,8 @@ describe('Finished product summary history HTTP', () => {
       .set('Authorization', 'test');
 
   it('requires summary read permission and resolves the SAP order from the summary', async () => {
-    const path = '/production-orders/finished-product-summaries/7/sap-production-receipts';
+    const path =
+      '/production-orders/finished-product-summaries/7/sap-production-receipts';
     const getReceipts = () => request(app.getHttpServer()).get(path);
     await getReceipts().expect(401);
     await getReceipts()
@@ -138,6 +139,33 @@ describe('Finished product summary history HTTP', () => {
       .query({ productionOrderId: 9999 })
       .expect(200, receipts);
     expect(getProductionReceipts).toHaveBeenCalledWith(productionOrder);
+  });
+
+  it('restricts posting to the warehouse permission and rejects client-supplied order keys', async () => {
+    const postReceipt = () =>
+      request(app.getHttpServer())
+        .post(
+          '/production-orders/finished-product-summaries/7/sap-production-receipts',
+        )
+        .set('Authorization', 'test');
+    await postReceipt().expect(403);
+    await postReceipt()
+      .set(
+        'x-test-permission',
+        'production-orders.finished-product-summaries.warehouse-confirm',
+      )
+      .send({
+        requestId: '8bc4d331-c62e-447a-8c6d-6fcd92a63179',
+        postingDate: '2026-11-24',
+        quantity: 2345,
+        warehouseCode: 'K-TP',
+        lotNumber: '1250926',
+        manufacturingDate: '2026-09-25',
+        expiryDate: '2028-09-25',
+        BaseEntry: 9999,
+      })
+      .expect(400);
+    expect(findUnique).not.toHaveBeenCalled();
   });
 
   it('requires authentication and warehouse confirmation permission', async () => {

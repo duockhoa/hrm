@@ -17,10 +17,25 @@ export type SapProductionReceipt = {
     WarehouseCode: string | null;
     MeasureUnit: string | null;
     Currency: string | null;
+    CostingCode: string | null;
+    CostingCode2: string | null;
     U_SL: string | null;
     U_HSD: string | null;
     U_NSX: string | null;
   }[];
+};
+
+export type SapProductionReceiptInput = {
+  requestId: string;
+  postingDate: string;
+  quantity: number;
+  warehouseCode: string;
+  lotNumber: string;
+  manufacturingDate: string;
+  expiryDate: string;
+  departmentCode?: string;
+  costItemCode?: string;
+  comments: string;
 };
 
 type UpdateFinishedProductSummaryPayload = {
@@ -74,13 +89,27 @@ const createSamplingRequest = async (
 };
 
 const productOrdersService = {
+  createSapProductionReceipt: async (
+    summaryId: string | number,
+    payload: SapProductionReceiptInput,
+  ) => {
+    const { data } = await axiosClient.post<
+      Pick<SapProductionReceipt, "DocEntry" | "DocNum">
+    >(
+      API_ROUTES.productionOrders.finishedProductSummarySapReceipts(summaryId),
+      payload,
+    );
+    return data;
+  },
   fetchSapProductionReceipts: async (summaryId: string | number) => {
     const { data } = await axiosClient.get<SapProductionReceipt[]>(
       API_ROUTES.productionOrders.finishedProductSummarySapReceipts(summaryId),
     );
     return data;
   },
-  confirmFinishedProductSummaryWarehouse: async (summaryId: string | number) => {
+  confirmFinishedProductSummaryWarehouse: async (
+    summaryId: string | number,
+  ) => {
     const response = await axiosClient.post(
       `${API_ROUTES.productionOrders.finishedProductSummaryDetail(summaryId)}/warehouse-confirmation`,
     );

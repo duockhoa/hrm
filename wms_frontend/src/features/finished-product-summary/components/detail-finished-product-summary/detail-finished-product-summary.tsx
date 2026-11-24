@@ -18,6 +18,7 @@ import productionOrdersService from "@/services/product-orders.service";
 import { LuFileInput } from "react-icons/lu";
 import useSWR, { mutate as mutateGlobal } from "swr";
 import SapProductionReceiptsButton from "./sap-production-receipts-button";
+import CreateSapProductionReceiptButton from "./create-sap-production-receipt-button";
 
 type FinishedProductSummaryUser = {
   id?: number | string;
@@ -42,6 +43,7 @@ type FinishedProductSummaryOrder = {
   item_code?: string | null;
   production_order_code?: string | null;
   lot_no?: string | null;
+  warehouse?: string | null;
   date_manufacture?: string | null;
   expire_date?: string | null;
   item?: {
@@ -64,6 +66,7 @@ type FinishedProductSummary = {
   created_at?: string | null;
   updated_at?: string | null;
   warehouse_confirmed_at?: string | null;
+  sap_production_receipt_number?: number | null;
   warehouseConfirmedBy?: FinishedProductSummaryUser | null;
   productionOrder?: FinishedProductSummaryOrder | null;
   createdBy?: FinishedProductSummaryUser | null;
@@ -78,6 +81,9 @@ const formatDate = (value: string | null | undefined) => {
     ? value
     : date.toLocaleDateString("vi-VN");
 };
+
+const toInputDate = (value: string | null | undefined) =>
+  value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
 
 const formatDateTime = (value: string | null | undefined) => {
   if (!value) {
@@ -274,6 +280,14 @@ export default function FinishedProductSummaryDetail({
   const showWarehouseAction =
     canConfirmWarehouse && !data.warehouse_confirmed_at;
   const showSapReceiptsAction = productionOrderId != null;
+  const sapReceiptNumber = data.sap_production_receipt_number;
+  const showCreateSapReceipt =
+    showSapReceiptsAction &&
+    canConfirmWarehouse &&
+    userId != null &&
+    sapReceiptNumber == null;
+  const sapOrderLabel =
+    productionOrder?.production_order_code || String(productionOrderId ?? "");
   const pyclm = productionOrder?.pyclm;
   const userLabel =
     createdBy?.name ?? createdBy?.username ?? createdBy?.email ?? "";
@@ -348,6 +362,37 @@ export default function FinishedProductSummaryDetail({
               }
             />
           )}
+          {showCreateSapReceipt && (
+            <CreateSapProductionReceiptButton
+              key={`create-sap-receipt-${id}-${userId}`}
+              summaryId={id}
+              userId={userId}
+              onCreated={(documentNumber) => {
+                void mutate(
+                  (current) =>
+                    current
+                      ? { ...current, sap_production_receipt_number: documentNumber }
+                      : current,
+                  { revalidate: false },
+                ).catch(() => {});
+              }}
+              onConflict={() => void mutate().catch(() => {})}
+              orderLabel={[sapOrderLabel, productionOrder?.item?.item_name]
+                .filter(Boolean)
+                .join(" · ")}
+              defaults={{
+                quantity: getTotalQuantity(data),
+                warehouseCode: productionOrder?.warehouse ?? "",
+                lotNumber: productionOrder?.lot_no ?? "",
+                manufacturingDate: toInputDate(productionOrder?.date_manufacture),
+                expiryDate: toInputDate(productionOrder?.expire_date),
+                comments: (
+                  data.note ||
+                  `Nhập kho ${productionOrder?.item?.item_name ?? ""} ${sapOrderLabel}`
+                ).trim().slice(0, 254),
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -396,6 +441,12 @@ export default function FinishedProductSummaryDetail({
           lable="Tổng số lượng"
           value={formatNumber(getTotalQuantity(data))}
         />
+        {sapReceiptNumber != null && (
+          <FieldDisplay
+            lable="Nhập kho từ WMS"
+            value={`Đã nhập kho · Phiếu SAP #${sapReceiptNumber}`}
+          />
+        )}
         <FieldDisplay lable="Ghi chú" value={formatText(data.note)} />
         <FieldDisplay
           lable="Xác nhận của kho"

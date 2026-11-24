@@ -77,6 +77,8 @@ function SapProductionReceiptDetail({
               <TableHead>Mã hàng</TableHead>
               <TableHead>Tên hàng</TableHead>
               <TableHead>Kho</TableHead>
+              <TableHead>Phòng ban - Bộ phận</TableHead>
+              <TableHead>Khoản mục chi phí</TableHead>
               <TableHead className="text-right">Số lượng</TableHead>
               <TableHead>Đơn vị tính</TableHead>
               <TableHead className="text-right">Đơn giá</TableHead>
@@ -93,6 +95,8 @@ function SapProductionReceiptDetail({
                   {line.ItemDescription || "—"}
                 </TableCell>
                 <TableCell>{line.WarehouseCode || "—"}</TableCell>
+                <TableCell>{line.CostingCode || "—"}</TableCell>
+                <TableCell>{line.CostingCode2 || "—"}</TableCell>
                 <TableCell className="text-right tabular-nums">
                   {formatReceiptQuantity(line.Quantity) || "—"}
                 </TableCell>

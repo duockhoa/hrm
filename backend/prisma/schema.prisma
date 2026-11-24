@@ -1843,10 +1843,27 @@ model ProductionOrderFinishedProductSummaries {
   warehouseConfirmedBy Users? @relation("FinishedProductSummaryWarehouseConfirmer", fields: [warehouse_confirmed_by_id], references: [id], onDelete: Restrict, map: "po_finished_summary_warehouse_confirmer_fkey")
   created_at          DateTime         @default(now())
   updated_at          DateTime         @default(now()) @updatedAt
+  sapProductionReceiptRequests SapProductionReceiptRequests[]
 
   @@index([production_order_id], map: "po_finished_summary_po_id_fkey")
   @@index([created_by_id], map: "po_finished_summary_created_by_id_fkey")
   @@map("production_order_finished_product_summaries")
+}
+
+model SapProductionReceiptRequests {
+  id              Int @id @default(autoincrement())
+  request_id      String @unique(map: "sap_production_receipt_request_key") @db.Char(36)
+  summary_id      Int
+  active_summary_id Int? @unique(map: "sap_production_receipt_active_summary_key")
+  summary         ProductionOrderFinishedProductSummaries @relation(fields: [summary_id], references: [id], onDelete: Cascade, map: "sap_production_receipt_request_summary_fkey")
+  payload_hash    String @db.Char(64)
+  sap_order_entry Int
+  sap_doc_entry   Int?
+  sap_doc_num     Int?
+  created_at      DateTime @default(now())
+
+  @@index([summary_id], map: "sap_production_receipt_request_summary_fkey")
+  @@map("sap_production_receipt_requests")
 }
 
 model ProductionOrderDensityChecks {

@@ -14,12 +14,26 @@ import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-laye
 describe('ProductionOrderFinishedProductSummariesService', () => {
   let service: ProductionOrderFinishedProductSummariesService;
   const auditLogsService = { findAll: jest.fn() };
-  const sapB1Client = { getProductionReceipts: jest.fn() };
+  const sapB1Client = {
+    getProductionReceipts: jest.fn(),
+    resolveProductionOrderEntry: jest.fn(),
+    getReceiptItemTracking: jest.fn(),
+    getProductionReceiptDistributionRules: jest.fn(),
+    postProductionReceipt: jest.fn(),
+    getProductionReceiptsForEntry: jest.fn(),
+  };
+  const receiptRequests = {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  };
   let prismaService: {
     $transaction: jest.Mock;
     productionOrders: {
       findUnique: jest.Mock;
     };
+    sapProductionReceiptRequests: typeof receiptRequests;
     productionOrderFinishedProductSummaries: {
       findUnique: jest.Mock;
       findMany: jest.Mock;
@@ -33,7 +47,12 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
 
   beforeEach(async () => {
     auditLogsService.findAll.mockReset();
-    sapB1Client.getProductionReceipts.mockReset();
+    for (const mock of [
+      ...Object.values(sapB1Client),
+      ...Object.values(receiptRequests),
+    ]) {
+      mock.mockReset();
+    }
     prismaService = {
       $transaction: jest.fn((operations: Promise<unknown>[]) =>
         Promise.all(operations),
@@ -41,6 +60,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       productionOrders: {
         findUnique: jest.fn(),
       },
+      sapProductionReceiptRequests: receiptRequests,
       productionOrderFinishedProductSummaries: {
         findUnique: jest.fn(),
         findMany: jest.fn(),
@@ -99,6 +119,212 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       NotFoundException,
     );
     expect(sapB1Client.getProductionReceipts).not.toHaveBeenCalled();
+  });
+
+  describe('posting production receipts', () => {
+    const dto = {
+      requestId: '8bc4d331-c62e-447a-8c6d-6fcd92a63179',
+      postingDate: '2026-11-24',
+      quantity: 2345,
+      warehouseCode: 'K-TP',
+      lotNumber: '1250926',
+      manufacturingDate: '2026-09-25',
+      expiryDate: '2028-09-25',
+      comments: 'Nhập kho',
+    };
+    const sapReceipt = { DocEntry: 1875, DocNum: 1875 };
+    beforeEach(() => {
+      prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+        {
+          productionOrder: {
+            id: 3077,
+            item_code: 'TP001',
+            lot_no: dto.lotNumber,
+          },
+        },
+      );
+      receiptRequests.findUnique.mockResolvedValue(null);
+      receiptRequests.create.mockImplementation(({ data }) =>
+        Promise.resolve({
+          ...data,
+          id: 4,
+          sap_doc_entry: null,
+          sap_doc_num: null,
+        }),
+      );
+      sapB1Client.resolveProductionOrderEntry.mockResolvedValue(3120);
+      sapB1Client.getReceiptItemTracking.mockResolvedValue({
+        ManageBatchNumbers: 'tYES',
+        ManageSerialNumbers: 'tNO',
+      });
+      sapB1Client.getProductionReceiptDistributionRules.mockResolvedValue([
+        { FactorCode: 'KHKV', InWhichDimension: 1, Active: 'tYES' },
+        { FactorCode: 'CP004', InWhichDimension: 2, Active: 'tYES' },
+      ]);
+      sapB1Client.postProductionReceipt.mockResolvedValue(sapReceipt);
+    });
+
+    it('posts the linked SAP internal order and the full quantity in its batch', async () => {
+      await expect(service.createSapProductionReceipt(7, dto)).resolves.toEqual(
+        sapReceipt,
+      );
+      expect(sapB1Client.postProductionReceipt).toHaveBeenCalledWith({
+        DocDate: dto.postingDate,
+        JournalMemo: 'Nhập kho sản xuất',
+        Comments: dto.comments,
+        Reference2: expect.stringMatching(/^W[A-Z0-9]{10}$/),
+        DocumentLines: [
+          {
+            BaseType: 202,
+            BaseEntry: 3120,
+            Quantity: dto.quantity,
+            WarehouseCode: 'K-TP',
+            CostingCode: 'KHKV',
+            CostingCode2: 'CP004',
+            U_SL: dto.lotNumber,
+            U_NSX: dto.manufacturingDate,
+            U_HSD: dto.expiryDate,
+            BatchNumbers: [
+              {
+                BatchNumber: dto.lotNumber,
+                Quantity: dto.quantity,
+                ManufacturingDate: dto.manufacturingDate,
+                ExpiryDate: dto.expiryDate,
+              },
+            ],
+          },
+        ],
+      });
+      expect(receiptRequests.update).toHaveBeenCalledWith({
+        where: { id: 4 },
+        data: { sap_doc_entry: 1875, sap_doc_num: 1875 },
+      });
+      expect(receiptRequests.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ summary_id: 7, active_summary_id: 7 }),
+      });
+    });
+
+    it('posts the selected codes only in their SAP dimensions', async () => {
+      const selected = {
+        ...dto,
+        departmentCode: 'KHO1',
+        costItemCode: 'CP005',
+      };
+      sapB1Client.getProductionReceiptDistributionRules.mockResolvedValueOnce([
+        { FactorCode: 'KHO1', InWhichDimension: 1, Active: 'tYES' },
+        { FactorCode: 'CP005', InWhichDimension: 2, Active: 'tYES' },
+      ]);
+      await expect(
+        service.createSapProductionReceipt(7, selected),
+      ).resolves.toEqual(sapReceipt);
+      expect(
+        sapB1Client.getProductionReceiptDistributionRules,
+      ).toHaveBeenCalledWith('KHO1', 'CP005');
+      expect(sapB1Client.postProductionReceipt).toHaveBeenCalledWith(
+        expect.objectContaining({
+          DocumentLines: [
+            expect.objectContaining({
+              CostingCode: 'KHO1',
+              CostingCode2: 'CP005',
+            }),
+          ],
+        }),
+      );
+    });
+
+    it('rejects swapped distribution dimensions before creating a receipt', async () => {
+      await expect(
+        service.createSapProductionReceipt(7, {
+          ...dto,
+          departmentCode: 'CP004',
+          costItemCode: 'KHKV',
+        }),
+      ).rejects.toMatchObject({ status: 422 });
+      expect(receiptRequests.create).not.toHaveBeenCalled();
+      expect(sapB1Client.postProductionReceipt).not.toHaveBeenCalled();
+    });
+
+    it('blocks a new request for an already posted summary before calling SAP', async () => {
+      receiptRequests.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          summary_id: 7,
+          sap_doc_entry: 1875,
+          sap_doc_num: 1875,
+        });
+      await expect(service.createSapProductionReceipt(7, dto)).rejects.toThrow(
+        'Bản tổng kết đã nhập kho từ WMS qua phiếu SAP #1875.',
+      );
+      expect(sapB1Client.resolveProductionOrderEntry).not.toHaveBeenCalled();
+      expect(sapB1Client.postProductionReceipt).not.toHaveBeenCalled();
+    });
+
+    it('blocks a concurrent submission with a different request key', async () => {
+      receiptRequests.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          request_id: '23448c2b-75a5-4f5b-a626-c49337bddf20',
+          summary_id: 7,
+          sap_order_entry: 3120,
+          sap_doc_entry: null,
+          sap_doc_num: null,
+        });
+      receiptRequests.create.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('duplicate', {
+          code: 'P2002',
+          clientVersion: '6.19.3',
+        }),
+      );
+      sapB1Client.getProductionReceiptsForEntry.mockResolvedValueOnce([]);
+      await expect(service.createSapProductionReceipt(7, dto)).rejects.toThrow(
+        'Bản tổng kết đang chờ kết quả nhập kho từ SAP.',
+      );
+      expect(sapB1Client.postProductionReceipt).not.toHaveBeenCalled();
+    });
+
+    it('reconciles an unconfirmed attempt without posting twice', async () => {
+      sapB1Client.postProductionReceipt.mockRejectedValueOnce(
+        new Error('timeout'),
+      );
+      sapB1Client.getProductionReceiptsForEntry.mockResolvedValueOnce([]);
+      await expect(
+        service.createSapProductionReceipt(7, dto),
+      ).rejects.toMatchObject({ status: 503 });
+      const reference =
+        sapB1Client.postProductionReceipt.mock.calls[0][0].Reference2;
+      receiptRequests.findUnique.mockResolvedValue(
+        await receiptRequests.create.mock.results[0].value,
+      );
+      sapB1Client.getProductionReceiptsForEntry.mockResolvedValueOnce([
+        { ...sapReceipt, Reference2: reference },
+      ]);
+      await expect(service.createSapProductionReceipt(7, dto)).resolves.toEqual(
+        sapReceipt,
+      );
+      expect(
+        sapB1Client.getProductionReceiptsForEntry,
+      ).toHaveBeenLastCalledWith(3120, reference);
+      expect(sapB1Client.postProductionReceipt).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns the SAP rejection and releases the attempt for correction', async () => {
+      sapB1Client.postProductionReceipt.mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: { error: { message: 'Posting period is locked' } },
+        },
+      });
+      await expect(
+        service.createSapProductionReceipt(7, dto),
+      ).rejects.toMatchObject({
+        status: 422,
+        message: 'Posting period is locked',
+      });
+      expect(receiptRequests.delete).toHaveBeenCalledWith({ where: { id: 4 } });
+    });
   });
 
   it('records the authenticated warehouse employee and server time only when unconfirmed', async () => {
@@ -482,6 +708,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     await expect(service.findById(1)).resolves.toEqual({
       id: 1,
       production_order_id: 2031,
+      sap_production_receipt_number: null,
       productionOrder: {
         id: 2031,
         pyclm: {

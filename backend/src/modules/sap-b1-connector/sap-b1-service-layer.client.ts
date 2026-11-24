@@ -10,6 +10,8 @@ import {
   SapProductionOrderLookup,
   SapProductionOrderReference,
   SapProductionReceipt,
+  SapProductionReceiptPayload,
+  SapProductionReceiptResult,
   SapProductionReceiptRow,
 } from './sap-production-receipt';
 
@@ -89,9 +91,7 @@ export class SapB1ServiceLayerClient {
     return this.get<T>(`ProductionOrders(${id})`);
   }
 
-  async getProductionReceipts(
-    order: SapProductionOrderReference,
-  ): Promise<SapProductionReceipt[] | null> {
+  async resolveProductionOrderEntry(order: SapProductionOrderReference) {
     if (!Number.isSafeInteger(order.id) || order.id <= 0) return null;
 
     // The local ID is SAP DocumentNumber. Receipt lines reference AbsoluteEntry.
@@ -118,7 +118,62 @@ export class SapB1ServiceLayerClient {
     ) {
       throw new Error('SAP production order could not be uniquely resolved');
     }
+    return orderEntry;
+  }
 
+  async getProductionReceipts(
+    order: SapProductionOrderReference,
+  ): Promise<SapProductionReceipt[] | null> {
+    const orderEntry = await this.resolveProductionOrderEntry(order);
+    return orderEntry === null
+      ? null
+      : this.getProductionReceiptsForEntry(orderEntry);
+  }
+
+  async getReceiptItemTracking(itemCode: string) {
+    const key = encodeURIComponent(itemCode.replaceAll("'", "''"));
+    return this.get<{
+      ManageBatchNumbers: 'tYES' | 'tNO';
+      ManageSerialNumbers: 'tYES' | 'tNO';
+    }>(`Items('${key}')?$select=ManageBatchNumbers,ManageSerialNumbers`);
+  }
+
+  async postProductionReceipt(payload: SapProductionReceiptPayload) {
+    const result = await this.post<SapProductionReceiptResult>(
+      SAP_PRODUCTION_RECEIPT,
+      payload,
+    );
+    if (
+      !Number.isSafeInteger(result?.DocEntry) ||
+      !Number.isSafeInteger(result?.DocNum) ||
+      result.DocEntry <= 0 ||
+      result.DocNum <= 0
+    ) {
+      throw new Error('SAP did not return a posted production receipt');
+    }
+    return { DocEntry: result.DocEntry, DocNum: result.DocNum };
+  }
+
+  getProductionReceiptDistributionRules(
+    departmentCode: string,
+    costItemCode: string,
+  ) {
+    const filter = [departmentCode, costItemCode]
+      .map((code) => `FactorCode eq '${code.replaceAll("'", "''")}'`)
+      .join(' or ');
+    return this.fetchAllPages<{
+      FactorCode: string;
+      InWhichDimension: number;
+      Active: 'tYES' | 'tNO';
+    }>(
+      `DistributionRules?$select=FactorCode,InWhichDimension,Active&$filter=${encodeURIComponent(filter)}`,
+    );
+  }
+
+  async getProductionReceiptsForEntry(orderEntry: number, reference?: string) {
+    if (!Number.isSafeInteger(orderEntry) || orderEntry <= 0) {
+      throw new Error('Invalid SAP production order entry');
+    }
     const header = SAP_PRODUCTION_RECEIPT;
     const lines = SAP_PRODUCTION_RECEIPT_LINES;
     const filters = [
@@ -126,10 +181,15 @@ export class SapB1ServiceLayerClient {
       `${lines}/BaseType eq ${SAP_PRODUCTION_ORDER_BASE_TYPE}`,
       `${lines}/BaseEntry eq ${orderEntry}`,
     ];
+    if (reference) {
+      filters.push(
+        `${header}/Reference2 eq '${reference.replaceAll("'", "''")}'`,
+      );
+    }
     const rows = await this.fetchAllPages<SapProductionReceiptRow>(
       `$crossjoin(${header},${lines})?` +
         `$expand=${header}($select=DocEntry,DocNum,DocDate,Comments,JournalMemo,Reference2),` +
-        `${lines}($select=LineNum,BaseType,BaseEntry,ItemCode,ItemDescription,Quantity,Price,WarehouseCode,MeasureUnit,Currency,U_SL,U_HSD,U_NSX)` +
+        `${lines}($select=LineNum,BaseType,BaseEntry,ItemCode,ItemDescription,Quantity,Price,WarehouseCode,MeasureUnit,Currency,CostingCode,CostingCode2,U_SL,U_HSD,U_NSX)` +
         `&$filter=${encodeURIComponent(filters.join(' and '))}` +
         `&$orderby=${encodeURIComponent(`${header}/DocEntry desc,${lines}/LineNum asc`)}`,
     );

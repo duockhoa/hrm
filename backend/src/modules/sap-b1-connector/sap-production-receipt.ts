@@ -37,6 +37,8 @@ type SapProductionReceiptLine = {
   WarehouseCode: string | null;
   MeasureUnit: string | null;
   Currency: string | null;
+  CostingCode: string | null;
+  CostingCode2: string | null;
   U_SL: string | null;
   U_HSD: string | null;
   U_NSX: string | null;
@@ -44,6 +46,35 @@ type SapProductionReceiptLine = {
 
 export type SapProductionReceipt = SapProductionReceiptHeader & {
   DocumentLines: SapProductionReceiptLine[];
+};
+
+export type SapProductionReceiptResult = Pick<
+  SapProductionReceiptHeader,
+  'DocEntry' | 'DocNum'
+>;
+
+export type SapProductionReceiptPayload = {
+  DocDate: string;
+  Reference2: string;
+  JournalMemo: string;
+  Comments?: string;
+  DocumentLines: {
+    BaseType: number;
+    BaseEntry: number;
+    Quantity: number;
+    WarehouseCode: string;
+    CostingCode: string;
+    CostingCode2: string;
+    U_SL: string;
+    U_NSX: string;
+    U_HSD: string;
+    BatchNumbers?: {
+      BatchNumber: string;
+      Quantity: number;
+      ManufacturingDate: string;
+      ExpiryDate: string;
+    }[];
+  }[];
 };
 
 export type SapProductionReceiptRow = {
