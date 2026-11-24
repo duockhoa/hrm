@@ -103,3 +103,9 @@ export const PRODUCTION_ORDER_HISTORY_RESOURCES = {
 
 export type ProductionOrderHistoryResource =
   keyof typeof PRODUCTION_ORDER_HISTORY_RESOURCES;
+
+export const LOT_HISTORY_CATEGORIES = Object.keys(
+  PRODUCTION_ORDER_HISTORY_RESOURCES,
+) as ProductionOrderHistoryResource[];
+
+export type LotHistoryCategory = ProductionOrderHistoryResource;

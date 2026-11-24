@@ -4,6 +4,12 @@ import { PrismaService } from 'src/prisma.service';
 import { GetAuditLogsDto } from './dto/get-audit-logs.dto';
 import { GetAuditLogPageDto } from './dto/get-audit-log-page.dto';
 
+export type AuditEntityScope = {
+  entityType: string;
+  ids: number[];
+  afterAuditId?: bigint;
+};
+
 @Injectable()
 export class AuditLogsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -44,7 +50,7 @@ export class AuditLogsService {
   }
 
   async findForEntities(
-    entities: { entityType: string; ids: number[] }[],
+    entities: AuditEntityScope[],
     query: GetAuditLogPageDto,
   ) {
     const scopes = entities
@@ -52,11 +58,38 @@ export class AuditLogsService {
       .map((entity) => ({
         entity_type: entity.entityType,
         entity_id: { in: entity.ids.map((id) => BigInt(id)) },
+        ...(entity.afterAuditId !== undefined && {
+          id: { gt: entity.afterAuditId },
+        }),
       }));
     return this.findMatching(
       { OR: scopes },
       query.page ?? 1,
       query.limit ?? 20,
+    );
+  }
+
+  async findLastAssignmentAuditIds(
+    entityType: string,
+    ids: number[],
+    foreignKey: string,
+    parentId: number,
+  ) {
+    if (!ids.length) return new Map<number, bigint>();
+    const assignments = await this.prisma.auditLogs.groupBy({
+      by: ['entity_id'],
+      where: {
+        entity_type: entityType,
+        entity_id: { in: ids.map((id) => BigInt(id)) },
+        action: 'UPDATE',
+        new_values: { path: `$.${foreignKey}`, equals: parentId },
+      },
+      _max: { id: true },
+    });
+    return new Map(
+      assignments.flatMap(({ entity_id, _max }) =>
+        _max.id === null ? [] : [[Number(entity_id), _max.id] as const],
+      ),
     );
   }
 

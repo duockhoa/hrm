@@ -17,6 +17,7 @@ describe('ProductionOrderHistoryService', () => {
   const audit = {
     findForEntities: jest.fn(),
     findHistoricalEntityIds: jest.fn(),
+    findLastAssignmentAuditIds: jest.fn(),
   };
   let service: ProductionOrderHistoryService;
   beforeEach(() => {
@@ -30,6 +31,7 @@ describe('ProductionOrderHistoryService', () => {
       .mockReset()
       .mockResolvedValue({ data: [], meta: { total: 0 } });
     audit.findHistoricalEntityIds.mockReset().mockResolvedValue([]);
+    audit.findLastAssignmentAuditIds.mockReset().mockResolvedValue(new Map());
     service = new ProductionOrderHistoryService(
       delegates as unknown as PrismaService,
       audit as unknown as AuditLogsService,
@@ -201,6 +203,130 @@ describe('ProductionOrderHistoryService', () => {
       {},
     );
     expect(audit.findHistoricalEntityIds).not.toHaveBeenCalled();
+  });
+
+  it('merges lot updates with permitted forms and recovers deleted summaries', async () => {
+    delegates.productionOrderDensityChecks.findMany.mockResolvedValue([
+      { id: 44 },
+    ]);
+    delegates.productionOrderWeighingRecords.findMany.mockResolvedValue([
+      { id: 11 },
+    ]);
+    delegates.productionOrderWeighingRecordLines.findMany.mockResolvedValue([
+      { id: 22 },
+    ]);
+    audit.findHistoricalEntityIds.mockImplementation((table: string) =>
+      Promise.resolve(
+        table === 'production_order_finished_product_summaries' ? [33] : [],
+      ),
+    );
+    const page = { scope: 'lot', page: 2, limit: 20 } as const;
+
+    await service.findHistory('production-order', 7, page, {
+      permissions: ['production-orders.read'],
+    });
+
+    expect(audit.findForEntities).toHaveBeenCalledWith(
+      [
+        { entityType: 'production_orders', ids: [7] },
+        {
+          entityType: 'production_order_finished_product_summaries',
+          ids: [33],
+        },
+        { entityType: 'production_order_density_checks', ids: [44] },
+        { entityType: 'production_order_weighing_records', ids: [11] },
+        { entityType: 'production_order_weighing_record_lines', ids: [22] },
+      ],
+      page,
+    );
+    expect(delegates.productionOrderDeviations.findMany).not.toHaveBeenCalled();
+    expect(
+      delegates.productionOrderFiltrationChecks.findMany,
+    ).not.toHaveBeenCalled();
+    expect(audit.findLastAssignmentAuditIds).not.toHaveBeenCalled();
+  });
+
+  it('rejects a deviation filter without its read permission', async () => {
+    await expect(
+      service.findHistory(
+        'production-order',
+        7,
+        {
+          scope: 'lot',
+          category: 'production-order-deviation',
+        },
+        { permissions: ['production-orders.read'] },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(audit.findForEntities).not.toHaveBeenCalled();
+    expect(delegates.productionOrderDeviations.findMany).not.toHaveBeenCalled();
+  });
+
+  it('limits moved deviation and image history to logs after assignment to this lot', async () => {
+    delegates.productionOrderDeviations.findMany.mockResolvedValue([
+      { id: 44 },
+      { id: 45 },
+    ]);
+    audit.findLastAssignmentAuditIds.mockResolvedValue(new Map([[44, 100n]]));
+    delegates.productionOrderDeviationImages.findMany.mockImplementation(
+      ({ where }) =>
+        Promise.resolve(where.deviation_id.in.includes(44) ? [{ id: 55 }] : []),
+    );
+    const page = {
+      scope: 'lot',
+      category: 'production-order-deviation',
+    } as const;
+    await service.findHistory('production-order', 7, page, {
+      permissions: [
+        'production-orders.read',
+        'production-order-deviations.read',
+      ],
+    });
+    expect(delegates.productionOrderDeviations.findMany).toHaveBeenCalledWith({
+      where: { production_order_id: 7 },
+      select: { id: true },
+    });
+    expect(audit.findLastAssignmentAuditIds).toHaveBeenCalledWith(
+      'production_order_deviations',
+      [44, 45],
+      'production_order_id',
+      7,
+    );
+    expect(audit.findForEntities).toHaveBeenCalledWith(
+      [
+        { entityType: 'production_order_deviations', ids: [45] },
+        {
+          entityType: 'production_order_deviations',
+          ids: [44],
+          afterAuditId: 100n,
+        },
+        {
+          entityType: 'production_order_deviation_images',
+          ids: [55],
+          afterAuditId: 100n,
+        },
+      ],
+      page,
+    );
+  });
+
+  it('checks that the lot is visible before collecting any aggregate history', async () => {
+    delegates.productionOrders.findUnique.mockResolvedValue(null);
+    await expect(
+      service.findHistory(
+        'production-order',
+        7,
+        { scope: 'lot' },
+        {
+          permissions: [
+            'production-orders.read',
+            'production-order-deviations.read',
+          ],
+        },
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(audit.findHistoricalEntityIds).not.toHaveBeenCalled();
+    expect(audit.findForEntities).not.toHaveBeenCalled();
   });
 
   it('uses the actual record ID for cylinder calibration, independently of its order ID', async () => {

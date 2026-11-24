@@ -1,4 +1,5 @@
 import type { EditHistoryFields } from "./types";
+import { PRODUCTION_ORDER_HISTORY_ENTITIES } from "./production-order-history-labels";
 
 const fields: EditHistoryFields = {
   item_code: { label: "Mã sản phẩm", type: "text" },
@@ -37,6 +38,8 @@ const fields: EditHistoryFields = {
   package_count: { label: "Số kiện", type: "number" },
   boxes_per_package: { label: "Số hộp trên kiện", type: "number" },
   loose_box_count: { label: "Số hộp lẻ", type: "number" },
+  warehouse_confirmed_at: { label: "Thời điểm kho xác nhận", type: "date" },
+  warehouse_confirmed_by_id: { label: "Mã người xác nhận kho", type: "text" },
   input_quantity: { label: "Số lượng đầu vào", type: "number" },
   input_unit: { label: "Đơn vị đầu vào", type: "text" },
   load_quantity: { label: "Số lượng nạp", type: "number" },
@@ -400,6 +403,8 @@ const resourceFields = {
     "package_count",
     "boxes_per_package",
     "loose_box_count",
+    "warehouse_confirmed_at",
+    "warehouse_confirmed_by_id",
     "note",
   ],
   "semi-finished-product-summary": [
@@ -782,3 +787,19 @@ export const PRODUCTION_ORDER_HISTORY_FIELDS = Object.fromEntries(
     Object.fromEntries(keys.map((key) => [key, fields[key]])),
   ]),
 ) as Record<ProductionOrderHistoryResource, EditHistoryFields>;
+
+export const LOT_HISTORY_FIELDS_BY_ENTITY: Record<string, EditHistoryFields> =
+  Object.fromEntries(
+    (
+      Object.keys(
+        PRODUCTION_ORDER_HISTORY_ENTITIES,
+      ) as ProductionOrderHistoryResource[]
+    ).flatMap((resource) => {
+      const { entity, children = [] } =
+        PRODUCTION_ORDER_HISTORY_ENTITIES[resource];
+      return [entity, ...children].map((name) => [
+        name,
+        PRODUCTION_ORDER_HISTORY_FIELDS[resource],
+      ]);
+    }),
+  );

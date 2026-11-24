@@ -85,7 +85,7 @@ describe('AuditLogsService', () => {
     await service.findForEntities(
       [
         { entityType: 'parent', ids: [7] },
-        { entityType: 'child', ids: [8, 9] },
+        { entityType: 'child', ids: [8, 9], afterAuditId: 100n },
       ],
       {},
     );
@@ -94,7 +94,11 @@ describe('AuditLogsService', () => {
         where: {
           OR: [
             { entity_type: 'parent', entity_id: { in: [7n] } },
-            { entity_type: 'child', entity_id: { in: [8n, 9n] } },
+            {
+              entity_type: 'child',
+              entity_id: { in: [8n, 9n] },
+              id: { gt: 100n },
+            },
           ],
         },
       }),

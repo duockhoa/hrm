@@ -102,11 +102,29 @@ describe('ProductionOrderHistory HTTP', () => {
     await get('users').expect(404);
     expect(findForEntities).not.toHaveBeenCalled();
   });
-  it.each([{ page: 0 }, { limit: 101 }, { scope: 'all' }])(
-    'validates history query %j',
-    async (query) => {
-      await get().query(query).expect(400);
-      expect(findForEntities).not.toHaveBeenCalled();
-    },
-  );
+  it('routes a filtered lot timeline and rejects unsupported category combinations', async () => {
+    await get('production-order')
+      .query({ scope: 'lot', category: 'production-order' })
+      .expect(200);
+    expect(findForEntities).toHaveBeenCalledWith(
+      [{ entityType: 'production_orders', ids: [7] }],
+      { scope: 'lot', category: 'production-order', page: 1, limit: 20 },
+    );
+    await get('production-order')
+      .query({ scope: 'lot', category: 'production-order-deviation' })
+      .expect(403);
+    await get('production-order')
+      .query({ category: 'production-order' })
+      .expect(400);
+    await get('density-check').query({ scope: 'lot' }).expect(400);
+  });
+  it.each([
+    { page: 0 },
+    { limit: 101 },
+    { scope: 'all' },
+    { scope: 'lot', category: 'users' },
+  ])('validates history query %j', async (query) => {
+    await get().query(query).expect(400);
+    expect(findForEntities).not.toHaveBeenCalled();
+  });
 });

@@ -3,6 +3,7 @@
 import { API_ROUTES } from "@/lib/api-routes";
 import EditHistoryButton from "./edit-history-button";
 import {
+  LOT_HISTORY_FIELDS_BY_ENTITY,
   PRODUCTION_ORDER_HISTORY_FIELDS,
   type ProductionOrderHistoryResource,
 } from "./production-order-history-config";
@@ -20,7 +21,16 @@ export default function ProductionOrderHistoryButton({
   title,
   scope,
 }: ProductionOrderHistorySelection & { title: string }) {
+  const isLotHistory =
+    resource === "production-order" && scope !== "production-order";
   if (id === null || id === undefined) return null;
+
+  const timeline = isLotHistory
+    ? {
+        historyUrl: API_ROUTES.productionOrders.lotHistory(id),
+        fieldsByEntity: LOT_HISTORY_FIELDS_BY_ENTITY,
+      }
+    : undefined;
   return (
     <EditHistoryButton
       key={`${resource}:${id}:${scope ?? "record"}`}
@@ -32,6 +42,7 @@ export default function ProductionOrderHistoryButton({
       title={title}
       fields={PRODUCTION_ORDER_HISTORY_FIELDS[resource]}
       entityLabels={PRODUCTION_ORDER_HISTORY_ENTITY_LABELS}
+      timeline={timeline}
     />
   );
 }

@@ -277,6 +277,8 @@ const PRODUCTION_ORDERS = {
     `/production-orders/finished-product-summaries/${summaryId}/history`,
   recordHistory: (resource: string, recordId: string | number, scope?: "record" | "production-order") =>
     `/production-orders/history/${encodeURIComponent(resource)}/${encodeURIComponent(recordId)}${scope === "production-order" ? "?scope=production-order" : ""}`,
+  lotHistory: (orderId: string | number) =>
+    `/production-orders/history/production-order/${encodeURIComponent(orderId)}?scope=lot`,
   semiFinishedProductSummaries: (id: string | number) =>
     `/production-orders/${id}/semi-finished-product-summaries`,
   semiFinishedProductSummaryDetail: (summaryId: string | number) =>
