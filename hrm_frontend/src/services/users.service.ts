@@ -2,8 +2,8 @@ import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 
 //users fetcher
-const fetcherUsers = async () => {
-  const response = await axiosClient.get(API_ROUTES.users.base);
+const fetcherUsers = async (url: string = API_ROUTES.users.base) => {
+  const response = await axiosClient.get(url);
   return response.data;
 };
 

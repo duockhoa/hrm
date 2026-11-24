@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { compareSync, hash } from 'bcrypt';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService, withSoftDeleted } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -56,9 +56,9 @@ export class UsersService {
   }
 
   async findAllWithDeleted() {
-    return this.prisma.users.findMany({
-      withDeleted: true,
-    } as any);
+    return this.prisma.users.findMany(
+      withSoftDeleted({ omit: { password: true } }),
+    );
   }
 
   findById(id: number) {

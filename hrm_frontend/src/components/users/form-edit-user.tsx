@@ -24,7 +24,7 @@ import { useDepartmentDirectory } from "@/hooks/use-department-directory";
 import DirectoryLoadStatus from "@/components/common/directory-load-status";
 import { userService } from "@/services/index.service";
 import { mutate } from "swr";
-import { API_ROUTES } from "@/lib/api-routes";
+import { refreshUserDirectories } from "@/hooks/use-user-directory";
 
 export default function EditUserForm({
   user,
@@ -74,7 +74,7 @@ export default function EditUserForm({
       await userService.updateUser(user?.id || "", data);
       toast.success("User updated successfully!");
       mutate("/users/" + user?.id);
-      mutate(API_ROUTES.users.base);
+      void refreshUserDirectories();
       onClose?.();
     } catch (error: any) {
       toast.error(error?.message || "Failed to update user.");

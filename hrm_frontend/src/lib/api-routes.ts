@@ -9,6 +9,7 @@ const AUTH = {
 
 const USERS = {
   base: "/users",
+  withDeleted: "/users/with-deleted",
   me: "/users/me",
   addUser: "/users",
   uploadAvatar: "/users/me/avatar",

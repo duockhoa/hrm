@@ -23,8 +23,7 @@ import { Input } from "../ui/input";
 import { useDepartmentDirectory } from "@/hooks/use-department-directory";
 import DirectoryLoadStatus from "@/components/common/directory-load-status";
 import { userService } from "@/services/index.service";
-import { mutate } from "swr";
-import { API_ROUTES } from "@/lib/api-routes";
+import { refreshUserDirectories } from "@/hooks/use-user-directory";
 export default function AddUserForm({ onClose }: { onClose?: () => void }) {
   const {
     data: departments = [],
@@ -72,7 +71,7 @@ export default function AddUserForm({ onClose }: { onClose?: () => void }) {
       await userService.addUser(data);
       toast.success("User added successfully!");
       form.reset();
-      mutate(API_ROUTES.users.base); // Refresh the user list after adding a new user
+      void refreshUserDirectories();
       onClose?.();
     } catch (error: any) {
       toast.error(error?.message || "Failed to add user.");

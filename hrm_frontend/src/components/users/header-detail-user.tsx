@@ -1,7 +1,7 @@
 "use client";
 import FormConfirm from "@/components/common/form-confirm";
 import { Button } from "@/components/ui/button";
-import { API_ROUTES } from "@/lib/api-routes";
+import { refreshUserDirectories } from "@/hooks/use-user-directory";
 import { userService } from "@/services/index.service";
 import { Trash2 } from "lucide-react";
 import { AiOutlineRight } from "react-icons/ai";
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import Link from "next/link";
 import { toast } from "sonner";
-import { mutate } from "swr";
 export default function DetailUserHeader({ user }: { user: any }) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -30,7 +29,7 @@ export default function DetailUserHeader({ user }: { user: any }) {
 
     try {
       await userService.deleteUser(String(user.id));
-      await mutate(API_ROUTES.users.base);
+      await refreshUserDirectories();
       toast.success("Đã xóa người dùng.");
       setIsDeleteOpen(false);
       router.push("/home", { scroll: false });

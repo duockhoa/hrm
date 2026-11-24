@@ -29,6 +29,9 @@ export class UserResponseDto {
 
   @ApiProperty({ example: '2026-08-12T13:00:00.000Z', format: 'date-time' })
   updated_at!: Date;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
+  deleted_at?: Date | null;
 }
 
 export class PermissionKeysResponseDto {

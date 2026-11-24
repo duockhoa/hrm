@@ -11,16 +11,25 @@ import {
 } from "@/lib/scroll-position";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useEffect, useMemo } from "react";
+import useSWR from "swr";
+import { API_ROUTES } from "@/lib/api-routes";
+import usersService from "@/services/users.service";
 
 const USER_LIST_SCROLL_KEY = "userListScroll";
 
 export default function HomePage() {
+  const { data: permissions } = useSWR(
+    `${API_ROUTES.users.me}/permissions`,
+    usersService.fetcherMyPermissionKeys,
+  );
+  const includeDeleted =
+    permissions?.permissionKeys.includes("users.list.deleted");
   const {
     data: users = [],
     isLoading: usersLoading,
     error: usersError,
     mutate: retryUsers,
-  } = useUserDirectory();
+  } = useUserDirectory(includeDeleted);
 
   const router = useRouter();
   const pathname = usePathname();
