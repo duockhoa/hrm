@@ -89,12 +89,14 @@ export default function SuppliersPage() {
               variant="outline"
               disabled={isSyncing}
               aria-busy={isSyncing}
+              aria-label="SAP – Đồng bộ danh sách nhà cung cấp"
               onClick={() => void syncSuppliers()}
             >
               <RefreshCw
+                aria-hidden="true"
                 className={isSyncing ? "size-4 animate-spin" : "size-4"}
               />
-              {isSyncing ? "Đang đồng bộ…" : "Đồng bộ SAP"}
+              SAP
             </Button>
           )}
         </div>

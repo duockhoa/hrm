@@ -100,12 +100,14 @@ export default function ItemsPage() {
               className="ml-auto"
               disabled={isSyncing}
               aria-busy={isSyncing}
+              aria-label="SAP – Đồng bộ danh mục mặt hàng"
               onClick={() => void syncItems()}
             >
               <RefreshCw
+                aria-hidden="true"
                 className={isSyncing ? "size-4 animate-spin" : "size-4"}
               />
-              {isSyncing ? "Đang đồng bộ…" : "Đồng bộ SAP"}
+              SAP
             </Button>
           )}
         </div>

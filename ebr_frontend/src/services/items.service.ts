@@ -24,6 +24,20 @@ export type ItemCatalogPage = {
   skip: number;
 };
 
+type ItemSyncResult = {
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+};
+
+const syncFromSap = async () => {
+  const response = await axiosClient.post<ItemSyncResult>(
+    API_ROUTES.items.syncFromSap,
+  );
+  return response.data;
+};
+
 const fetchCatalogPage = async (
   url: string,
   search: string,
@@ -146,6 +160,7 @@ const copyItemEquipment = async (
 };
 
 const itemsService = {
+  syncFromSap,
   fetchCatalogPage,
   fetchItems,
   fetchItemsByCodePrefix,
