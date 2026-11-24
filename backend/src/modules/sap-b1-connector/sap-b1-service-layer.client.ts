@@ -6,6 +6,7 @@ import { SapItemSeries } from './sap-item-series';
 
 type SapPagedResponse<T> = {
   value?: T[];
+  '@odata.nextLink'?: string;
   'odata.nextLink'?: string;
 };
 
@@ -103,7 +104,15 @@ export class SapB1ServiceLayerClient {
     while (nextEndpoint) {
       const data = await this.get<SapPagedResponse<T>>(nextEndpoint);
       results.push(...(data.value ?? []));
-      nextEndpoint = data['odata.nextLink'] ?? null;
+      const nextLink = data['@odata.nextLink'] ?? data['odata.nextLink'];
+      if (!nextLink) break;
+
+      const currentUrl = new URL(this.sapApi.getUri({ url: nextEndpoint }));
+      const nextUrl = new URL(nextLink, currentUrl);
+      if (nextUrl.origin !== currentUrl.origin) {
+        throw new Error('SAP pagination returned a link to a different origin');
+      }
+      nextEndpoint = nextUrl.href;
     }
 
     return results;
