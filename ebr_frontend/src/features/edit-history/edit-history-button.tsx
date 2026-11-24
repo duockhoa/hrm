@@ -67,7 +67,7 @@ function HistoryEntry({
             {entry.actor_name ||
               (entry.actor_id
                 ? `Người dùng #${entry.actor_id}`
-                : "Không ghi nhận người thực hiện")}
+                : "Hệ thống")}
           </p>
           <time dateTime={entry.created_at} className="text-xs text-gray-500">
             {formatHistoryDate(entry.created_at)}
