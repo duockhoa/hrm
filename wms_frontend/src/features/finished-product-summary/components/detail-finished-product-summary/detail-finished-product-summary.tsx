@@ -17,6 +17,7 @@ import userService from "@/services/user.service";
 import productionOrdersService from "@/services/product-orders.service";
 import { LuFileInput } from "react-icons/lu";
 import useSWR, { mutate as mutateGlobal } from "swr";
+import SapProductionReceiptsButton from "./sap-production-receipts-button";
 
 type FinishedProductSummaryUser = {
   id?: number | string;
@@ -272,6 +273,7 @@ export default function FinishedProductSummaryDetail({
     canSendSamplingRequest && productionOrderId != null;
   const showWarehouseAction =
     canConfirmWarehouse && !data.warehouse_confirmed_at;
+  const showSapReceiptsAction = productionOrderId != null;
   const pyclm = productionOrder?.pyclm;
   const userLabel =
     createdBy?.name ?? createdBy?.username ?? createdBy?.email ?? "";
@@ -297,7 +299,7 @@ export default function FinishedProductSummaryDetail({
         showCloseButton={showCloseButton}
       />
 
-      {(showSamplingAction || showWarehouseAction) && (
+      {(showSamplingAction || showWarehouseAction || showSapReceiptsAction) && (
         <div className="flex flex-wrap items-start gap-2 border-b py-3">
           {showSamplingAction && (
             <OpenFormButton
@@ -336,6 +338,15 @@ export default function FinishedProductSummaryDetail({
                 {confirming ? "Đang xác nhận..." : "Nhân viên kho xác nhận"}
               </span>
             </button>
+          )}
+          {showSapReceiptsAction && (
+            <SapProductionReceiptsButton
+              key={id}
+              summaryId={id}
+              orderCode={
+                productionOrder?.production_order_code || productionOrderId
+              }
+            />
           )}
         </div>
       )}

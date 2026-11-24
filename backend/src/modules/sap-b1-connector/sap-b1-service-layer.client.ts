@@ -3,6 +3,15 @@ import axios, { AxiosInstance } from 'axios';
 import * as https from 'https';
 import { SAP_BP_SELECT, SapBusinessPartner } from './sap-business-partner';
 import { SapItemSeries } from './sap-item-series';
+import {
+  SAP_PRODUCTION_ORDER_BASE_TYPE,
+  SAP_PRODUCTION_RECEIPT,
+  SAP_PRODUCTION_RECEIPT_LINES,
+  SapProductionOrderLookup,
+  SapProductionOrderReference,
+  SapProductionReceipt,
+  SapProductionReceiptRow,
+} from './sap-production-receipt';
 
 type SapPagedResponse<T> = {
   value?: T[];
@@ -78,6 +87,69 @@ export class SapB1ServiceLayerClient {
 
   async getProductionOrderById<T = any>(id: number | string): Promise<T> {
     return this.get<T>(`ProductionOrders(${id})`);
+  }
+
+  async getProductionReceipts(
+    order: SapProductionOrderReference,
+  ): Promise<SapProductionReceipt[] | null> {
+    if (!Number.isSafeInteger(order.id) || order.id <= 0) return null;
+
+    // The local ID is SAP DocumentNumber. Receipt lines reference AbsoluteEntry.
+    const sapOrders = await this.fetchAllPages<SapProductionOrderLookup>(
+      `ProductionOrders?$select=AbsoluteEntry,DocumentNumber,ItemNo,U_SL,U_MLSX&$filter=DocumentNumber eq ${order.id}`,
+    );
+    let matches = sapOrders.filter(
+      (candidate) =>
+        candidate.DocumentNumber === order.id &&
+        candidate.ItemNo === order.item_code &&
+        candidate.U_SL?.trim() === order.lot_no.trim(),
+    );
+    if (matches.length > 1 && order.production_order_code) {
+      matches = matches.filter(
+        (candidate) => candidate.U_MLSX === order.production_order_code,
+      );
+    }
+    if (matches.length === 0) return null;
+    const orderEntry = matches[0].AbsoluteEntry;
+    if (
+      matches.length > 1 ||
+      !Number.isSafeInteger(orderEntry) ||
+      orderEntry <= 0
+    ) {
+      throw new Error('SAP production order could not be uniquely resolved');
+    }
+
+    const header = SAP_PRODUCTION_RECEIPT;
+    const lines = SAP_PRODUCTION_RECEIPT_LINES;
+    const filters = [
+      `${header}/DocEntry eq ${lines}/DocEntry`,
+      `${lines}/BaseType eq ${SAP_PRODUCTION_ORDER_BASE_TYPE}`,
+      `${lines}/BaseEntry eq ${orderEntry}`,
+    ];
+    const rows = await this.fetchAllPages<SapProductionReceiptRow>(
+      `$crossjoin(${header},${lines})?` +
+        `$expand=${header}($select=DocEntry,DocNum,DocDate,Comments,JournalMemo,Reference2),` +
+        `${lines}($select=LineNum,BaseType,BaseEntry,ItemCode,ItemDescription,Quantity,Price,WarehouseCode,MeasureUnit,Currency,U_SL,U_HSD,U_NSX)` +
+        `&$filter=${encodeURIComponent(filters.join(' and '))}` +
+        `&$orderby=${encodeURIComponent(`${header}/DocEntry desc,${lines}/LineNum asc`)}`,
+    );
+    const receipts = new Map<number, SapProductionReceipt>();
+    for (const row of rows) {
+      const document = row[header];
+      const line = row[lines];
+      if (
+        line.BaseEntry !== orderEntry ||
+        line.BaseType !== SAP_PRODUCTION_ORDER_BASE_TYPE
+      )
+        continue;
+      const receipt = receipts.get(document.DocEntry);
+      if (receipt) {
+        receipt.DocumentLines.push(line);
+      } else {
+        receipts.set(document.DocEntry, { ...document, DocumentLines: [line] });
+      }
+    }
+    return [...receipts.values()];
   }
 
   async patchProductionOrderById(

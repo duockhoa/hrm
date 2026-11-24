@@ -12,6 +12,7 @@ import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { ProductionOrdersController } from './production-orders.controller';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 
 describe('Finished product summary history HTTP', () => {
   let app: INestApplication<Server>;
@@ -20,6 +21,7 @@ describe('Finished product summary history HTTP', () => {
   const findMany = jest.fn();
   const count = jest.fn();
   const networkAllowed = jest.fn();
+  const getProductionReceipts = jest.fn();
 
   beforeAll(async () => {
     const dependencies = Reflect.getMetadata(
@@ -40,6 +42,10 @@ describe('Finished product summary history HTTP', () => {
           })),
         ProductionOrderFinishedProductSummariesService,
         AuditLogsService,
+        {
+          provide: SapB1ServiceLayerClient,
+          useValue: { getProductionReceipts },
+        },
         {
           provide: PrismaService,
           useValue: {
@@ -107,6 +113,32 @@ describe('Finished product summary history HTTP', () => {
         '/production-orders/finished-product-summaries/7/warehouse-confirmation',
       )
       .set('Authorization', 'test');
+
+  it('requires summary read permission and resolves the SAP order from the summary', async () => {
+    const path = '/production-orders/finished-product-summaries/7/sap-production-receipts';
+    const getReceipts = () => request(app.getHttpServer()).get(path);
+    await getReceipts().expect(401);
+    await getReceipts()
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.list')
+      .expect(403);
+    expect(getProductionReceipts).not.toHaveBeenCalled();
+
+    const productionOrder = {
+      id: 3353,
+      item_code: 'TP001',
+      lot_no: '001',
+      production_order_code: null,
+    };
+    findUnique.mockResolvedValue({ productionOrder });
+    const receipts = [{ DocEntry: 2096, DocNum: 2096, DocumentLines: [] }];
+    getProductionReceipts.mockResolvedValue(receipts);
+    await getReceipts()
+      .set('Authorization', 'test')
+      .query({ productionOrderId: 9999 })
+      .expect(200, receipts);
+    expect(getProductionReceipts).toHaveBeenCalledWith(productionOrder);
+  });
 
   it('requires authentication and warehouse confirmation permission', async () => {
     await request(app.getHttpServer())

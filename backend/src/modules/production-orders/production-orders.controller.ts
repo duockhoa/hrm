@@ -525,6 +525,16 @@ export class ProductionOrdersController {
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Get('finished-product-summaries/:summaryId/sap-production-receipts')
+  async findFinishedProductSummarySapProductionReceipts(
+    @Param('summaryId', ParseIntPipe) summaryId: number,
+  ) {
+    return this.productionOrderFinishedProductSummariesService.findSapProductionReceipts(
+      summaryId,
+    );
+  }
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('finished-product-summaries/:summaryId')
   async findFinishedProductSummaryById(
     @Param('summaryId', ParseIntPipe) summaryId: number,

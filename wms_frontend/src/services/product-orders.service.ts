@@ -1,6 +1,28 @@
 import { API_ROUTES } from "@/lib/api-routes";
 import axiosClient from "@/lib/axios-client";
 
+export type SapProductionReceipt = {
+  DocEntry: number;
+  DocNum: number;
+  DocDate: string;
+  Comments: string | null;
+  JournalMemo: string | null;
+  Reference2: string | null;
+  DocumentLines: {
+    LineNum: number;
+    ItemCode: string;
+    ItemDescription: string | null;
+    Quantity: number;
+    Price: number | null;
+    WarehouseCode: string | null;
+    MeasureUnit: string | null;
+    Currency: string | null;
+    U_SL: string | null;
+    U_HSD: string | null;
+    U_NSX: string | null;
+  }[];
+};
+
 type UpdateFinishedProductSummaryPayload = {
   package_count?: number;
   boxes_per_package?: number;
@@ -52,6 +74,12 @@ const createSamplingRequest = async (
 };
 
 const productOrdersService = {
+  fetchSapProductionReceipts: async (summaryId: string | number) => {
+    const { data } = await axiosClient.get<SapProductionReceipt[]>(
+      API_ROUTES.productionOrders.finishedProductSummarySapReceipts(summaryId),
+    );
+    return data;
+  },
   confirmFinishedProductSummaryWarehouse: async (summaryId: string | number) => {
     const response = await axiosClient.post(
       `${API_ROUTES.productionOrders.finishedProductSummaryDetail(summaryId)}/warehouse-confirmation`,

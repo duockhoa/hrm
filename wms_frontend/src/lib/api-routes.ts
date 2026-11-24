@@ -53,6 +53,8 @@ const PRODUCTION_ORDERS = {
     `/production-orders/${id}/finished-product-summaries`,
   finishedProductSummaryDetail: (summaryId: string | number) =>
     `/production-orders/finished-product-summaries/${summaryId}`,
+  finishedProductSummarySapReceipts: (summaryId: string | number) =>
+    `/production-orders/finished-product-summaries/${summaryId}/sap-production-receipts`,
 };
 
 const FEATURES = {

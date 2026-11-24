@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   BadRequestException,
   ConflictException,
   Injectable,
@@ -13,6 +14,8 @@ import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { GetAuditLogPageDto } from '../audit-logs/dto/get-audit-log-page.dto';
 import { GetFinishedProductSummariesDto } from './dto/get-finished-product-summaries.dto';
 import { normalizeLotSearch } from './production-order-list-query';
+import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
+import type { SapProductionReceipt } from '../sap-b1-connector/sap-production-receipt';
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -123,7 +126,45 @@ export class ProductionOrderFinishedProductSummariesService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly sapB1Client: SapB1ServiceLayerClient,
   ) {}
+
+  async findSapProductionReceipts(summaryId: number) {
+    const summary =
+      await this.prismaService.productionOrderFinishedProductSummaries.findUnique(
+        {
+          where: { id: summaryId },
+          select: {
+            productionOrder: {
+              select: {
+                id: true,
+                item_code: true,
+                lot_no: true,
+                production_order_code: true,
+              },
+            },
+          },
+        },
+      );
+    if (!summary) {
+      throw new NotFoundException('Không tìm thấy tổng kết thành phẩm');
+    }
+
+    let receipts: SapProductionReceipt[] | null;
+    try {
+      receipts = await this.sapB1Client.getProductionReceipts(
+        summary.productionOrder,
+      );
+    } catch {
+      throw new BadGatewayException('Không thể đọc phiếu nhập kho từ SAP');
+    }
+    if (receipts === null) {
+      throw new NotFoundException(
+        'Không tìm thấy lệnh sản xuất tương ứng trên SAP',
+      );
+    }
+    return receipts;
+  }
 
   async findHistory(summaryId: number, query: GetAuditLogPageDto) {
     // This scoped lookup must succeed before reading the shared audit table.

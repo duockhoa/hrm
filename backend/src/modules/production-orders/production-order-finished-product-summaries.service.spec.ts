@@ -9,10 +9,12 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ProductionOrderFinishedProductSummariesService } from './production-order-finished-product-summaries.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
 
 describe('ProductionOrderFinishedProductSummariesService', () => {
   let service: ProductionOrderFinishedProductSummariesService;
   const auditLogsService = { findAll: jest.fn() };
+  const sapB1Client = { getProductionReceipts: jest.fn() };
   let prismaService: {
     $transaction: jest.Mock;
     productionOrders: {
@@ -31,6 +33,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
 
   beforeEach(async () => {
     auditLogsService.findAll.mockReset();
+    sapB1Client.getProductionReceipts.mockReset();
     prismaService = {
       $transaction: jest.fn((operations: Promise<unknown>[]) =>
         Promise.all(operations),
@@ -53,6 +56,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       providers: [
         ProductionOrderFinishedProductSummariesService,
         { provide: AuditLogsService, useValue: auditLogsService },
+        { provide: SapB1ServiceLayerClient, useValue: sapB1Client },
         {
           provide: PrismaService,
           useValue: prismaService,
@@ -63,6 +67,38 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     service = module.get<ProductionOrderFinishedProductSummariesService>(
       ProductionOrderFinishedProductSummariesService,
     );
+  });
+
+  it('loads SAP receipts for the production order attached to the summary', async () => {
+    const productionOrder = {
+      id: 3353,
+      item_code: 'TP001',
+      lot_no: '001',
+      production_order_code: 'TP001-001-3353',
+    };
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      {
+        productionOrder,
+      },
+    );
+    const receipts = [{ DocEntry: 2096, DocumentLines: [] }];
+    sapB1Client.getProductionReceipts.mockResolvedValue(receipts);
+
+    await expect(service.findSapProductionReceipts(7)).resolves.toBe(receipts);
+    expect(sapB1Client.getProductionReceipts).toHaveBeenCalledWith(
+      productionOrder,
+    );
+  });
+
+  it('does not query SAP when the summary is absent or outside the current scope', async () => {
+    prismaService.productionOrderFinishedProductSummaries.findUnique.mockResolvedValue(
+      null,
+    );
+
+    await expect(service.findSapProductionReceipts(7)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(sapB1Client.getProductionReceipts).not.toHaveBeenCalled();
   });
 
   it('records the authenticated warehouse employee and server time only when unconfirmed', async () => {
@@ -605,7 +641,9 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     expect(
       prismaService.productionOrderFinishedProductSummaries.delete,
     ).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 1, warehouse_confirmed_at: null } }),
+      expect.objectContaining({
+        where: { id: 1, warehouse_confirmed_at: null },
+      }),
     );
   });
 
@@ -622,7 +660,9 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       );
 
       await expect(
-        operation === 'update' ? service.update(1, { package_count: 14 }) : service.delete(1),
+        operation === 'update'
+          ? service.update(1, { package_count: 14 })
+          : service.delete(1),
       ).rejects.toBeInstanceOf(ConflictException);
     },
   );
