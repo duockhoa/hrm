@@ -13,7 +13,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
+import { WarehouseReceiptListQueryDto } from './dto/warehouse-receipt-list-query.dto';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { WarehouseReceiptReadGuard } from 'src/access/warehouse-receipt-scope';
 import { CreateWarehouseReceiptItemDto } from './dto/create-warehouse-receipt-item.dto';
@@ -29,7 +29,7 @@ export class WarehouseReceiptItemsController {
   @Get()
   findAll(
     @Query(new ValidationPipe({ transform: true, whitelist: true }))
-    query: RecordListQueryDto = {},
+    query: WarehouseReceiptListQueryDto = {},
   ) {
     return this.service.findAll(query);
   }

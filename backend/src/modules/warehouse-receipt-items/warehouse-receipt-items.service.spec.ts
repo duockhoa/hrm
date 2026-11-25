@@ -136,6 +136,35 @@ describe('WarehouseReceiptItemsService', () => {
     );
   });
 
+  it('combines filters with search before paging and counting', async () => {
+    prisma.warehouseReceiptItems.findMany.mockResolvedValue([]);
+    prisma.warehouseReceiptItems.count.mockResolvedValue(0);
+    await service.findAll({
+      search: 'PEG',
+      item_code: 'NL001',
+      lot_number: 'L01',
+      sap_status: 'not_entered',
+      page: 2,
+      limit: 300,
+    });
+    expect(prisma.warehouseReceiptItems.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 300,
+        take: 300,
+        where: expect.objectContaining({
+          item_code: 'NL001',
+          AND: expect.arrayContaining([
+            { lot_number: { contains: 'L01' } },
+            { sapConfirmation: { is: null } },
+          ]),
+        }),
+      }),
+    );
+    expect(prisma.warehouseReceiptItems.count).toHaveBeenCalledWith({
+      where: prisma.warehouseReceiptItems.findMany.mock.calls[0][0].where,
+    });
+  });
+
   it('filters receipt history by exact item code before paging and counting', async () => {
     prisma.warehouseReceiptItems.findMany.mockResolvedValue([
       { id: 1, item_code: 'NL_001%' },

@@ -46,6 +46,7 @@ import ReceiptDetail, {
 import ReceiptForm, { receiptError } from "./receipt-form";
 import { BatchSamplingDraftButton } from "./receipt-sampling-draft-form";
 import BatchReceiptImagesButton from "./batch-receipt-images";
+import { ReceiptFilterButton, type ReceiptFilters } from "./receipt-filters";
 
 const columns = [
   "Mã hàng",
@@ -144,6 +145,7 @@ export default function ReceiptPage({
     useState<HTMLDivElement | null>(null);
   const [creating, setCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [filters, setFilters] = useState<ReceiptFilters>({});
   const serverSearch = useDebouncedValue(search.trim());
   const {
     records,
@@ -160,7 +162,7 @@ export default function ReceiptPage({
     url: WAREHOUSE_RECEIPT_ITEMS_URL,
     enabled: canRead,
     cacheScope: access.cacheScope,
-    filters: { search: serverSearch || undefined },
+    filters: { ...filters, search: serverSearch || undefined },
     observe: !isMobile || selectedId === null,
     storageKey: "warehouseReceiptListScroll",
   });
@@ -270,6 +272,15 @@ export default function ReceiptPage({
                 >
                   <SquareCheck className="size-5" />
                 </Button>
+                <ReceiptFilterButton
+                  filters={filters}
+                  disabled={!canRead}
+                  onApply={(next) => {
+                    setFilters(next);
+                    setSelection(null);
+                    closeDetail();
+                  }}
+                />
               </div>
             </>
           )}
@@ -398,7 +409,7 @@ export default function ReceiptPage({
                     colSpan={columnCount}
                     className="h-32 text-center text-sm text-gray-500"
                   >
-                    {search.trim()
+                    {search.trim() || Object.keys(filters).length > 0
                       ? "Không tìm thấy hàng nhập kho phù hợp."
                       : "Chưa có hàng nhập kho."}
                   </TableCell>

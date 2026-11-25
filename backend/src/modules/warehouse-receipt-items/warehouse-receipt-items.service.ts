@@ -11,7 +11,8 @@ import { Prisma } from '@prisma/client';
 import axios from 'axios';
 import { isISO8601 } from 'class-validator';
 import { PrismaService } from 'src/prisma.service';
-import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
+import { WarehouseReceiptListQueryDto } from './dto/warehouse-receipt-list-query.dto';
+import { warehouseReceiptFilters } from './warehouse-receipt-filters';
 import {
   literalContains,
   recordPagination,
@@ -69,40 +70,43 @@ const allowedFields = new Set([
 export class WarehouseReceiptItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(options: RecordListQueryDto = {}) {
+  async findAll(options: WarehouseReceiptListQueryDto = {}) {
     const pagination = recordPagination(options);
     const where: Prisma.WarehouseReceiptItemsWhereInput = {
       ...(options.item_code?.trim()
         ? { item_code: options.item_code.trim() }
         : {}),
-      AND: recordSearchTerms(options.search).map((term) => {
-        const contains = literalContains(term);
-        const id = searchDocumentId(term);
-        return {
-          OR: [
-            ...[
-              'item_code',
-              'unit',
-              'lot_number',
-              'manufacturer_lot_number',
-              'packaging_specification',
-              'supplier_code',
-              'supplier_name',
-              'manufacturer_code',
-              'manufacturer_name',
-              'note',
-            ].map((field) => ({ [field]: contains })),
-            { item: { is: { item_name: contains } } },
-            { supplier: { is: { card_name: contains } } },
-            { manufacturer: { is: { manufacturer_name: contains } } },
-            { enteredBy: { is: searchUserFields(term) } },
-            ...(id !== undefined ? [{ id }] : []),
-            ...(/^\d+(?:[.,]\d+)?$/.test(term)
-              ? [{ quantity: { equals: term.replace(',', '.') } }]
-              : []),
-          ],
-        };
-      }),
+      AND: [
+        ...warehouseReceiptFilters(options),
+        ...recordSearchTerms(options.search).map((term) => {
+          const contains = literalContains(term);
+          const id = searchDocumentId(term);
+          return {
+            OR: [
+              ...[
+                'item_code',
+                'unit',
+                'lot_number',
+                'manufacturer_lot_number',
+                'packaging_specification',
+                'supplier_code',
+                'supplier_name',
+                'manufacturer_code',
+                'manufacturer_name',
+                'note',
+              ].map((field) => ({ [field]: contains })),
+              { item: { is: { item_name: contains } } },
+              { supplier: { is: { card_name: contains } } },
+              { manufacturer: { is: { manufacturer_name: contains } } },
+              { enteredBy: { is: searchUserFields(term) } },
+              ...(id !== undefined ? [{ id }] : []),
+              ...(/^\d+(?:[.,]\d+)?$/.test(term)
+                ? [{ quantity: { equals: term.replace(',', '.') } }]
+                : []),
+            ],
+          };
+        }),
+      ],
     };
     const data = await this.prisma.warehouseReceiptItems.findMany({
       where,
