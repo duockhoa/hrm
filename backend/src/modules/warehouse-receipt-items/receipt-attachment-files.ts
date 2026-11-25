@@ -21,6 +21,7 @@ export const RECEIPT_ATTACHMENT_TYPES = [
   'dispatch_note',
   'coa',
   'invoice',
+  'original_label',
 ] as const;
 export const MAX_RECEIPT_ATTACHMENT_FILES = 10;
 const MAX_FILE_SIZE_MB = 20;

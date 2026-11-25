@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import warehouseReceiptItemsService, {
+  RECEIPT_COUNTING_METHODS,
   WAREHOUSE_RECEIPT_ITEMS_URL,
   type WarehouseReceiptItem,
 } from "@/services/warehouse-receipt-items.service";
@@ -203,7 +204,13 @@ export default function ReceiptDetail({
       </Link>,
     ],
     ["Tên hàng", data.item?.item_name],
-    ["Số lượng", formatReceiptQuantity(data.quantity)],
+    ["Số lượng chứng từ", formatReceiptQuantity(data.quantity)],
+    ["Số lượng thực tế", formatReceiptQuantity(data.actual_quantity)],
+    [
+      "Phương pháp kiểm đếm",
+      data.counting_method ? RECEIPT_COUNTING_METHODS[data.counting_method] : null,
+    ],
+    ["Cảm quan", data.sensory_passed == null ? null : data.sensory_passed ? "Đạt" : "Không đạt"],
     ["Đơn vị tính", data.unit],
     ["Số lô", data.lot_number],
     ["Số lô nhà sản xuất", data.manufacturer_lot_number],

@@ -3,6 +3,15 @@ import type { ReceiptAttachment } from "@/features/warehouse-receipt-items/recei
 
 export const WAREHOUSE_RECEIPT_ITEMS_URL = "/warehouse-receipt-items";
 
+export const RECEIPT_COUNTING_METHODS = {
+  count: "Đếm",
+  document: "Lấy theo chứng từ",
+  weigh: "Cân",
+  sample_count: "Đếm xác suất",
+} as const;
+
+export type ReceiptCountingMethod = keyof typeof RECEIPT_COUNTING_METHODS;
+
 export type ReceiptSapConfirmation = {
   id: number;
   warehouse_receipt_item_id: number;
@@ -24,6 +33,9 @@ export type WarehouseReceiptItem = {
   attachments: ReceiptAttachment[];
   item_code: string;
   quantity: string | number | null;
+  actual_quantity: string | number | null;
+  counting_method: ReceiptCountingMethod | null;
+  sensory_passed: boolean | null;
   unit: string | null;
   manufacturer_lot_number: string | null;
   lot_number: string;
@@ -63,6 +75,9 @@ export type WarehouseReceiptItemPayload = Pick<
   | "note"
 > & {
   quantity: string | number;
+  actual_quantity?: string | number | null;
+  counting_method?: ReceiptCountingMethod | null;
+  sensory_passed?: boolean | null;
   supplier_code: string;
 };
 

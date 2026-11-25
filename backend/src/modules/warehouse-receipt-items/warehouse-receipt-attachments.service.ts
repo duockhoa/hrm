@@ -171,7 +171,7 @@ export class WarehouseReceiptAttachmentsService {
   private validateType(type: unknown) {
     if (!RECEIPT_ATTACHMENT_TYPES.some((value) => value === type)) {
       throw new BadRequestException(
-        'attachment_type must be dispatch_note, coa or invoice',
+        `attachment_type must be one of: ${RECEIPT_ATTACHMENT_TYPES.join(', ')}`,
       );
     }
   }

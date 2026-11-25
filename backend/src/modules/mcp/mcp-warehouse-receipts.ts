@@ -82,6 +82,9 @@ const receiptSummarySelect = {
 
 const receiptDetailSelect = {
   ...receiptSummarySelect,
+  actual_quantity: true,
+  counting_method: true,
+  sensory_passed: true,
   packaging_specification: true,
   supplier_code: true,
   supplier_name: true,

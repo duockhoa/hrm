@@ -118,6 +118,7 @@ test("uploads each document category before deleting old images", async () => {
   pending.dispatch_note = [image("dispatch.jpg")];
   pending.coa = [image("coa-1.jpg"), image("coa-2.jpg")];
   pending.invoice = [image("invoice.jpg")];
+  pending.original_label = [image("label.jpg")];
   const events: string[] = [];
   await saveReceiptImages({
     receiptId: 42,
@@ -148,6 +149,8 @@ test("uploads each document category before deleting old images", async () => {
     "saved:coa",
     "invoice",
     "saved:invoice",
+    "original_label",
+    "saved:original_label",
     "delete:5",
     "deleted:5",
   ]);

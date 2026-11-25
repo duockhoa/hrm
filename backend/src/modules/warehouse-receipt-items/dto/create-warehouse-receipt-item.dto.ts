@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export const RECEIPT_COUNTING_METHODS = [
+  'count',
+  'document',
+  'weigh',
+  'sample_count',
+] as const;
+
 export class CreateWarehouseReceiptItemDto {
   @ApiProperty({ maxLength: 191, example: 'NL001' })
   item_code: string;
@@ -11,6 +18,24 @@ export class CreateWarehouseReceiptItemDto {
       'Positive quantity, at most 3 decimal places and 999999999.999',
   })
   quantity: number | string;
+
+  @ApiPropertyOptional({
+    oneOf: [{ type: 'number' }, { type: 'string' }],
+    nullable: true,
+    description:
+      'Actual quantity, from 0 to 999999999.999, at most 3 decimal places',
+  })
+  actual_quantity?: number | string | null;
+
+  @ApiPropertyOptional({ enum: RECEIPT_COUNTING_METHODS, nullable: true })
+  counting_method?: (typeof RECEIPT_COUNTING_METHODS)[number] | null;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    nullable: true,
+    description: 'Sensory inspection: true = pass, false = fail',
+  })
+  sensory_passed?: boolean | null;
 
   @ApiPropertyOptional({
     type: String,

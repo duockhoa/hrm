@@ -43,6 +43,8 @@ import businessPartnersService, {
   SUPPLIERS_URL,
 } from "@/services/business-partners.service";
 import warehouseReceiptItemsService, {
+  RECEIPT_COUNTING_METHODS,
+  type ReceiptCountingMethod,
   type WarehouseReceiptItem,
   type WarehouseReceiptItemPayload,
   WAREHOUSE_RECEIPT_ITEMS_URL,
@@ -63,7 +65,13 @@ export function receiptError(error: unknown, fallback: string) {
     if (error.response?.status === 404)
       return "Không tìm thấy bản ghi hàng nhập kho.";
     const message = error.response?.data?.message;
-    if (message === "quantity is required") return "Vui lòng nhập số lượng.";
+    if (message === "sensory_passed must be a boolean or null")
+      return "Vui lòng chọn kết quả cảm quan hợp lệ.";
+    if (typeof message === "string" && message.startsWith("actual_quantity "))
+      return "Số lượng thực tế phải từ 0 đến 999.999.999,999 và có tối đa 3 chữ số thập phân.";
+    if (message === "counting_method is invalid")
+      return "Vui lòng chọn phương pháp kiểm đếm hợp lệ.";
+    if (message === "quantity is required") return "Vui lòng nhập số lượng chứng từ.";
     if (message === "supplier_code is required")
       return "Vui lòng chọn nhà cung cấp.";
     if (message === "Supplier does not exist or is not a supplier")
@@ -71,7 +79,7 @@ export function receiptError(error: unknown, fallback: string) {
     if (message === "Manufacturer does not exist")
       return "Nhà sản xuất không còn tồn tại. Vui lòng chọn lại trong danh sách.";
     if (typeof message === "string" && message.startsWith("quantity ")) {
-      return "Số lượng phải lớn hơn 0, không vượt quá 999.999.999,999 và có tối đa 3 chữ số thập phân.";
+      return "Số lượng chứng từ phải lớn hơn 0, không vượt quá 999.999.999,999 và có tối đa 3 chữ số thập phân.";
     }
     if (Array.isArray(message)) return message.join("; ");
     if (typeof message === "string") return message;
@@ -292,7 +300,7 @@ export default function ReceiptForm({
     const text = (key: string) => String(values.get(key) ?? "").trim();
     const quantity = text("quantity");
     if (!quantity) {
-      setError("Vui lòng nhập số lượng.");
+      setError("Vui lòng nhập số lượng chứng từ.");
       return;
     }
     if (
@@ -301,8 +309,28 @@ export default function ReceiptForm({
       Number(quantity) > 999999999.999
     ) {
       setError(
-        "Số lượng phải lớn hơn 0, không vượt quá 999.999.999,999 và có tối đa 3 chữ số thập phân.",
+        "Số lượng chứng từ phải lớn hơn 0, không vượt quá 999.999.999,999 và có tối đa 3 chữ số thập phân.",
       );
+      return;
+    }
+    const actualQuantity = text("actual_quantity");
+    if (
+      actualQuantity &&
+      (!/^\d+(?:\.\d{1,3})?$/.test(actualQuantity) ||
+        Number(actualQuantity) < 0 ||
+        Number(actualQuantity) > 999999999.999)
+    ) {
+      setError(
+        "Số lượng thực tế phải từ 0 đến 999.999.999,999 và có tối đa 3 chữ số thập phân.",
+      );
+      return;
+    }
+    const countingMethod = text("counting_method");
+    if (
+      countingMethod &&
+      !Object.hasOwn(RECEIPT_COUNTING_METHODS, countingMethod)
+    ) {
+      setError("Vui lòng chọn phương pháp kiểm đếm hợp lệ.");
       return;
     }
     if (!supplierCode.trim()) {
@@ -317,6 +345,9 @@ export default function ReceiptForm({
     const payload: WarehouseReceiptItemPayload = {
       item_code: itemCode,
       quantity,
+      actual_quantity: actualQuantity || null,
+      counting_method: (countingMethod as ReceiptCountingMethod) || null,
+      sensory_passed: text("sensory_passed") === "" ? null : text("sensory_passed") === "true",
       unit: unit.trim() || null,
       lot_number: (
         manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, new Date())
@@ -378,10 +409,10 @@ export default function ReceiptForm({
                 value !==
                 (key === "expiry_date"
                   ? (baseline.expiry_date?.slice(0, 10) ?? null)
-                  : key === "quantity"
-                    ? baseline.quantity == null
+                  : key === "quantity" || key === "actual_quantity"
+                    ? baseline[key] == null
                       ? null
-                      : String(baseline.quantity)
+                      : String(baseline[key])
                     : baseline[key as keyof WarehouseReceiptItem]),
             ),
           )
@@ -737,7 +768,7 @@ export default function ReceiptForm({
               )}
               {key === "lot_number" && (
                 <div className="space-y-2">
-                  <Label htmlFor="receipt-quantity">Số lượng *</Label>
+                  <Label htmlFor="receipt-quantity">Số lượng chứng từ *</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="receipt-quantity"
@@ -749,7 +780,7 @@ export default function ReceiptForm({
                       max="999999999.999"
                       step="0.001"
                       defaultValue={data?.quantity ?? ""}
-                      placeholder="Nhập số lượng"
+                      placeholder="Nhập số lượng chứng từ"
                       className="min-w-0 flex-1"
                       aria-describedby="receipt-quantity-unit"
                     />
@@ -763,6 +794,63 @@ export default function ReceiptForm({
                     </span>
                   </div>
                 </div>
+              )}
+              {key === "lot_number" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="receipt-actual-quantity">Số lượng thực tế</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="receipt-actual-quantity"
+                        name="actual_quantity"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        max="999999999.999"
+                        step="0.001"
+                        defaultValue={data?.actual_quantity ?? ""}
+                        placeholder="Nhập số lượng thực tế"
+                        className="min-w-0 flex-1"
+                        aria-describedby="receipt-actual-quantity-unit"
+                      />
+                      <span
+                        id="receipt-actual-quantity-unit"
+                        className="max-w-32 shrink-0 truncate text-sm text-gray-400"
+                        title={unit}
+                        aria-label="Đơn vị tính"
+                      >
+                        {unit}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="receipt-counting-method">Phương pháp kiểm đếm</Label>
+                    <select
+                      id="receipt-counting-method"
+                      name="counting_method"
+                      defaultValue={data?.counting_method ?? ""}
+                      className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    >
+                      <option value="">Chọn phương pháp kiểm đếm</option>
+                      {Object.entries(RECEIPT_COUNTING_METHODS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="receipt-sensory-passed">Cảm quan</Label>
+                    <select
+                      id="receipt-sensory-passed"
+                      name="sensory_passed"
+                      defaultValue={data?.sensory_passed == null ? "" : String(data.sensory_passed)}
+                      className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    >
+                      <option value="">Chọn kết quả cảm quan</option>
+                      <option value="true">Đạt</option>
+                      <option value="false">Không đạt</option>
+                    </select>
+                  </div>
+                </>
               )}
             </Fragment>
           ),

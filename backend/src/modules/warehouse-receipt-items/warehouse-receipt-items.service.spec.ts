@@ -577,6 +577,115 @@ describe('WarehouseReceiptItemsService', () => {
     },
   );
 
+  it.each(['0', '0.001', '999999999.999'])(
+    'stores actual quantity %s on create and update',
+    async (actual_quantity) => {
+      await service.create({ ...validCreateDto, actual_quantity }, { id: 7 });
+      await service.update(1, { actual_quantity });
+      const expected = expect.objectContaining({
+        data: expect.objectContaining({
+          actual_quantity: new Prisma.Decimal(actual_quantity),
+        }),
+      });
+      expect(prisma.warehouseReceiptItems.create).toHaveBeenCalledWith(
+        expected,
+      );
+      expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+        expected,
+      );
+    },
+  );
+
+  it.each([-1, '1.2345', '1e3', '1000000000', Infinity, NaN, true, {}])(
+    'rejects invalid actual quantity %j on create and update',
+    async (actual_quantity) => {
+      await expect(
+        service.create({ ...validCreateDto, actual_quantity } as never, {
+          id: 7,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.update(1, { actual_quantity } as never),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.warehouseReceiptItems.create).not.toHaveBeenCalled();
+      expect(prisma.warehouseReceiptItems.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['count', 'document', 'weigh', 'sample_count'] as const)(
+    'stores counting method %s on create and update',
+    async (counting_method) => {
+      await service.create({ ...validCreateDto, counting_method }, { id: 7 });
+      await service.update(1, { counting_method });
+      const expected = expect.objectContaining({
+        data: expect.objectContaining({ counting_method }),
+      });
+      expect(prisma.warehouseReceiptItems.create).toHaveBeenCalledWith(
+        expected,
+      );
+      expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+        expected,
+      );
+    },
+  );
+
+  it.each(['other', '', 1, {}, true])(
+    'rejects invalid counting method %j on create and update',
+    async (counting_method) => {
+      await expect(
+        service.create({ ...validCreateDto, counting_method } as never, {
+          id: 7,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.update(1, { counting_method } as never),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.warehouseReceiptItems.create).not.toHaveBeenCalled();
+      expect(prisma.warehouseReceiptItems.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('allows clearing counting fields without changing document quantity', async () => {
+    await service.update(1, { actual_quantity: null, counting_method: null });
+    expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { actual_quantity: null, counting_method: null },
+      }),
+    );
+  });
+
+  it.each([true, false, null])(
+    'preserves sensory inspection result %j on create and update',
+    async (sensory_passed) => {
+      await service.create({ ...validCreateDto, sensory_passed }, { id: 7 });
+      await service.update(1, { sensory_passed });
+      expect(prisma.warehouseReceiptItems.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ sensory_passed }),
+        }),
+      );
+      expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { sensory_passed } }),
+      );
+    },
+  );
+
+  it.each(['false', 'true', 0, 1, '', {}])(
+    'rejects invalid sensory inspection result %j',
+    async (sensory_passed) => {
+      await expect(
+        service.create({ ...validCreateDto, sensory_passed } as never, {
+          id: 7,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.update(1, { sensory_passed } as never),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.warehouseReceiptItems.create).not.toHaveBeenCalled();
+      expect(prisma.warehouseReceiptItems.update).not.toHaveBeenCalled();
+    },
+  );
+
   it('allows clearing the optional unit', async () => {
     await service.update(1, { unit: '' });
     expect(prisma.warehouseReceiptItems.update).toHaveBeenCalledWith(

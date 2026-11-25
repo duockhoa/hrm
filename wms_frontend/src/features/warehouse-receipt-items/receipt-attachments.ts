@@ -2,6 +2,7 @@ export const RECEIPT_ATTACHMENT_GROUPS = [
   { type: "dispatch_note", label: "Ảnh phiếu xuất kho" },
   { type: "coa", label: "Ảnh COA" },
   { type: "invoice", label: "Ảnh hoá đơn" },
+  { type: "original_label", label: "Ảnh nhãn gốc" },
 ] as const;
 
 export type ReceiptAttachmentType =
@@ -26,6 +27,7 @@ export const emptyReceiptImages = (): PendingReceiptImages => ({
   dispatch_note: [],
   coa: [],
   invoice: [],
+  original_label: [],
 });
 
 export const MAX_RECEIPT_IMAGES_PER_UPLOAD = 10;

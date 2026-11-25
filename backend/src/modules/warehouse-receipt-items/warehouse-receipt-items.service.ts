@@ -19,7 +19,10 @@ import {
   searchDocumentId,
   searchUserFields,
 } from '../../common/utils/record-list-query';
-import { CreateWarehouseReceiptItemDto } from './dto/create-warehouse-receipt-item.dto';
+import {
+  CreateWarehouseReceiptItemDto,
+  RECEIPT_COUNTING_METHODS,
+} from './dto/create-warehouse-receipt-item.dto';
 import { UpdateWarehouseReceiptItemDto } from './dto/update-warehouse-receipt-item.dto';
 import { receiptAttachmentInclude } from './warehouse-receipt-attachments.service';
 import { removeReceiptAttachments } from './receipt-attachment-files';
@@ -51,6 +54,9 @@ const optionalTextLimits = {
 const allowedFields = new Set([
   'item_code',
   'quantity',
+  'actual_quantity',
+  'counting_method',
+  'sensory_passed',
   'supplier_code',
   'manufacturer_code',
   'lot_number',
@@ -306,6 +312,35 @@ export class WarehouseReceiptItemsService {
     if (creating || dto.quantity !== undefined) {
       data.quantity = this.normalizeQuantity(dto.quantity);
     }
+    if (dto.actual_quantity !== undefined) {
+      data.actual_quantity =
+        dto.actual_quantity === null || dto.actual_quantity === ''
+          ? null
+          : this.normalizeQuantity(
+              dto.actual_quantity,
+              'actual_quantity',
+              true,
+            );
+    }
+    if (dto.counting_method !== undefined) {
+      if (dto.counting_method === null) {
+        data.counting_method = null;
+      } else {
+        if (!RECEIPT_COUNTING_METHODS.includes(dto.counting_method))
+          throw new BadRequestException('counting_method is invalid');
+        data.counting_method = dto.counting_method;
+      }
+    }
+    if (dto.sensory_passed !== undefined) {
+      if (
+        dto.sensory_passed !== null &&
+        typeof dto.sensory_passed !== 'boolean'
+      )
+        throw new BadRequestException(
+          'sensory_passed must be a boolean or null',
+        );
+      data.sensory_passed = dto.sensory_passed;
+    }
     if (creating || dto.item_code !== undefined) {
       data.item_code = this.requiredText(dto.item_code, 'item_code', 191);
     }
@@ -387,29 +422,36 @@ export class WarehouseReceiptItemsService {
     return data;
   }
 
-  private normalizeQuantity(value: unknown) {
+  private normalizeQuantity(
+    value: unknown,
+    field = 'quantity',
+    allowZero = false,
+  ) {
     if (
       value === undefined ||
       value === null ||
       (typeof value === 'string' && !value.trim())
     ) {
-      throw new BadRequestException('quantity is required');
+      throw new BadRequestException(`${field} is required`);
     }
     if (typeof value !== 'number' && typeof value !== 'string') {
       throw new BadRequestException(
-        'quantity must be a positive decimal with at most 3 decimal places',
+        `${field} must be a ${allowZero ? 'non-negative' : 'positive'} decimal with at most 3 decimal places`,
       );
     }
     const text = String(value).trim();
     if (!/^\d+(?:\.\d{1,3})?$/.test(text)) {
       throw new BadRequestException(
-        'quantity must be a positive decimal with at most 3 decimal places',
+        `${field} must be a ${allowZero ? 'non-negative' : 'positive'} decimal with at most 3 decimal places`,
       );
     }
     const quantity = new Prisma.Decimal(text);
-    if (quantity.lte(0) || quantity.gt('999999999.999')) {
+    if (
+      (allowZero ? quantity.lt(0) : quantity.lte(0)) ||
+      quantity.gt('999999999.999')
+    ) {
       throw new BadRequestException(
-        'quantity must be greater than 0 and at most 999999999.999',
+        `${field} must be ${allowZero ? 'at least' : 'greater than'} 0 and at most 999999999.999`,
       );
     }
     return quantity;

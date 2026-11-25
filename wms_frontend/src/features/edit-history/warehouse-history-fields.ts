@@ -1,8 +1,12 @@
 import type { EditHistoryFields } from "./types";
+import { RECEIPT_COUNTING_METHODS } from "@/services/warehouse-receipt-items.service";
 
 export const RECEIPT_HISTORY_FIELDS: EditHistoryFields = {
   item_code: { label: "Mã hàng" },
-  quantity: { label: "Số lượng", type: "number" },
+  quantity: { label: "Số lượng chứng từ", type: "number" },
+  actual_quantity: { label: "Số lượng thực tế", type: "number" },
+  sensory_passed: { label: "Cảm quan", values: { true: "Đạt", false: "Không đạt" } },
+  counting_method: { label: "Phương pháp kiểm đếm", values: RECEIPT_COUNTING_METHODS },
   unit: { label: "Đơn vị tính" },
   lot_number: { label: "Số lô" },
   manufacturer_lot_number: { label: "Số lô nhà sản xuất" },
@@ -17,7 +21,7 @@ export const RECEIPT_HISTORY_FIELDS: EditHistoryFields = {
   entered_by_id: { label: "Người nhập (ID)", type: "number" },
   attachment_type: {
     label: "Loại ảnh",
-    values: { dispatch_note: "Ảnh PXK", coa: "Ảnh COA", invoice: "Ảnh HĐ" },
+    values: { dispatch_note: "Ảnh PXK", coa: "Ảnh COA", invoice: "Ảnh HĐ", original_label: "Ảnh nhãn gốc" },
   },
   original_name: { label: "Tên file ảnh" },
   mime_type: { label: "Định dạng ảnh" },

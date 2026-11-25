@@ -56,7 +56,7 @@ describe('Warehouse receipt attachment API', () => {
           switchToHttp: () => {
             getRequest: () => {
               headers: Record<string, string>;
-              user?: { id: number };
+              user?: { id: number; permissions?: string[] };
             };
           };
         }) {
@@ -130,7 +130,7 @@ describe('Warehouse receipt attachment API', () => {
       .expect(401);
   });
 
-  it.each(['dispatch_note', 'coa', 'invoice'])(
+  it.each(['dispatch_note', 'coa', 'invoice', 'original_label'])(
     'uploads and serves an actual %s image with a thumbnail',
     async (type) => {
       const response = await upload()
