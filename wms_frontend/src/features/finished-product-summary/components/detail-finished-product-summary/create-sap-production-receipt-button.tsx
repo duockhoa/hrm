@@ -4,7 +4,7 @@ import { isAxiosError } from "axios";
 import { Loader2, PackageCheck } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { useSWRConfig } from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -82,6 +82,17 @@ export default function CreateSapProductionReceiptButton({
   const [errorMessage, setErrorMessage] = useState("");
   const sendingRef = useRef(false);
   const { mutate } = useSWRConfig();
+  const {
+    data: sapSession,
+    error: sessionError,
+    mutate: checkSapSession,
+  } = useSWR(
+    open
+      ? [API_ROUTES.productionOrders.finishedProductSummarySapSession, userId]
+      : null,
+    productionOrdersService.getSapReceiptSession,
+    { shouldRetryOnError: false, revalidateOnFocus: false },
+  );
   const storageKey = `wms:sap-production-receipt:${userId}:${summaryId}`;
 
   function toggleOpen(nextOpen: boolean) {
@@ -95,6 +106,42 @@ export default function CreateSapProductionReceiptButton({
       setErrorMessage("");
     }
     setOpen(nextOpen);
+  }
+
+  async function login(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (sendingRef.current) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    sendingRef.current = true;
+    setSending(true);
+    setErrorMessage("");
+    try {
+      await productionOrdersService.loginSapReceiptSession(
+        String(data.get("username") ?? "").trim(),
+        String(data.get("password") ?? ""),
+      );
+      form.reset();
+      const session = await checkSapSession();
+      if (!session?.active) {
+        setErrorMessage(
+          "Trình duyệt chưa nhận được cookie phiên SAP. Vui lòng cho phép cookie cho trang WMS.",
+        );
+      }
+    } catch (error) {
+      form.reset();
+      const message = isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      setErrorMessage(
+        typeof message === "string"
+          ? message
+          : "Không thể đăng nhập SAP. Vui lòng thử lại.",
+      );
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -146,6 +193,17 @@ export default function CreateSapProductionReceiptButton({
     } catch (error) {
       const response = isAxiosError(error) ? error.response : undefined;
       const message = response?.data?.message;
+      if (
+        response?.status === 428 &&
+        response.data?.code === "SAP_SESSION_REQUIRED"
+      ) {
+        setPending(payload);
+        setErrorMessage(
+          "Phiên SAP đã hết hạn. Đăng nhập lại để tiếp tục với dữ liệu đã nhập.",
+        );
+        await checkSapSession({ active: false }, { revalidate: false });
+        return;
+      }
       const uncertain = !response || response.status >= 500;
       setPending(uncertain ? payload : null);
       if (!uncertain) persist(null);
@@ -195,57 +253,123 @@ export default function CreateSapProductionReceiptButton({
           <DialogTitle>Nhập kho sản xuất</DialogTitle>
           <DialogDescription>{orderLabel}</DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
-          <fieldset
-            className="grid gap-3 sm:grid-cols-2"
-            disabled={sending || pending !== null}
-          >
-            {fields.map(({ name, label, ...inputProps }) => (
-              <label key={name} className="grid gap-1.5 text-sm font-medium">
-                {label}
-                <Input
-                  name={name}
-                  defaultValue={values[name] ?? ""}
-                  required
-                  {...inputProps}
-                />
-              </label>
-            ))}
-            <label className="col-span-full grid gap-1.5 text-sm font-medium">
-              Ghi chú
-              <Textarea
-                name="comments"
-                defaultValue={values.comments}
-                maxLength={254}
-              />
-            </label>
-            <label className="col-span-full grid gap-1.5 text-sm font-medium">
-              Ghi chú nhật ký
-              <Input value="Nhập kho sản xuất" readOnly />
-            </label>
-          </fieldset>
-          {errorMessage && (
+        {sessionError ? (
+          <div className="space-y-3">
             <p role="alert" className="text-sm text-red-700">
-              {errorMessage}
+              Không thể kiểm tra phiên SAP.
             </p>
-          )}
-          <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
-              disabled={sending}
-              onClick={() => toggleOpen(false)}
+              onClick={() => void checkSapSession().catch(() => {})}
             >
-              {pending ? "Đóng" : "Hủy"}
-            </Button>
-            <Button type="submit" disabled={sending}>
-              {sending && (
-                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-              )}
-              {sending ? "Đang xử lý…" : pending ? "Kiểm tra kết quả" : "Nhập"}
+              Thử lại
             </Button>
           </div>
-        </form>
+        ) : !sapSession ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Đang kiểm tra phiên SAP…
+          </p>
+        ) : !sapSession.active ? (
+          <form className="space-y-4" onSubmit={(event) => void login(event)}>
+            <fieldset className="space-y-3" disabled={sending}>
+              <label className="grid gap-1.5 text-sm font-medium">
+                Tên đăng nhập SAP
+                <Input
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  maxLength={128}
+                  required
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                Mật khẩu SAP
+                <Input
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  maxLength={256}
+                  required
+                />
+              </label>
+            </fieldset>
+            {errorMessage && (
+              <p role="alert" className="text-sm text-red-700">
+                {errorMessage}
+              </p>
+            )}
+            <div className="flex justify-end">
+              <Button type="submit" disabled={sending}>
+                {sending && (
+                  <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                )}
+                Đăng nhập SAP
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+            {sapSession.username && (
+              <p className="text-sm text-muted-foreground">
+                Tài khoản SAP đang dùng {sapSession.username}
+              </p>
+            )}
+            <fieldset
+              className="grid gap-3 sm:grid-cols-2"
+              disabled={sending || pending !== null}
+            >
+              {fields.map(({ name, label, ...inputProps }) => (
+                <label key={name} className="grid gap-1.5 text-sm font-medium">
+                  {label}
+                  <Input
+                    name={name}
+                    defaultValue={values[name] ?? ""}
+                    required
+                    {...inputProps}
+                  />
+                </label>
+              ))}
+              <label className="col-span-full grid gap-1.5 text-sm font-medium">
+                Ghi chú
+                <Textarea
+                  name="comments"
+                  defaultValue={values.comments}
+                  maxLength={254}
+                />
+              </label>
+              <label className="col-span-full grid gap-1.5 text-sm font-medium">
+                Ghi chú nhật ký
+                <Input value="Nhập kho sản xuất" readOnly />
+              </label>
+            </fieldset>
+            {errorMessage && (
+              <p role="alert" className="text-sm text-red-700">
+                {errorMessage}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={sending}
+                onClick={() => toggleOpen(false)}
+              >
+                {pending ? "Đóng" : "Hủy"}
+              </Button>
+              <Button type="submit" disabled={sending}>
+                {sending && (
+                  <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                )}
+                {sending
+                  ? "Đang xử lý…"
+                  : pending
+                    ? "Kiểm tra kết quả"
+                    : "Nhập"}
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

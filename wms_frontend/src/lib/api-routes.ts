@@ -49,6 +49,7 @@ const PRODUCTION_SPECIFICATIONS = {
 const PRODUCTION_ORDERS = {
   base: "/production-orders",
   finishedProductSummaries: "/production-orders/finished-product-summaries",
+  finishedProductSummarySapSession: "/production-orders/finished-product-summaries/sap-session",
   finishedProductSummary: (id: string | number) =>
     `/production-orders/${id}/finished-product-summaries`,
   finishedProductSummaryDetail: (summaryId: string | number) =>

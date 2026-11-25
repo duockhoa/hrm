@@ -30,7 +30,14 @@ import {
   FileFieldsInterceptor,
 } from '@nestjs/platform-express';
 import { createReadStream } from 'fs';
-import type { Response } from 'express';
+import type { Request as ExpressRequest, Response } from 'express';
+import { LoginSapReceiptDto } from './dto/login-sap-receipt.dto';
+import {
+  clearSapReceiptSession,
+  readSapReceiptSession,
+  saveSapReceiptSession,
+  SapReceiptSessionRequired,
+} from './sap-receipt-session';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { ProductionOrdersService } from './production-orders.service';
@@ -538,10 +545,53 @@ export class ProductionOrdersController {
   @Permissions(
     PRODUCTION_ORDER_PERMISSIONS.FINISHED_PRODUCT_SUMMARY_WAREHOUSE_CONFIRM,
   )
+  @Get('finished-product-summaries/sap-session')
+  getSapReceiptSession(
+    @Request() req: ExpressRequest & { user: { id: number } },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    const session = readSapReceiptSession(req, req.user.id);
+    return session
+      ? { active: true, username: session.username }
+      : { active: false };
+  }
+
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.FINISHED_PRODUCT_SUMMARY_WAREHOUSE_CONFIRM,
+  )
+  @Post('finished-product-summaries/sap-session')
+  async loginSapReceiptSession(
+    @Request() req: ExpressRequest & { user: { id: number } },
+    @Res({ passthrough: true }) res: Response,
+    @Body(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
+    dto: LoginSapReceiptDto,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    const { session, timeoutMinutes } =
+      await this.productionOrderFinishedProductSummariesService.loginSapReceipt(
+        dto.username,
+        dto.password,
+      );
+    return saveSapReceiptSession(
+      req,
+      res,
+      req.user.id,
+      dto.username,
+      session,
+      timeoutMinutes,
+    );
+  }
+
+  @Permissions(
+    PRODUCTION_ORDER_PERMISSIONS.FINISHED_PRODUCT_SUMMARY_WAREHOUSE_CONFIRM,
+  )
   @Post('finished-product-summaries/:summaryId/sap-production-receipts')
   @ApiOperation({ summary: 'Tạo phiếu nhập kho sản xuất trên SAP' })
   async createFinishedProductSummarySapProductionReceipt(
     @Param('summaryId', ParseIntPipe) summaryId: number,
+    @Request() req: ExpressRequest & { user: { id: number } },
+    @Res({ passthrough: true }) res: Response,
     @Body(
       new ValidationPipe({
         transform: true,
@@ -551,10 +601,20 @@ export class ProductionOrdersController {
     )
     dto: CreateSapProductionReceiptDto,
   ) {
-    return this.productionOrderFinishedProductSummariesService.createSapProductionReceipt(
-      summaryId,
-      dto,
-    );
+    try {
+      const session = readSapReceiptSession(req, req.user.id);
+      if (!session) throw new SapReceiptSessionRequired();
+      return await this.productionOrderFinishedProductSummariesService.createSapProductionReceipt(
+        summaryId,
+        dto,
+        session,
+      );
+    } catch (error) {
+      if (error instanceof SapReceiptSessionRequired) {
+        clearSapReceiptSession(req, res);
+      }
+      throw error;
+    }
   }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)

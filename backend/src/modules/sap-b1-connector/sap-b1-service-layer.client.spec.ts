@@ -5,15 +5,15 @@ describe('SAP Service Layer pagination', () => {
   const originalUrl = process.env.SAP_SERVICE_LAYER_URL;
   const createAxios = axios.create.bind(axios);
   let get: jest.Mock;
+  let post: jest.Mock;
 
   beforeEach(() => {
     get = jest.fn();
+    post = jest.fn().mockResolvedValue({ data: { SessionId: 'test-session' } });
     jest.spyOn(axios, 'create').mockImplementation((config) => {
       const instance = createAxios(config);
       instance.get = get;
-      instance.post = jest.fn().mockResolvedValue({
-        data: { SessionId: 'test-session' },
-      });
+      instance.post = post;
       return instance;
     });
   });
@@ -62,6 +62,34 @@ describe('SAP Service Layer pagination', () => {
       'different origin',
     );
     expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the personal session and sticky route without falling back after expiry', async () => {
+    process.env.SAP_SERVICE_LAYER_URL = 'https://sap.test/b1s/v2/';
+    get.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 401 },
+    });
+    const client = new SapB1ServiceLayerClient();
+    await expect(
+      client.getReceiptItemTracking('TP001', {
+        sessionId: 'personal-session',
+        routeId: '.node1',
+      }),
+    ).rejects.toMatchObject({ response: { status: 401 } });
+    expect(get).toHaveBeenCalledWith(
+      "Items('TP001')?$select=ManageBatchNumbers,ManageSerialNumbers",
+      expect.objectContaining({
+        maxRedirects: 0,
+        headers: expect.objectContaining({
+          Cookie: 'B1SESSION=personal-session; ROUTEID=.node1',
+        }),
+        httpsAgent: expect.objectContaining({
+          options: expect.objectContaining({ rejectUnauthorized: true }),
+        }),
+      }),
+    );
+    expect(post).not.toHaveBeenCalled();
   });
 
   const localOrder = {

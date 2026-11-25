@@ -38,6 +38,8 @@ export type SapProductionReceiptInput = {
   comments: string;
 };
 
+type SapReceiptSessionStatus = { active: boolean; username?: string };
+
 type UpdateFinishedProductSummaryPayload = {
   package_count?: number;
   boxes_per_package?: number;
@@ -89,6 +91,20 @@ const createSamplingRequest = async (
 };
 
 const productOrdersService = {
+  getSapReceiptSession: async () => {
+    const { data } = await axiosClient.get<SapReceiptSessionStatus>(
+      API_ROUTES.productionOrders.finishedProductSummarySapSession,
+      { withCredentials: true },
+    );
+    return data;
+  },
+  loginSapReceiptSession: async (username: string, password: string) => {
+    await axiosClient.post(
+      API_ROUTES.productionOrders.finishedProductSummarySapSession,
+      { username, password },
+      { withCredentials: true },
+    );
+  },
   createSapProductionReceipt: async (
     summaryId: string | number,
     payload: SapProductionReceiptInput,
@@ -98,6 +114,7 @@ const productOrdersService = {
     >(
       API_ROUTES.productionOrders.finishedProductSummarySapReceipts(summaryId),
       payload,
+      { withCredentials: true },
     );
     return data;
   },

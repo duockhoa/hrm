@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import * as https from 'https';
+import { readFileSync } from 'node:fs';
+import { checkServerIdentity } from 'node:tls';
 import { SAP_BP_SELECT, SapBusinessPartner } from './sap-business-partner';
 import { SapItemSeries } from './sap-item-series';
 import {
@@ -26,6 +28,8 @@ type SapSessionCache = {
   expiresAt: number | null;
 };
 
+export type SapUserSession = { sessionId: string; routeId?: string };
+
 @Injectable()
 export class SapB1ServiceLayerClient {
   private readonly logger = new Logger(SapB1ServiceLayerClient.name);
@@ -36,6 +40,7 @@ export class SapB1ServiceLayerClient {
     expiresAt: null,
   };
   private loginPromise: Promise<string> | null = null;
+  private personalAgent?: https.Agent;
 
   constructor() {
     this.sapApi = axios.create({
@@ -91,12 +96,16 @@ export class SapB1ServiceLayerClient {
     return this.get<T>(`ProductionOrders(${id})`);
   }
 
-  async resolveProductionOrderEntry(order: SapProductionOrderReference) {
+  async resolveProductionOrderEntry(
+    order: SapProductionOrderReference,
+    session?: SapUserSession,
+  ) {
     if (!Number.isSafeInteger(order.id) || order.id <= 0) return null;
 
     // The local ID is SAP DocumentNumber. Receipt lines reference AbsoluteEntry.
     const sapOrders = await this.fetchAllPages<SapProductionOrderLookup>(
       `ProductionOrders?$select=AbsoluteEntry,DocumentNumber,ItemNo,U_SL,U_MLSX&$filter=DocumentNumber eq ${order.id}`,
+      session,
     );
     let matches = sapOrders.filter(
       (candidate) =>
@@ -130,18 +139,25 @@ export class SapB1ServiceLayerClient {
       : this.getProductionReceiptsForEntry(orderEntry);
   }
 
-  async getReceiptItemTracking(itemCode: string) {
+  async getReceiptItemTracking(itemCode: string, session?: SapUserSession) {
     const key = encodeURIComponent(itemCode.replaceAll("'", "''"));
     return this.get<{
       ManageBatchNumbers: 'tYES' | 'tNO';
       ManageSerialNumbers: 'tYES' | 'tNO';
-    }>(`Items('${key}')?$select=ManageBatchNumbers,ManageSerialNumbers`);
+    }>(
+      `Items('${key}')?$select=ManageBatchNumbers,ManageSerialNumbers`,
+      session,
+    );
   }
 
-  async postProductionReceipt(payload: SapProductionReceiptPayload) {
+  async postProductionReceipt(
+    payload: SapProductionReceiptPayload,
+    session: SapUserSession,
+  ) {
     const result = await this.post<SapProductionReceiptResult>(
       SAP_PRODUCTION_RECEIPT,
       payload,
+      session,
     );
     if (
       !Number.isSafeInteger(result?.DocEntry) ||
@@ -157,6 +173,7 @@ export class SapB1ServiceLayerClient {
   getProductionReceiptDistributionRules(
     departmentCode: string,
     costItemCode: string,
+    session?: SapUserSession,
   ) {
     const filter = [departmentCode, costItemCode]
       .map((code) => `FactorCode eq '${code.replaceAll("'", "''")}'`)
@@ -167,10 +184,15 @@ export class SapB1ServiceLayerClient {
       Active: 'tYES' | 'tNO';
     }>(
       `DistributionRules?$select=FactorCode,InWhichDimension,Active&$filter=${encodeURIComponent(filter)}`,
+      session,
     );
   }
 
-  async getProductionReceiptsForEntry(orderEntry: number, reference?: string) {
+  async getProductionReceiptsForEntry(
+    orderEntry: number,
+    reference?: string,
+    session?: SapUserSession,
+  ) {
     if (!Number.isSafeInteger(orderEntry) || orderEntry <= 0) {
       throw new Error('Invalid SAP production order entry');
     }
@@ -192,6 +214,7 @@ export class SapB1ServiceLayerClient {
         `${lines}($select=LineNum,BaseType,BaseEntry,ItemCode,ItemDescription,Quantity,Price,WarehouseCode,MeasureUnit,Currency,CostingCode,CostingCode2,U_SL,U_HSD,U_NSX)` +
         `&$filter=${encodeURIComponent(filters.join(' and '))}` +
         `&$orderby=${encodeURIComponent(`${header}/DocEntry desc,${lines}/LineNum asc`)}`,
+      session,
     );
     const receipts = new Map<number, SapProductionReceipt>();
     for (const row of rows) {
@@ -229,12 +252,15 @@ export class SapB1ServiceLayerClient {
     );
   }
 
-  private async fetchAllPages<T = any>(endpoint: string): Promise<T[]> {
+  private async fetchAllPages<T = any>(
+    endpoint: string,
+    session?: SapUserSession,
+  ): Promise<T[]> {
     const results: T[] = [];
     let nextEndpoint: string | null = endpoint;
 
     while (nextEndpoint) {
-      const data = await this.get<SapPagedResponse<T>>(nextEndpoint);
+      const data = await this.get<SapPagedResponse<T>>(nextEndpoint, session);
       results.push(...(data.value ?? []));
       const nextLink = data['@odata.nextLink'] ?? data['odata.nextLink'];
       if (!nextLink) break;
@@ -252,13 +278,15 @@ export class SapB1ServiceLayerClient {
 
   private async get<T>(
     endpoint: string,
+    session?: SapUserSession,
     retryOnUnauthorized = true,
   ): Promise<T> {
-    const token = await this.getValidToken();
+    const token = session?.sessionId ?? (await this.getValidToken());
 
     try {
       const response = await this.sapApi.get<T>(endpoint, {
-        headers: this.buildSessionHeaders(token),
+        ...(session && this.personalRequestOptions()),
+        headers: this.buildSessionHeaders(token, session?.routeId),
       });
 
       if (!response.data) {
@@ -268,12 +296,13 @@ export class SapB1ServiceLayerClient {
       return response.data;
     } catch (error) {
       if (
+        !session &&
         retryOnUnauthorized &&
         axios.isAxiosError(error) &&
         error.response?.status === 401
       ) {
         this.clearSession();
-        return this.get<T>(endpoint, false);
+        return this.get<T>(endpoint, undefined, false);
       }
 
       throw error;
@@ -283,22 +312,25 @@ export class SapB1ServiceLayerClient {
   private async post<T>(
     endpoint: string,
     body: Record<string, unknown>,
+    session?: SapUserSession,
     retryOnUnauthorized = true,
   ): Promise<T> {
-    const token = await this.getValidToken();
+    const token = session?.sessionId ?? (await this.getValidToken());
     try {
       const response = await this.sapApi.post<T>(endpoint, body, {
-        headers: this.buildSessionHeaders(token),
+        ...(session && this.personalRequestOptions()),
+        headers: this.buildSessionHeaders(token, session?.routeId),
       });
       return response.data;
     } catch (error) {
       if (
+        !session &&
         retryOnUnauthorized &&
         axios.isAxiosError(error) &&
         error.response?.status === 401
       ) {
         this.clearSession();
-        return this.post<T>(endpoint, body, false);
+        return this.post<T>(endpoint, body, undefined, false);
       }
       throw error;
     }
@@ -371,6 +403,55 @@ export class SapB1ServiceLayerClient {
     return token;
   }
 
+  async loginPersonal(username: string, password: string) {
+    if (!process.env.SAP_COMPANY_DB)
+      throw new Error('SAP_COMPANY_DB is not configured');
+    const response = await this.sapApi.post<{
+      SessionId?: string;
+      SessionTimeout?: number;
+    }>(
+      'Login',
+      {
+        CompanyDB: process.env.SAP_COMPANY_DB,
+        UserName: username,
+        Password: password,
+      },
+      this.personalRequestOptions(),
+    );
+    const sessionId = response.data?.SessionId;
+    if (!sessionId || !/^[\w-]+$/.test(sessionId)) {
+      throw new Error('SAP did not provide a valid session');
+    }
+    const routeId = response.headers['set-cookie']
+      ?.map((cookie) => /^ROUTEID=([\w.-]+);?/i.exec(cookie)?.[1])
+      .find(Boolean);
+    const timeout = Number(response.data.SessionTimeout);
+    return {
+      session: { sessionId, routeId },
+      timeoutMinutes: Number.isFinite(timeout) && timeout > 0 ? timeout : 30,
+    };
+  }
+
+  private personalRequestOptions() {
+    const base = this.sapApi.defaults.baseURL;
+    if (!base || new URL(base).protocol !== 'https:') {
+      throw new Error('Personal SAP login requires HTTPS');
+    }
+    if (!this.personalAgent) {
+      const caFile = process.env.SAP_PERSONAL_TLS_CA_FILE;
+      const serverName = process.env.SAP_PERSONAL_TLS_SERVER_NAME;
+      this.personalAgent = new https.Agent({
+        rejectUnauthorized: true,
+        ...(caFile && { ca: readFileSync(caFile) }),
+        ...(serverName && {
+          checkServerIdentity: (_hostname, cert) =>
+            checkServerIdentity(serverName, cert),
+        }),
+      });
+    }
+    return { httpsAgent: this.personalAgent, maxRedirects: 0 };
+  }
+
   private async login(): Promise<string> {
     if (!process.env.SAP_SERVICE_LAYER_URL) {
       throw new Error('SAP_SERVICE_LAYER_URL is not configured');
@@ -399,9 +480,11 @@ export class SapB1ServiceLayerClient {
     );
   }
 
-  private buildSessionHeaders(token: string) {
+  private buildSessionHeaders(token: string, routeId?: string) {
     return {
-      Cookie: `B1SESSION=${token}`,
+      Cookie: routeId
+        ? `B1SESSION=${token}; ROUTEID=${routeId}`
+        : `B1SESSION=${token}`,
       'B1S-PageSize': Number(process.env.SAP_B1_PAGE_SIZE ?? 10000),
     };
   }

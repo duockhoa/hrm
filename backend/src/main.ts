@@ -8,6 +8,45 @@ import { AppModule } from './app.module';
 import { ensureProductionOrderDeviationUploadDir } from './modules/production-order-deviations/production-order-deviation-upload.config';
 import { enrichOpenApiDocument } from './swagger/enrich-openapi-document';
 import { createProxyTrust } from './modules/network-policies/client-ip';
+import type { CorsOptionsDelegate } from '@nestjs/common/interfaces/external/cors-options.interface';
+import type { Request } from 'express';
+
+const sapReceiptOrigins = new Set(
+  (
+    process.env.WMS_SAP_ALLOWED_ORIGINS ??
+    'https://wms.intech.io.vn,https://kho.dkpharma.io.vn'
+  )
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
+
+const corsOptions: CorsOptionsDelegate<Request> = (request, callback) => {
+  const path = request.path.replace(/\/$/, '');
+  const credentialed =
+    path === '/production-orders/finished-product-summaries/sap-session' ||
+    (/^\/production-orders\/finished-product-summaries\/\d+\/sap-production-receipts$/.test(
+      path,
+    ) &&
+      (request.method === 'POST' || request.method === 'OPTIONS'));
+  const origin = request.get('origin');
+  const allowed =
+    !!origin &&
+    (sapReceiptOrigins.has(origin) ||
+      (process.env.NODE_ENV !== 'production' &&
+        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)));
+  callback(null, {
+    ...(credentialed
+      ? { origin: allowed ? origin : false, credentials: true }
+      : {}),
+    exposedHeaders: [
+      'Content-Disposition',
+      'WWW-Authenticate',
+      'MCP-Protocol-Version',
+      'X-Total-Count',
+    ],
+  });
+};
 
 async function bootstrap() {
   ensureProductionOrderDeviationUploadDir();
@@ -18,14 +57,7 @@ async function bootstrap() {
     index: false,
   });
   app.set('trust proxy', createProxyTrust());
-  app.enableCors({
-    exposedHeaders: [
-      'Content-Disposition',
-      'WWW-Authenticate',
-      'MCP-Protocol-Version',
-      'X-Total-Count',
-    ],
-  });
+  app.enableCors(corsOptions);
 
   const swaggerDocumentConfig = new DocumentBuilder()
     .setTitle('DKPHARMA APP API')

@@ -22,8 +22,11 @@ describe('Finished product summary history HTTP', () => {
   const count = jest.fn();
   const networkAllowed = jest.fn();
   const getProductionReceipts = jest.fn();
+  const loginPersonal = jest.fn();
+  const previousJwtSecret = process.env.JWT_SECRET;
 
   beforeAll(async () => {
+    process.env.JWT_SECRET = 'sap-cookie-http-test-secret';
     const dependencies = Reflect.getMetadata(
       'design:paramtypes',
       ProductionOrdersController,
@@ -44,7 +47,7 @@ describe('Finished product summary history HTTP', () => {
         AuditLogsService,
         {
           provide: SapB1ServiceLayerClient,
-          useValue: { getProductionReceipts },
+          useValue: { getProductionReceipts, loginPersonal },
         },
         {
           provide: PrismaService,
@@ -66,7 +69,7 @@ describe('Finished product summary history HTTP', () => {
           }>();
           if (!req.headers.authorization) throw new UnauthorizedException();
           req.user = {
-            id: 3,
+            id: Number(req.headers['x-test-user-id'] ?? 3),
             permissions: [
               req.headers['x-test-permission'] ?? 'production-orders.read',
             ],
@@ -99,6 +102,8 @@ describe('Finished product summary history HTTP', () => {
   });
 
   afterAll(async () => {
+    if (previousJwtSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = previousJwtSecret;
     await app.close();
   });
 
@@ -113,6 +118,60 @@ describe('Finished product summary history HTTP', () => {
         '/production-orders/finished-product-summaries/7/warehouse-confirmation',
       )
       .set('Authorization', 'test');
+
+  it('reuses a protected SAP cookie for its WMS user and never returns SAP secrets', async () => {
+    const path = '/production-orders/finished-product-summaries/sap-session';
+    const permission =
+      'production-orders.finished-product-summaries.warehouse-confirm';
+    loginPersonal.mockResolvedValue({
+      session: { sessionId: 'sap-personal-test-token', routeId: '.node1' },
+      timeoutMinutes: 45,
+    });
+    const login = await request(app.getHttpServer())
+      .post(path)
+      .set('Authorization', 'test')
+      .set('x-test-permission', permission)
+      .send({ username: 'warehouse-user', password: 'test-only' })
+      .expect(201, { active: true, username: 'warehouse-user' });
+    const cookie = String(login.headers['set-cookie'][0]);
+    expect(cookie).toContain('HttpOnly');
+    expect(cookie).toContain('Max-Age=1800');
+    expect(cookie).not.toContain('sap-personal-test-token');
+    expect(cookie).not.toContain('test-only');
+    const status = () =>
+      request(app.getHttpServer())
+        .get(path)
+        .set('Authorization', 'test')
+        .set('x-test-permission', permission)
+        .set('Cookie', cookie.split(';')[0]);
+    await status().expect(200, { active: true, username: 'warehouse-user' });
+    await status().set('x-test-user-id', '4').expect(200, { active: false });
+    expect(loginPersonal).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires the personal SAP cookie before reading or posting a receipt', async () => {
+    await request(app.getHttpServer())
+      .post(
+        '/production-orders/finished-product-summaries/7/sap-production-receipts',
+      )
+      .set('Authorization', 'test')
+      .set(
+        'x-test-permission',
+        'production-orders.finished-product-summaries.warehouse-confirm',
+      )
+      .send({
+        requestId: '8bc4d331-c62e-447a-8c6d-6fcd92a63179',
+        postingDate: '2026-11-24',
+        quantity: 2345,
+        warehouseCode: 'K-TP',
+        lotNumber: '1250926',
+        manufacturingDate: '2026-09-25',
+        expiryDate: '2028-09-25',
+      })
+      .expect(428)
+      .expect(({ body }) => expect(body.code).toBe('SAP_SESSION_REQUIRED'));
+    expect(findUnique).not.toHaveBeenCalled();
+  });
 
   it('requires summary read permission and resolves the SAP order from the summary', async () => {
     const path =

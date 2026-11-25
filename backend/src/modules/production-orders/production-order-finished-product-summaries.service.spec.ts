@@ -122,6 +122,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
   });
 
   describe('posting production receipts', () => {
+    const sapSession = { sessionId: 'personal-test-session' };
     const dto = {
       requestId: '8bc4d331-c62e-447a-8c6d-6fcd92a63179',
       postingDate: '2026-11-24',
@@ -165,36 +166,39 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     });
 
     it('posts the linked SAP internal order and the full quantity in its batch', async () => {
-      await expect(service.createSapProductionReceipt(7, dto)).resolves.toEqual(
-        sapReceipt,
+      await expect(
+        service.createSapProductionReceipt(7, dto, sapSession),
+      ).resolves.toEqual(sapReceipt);
+      expect(sapB1Client.postProductionReceipt).toHaveBeenCalledWith(
+        {
+          DocDate: dto.postingDate,
+          JournalMemo: 'Nhập kho sản xuất',
+          Comments: dto.comments,
+          Reference2: expect.stringMatching(/^W[A-Z0-9]{10}$/),
+          DocumentLines: [
+            {
+              BaseType: 202,
+              BaseEntry: 3120,
+              Quantity: dto.quantity,
+              WarehouseCode: 'K-TP',
+              CostingCode: 'KHKV',
+              CostingCode2: 'CP004',
+              U_SL: dto.lotNumber,
+              U_NSX: dto.manufacturingDate,
+              U_HSD: dto.expiryDate,
+              BatchNumbers: [
+                {
+                  BatchNumber: dto.lotNumber,
+                  Quantity: dto.quantity,
+                  ManufacturingDate: dto.manufacturingDate,
+                  ExpiryDate: dto.expiryDate,
+                },
+              ],
+            },
+          ],
+        },
+        sapSession,
       );
-      expect(sapB1Client.postProductionReceipt).toHaveBeenCalledWith({
-        DocDate: dto.postingDate,
-        JournalMemo: 'Nhập kho sản xuất',
-        Comments: dto.comments,
-        Reference2: expect.stringMatching(/^W[A-Z0-9]{10}$/),
-        DocumentLines: [
-          {
-            BaseType: 202,
-            BaseEntry: 3120,
-            Quantity: dto.quantity,
-            WarehouseCode: 'K-TP',
-            CostingCode: 'KHKV',
-            CostingCode2: 'CP004',
-            U_SL: dto.lotNumber,
-            U_NSX: dto.manufacturingDate,
-            U_HSD: dto.expiryDate,
-            BatchNumbers: [
-              {
-                BatchNumber: dto.lotNumber,
-                Quantity: dto.quantity,
-                ManufacturingDate: dto.manufacturingDate,
-                ExpiryDate: dto.expiryDate,
-              },
-            ],
-          },
-        ],
-      });
       expect(receiptRequests.update).toHaveBeenCalledWith({
         where: { id: 4 },
         data: { sap_doc_entry: 1875, sap_doc_num: 1875 },
@@ -215,11 +219,11 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
         { FactorCode: 'CP005', InWhichDimension: 2, Active: 'tYES' },
       ]);
       await expect(
-        service.createSapProductionReceipt(7, selected),
+        service.createSapProductionReceipt(7, selected, sapSession),
       ).resolves.toEqual(sapReceipt);
       expect(
         sapB1Client.getProductionReceiptDistributionRules,
-      ).toHaveBeenCalledWith('KHO1', 'CP005');
+      ).toHaveBeenCalledWith('KHO1', 'CP005', sapSession);
       expect(sapB1Client.postProductionReceipt).toHaveBeenCalledWith(
         expect.objectContaining({
           DocumentLines: [
@@ -229,16 +233,21 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
             }),
           ],
         }),
+        sapSession,
       );
     });
 
     it('rejects swapped distribution dimensions before creating a receipt', async () => {
       await expect(
-        service.createSapProductionReceipt(7, {
-          ...dto,
-          departmentCode: 'CP004',
-          costItemCode: 'KHKV',
-        }),
+        service.createSapProductionReceipt(
+          7,
+          {
+            ...dto,
+            departmentCode: 'CP004',
+            costItemCode: 'KHKV',
+          },
+          sapSession,
+        ),
       ).rejects.toMatchObject({ status: 422 });
       expect(receiptRequests.create).not.toHaveBeenCalled();
       expect(sapB1Client.postProductionReceipt).not.toHaveBeenCalled();
@@ -252,9 +261,9 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
           sap_doc_entry: 1875,
           sap_doc_num: 1875,
         });
-      await expect(service.createSapProductionReceipt(7, dto)).rejects.toThrow(
-        'Bản tổng kết đã nhập kho từ WMS qua phiếu SAP #1875.',
-      );
+      await expect(
+        service.createSapProductionReceipt(7, dto, sapSession),
+      ).rejects.toThrow('Bản tổng kết đã nhập kho từ WMS qua phiếu SAP #1875.');
       expect(sapB1Client.resolveProductionOrderEntry).not.toHaveBeenCalled();
       expect(sapB1Client.postProductionReceipt).not.toHaveBeenCalled();
     });
@@ -278,9 +287,9 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
         }),
       );
       sapB1Client.getProductionReceiptsForEntry.mockResolvedValueOnce([]);
-      await expect(service.createSapProductionReceipt(7, dto)).rejects.toThrow(
-        'Bản tổng kết đang chờ kết quả nhập kho từ SAP.',
-      );
+      await expect(
+        service.createSapProductionReceipt(7, dto, sapSession),
+      ).rejects.toThrow('Bản tổng kết đang chờ kết quả nhập kho từ SAP.');
       expect(sapB1Client.postProductionReceipt).not.toHaveBeenCalled();
     });
 
@@ -290,7 +299,7 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       );
       sapB1Client.getProductionReceiptsForEntry.mockResolvedValueOnce([]);
       await expect(
-        service.createSapProductionReceipt(7, dto),
+        service.createSapProductionReceipt(7, dto, sapSession),
       ).rejects.toMatchObject({ status: 503 });
       const reference =
         sapB1Client.postProductionReceipt.mock.calls[0][0].Reference2;
@@ -300,12 +309,12 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
       sapB1Client.getProductionReceiptsForEntry.mockResolvedValueOnce([
         { ...sapReceipt, Reference2: reference },
       ]);
-      await expect(service.createSapProductionReceipt(7, dto)).resolves.toEqual(
-        sapReceipt,
-      );
+      await expect(
+        service.createSapProductionReceipt(7, dto, sapSession),
+      ).resolves.toEqual(sapReceipt);
       expect(
         sapB1Client.getProductionReceiptsForEntry,
-      ).toHaveBeenLastCalledWith(3120, reference);
+      ).toHaveBeenLastCalledWith(3120, reference, sapSession);
       expect(sapB1Client.postProductionReceipt).toHaveBeenCalledTimes(1);
     });
 
@@ -318,12 +327,24 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
         },
       });
       await expect(
-        service.createSapProductionReceipt(7, dto),
+        service.createSapProductionReceipt(7, dto, sapSession),
       ).rejects.toMatchObject({
         status: 422,
         message: 'Posting period is locked',
       });
       expect(receiptRequests.delete).toHaveBeenCalledWith({ where: { id: 4 } });
+    });
+
+    it('asks for a new personal session when SAP rejects an expired session on write', async () => {
+      sapB1Client.postProductionReceipt.mockRejectedValueOnce({
+        isAxiosError: true,
+        response: { status: 401 },
+      });
+      await expect(
+        service.createSapProductionReceipt(7, dto, sapSession),
+      ).rejects.toMatchObject({ status: 428 });
+      expect(receiptRequests.delete).toHaveBeenCalledWith({ where: { id: 4 } });
+      expect(sapB1Client.postProductionReceipt).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -18,7 +18,11 @@ import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { GetAuditLogPageDto } from '../audit-logs/dto/get-audit-log-page.dto';
 import { GetFinishedProductSummariesDto } from './dto/get-finished-product-summaries.dto';
 import { normalizeLotSearch } from './production-order-list-query';
-import { SapB1ServiceLayerClient } from '../sap-b1-connector/sap-b1-service-layer.client';
+import {
+  SapB1ServiceLayerClient,
+  type SapUserSession,
+} from '../sap-b1-connector/sap-b1-service-layer.client';
+import { SapReceiptSessionRequired } from './sap-receipt-session';
 import type { SapProductionReceipt } from '../sap-b1-connector/sap-production-receipt';
 import { SAP_PRODUCTION_ORDER_BASE_TYPE } from '../sap-b1-connector/sap-production-receipt';
 import { CreateSapProductionReceiptDto } from './dto/create-sap-production-receipt.dto';
@@ -27,6 +31,9 @@ function sapReceiptReference(requestId: string) {
   const hash = createHash('sha256').update(requestId).digest();
   return `W${hash.readUIntBE(0, 6).toString(36).padStart(10, '0').toUpperCase()}`;
 }
+
+const isExpiredSapSession = (error: unknown) =>
+  isAxiosError(error) && error.response?.status === 401;
 
 type AuthenticatedUser = {
   id?: number | string | null;
@@ -180,9 +187,26 @@ export class ProductionOrderFinishedProductSummariesService {
     return receipts;
   }
 
+  async loginSapReceipt(username: string, password: string) {
+    try {
+      return await this.sapB1Client.loginPersonal(username, password);
+    } catch (error) {
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      if (status === 401 || status === 400 || status === 403) {
+        throw new UnprocessableEntityException(
+          'SAP từ chối đăng nhập. Vui lòng kiểm tra tài khoản và mật khẩu.',
+        );
+      }
+      throw new BadGatewayException(
+        'Không thể kết nối an toàn tới SAP. Vui lòng liên hệ quản trị viên.',
+      );
+    }
+  }
+
   async createSapProductionReceipt(
     summaryId: number,
     dto: CreateSapProductionReceiptDto,
+    session: SapUserSession,
   ) {
     const order = await this.findSapReceiptOrder(summaryId);
     const {
@@ -229,11 +253,20 @@ export class ProductionOrderFinishedProductSummariesService {
     const activeWhere = { active_summary_id: summaryId };
     const existing = await requests.findUnique({ where });
     if (existing)
-      return this.recoverSapProductionReceipt(existing, summaryId, payloadHash);
+      return this.recoverSapProductionReceipt(
+        existing,
+        summaryId,
+        payloadHash,
+        session,
+      );
 
     const active = await requests.findUnique({ where: activeWhere });
     if (active)
-      return this.rejectDuplicateSapProductionReceipt(active, summaryId);
+      return this.rejectDuplicateSapProductionReceipt(
+        active,
+        summaryId,
+        session,
+      );
 
     let entry: number | null;
     let tracking: Awaited<
@@ -246,14 +279,16 @@ export class ProductionOrderFinishedProductSummariesService {
     >;
     try {
       [entry, tracking, distributionRules] = await Promise.all([
-        this.sapB1Client.resolveProductionOrderEntry(order),
-        this.sapB1Client.getReceiptItemTracking(order.item_code),
+        this.sapB1Client.resolveProductionOrderEntry(order, session),
+        this.sapB1Client.getReceiptItemTracking(order.item_code, session),
         this.sapB1Client.getProductionReceiptDistributionRules(
           departmentCode,
           costItemCode,
+          session,
         ),
       ]);
-    } catch {
+    } catch (error) {
+      if (isExpiredSapSession(error)) throw new SapReceiptSessionRequired();
       throw new BadGatewayException(
         'Không thể kiểm tra lệnh, mặt hàng hoặc mã phân bổ trên SAP.',
       );
@@ -317,11 +352,16 @@ export class ProductionOrderFinishedProductSummariesService {
           concurrent,
           summaryId,
           payloadHash,
+          session,
         );
       }
       const winner = await requests.findUnique({ where: activeWhere });
       if (winner)
-        return this.rejectDuplicateSapProductionReceipt(winner, summaryId);
+        return this.rejectDuplicateSapProductionReceipt(
+          winner,
+          summaryId,
+          session,
+        );
       throw new ConflictException(
         'Yêu cầu nhập kho vừa thay đổi. Vui lòng thử lại.',
       );
@@ -330,37 +370,44 @@ export class ProductionOrderFinishedProductSummariesService {
     const reference = sapReceiptReference(request.request_id);
     let receipt: { DocEntry: number; DocNum: number };
     try {
-      receipt = await this.sapB1Client.postProductionReceipt({
-        DocDate: postingDate,
-        JournalMemo: 'Nhập kho sản xuất',
-        Reference2: reference,
-        Comments: comments || undefined,
-        DocumentLines: [
-          {
-            BaseType: SAP_PRODUCTION_ORDER_BASE_TYPE,
-            BaseEntry: entry,
-            Quantity: quantity,
-            WarehouseCode: warehouseCode,
-            CostingCode: departmentCode,
-            CostingCode2: costItemCode,
-            U_SL: lotNumber,
-            U_NSX: manufacturingDate,
-            U_HSD: expiryDate,
-            BatchNumbers:
-              tracking.ManageBatchNumbers === 'tYES'
-                ? [
-                    {
-                      BatchNumber: lotNumber,
-                      Quantity: quantity,
-                      ManufacturingDate: manufacturingDate,
-                      ExpiryDate: expiryDate,
-                    },
-                  ]
-                : undefined,
-          },
-        ],
-      });
+      receipt = await this.sapB1Client.postProductionReceipt(
+        {
+          DocDate: postingDate,
+          JournalMemo: 'Nhập kho sản xuất',
+          Reference2: reference,
+          Comments: comments || undefined,
+          DocumentLines: [
+            {
+              BaseType: SAP_PRODUCTION_ORDER_BASE_TYPE,
+              BaseEntry: entry,
+              Quantity: quantity,
+              WarehouseCode: warehouseCode,
+              CostingCode: departmentCode,
+              CostingCode2: costItemCode,
+              U_SL: lotNumber,
+              U_NSX: manufacturingDate,
+              U_HSD: expiryDate,
+              BatchNumbers:
+                tracking.ManageBatchNumbers === 'tYES'
+                  ? [
+                      {
+                        BatchNumber: lotNumber,
+                        Quantity: quantity,
+                        ManufacturingDate: manufacturingDate,
+                        ExpiryDate: expiryDate,
+                      },
+                    ]
+                  : undefined,
+            },
+          ],
+        },
+        session,
+      );
     } catch (error) {
+      if (isExpiredSapSession(error)) {
+        await requests.delete({ where: { id: request.id } });
+        throw new SapReceiptSessionRequired();
+      }
       if (
         isAxiosError(error) &&
         [400, 422].includes(error.response?.status ?? 0)
@@ -377,7 +424,12 @@ export class ProductionOrderFinishedProductSummariesService {
           throw new UnprocessableEntityException(message.trim().slice(0, 400));
         }
       }
-      return this.recoverSapProductionReceipt(request, summaryId, payloadHash);
+      return this.recoverSapProductionReceipt(
+        request,
+        summaryId,
+        payloadHash,
+        session,
+      );
     }
     return this.recordSapProductionReceipt(request.id, receipt);
   }
@@ -385,11 +437,13 @@ export class ProductionOrderFinishedProductSummariesService {
   private async rejectDuplicateSapProductionReceipt(
     active: SapProductionReceiptRequests,
     summaryId: number,
+    session: SapUserSession,
   ): Promise<never> {
     const receipt = await this.recoverSapProductionReceipt(
       active,
       summaryId,
       active.payload_hash,
+      session,
     ).catch((error: unknown) => {
       if (error instanceof ServiceUnavailableException) {
         throw new ConflictException(
@@ -407,6 +461,7 @@ export class ProductionOrderFinishedProductSummariesService {
     request: SapProductionReceiptRequests,
     summaryId: number,
     payloadHash: string,
+    session: SapUserSession,
   ) {
     if (
       request.summary_id !== summaryId ||
@@ -419,8 +474,15 @@ export class ProductionOrderFinishedProductSummariesService {
     }
     const reference = sapReceiptReference(request.request_id);
     const receipts = await this.sapB1Client
-      .getProductionReceiptsForEntry(request.sap_order_entry, reference)
-      .catch((): SapProductionReceipt[] => []);
+      .getProductionReceiptsForEntry(
+        request.sap_order_entry,
+        reference,
+        session,
+      )
+      .catch((error: unknown): SapProductionReceipt[] => {
+        if (isExpiredSapSession(error)) throw new SapReceiptSessionRequired();
+        return [];
+      });
     const matches = receipts.filter(
       (receipt) => receipt.Reference2 === reference,
     );
