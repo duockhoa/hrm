@@ -3,11 +3,14 @@ import { SapB1ServiceLayerClient } from './sap-b1-service-layer.client';
 
 describe('SAP Service Layer pagination', () => {
   const originalUrl = process.env.SAP_SERVICE_LAYER_URL;
+  const originalCompanyDb = process.env.SAP_COMPANY_DB;
+  const originalRejectUnauthorized = process.env.SAP_REJECT_UNAUTHORIZED;
   const createAxios = axios.create.bind(axios);
   let get: jest.Mock;
   let post: jest.Mock;
 
   beforeEach(() => {
+    process.env.SAP_REJECT_UNAUTHORIZED = 'false';
     get = jest.fn();
     post = jest.fn().mockResolvedValue({ data: { SessionId: 'test-session' } });
     jest.spyOn(axios, 'create').mockImplementation((config) => {
@@ -22,7 +25,45 @@ describe('SAP Service Layer pagination', () => {
     jest.restoreAllMocks();
     if (originalUrl === undefined) delete process.env.SAP_SERVICE_LAYER_URL;
     else process.env.SAP_SERVICE_LAYER_URL = originalUrl;
+    if (originalCompanyDb === undefined) delete process.env.SAP_COMPANY_DB;
+    else process.env.SAP_COMPANY_DB = originalCompanyDb;
+    if (originalRejectUnauthorized === undefined)
+      delete process.env.SAP_REJECT_UNAUTHORIZED;
+    else process.env.SAP_REJECT_UNAUTHORIZED = originalRejectUnauthorized;
   });
+
+  it.each(['false', 'true'])(
+    'uses the connector TLS setting %s for personal login',
+    async (setting) => {
+      process.env.SAP_SERVICE_LAYER_URL = 'https://sap.test/b1s/v2/';
+      process.env.SAP_COMPANY_DB = 'test-company';
+      process.env.SAP_REJECT_UNAUTHORIZED = setting;
+      post.mockResolvedValueOnce({
+        data: { SessionId: 'personal-session', SessionTimeout: 30 },
+        headers: {},
+      });
+
+      await expect(
+        new SapB1ServiceLayerClient().loginPersonal('personal-user', 'password'),
+      ).resolves.toMatchObject({ session: { sessionId: 'personal-session' } });
+      expect(post).toHaveBeenCalledWith(
+        'Login',
+        {
+          CompanyDB: 'test-company',
+          UserName: 'personal-user',
+          Password: 'password',
+        },
+        expect.objectContaining({
+          maxRedirects: 0,
+          httpsAgent: expect.objectContaining({
+            options: expect.objectContaining({
+              rejectUnauthorized: setting === 'true',
+            }),
+          }),
+        }),
+      );
+    },
+  );
 
   it.each([
     ['v1', 'odata.nextLink', '/b1s/v1/Items?$skip=1'],
@@ -85,7 +126,7 @@ describe('SAP Service Layer pagination', () => {
           Cookie: 'B1SESSION=personal-session; ROUTEID=.node1',
         }),
         httpsAgent: expect.objectContaining({
-          options: expect.objectContaining({ rejectUnauthorized: true }),
+          options: expect.objectContaining({ rejectUnauthorized: false }),
         }),
       }),
     );

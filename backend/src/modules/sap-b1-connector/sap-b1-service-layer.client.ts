@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import * as https from 'https';
-import { readFileSync } from 'node:fs';
-import { checkServerIdentity } from 'node:tls';
 import { SAP_BP_SELECT, SapBusinessPartner } from './sap-business-partner';
 import { SapItemSeries } from './sap-item-series';
 import {
@@ -40,7 +38,6 @@ export class SapB1ServiceLayerClient {
     expiresAt: null,
   };
   private loginPromise: Promise<string> | null = null;
-  private personalAgent?: https.Agent;
 
   constructor() {
     this.sapApi = axios.create({
@@ -437,19 +434,7 @@ export class SapB1ServiceLayerClient {
     if (!base || new URL(base).protocol !== 'https:') {
       throw new Error('Personal SAP login requires HTTPS');
     }
-    if (!this.personalAgent) {
-      const caFile = process.env.SAP_PERSONAL_TLS_CA_FILE;
-      const serverName = process.env.SAP_PERSONAL_TLS_SERVER_NAME;
-      this.personalAgent = new https.Agent({
-        rejectUnauthorized: true,
-        ...(caFile && { ca: readFileSync(caFile) }),
-        ...(serverName && {
-          checkServerIdentity: (_hostname, cert) =>
-            checkServerIdentity(serverName, cert),
-        }),
-      });
-    }
-    return { httpsAgent: this.personalAgent, maxRedirects: 0 };
+    return { httpsAgent: this.sapApi.defaults.httpsAgent, maxRedirects: 0 };
   }
 
   private async login(): Promise<string> {

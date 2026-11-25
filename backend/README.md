@@ -63,6 +63,7 @@ SAP_REJECT_UNAUTHORIZED=false
 `SAP_REJECT_UNAUTHORIZED=false` preserves the previous connector behavior for
 self-signed SAP certificates. Use `true` when the SAP certificate chain is
 trusted by the backend runtime.
+WMS personal SAP login and subsequent API calls use this same TLS setting.
 
 ## Image thumbnails
 
