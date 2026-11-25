@@ -50,10 +50,10 @@ import BatchReceiptImagesButton from "./batch-receipt-images";
 const columns = [
   "Mã hàng",
   "Tên hàng",
-  "Số lượng chứng từ",
-  "Số lượng thực tế",
-  "Đơn vị tính",
   "Số lô",
+  "SL Chứng từ",
+  "SL Thực tế",
+  "Đơn vị tính",
   "Hạn dùng",
   "Ảnh PXK",
   "Ảnh COA",
@@ -86,10 +86,10 @@ function rowValues(receipt: WarehouseReceiptItem) {
   return [
     receipt.item_code,
     receipt.item?.item_name,
+    receipt.lot_number,
     formatReceiptQuantity(receipt.quantity),
     formatReceiptQuantity(receipt.actual_quantity),
     receipt.unit,
-    receipt.lot_number,
     formatExpiryDate(receipt.expiry_date),
     ...(["dispatch_note", "coa"] as const).map((type) => (
       <ReceiptStatus

@@ -12,7 +12,13 @@ import useSWR, { useSWRConfig } from "swr";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import {
+  Check,
+  ClipboardCheck,
+  Images,
+  PackageSearch,
+  Plus,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -71,7 +77,8 @@ export function receiptError(error: unknown, fallback: string) {
       return "Số lượng thực tế phải từ 0 đến 999.999.999,999 và có tối đa 3 chữ số thập phân.";
     if (message === "counting_method is invalid")
       return "Vui lòng chọn phương pháp kiểm đếm hợp lệ.";
-    if (message === "quantity is required") return "Vui lòng nhập số lượng chứng từ.";
+    if (message === "quantity is required")
+      return "Vui lòng nhập số lượng chứng từ.";
     if (message === "supplier_code is required")
       return "Vui lòng chọn nhà cung cấp.";
     if (message === "Supplier does not exist or is not a supplier")
@@ -102,8 +109,7 @@ export function receiptImageError(error: unknown) {
         "Định dạng ảnh không khớp với nội dung file.",
       "files must be JPG, PNG, WEBP or GIF images":
         "Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF.",
-      [`Invalid image or image exceeds ${MAX_RECEIPT_IMAGE_SIZE_MB} MB`]:
-        `Ảnh không hợp lệ hoặc vượt quá giới hạn ${MAX_RECEIPT_IMAGE_SIZE_MB} MB.`,
+      [`Invalid image or image exceeds ${MAX_RECEIPT_IMAGE_SIZE_MB} MB`]: `Ảnh không hợp lệ hoặc vượt quá giới hạn ${MAX_RECEIPT_IMAGE_SIZE_MB} MB.`,
     };
     if (typeof message === "string" && messages[message])
       return messages[message];
@@ -117,6 +123,30 @@ const textFields = [
   ["packaging_specification", "Quy cách đóng gói", 255, false],
   ["supplier_code", "Nhà cung cấp", 191, true],
   ["manufacturer_code", "Nhà sản xuất", 100, false],
+] as const;
+
+const receiptSteps = [
+  {
+    label: "Thông tin hàng",
+    icon: PackageSearch,
+    active: "bg-violet-600 text-white",
+    completed: "bg-violet-200 text-violet-900",
+    pending: "bg-violet-100 text-violet-700",
+  },
+  {
+    label: "Kiểm đếm, cảm quan",
+    icon: ClipboardCheck,
+    active: "bg-orange-500 text-white",
+    completed: "bg-orange-200 text-orange-900",
+    pending: "bg-orange-100 text-orange-800",
+  },
+  {
+    label: "Ảnh, ghi chú",
+    icon: Images,
+    active: "bg-amber-400 text-amber-950",
+    completed: "bg-amber-200 text-amber-950",
+    pending: "bg-amber-100 text-amber-800",
+  },
 ] as const;
 
 function defaultLotNumber(manufacturerLotNumber: string, date: Date) {
@@ -146,6 +176,7 @@ export default function ReceiptForm({
   onSaved: (receipt: WarehouseReceiptItem) => void;
   onSubmittingChange?: (submitting: boolean) => void;
 }) {
+  const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
@@ -296,10 +327,59 @@ export default function ReceiptForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submittingRef.current) return;
+    setError("");
+    // Keep all steps mounted so values and selected images survive navigation.
+    // Validate explicitly because required controls in other steps are hidden.
+    for (let section = 1; section <= step; section++) {
+      const controls = event.currentTarget.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >(
+        `[data-receipt-step="${section}"] input, [data-receipt-step="${section}"] select, [data-receipt-step="${section}"] textarea`,
+      );
+      const invalid = Array.from(controls).find(
+        (control) => !control.checkValidity(),
+      );
+      if (invalid) {
+        setStep(section);
+        requestAnimationFrame(() => invalid.reportValidity());
+        return;
+      }
+    }
     const values = new FormData(event.currentTarget);
     const text = (key: string) => String(values.get(key) ?? "").trim();
+    const lot = (
+      manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, new Date())
+    ).trim();
+    const basicError = !itemOptions.some((item) => item.value === itemCode)
+      ? "Vui lòng chọn mã hàng trong danh sách."
+      : !supplierCode.trim()
+        ? "Vui lòng chọn nhà cung cấp."
+        : supplierCode !== data?.supplier_code &&
+            !supplierOptions.some((supplier) => supplier.value === supplierCode)
+          ? "Vui lòng chọn nhà cung cấp trong danh sách."
+          : manufacturerCode &&
+              manufacturerCode !== data?.manufacturer_code &&
+              !manufacturerOptions.some(
+                (manufacturer) => manufacturer.value === manufacturerCode,
+              )
+            ? "Vui lòng chọn nhà sản xuất trong danh sách."
+            : !lot
+              ? "Vui lòng nhập số lô."
+              : lot.length > 100
+                ? "Số lô không được vượt quá 100 ký tự."
+                : "";
+    if (basicError) {
+      setStep(1);
+      setError(basicError);
+      return;
+    }
+    if (step === 1) {
+      setStep(2);
+      return;
+    }
     const quantity = text("quantity");
     if (!quantity) {
+      setStep(2);
       setError("Vui lòng nhập số lượng chứng từ.");
       return;
     }
@@ -308,6 +388,7 @@ export default function ReceiptForm({
       Number(quantity) <= 0 ||
       Number(quantity) > 999999999.999
     ) {
+      setStep(2);
       setError(
         "Số lượng chứng từ phải lớn hơn 0, không vượt quá 999.999.999,999 và có tối đa 3 chữ số thập phân.",
       );
@@ -320,6 +401,7 @@ export default function ReceiptForm({
         Number(actualQuantity) < 0 ||
         Number(actualQuantity) > 999999999.999)
     ) {
+      setStep(2);
       setError(
         "Số lượng thực tế phải từ 0 đến 999.999.999,999 và có tối đa 3 chữ số thập phân.",
       );
@@ -330,11 +412,12 @@ export default function ReceiptForm({
       countingMethod &&
       !Object.hasOwn(RECEIPT_COUNTING_METHODS, countingMethod)
     ) {
+      setStep(2);
       setError("Vui lòng chọn phương pháp kiểm đếm hợp lệ.");
       return;
     }
-    if (!supplierCode.trim()) {
-      setError("Vui lòng chọn nhà cung cấp.");
+    if (step === 2) {
+      setStep(3);
       return;
     }
     const note = text("note");
@@ -347,11 +430,12 @@ export default function ReceiptForm({
       quantity,
       actual_quantity: actualQuantity || null,
       counting_method: (countingMethod as ReceiptCountingMethod) || null,
-      sensory_passed: text("sensory_passed") === "" ? null : text("sensory_passed") === "true",
+      sensory_passed:
+        text("sensory_passed") === ""
+          ? null
+          : text("sensory_passed") === "true",
       unit: unit.trim() || null,
-      lot_number: (
-        manualLotNumber ?? defaultLotNumber(manufacturerLotNumber, new Date())
-      ).trim(),
+      lot_number: lot,
       manufacturer_lot_number: text("manufacturer_lot_number") || null,
       packaging_specification: text("packaging_specification") || null,
       supplier_code: supplierCode,
@@ -359,35 +443,6 @@ export default function ReceiptForm({
       expiry_date: text("expiry_date") || null,
       note: note || null,
     };
-    if (!itemOptions.some((item) => item.value === itemCode)) {
-      setError("Vui lòng chọn mã hàng trong danh sách.");
-      return;
-    }
-    if (
-      supplierCode !== data?.supplier_code &&
-      !supplierOptions.some((supplier) => supplier.value === supplierCode)
-    ) {
-      setError("Vui lòng chọn nhà cung cấp trong danh sách.");
-      return;
-    }
-    if (
-      manufacturerCode &&
-      manufacturerCode !== data?.manufacturer_code &&
-      !manufacturerOptions.some(
-        (manufacturer) => manufacturer.value === manufacturerCode,
-      )
-    ) {
-      setError("Vui lòng chọn nhà sản xuất trong danh sách.");
-      return;
-    }
-    if (!payload.lot_number) {
-      setError("Vui lòng nhập số lô.");
-      return;
-    }
-    if (payload.lot_number.length > 100) {
-      setError("Số lô không được vượt quá 100 ký tự.");
-      return;
-    }
     for (const { type } of RECEIPT_ATTACHMENT_GROUPS) {
       const imageError = validateReceiptImages(pendingImages[type]);
       if (imageError) {
@@ -479,8 +534,76 @@ export default function ReceiptForm({
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-      <fieldset disabled={isSubmitting} className="grid grid-cols-1 gap-4">
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      noValidate
+      className="space-y-4"
+    >
+      <ol
+        aria-label="Các bước nhập kiểm hàng"
+        className="isolate flex w-full"
+      >
+        {receiptSteps.map(
+          ({ label, icon: Icon, active, completed, pending }, index) => {
+            const current = step === index + 1;
+            const done = step > index + 1;
+            return (
+              <li
+                key={label}
+                aria-current={current ? "step" : undefined}
+                className={`relative min-w-0 flex-1 ${index > 0 ? "-ml-1.5" : ""}`}
+              >
+                <div
+                  className={`flex h-16 flex-col items-center justify-center gap-0.5 pl-4 pr-3 text-center transition-colors duration-200 sm:h-12 sm:flex-row sm:gap-1.5 ${current ? active : done ? completed : pending}`}
+                  style={{
+                    clipPath:
+                      index === 0
+                        ? "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)"
+                        : "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)",
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`flex size-5 shrink-0 items-center justify-center rounded-full sm:size-6 ${current ? "bg-white/20" : "bg-white/50"}`}
+                  >
+                    {done ? (
+                      <Check className="size-3 sm:size-3.5" strokeWidth={2.5} />
+                    ) : (
+                      <Icon className="size-3 sm:size-3.5" />
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <span
+                      className={`block text-[8px] font-semibold uppercase tracking-wide sm:text-[9px] ${current ? "opacity-90" : "opacity-70"}`}
+                    >
+                      Bước {index + 1}
+                    </span>
+                    <span
+                      className={`block text-[10px] leading-3 sm:text-[11px] sm:leading-3.5 ${current ? "font-bold" : "font-medium"}`}
+                    >
+                      {label}
+                    </span>
+                    <span className="sr-only">
+                      {current
+                        ? "Đang nhập"
+                        : done
+                          ? "Đã hoàn thành"
+                          : "Chưa thực hiện"}
+                    </span>
+                  </span>
+                </div>
+              </li>
+            );
+          },
+        )}
+      </ol>
+      <fieldset
+        data-receipt-step="1"
+        disabled={isSubmitting}
+        hidden={step !== 1}
+        className={step === 1 ? "grid grid-cols-1 gap-4" : "hidden"}
+      >
         <div className="space-y-2">
           <Label htmlFor="receipt-item-code">Mã hàng *</Label>
           <Combobox
@@ -766,95 +889,107 @@ export default function ReceiptForm({
                   />
                 </div>
               )}
-              {key === "lot_number" && (
-                <div className="space-y-2">
-                  <Label htmlFor="receipt-quantity">Số lượng chứng từ *</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="receipt-quantity"
-                      name="quantity"
-                      required
-                      type="number"
-                      inputMode="decimal"
-                      min="0.001"
-                      max="999999999.999"
-                      step="0.001"
-                      defaultValue={data?.quantity ?? ""}
-                      placeholder="Nhập số lượng chứng từ"
-                      className="min-w-0 flex-1"
-                      aria-describedby="receipt-quantity-unit"
-                    />
-                    <span
-                      id="receipt-quantity-unit"
-                      className="max-w-32 shrink-0 truncate text-sm text-gray-400"
-                      title={unit}
-                      aria-label="Đơn vị tính"
-                    >
-                      {unit}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {key === "lot_number" && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="receipt-actual-quantity">Số lượng thực tế</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="receipt-actual-quantity"
-                        name="actual_quantity"
-                        type="number"
-                        inputMode="decimal"
-                        min="0"
-                        max="999999999.999"
-                        step="0.001"
-                        defaultValue={data?.actual_quantity ?? ""}
-                        placeholder="Nhập số lượng thực tế"
-                        className="min-w-0 flex-1"
-                        aria-describedby="receipt-actual-quantity-unit"
-                      />
-                      <span
-                        id="receipt-actual-quantity-unit"
-                        className="max-w-32 shrink-0 truncate text-sm text-gray-400"
-                        title={unit}
-                        aria-label="Đơn vị tính"
-                      >
-                        {unit}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="receipt-counting-method">Phương pháp kiểm đếm</Label>
-                    <select
-                      id="receipt-counting-method"
-                      name="counting_method"
-                      defaultValue={data?.counting_method ?? ""}
-                      className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                    >
-                      <option value="">Chọn phương pháp kiểm đếm</option>
-                      {Object.entries(RECEIPT_COUNTING_METHODS).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="receipt-sensory-passed">Cảm quan</Label>
-                    <select
-                      id="receipt-sensory-passed"
-                      name="sensory_passed"
-                      defaultValue={data?.sensory_passed == null ? "" : String(data.sensory_passed)}
-                      className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                    >
-                      <option value="">Chọn kết quả cảm quan</option>
-                      <option value="true">Đạt</option>
-                      <option value="false">Không đạt</option>
-                    </select>
-                  </div>
-                </>
-              )}
             </Fragment>
           ),
         )}
+      </fieldset>
+      <fieldset
+        data-receipt-step="2"
+        disabled={isSubmitting}
+        hidden={step !== 2}
+        className={step === 2 ? "grid grid-cols-1 gap-4" : "hidden"}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="receipt-quantity">Số lượng chứng từ *</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="receipt-quantity"
+              name="quantity"
+              required
+              type="number"
+              inputMode="decimal"
+              min="0.001"
+              max="999999999.999"
+              step="0.001"
+              defaultValue={data?.quantity ?? ""}
+              placeholder="Nhập số lượng chứng từ"
+              className="min-w-0 flex-1"
+              aria-describedby="receipt-quantity-unit"
+            />
+            <span
+              id="receipt-quantity-unit"
+              className="max-w-32 shrink-0 truncate text-sm text-gray-400"
+              title={unit}
+              aria-label="Đơn vị tính"
+            >
+              {unit}
+            </span>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="receipt-actual-quantity">Số lượng thực tế</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="receipt-actual-quantity"
+              name="actual_quantity"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              max="999999999.999"
+              step="0.001"
+              defaultValue={data?.actual_quantity ?? ""}
+              placeholder="Nhập số lượng thực tế"
+              className="min-w-0 flex-1"
+              aria-describedby="receipt-actual-quantity-unit"
+            />
+            <span
+              id="receipt-actual-quantity-unit"
+              className="max-w-32 shrink-0 truncate text-sm text-gray-400"
+              title={unit}
+              aria-label="Đơn vị tính"
+            >
+              {unit}
+            </span>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="receipt-counting-method">Phương pháp kiểm đếm</Label>
+          <select
+            id="receipt-counting-method"
+            name="counting_method"
+            defaultValue={data?.counting_method ?? ""}
+            className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          >
+            <option value="">Chọn phương pháp kiểm đếm</option>
+            {Object.entries(RECEIPT_COUNTING_METHODS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="receipt-sensory-passed">Cảm quan</Label>
+          <select
+            id="receipt-sensory-passed"
+            name="sensory_passed"
+            defaultValue={
+              data?.sensory_passed == null ? "" : String(data.sensory_passed)
+            }
+            className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          >
+            <option value="">Chọn kết quả cảm quan</option>
+            <option value="true">Đạt</option>
+            <option value="false">Không đạt</option>
+          </select>
+        </div>
+      </fieldset>
+      <fieldset
+        data-receipt-step="3"
+        disabled={isSubmitting}
+        hidden={step !== 3}
+        className={step === 3 ? "grid grid-cols-1 gap-4" : "hidden"}
+      >
         {RECEIPT_ATTACHMENT_GROUPS.map(({ type, label }) => (
           <ReceiptImagePicker
             key={type}
@@ -914,8 +1049,21 @@ export default function ReceiptForm({
         >
           Hủy
         </Button>
+        {step > 1 && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isSubmitting}
+            onClick={() => {
+              setStep(step - 1);
+              setError("");
+            }}
+          >
+            Quay lại
+          </Button>
+        )}
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Đang lưu..." : "Lưu"}
+          {isSubmitting ? "Đang lưu..." : step < 3 ? "Tiếp tục" : "Lưu"}
         </Button>
       </div>
       <Dialog

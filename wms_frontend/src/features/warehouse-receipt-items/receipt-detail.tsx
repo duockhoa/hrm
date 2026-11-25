@@ -204,18 +204,10 @@ export default function ReceiptDetail({
       </Link>,
     ],
     ["Tên hàng", data.item?.item_name],
-    ["Số lượng chứng từ", formatReceiptQuantity(data.quantity)],
-    ["Số lượng thực tế", formatReceiptQuantity(data.actual_quantity)],
-    [
-      "Phương pháp kiểm đếm",
-      data.counting_method ? RECEIPT_COUNTING_METHODS[data.counting_method] : null,
-    ],
-    ["Cảm quan", data.sensory_passed == null ? null : data.sensory_passed ? "Đạt" : "Không đạt"],
-    ["Đơn vị tính", data.unit],
+    ["Số lô NSX", data.manufacturer_lot_number],
     ["Số lô", data.lot_number],
-    ["Số lô nhà sản xuất", data.manufacturer_lot_number],
     ["Hạn dùng", formatExpiryDate(data.expiry_date)],
-    ["Quy cách đóng gói", data.packaging_specification],
+    ["Quy cách", data.packaging_specification],
     [
       "Nhà cung cấp",
       data.supplier
@@ -228,6 +220,16 @@ export default function ReceiptDetail({
         ? `${data.manufacturer.manufacturer_name} (${data.manufacturer.manufacturer_code})`
         : data.manufacturer_name,
     ],
+    ["SL Chứng từ", formatReceiptQuantity(data.quantity)],
+    ["SL Thực tế", formatReceiptQuantity(data.actual_quantity)],
+    ["Đơn vị tính", data.unit],
+    [
+      "PP Kiểm đếm",
+      data.counting_method ? RECEIPT_COUNTING_METHODS[data.counting_method] : null,
+    ],
+    ["Cảm quan", data.sensory_passed == null ? null : data.sensory_passed ? "Đạt" : "Không đạt"],
+  ];
+  const trailingFields: [string, ReactNode][] = [
     ["Ghi chú", data.note],
     ["Thời điểm nhập", formatReceiptDateTime(data.received_at)],
     ["Người nhập", data.enteredBy?.name || data.enteredBy?.username],
@@ -338,6 +340,9 @@ export default function ReceiptDetail({
             </div>
           ) : null;
         })}
+        {trailingFields.map(([label, value]) => (
+          <FieldDisplay key={label} lable={label} value={value ?? ""} />
+        ))}
       </div>
       <Dialog
         open={sapConfirmOpen}
