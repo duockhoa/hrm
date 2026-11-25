@@ -91,6 +91,22 @@ export default function VersionsPage() {
             </TableHeader>
             <TableBody>
               <TableRow>
+                <TableCell className="font-medium">1.3.21</TableCell>
+                <TableCell>
+                  <time dateTime="2026-11-25">25/11/2026</time>
+                </TableCell>
+                <TableCell className="min-w-72 max-w-xl whitespace-normal">
+                  <ul className="list-disc space-y-1 pl-4">
+                    <li>
+                      Bổ sung trường “Số lượng BTP nhận” trong tổng kết bán thành
+                      phẩm hoàn thiện, hiển thị trên biểu mẫu, chi tiết và danh sách.
+                    </li>
+                    <li>Bổ sung “Mẫu lưu” vào lựa chọn loại mẫu khi lấy mẫu.</li>
+                  </ul>
+                </TableCell>
+                <VersionResponsibleCells />
+              </TableRow>
+              <TableRow>
                 <TableCell className="font-medium">1.3.19</TableCell>
                 <TableCell>
                   <time dateTime="2026-11-24">24/11/2026</time>
