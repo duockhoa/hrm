@@ -835,6 +835,7 @@ export const recordSections = {
         'production_order_id',
         'semi_finished_product_order_id',
         'received_bag_count',
+        'received_quantity',
         'remaining_quantity',
         'unit',
         'remaining_reason',

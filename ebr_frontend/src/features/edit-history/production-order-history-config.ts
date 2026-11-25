@@ -422,6 +422,7 @@ const resourceFields = {
   ],
   "post-secondary-packaging-summary": [
     "received_bag_count",
+    "received_quantity",
     "remaining_quantity",
     "unit",
     "remaining_reason",

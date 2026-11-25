@@ -127,6 +127,12 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
             dto?.received_bag_count,
             'received_bag_count',
           ),
+          received_quantity: this.isEmpty(dto?.received_quantity)
+            ? null
+            : this.normalizeRequiredQuantity(
+                dto.received_quantity,
+                'received_quantity',
+              ),
           remaining_quantity: this.normalizeRequiredQuantity(
             dto?.remaining_quantity,
             'remaining_quantity',
@@ -172,6 +178,14 @@ export class ProductionOrderPostSecondaryPackagingSummariesService {
         updateDto.received_bag_count,
         'received_bag_count',
       );
+    }
+    if ('received_quantity' in updateDto) {
+      data.received_quantity = this.isEmpty(updateDto.received_quantity)
+        ? null
+        : this.normalizeRequiredQuantity(
+            updateDto.received_quantity,
+            'received_quantity',
+          );
     }
     if ('remaining_quantity' in updateDto) {
       data.remaining_quantity = this.normalizeRequiredQuantity(

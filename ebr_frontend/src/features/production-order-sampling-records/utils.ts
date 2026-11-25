@@ -5,6 +5,7 @@ const SAMPLING_TYPE_OPTIONS = [
     label: "Mẫu theo dõi độ ổn định",
   },
   { value: "Mẫu nghiên cứu", label: "Mẫu nghiên cứu" },
+  { value: "Mẫu lưu", label: "Mẫu lưu" },
   { value: "Khác", label: "Khác" },
 ];
 

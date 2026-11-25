@@ -360,6 +360,10 @@ export default function PostSecondaryPackagingSummaryDetail({
           value={formatNumber(data.received_bag_count)}
         />
         <FieldDisplay
+          lable="Số lượng BTP nhận"
+          value={formatNumber(data.received_quantity)}
+        />
+        <FieldDisplay
           lable="Số lượng tồn"
           value={formatNumber(data.remaining_quantity)}
         />

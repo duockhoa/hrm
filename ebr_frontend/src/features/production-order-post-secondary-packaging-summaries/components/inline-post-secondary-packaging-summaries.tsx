@@ -182,6 +182,9 @@ export default function InlinePostSecondaryPackagingSummaries({
                   Số tải nhận
                 </TableHead>
                 <TableHead className="border-r text-right">
+                  Số lượng BTP nhận
+                </TableHead>
+                <TableHead className="border-r text-right">
                   Số lượng tồn
                 </TableHead>
                 <TableHead className="border-r">Đơn vị</TableHead>
@@ -237,6 +240,9 @@ export default function InlinePostSecondaryPackagingSummaries({
                     </TableCell>
                     <TableCell className="border-r text-right tabular-nums">
                       {formatNumber(summary.received_bag_count)}
+                    </TableCell>
+                    <TableCell className="border-r text-right tabular-nums">
+                      {formatNumber(summary.received_quantity)}
                     </TableCell>
                     <TableCell className="border-r text-right tabular-nums">
                       {formatNumber(summary.remaining_quantity)}

@@ -69,6 +69,7 @@ describe('ProductionOrderPostSecondaryPackagingSummariesService', () => {
         {
           semi_finished_product_order_id: 2030,
           received_bag_count: 12,
+          received_quantity: '125,375',
           remaining_quantity: '3.5',
           unit: ' kg ',
         },
@@ -82,6 +83,9 @@ describe('ProductionOrderPostSecondaryPackagingSummariesService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           unit: 'kg',
+          received_quantity: expect.objectContaining({
+            toFixed: expect.any(Function),
+          }),
         }),
       }),
     );
@@ -107,6 +111,38 @@ describe('ProductionOrderPostSecondaryPackagingSummariesService', () => {
       }),
     );
   });
+
+  it('normalizes the received quantity and permits clearing legacy values', async () => {
+    prismaService.productionOrderPostSecondaryPackagingSummaries.findUnique.mockResolvedValue(
+      { id: 1, production_order_id: 2031 },
+    );
+    await service.update(1, { received_quantity: '125,375' });
+    const saved =
+      prismaService.productionOrderPostSecondaryPackagingSummaries.update.mock
+        .calls[0][0];
+    expect(saved.data.received_quantity.toString()).toBe('125.375');
+    await service.update(1, { received_quantity: null });
+    expect(
+      prismaService.productionOrderPostSecondaryPackagingSummaries.update,
+    ).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: { received_quantity: null } }),
+    );
+  });
+
+  it.each(['-1', '1.2345', '1000000000', 'abc'])(
+    'rejects invalid received quantity %s',
+    async (received_quantity) => {
+      prismaService.productionOrderPostSecondaryPackagingSummaries.findUnique.mockResolvedValue(
+        { id: 1, production_order_id: 2031 },
+      );
+      await expect(service.update(1, { received_quantity })).rejects.toThrow(
+        'received_quantity',
+      );
+      expect(
+        prismaService.productionOrderPostSecondaryPackagingSummaries.update,
+      ).not.toHaveBeenCalled();
+    },
+  );
 
   it('allows a semi-finished production order to be reused by another summary', async () => {
     prismaService.productionOrders.findUnique.mockResolvedValue({ id: 2032 });

@@ -31,7 +31,11 @@ import type {
   PostSecondaryPackagingSummary,
   SummaryProductionOrder,
 } from "../types";
-import { COMMON_UNIT_OPTIONS, getErrorMessage, getSummaryOrder } from "../utils";
+import {
+  COMMON_UNIT_OPTIONS,
+  getErrorMessage,
+  getSummaryOrder,
+} from "../utils";
 
 const nonNegativeDecimalText = z
   .string()
@@ -51,6 +55,19 @@ const formSchema = z.object({
     .trim()
     .min(1, "Số tải nhận là bắt buộc")
     .regex(/^\d+$/, "Số tải nhận phải là số nguyên không âm"),
+  received_quantity: z
+    .string()
+    .trim()
+    .min(1, "Số lượng BTP nhận là bắt buộc")
+    .refine(
+      (value) =>
+        /^\d+(?:[.,]\d{1,3})?$/.test(value) &&
+        value.replace(",", ".").split(".")[0].length <= 9,
+      {
+        message:
+          "Số lượng BTP nhận phải là số không âm, tối đa 9 chữ số nguyên và 3 chữ số thập phân",
+      },
+    ),
   remaining_quantity: nonNegativeDecimalText,
   unit: z.string().trim().max(20, "Đơn vị tính tối đa 20 ký tự"),
   remaining_reason: z.string(),
@@ -124,6 +141,7 @@ export default function PostSecondaryPackagingSummaryForm({
         data?.semi_finished_product_order_id ?? "",
       ),
       received_bag_count: String(data?.received_bag_count ?? ""),
+      received_quantity: String(data?.received_quantity ?? ""),
       remaining_quantity: String(data?.remaining_quantity ?? ""),
       unit: data?.unit ?? "",
       remaining_reason: data?.remaining_reason ?? "",
@@ -160,6 +178,7 @@ export default function PostSecondaryPackagingSummaryForm({
     const payload = {
       semi_finished_product_order_id: values.semi_finished_product_order_id,
       received_bag_count: Number(values.received_bag_count),
+      received_quantity: values.received_quantity.replace(",", "."),
       remaining_quantity: values.remaining_quantity.replace(",", "."),
       unit: values.unit.trim() || null,
       remaining_reason: values.remaining_reason.trim() || null,
@@ -217,7 +236,8 @@ export default function PostSecondaryPackagingSummaryForm({
               : "Thêm tổng kết BTP hoàn thiện"}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Có thể tổng kết nhiều lần cho cùng một lô BTP trong lô đóng gói cấp 2 này.
+            Có thể tổng kết nhiều lần cho cùng một lô BTP trong lô đóng gói cấp
+            2 này.
           </p>
         </div>
 
@@ -303,6 +323,19 @@ export default function PostSecondaryPackagingSummaryForm({
                     inputMode="numeric"
                     {...field}
                   />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="received_quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Số lượng BTP nhận *</FormLabel>
+                <FormControl>
+                  <Input inputMode="decimal" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

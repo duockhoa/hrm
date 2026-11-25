@@ -386,6 +386,7 @@ type SemiFinishedProductSummaryPayload = {
 type PostSecondaryPackagingSummaryPayload = {
   semi_finished_product_order_id: string | number;
   received_bag_count: string | number;
+  received_quantity?: string | number | null;
   remaining_quantity: string | number;
   unit?: string | null;
   remaining_reason?: string | null;
