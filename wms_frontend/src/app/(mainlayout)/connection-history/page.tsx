@@ -7,7 +7,7 @@ import { useInfiniteConnectionHistory } from "@/features/connection-history/use-
 import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
 import useSWR from "swr";
 import { isAxiosError } from "axios";
-import { Activity, Clock3, Unplug } from "lucide-react";
+import { Activity, RefreshCw, Clock3, Unplug } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -106,6 +106,11 @@ export default function ConnectionHistoryPage() {
   ).trim();
   const serverKeyword = useDebouncedValue(keyword);
   const [status, setStatus] = useState<ConnectionStatus>();
+  const [connectedFrom, setConnectedFrom] = useState("");
+  const [connectedTo, setConnectedTo] = useState("");
+  const invalidDateRange = Boolean(
+    connectedFrom && connectedTo && connectedFrom > connectedTo,
+  );
   const { data: user } = useSWR(API_ROUTES.users.me, userService.fetcherMe);
   const {
     data: permissions,
@@ -128,7 +133,15 @@ export default function ConnectionHistoryPage() {
     sentinelRef,
     loadMore,
     retry,
-  } = useInfiniteConnectionHistory(Boolean(canRead), serverKeyword, status);
+    refresh,
+    isValidating,
+  } = useInfiniteConnectionHistory(
+    Boolean(canRead) && !invalidDateRange,
+    serverKeyword,
+    status,
+    connectedFrom,
+    connectedTo,
+  );
   const records = canRead ? loadedRecords : [];
   const summary = canRead
     ? loadedSummary
@@ -224,6 +237,36 @@ export default function ConnectionHistoryPage() {
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-b p-2 text-sm">
+          <label className="flex items-center gap-2">
+            Từ ngày
+            <input
+              type="date"
+              value={connectedFrom}
+              max={connectedTo || undefined}
+              onChange={(event) => setConnectedFrom(event.target.value)}
+              className="rounded-md border px-2 py-1"
+            />
+          </label>
+          <label className="flex items-center gap-2">
+            Đến ngày
+            <input
+              type="date"
+              value={connectedTo}
+              min={connectedFrom || undefined}
+              onChange={(event) => setConnectedTo(event.target.value)}
+              className="rounded-md border px-2 py-1"
+            />
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canRead || isValidating || invalidDateRange}
+            onClick={() => void refresh().catch(() => {})}
+          >
+            <RefreshCw /> Làm mới
+          </Button>
+        </div>
         <div ref={containerRef} className="min-h-0 flex-1 overflow-auto">
           <table className="w-full min-w-[1000px] table-fixed text-sm [&_th]:whitespace-normal [&_th]:break-words [&_td]:truncate [&_td>div]:truncate [&_[data-slot=skeleton]]:max-w-full">
             <colgroup>
@@ -244,7 +287,17 @@ export default function ConnectionHistoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {showSkeleton ? (
+              {invalidDateRange ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    role="alert"
+                    className="py-12 text-center text-red-600"
+                  >
+                    Từ ngày phải trước hoặc bằng đến ngày.
+                  </TableCell>
+                </TableRow>
+              ) : showSkeleton ? (
                 <ConnectionHistoryTableSkeleton rows={8} />
               ) : error && !records.length ? (
                 <TableRow>

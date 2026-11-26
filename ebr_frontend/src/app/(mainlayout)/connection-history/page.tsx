@@ -267,7 +267,7 @@ export default function ConnectionHistoryPage() {
           </Button>
         </div>
         <div ref={containerRef} className="min-h-0 flex-1 overflow-auto">
-          <table className="w-full table-fixed text-sm [&_th]:whitespace-normal [&_th]:break-words [&_td]:truncate [&_td>div]:truncate [&_[data-slot=skeleton]]:max-w-full">
+          <table className="w-full min-w-[1000px] table-fixed text-sm [&_th]:whitespace-normal [&_th]:break-words [&_td]:truncate [&_td>div]:truncate [&_[data-slot=skeleton]]:max-w-full">
             <colgroup>
               {[20, 13, 13, 13, 10, 14, 7, 10].map((width, index) => (
                 <col key={index} style={{ width: `${width}%` }} />
