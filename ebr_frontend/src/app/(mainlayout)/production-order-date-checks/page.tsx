@@ -1,4 +1,10 @@
 "use client";
+import {
+  ListFilterButton,
+  type ListFilters,
+} from "@/components/list-filter-button";
+import { dateCheckFilters } from "@/lib/basic-list-filters";
+import { useState as useFilterState } from "react";
 
 import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
@@ -93,6 +99,7 @@ function DateChecksTableSkeleton() {
 }
 
 export default function ProductionOrderDateChecksPage() {
+  const [filters, setFilters] = useFilterState<ListFilters>({});
   const pathname = usePathname();
   const isMobile = useMobile();
   const [selectedCheckId, setSelectedCheckId] = useState<
@@ -119,6 +126,7 @@ export default function ProductionOrderDateChecksPage() {
     {
       url: API_ROUTES.productionOrders.allDateChecks,
       filters: {
+        ...filters,
         search: searchKeyword || undefined,
         has_images: true,
         order_by: "last_image_uploaded_at",
@@ -143,7 +151,16 @@ export default function ProductionOrderDateChecksPage() {
 
   const listPanel = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white shadow-md">
-      <div className="sticky top-0 z-20 w-full bg-white p-2">
+      <div className="sticky top-0 z-20 w-full pr-12 bg-white p-2">
+        <div className="absolute right-2 top-2">
+          <ListFilterButton
+            groups={dateCheckFilters}
+            filters={filters}
+            onApply={setFilters}
+            disabled={false}
+            title="Lọc dữ liệu"
+          />
+        </div>
         <div className="flex w-full justify-between border-b border-gray-200 pb-2">
           <div className="flex items-center gap-2">
             <AiOutlineRight />
@@ -288,7 +305,7 @@ export default function ProductionOrderDateChecksPage() {
                   colSpan={COLUMN_COUNT}
                   className="h-32 text-center text-sm text-gray-500"
                 >
-                  {searchKeyword.trim()
+                  {searchKeyword.trim() || Object.keys(filters).length > 0
                     ? "Không tìm thấy phiếu theo dõi In Date phù hợp."
                     : "Chưa có phiếu theo dõi In Date đã tải ảnh."}
                 </TableCell>

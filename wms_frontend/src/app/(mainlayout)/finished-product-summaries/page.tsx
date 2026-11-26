@@ -1,4 +1,9 @@
 "use client";
+import {
+  ReceiptFilterButton,
+  type ReceiptFilters,
+} from "@/features/warehouse-receipt-items/receipt-filters";
+import { summaryFilterGroups } from "@/features/warehouse-receipt-items/list-filter-groups";
 
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSkeletonRowCount } from "@/hooks/use-skeleton-row-count";
@@ -237,6 +242,7 @@ function EmptyDetailState() {
 export default function FinishedProductSummariesPage() {
   const pathname = usePathname();
   const isMobile = useMobile();
+  const [filters, setFilters] = useState<ReceiptFilters>({});
   const [selectedSummaryId, setSelectedSummaryId] = useState<
     string | number | null
   >(null);
@@ -259,7 +265,8 @@ export default function FinishedProductSummariesPage() {
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
   );
-  const isSearching = searchKeyword.trim().length > 0;
+  const isSearching =
+    searchKeyword.trim().length > 0 || Object.keys(filters).length > 0;
   const serverSearch = useDebouncedValue(searchKeyword.trim());
   const {
     records: summaries,
@@ -273,7 +280,7 @@ export default function FinishedProductSummariesPage() {
     retry,
   } = useInfiniteRecordList<FinishedProductSummary>({
     url: API_ROUTES.productionOrders.finishedProductSummaries,
-    filters: { search: serverSearch || undefined },
+    filters: { ...filters, search: serverSearch || undefined },
     observe: !isMobile || selectedSummaryId === null,
     storageKey: "finishedProductSummaryListScroll",
   });
@@ -358,19 +365,32 @@ export default function FinishedProductSummariesPage() {
                   Danh sách tổng kết thành phẩm
                 </Link>
               </div>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Chọn nhiều dòng"
-                title="Chọn nhiều dòng"
-                disabled={isLoading || summaries.length === 0}
-                onClick={() => {
-                  setSelectedSummaryId(null);
-                  setSelectedRows(new Map());
-                }}
-              >
-                <SquareCheck className="size-5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Chọn nhiều dòng"
+                  title="Chọn nhiều dòng"
+                  disabled={isLoading || summaries.length === 0}
+                  onClick={() => {
+                    setSelectedSummaryId(null);
+                    setSelectedRows(new Map());
+                  }}
+                >
+                  <SquareCheck className="size-5" />
+                </Button>
+                <ReceiptFilterButton
+                  title="Lọc tổng kết thành phẩm"
+                  groups={summaryFilterGroups}
+                  filters={filters}
+                  onApply={(next) => {
+                    setFilters(next);
+                    setSelectedRows(null);
+                    setSelectedSummaryId(null);
+                  }}
+                  disabled={false}
+                />
+              </div>
             </>
           )}
         </div>

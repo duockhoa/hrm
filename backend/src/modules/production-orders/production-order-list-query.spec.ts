@@ -15,6 +15,22 @@ const parse = (value: unknown): Promise<GetProductionOrderListDto> =>
   });
 
 describe('lot list query validation and search', () => {
+  it('combines basic lot fields without broadening the product scope', () => {
+    const where = productionOrderListWhere(true, {
+      item_code: 'TP001',
+      item_name: 'Vitamin',
+      lot_number: 'LOT_%',
+    });
+    expect(where.item_code).toEqual({ startsWith: 'TP' });
+    expect(where.AND).toEqual(
+      expect.arrayContaining([
+        { item_code: 'TP001' },
+        { lot_no: { contains: 'LOT\\_\\%' } },
+        { item: { is: { item_name: { contains: 'Vitamin' } } } },
+      ]),
+    );
+  });
+
   it('validates summary search and pagination', async () => {
     const metadata = {
       type: 'query' as const,

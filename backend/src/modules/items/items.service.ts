@@ -91,6 +91,11 @@ export class ItemsService {
     const query = parseItemsQuery(input);
     const conditions: Prisma.ItemsWhereInput[] = [];
     if (Object.keys(scope).length) conditions.push(scope);
+    for (const field of ['item_code', 'item_name', 'dk_code', 'unit'] as const)
+      if (query[field])
+        conditions.push({
+          [field]: { contains: query[field]!.replace(/[\\%_]/g, '\\$&') },
+        });
     if (query.codePrefix)
       conditions.push({ item_code: { startsWith: query.codePrefix } });
     if (query.search) {

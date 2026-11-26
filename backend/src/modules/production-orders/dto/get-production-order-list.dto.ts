@@ -18,6 +18,17 @@ export class GetProductionOrderListDto {
   @IsOptional()
   @Transform(trim)
   @IsString()
+  @MaxLength(100)
+  lot_number?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(191)
+  item_name?: string;
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
   @MaxLength(200)
   search?: string;
 

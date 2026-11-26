@@ -19,12 +19,18 @@ import itemsService from "@/services/items.service";
 import userService from "@/services/user.service";
 import useSearchStore from "@/store/search.store";
 import ItemRow from "./item-row";
+import {
+  ReceiptFilterButton,
+  type ReceiptFilters,
+} from "../warehouse-receipt-items/receipt-filters";
+import { itemFilterGroups } from "../warehouse-receipt-items/list-filter-groups";
 
 export default function ItemsPage() {
   const skeletonRows = useSkeletonRowCount(100);
   const router = useRouter();
   const pathname = usePathname();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [filters, setFilters] = useState<ReceiptFilters>({});
   const { data: user } = useSWR(API_ROUTES.users.me, userService.fetcherMe);
   const { data: permissions, error: permissionError } = useSWR(
     user?.id ? [API_ROUTES.users.myPermissions, user.id] : null,
@@ -50,7 +56,11 @@ export default function ItemsPage() {
     loadMore,
     retry,
     saveScrollPosition,
-  } = useInfiniteItemCatalog(API_ROUTES.items.rawMaterials, "itemsListScroll");
+  } = useInfiniteItemCatalog(
+    API_ROUTES.items.rawMaterials,
+    "itemsListScroll",
+    filters,
+  );
 
   const syncItems = async () => {
     if (!canSync || isSyncing) return;
@@ -92,24 +102,33 @@ export default function ItemsPage() {
         <div className="flex w-full items-center gap-2 border-b border-gray-200 pb-2">
           <AiOutlineRight />
           <Link href="/items">Danh sách nguyên liệu</Link>
-          {canSync && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="ml-auto"
-              disabled={isSyncing}
-              aria-busy={isSyncing}
-              aria-label="SAP – Đồng bộ danh mục mặt hàng"
-              onClick={() => void syncItems()}
-            >
-              <RefreshCw
-                aria-hidden="true"
-                className={isSyncing ? "size-4 animate-spin" : "size-4"}
-              />
-              SAP
-            </Button>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            {canSync && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="ml-auto"
+                disabled={isSyncing}
+                aria-busy={isSyncing}
+                aria-label="SAP – Đồng bộ danh mục mặt hàng"
+                onClick={() => void syncItems()}
+              >
+                <RefreshCw
+                  aria-hidden="true"
+                  className={isSyncing ? "size-4 animate-spin" : "size-4"}
+                />
+                SAP
+              </Button>
+            )}
+            <ReceiptFilterButton
+              title="Lọc nguyên liệu"
+              groups={itemFilterGroups}
+              filters={filters}
+              onApply={setFilters}
+              disabled={false}
+            />
+          </div>
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
@@ -133,7 +152,7 @@ export default function ItemsPage() {
           ))
         ) : !error ? (
           <p className="p-4 text-center text-sm text-gray-500">
-            {searchKeyword.trim()
+            {searchKeyword.trim() || Object.keys(filters).length > 0
               ? "Không tìm thấy nguyên liệu phù hợp."
               : "Chưa có nguyên liệu nào."}
           </p>

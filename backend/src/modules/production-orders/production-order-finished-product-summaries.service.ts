@@ -1,3 +1,4 @@
+import { wmsDateRange } from '../../common/utils/wms-date-range';
 import {
   BadGatewayException,
   BadRequestException,
@@ -532,7 +533,33 @@ export class ProductionOrderFinishedProductSummariesService {
         },
       );
 
-    const result = summaries.map(toFinishedProductSummaryListItem);
+    const range = wmsDateRange(options.from_date, options.to_date);
+    const matches = (value: string | number | null | undefined, text?: string) =>
+      !text || normalizeLotSearch(value).includes(normalizeLotSearch(text));
+    const result = summaries
+      .map(toFinishedProductSummaryListItem)
+      .filter((summary) => {
+        const order = summary.productionOrder;
+        return (
+          matches(order.item_code, options.item_code) &&
+          matches(order.item?.item_name, options.item_name) &&
+          matches(order.lot_no, options.lot_number) &&
+          matches(order.production_order_code, options.order_code) &&
+          (!options.created_by ||
+            [
+              summary.createdBy?.name,
+              summary.createdBy?.username,
+              summary.createdBy?.email,
+            ].some((value) => matches(value, options.created_by))) &&
+          (!range.gte || summary.created_at >= range.gte) &&
+          (!range.lt || summary.created_at < range.lt) &&
+          (!options.sampling_status ||
+            order.pyclm.isSent === (options.sampling_status === 'sent')) &&
+          (!options.warehouse_status ||
+            Boolean(summary.warehouse_confirmed_at) ===
+              (options.warehouse_status === 'confirmed'))
+        );
+      });
 
     const search = normalizeLotSearch(options.search).trim();
     if (!search) return result;
@@ -567,9 +594,17 @@ export class ProductionOrderFinishedProductSummariesService {
     const limit = options.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    if (normalizeLotSearch(options.search).trim()) {
+    if (
+      Object.entries(options).some(
+        ([key, value]) =>
+          key !== 'page' &&
+          key !== 'limit' &&
+          value !== undefined &&
+          value !== '',
+      )
+    ) {
       // Filter computed fields (including latest PYCLM) before paging and counting.
-      const matches = await this.findAll({ search: options.search });
+      const matches = await this.findAll(options);
       return {
         data: matches.slice(skip, skip + limit),
         total: matches.length,

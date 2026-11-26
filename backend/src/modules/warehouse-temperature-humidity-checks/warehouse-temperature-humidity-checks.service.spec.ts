@@ -29,6 +29,42 @@ describe('WarehouseTemperatureHumidityChecksService', () => {
     humidity: 65.25,
   };
 
+  it('combines ranges, result and Vietnam dates before counting', async () => {
+    prisma.warehouseTemperatureHumidityChecks.findMany.mockResolvedValue([]);
+    prisma.warehouseTemperatureHumidityChecks.count.mockResolvedValue(0);
+    await service.findAll({
+      location: 'A1',
+      temperature_min: '-5',
+      temperature_max: '0',
+      humidity_max: '70',
+      result: 'fail',
+      from_date: '2026-11-26',
+      to_date: '2026-11-26',
+      page: 2,
+      limit: 300,
+    });
+    expect(
+      prisma.warehouseTemperatureHumidityChecks.findMany,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 300,
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            { location: { contains: 'A1' } },
+            { temperature: { gte: '-5', lte: '0' } },
+            { is_passed: false },
+            {
+              created_at: {
+                gte: new Date('2026-11-25T17:00:00Z'),
+                lt: new Date('2026-11-26T17:00:00Z'),
+              },
+            },
+          ]),
+        }),
+      }),
+    );
+  });
+
   it('pages and counts the same server search before returning results', async () => {
     const rows = [{ id: 301 }];
     prisma.warehouseTemperatureHumidityChecks.findMany.mockResolvedValue(rows);

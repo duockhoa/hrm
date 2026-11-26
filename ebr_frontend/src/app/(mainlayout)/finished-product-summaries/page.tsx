@@ -1,4 +1,10 @@
 "use client";
+import {
+  ListFilterButton,
+  type ListFilters,
+} from "@/components/list-filter-button";
+import { summaryFilters } from "@/lib/basic-list-filters";
+import { useState as useFilterState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -215,6 +221,7 @@ function EmptyDetailState() {
 }
 
 export default function FinishedProductSummariesPage() {
+  const [filters, setFilters] = useFilterState<ListFilters>({});
   const pathname = usePathname();
   const isMobile = useMobile();
   const [selectedSummaryId, setSelectedSummaryId] = useState<
@@ -224,7 +231,8 @@ export default function FinishedProductSummariesPage() {
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
   ).trim();
-  const isSearching = searchKeyword.length > 0;
+  const isSearching =
+    searchKeyword.length > 0 || Object.keys(filters).length > 0;
   const {
     records: summaries,
     error,
@@ -237,7 +245,7 @@ export default function FinishedProductSummariesPage() {
     retry,
   } = useInfiniteRecordList<FinishedProductSummary>({
     url: API_ROUTES.productionOrders.finishedProductSummaries,
-    filters: { search: searchKeyword },
+    filters: { ...filters, search: searchKeyword },
     storageKey: "finishedProductSummaryListScroll",
   });
   const filteredSummaries = summaries;
@@ -276,7 +284,16 @@ export default function FinishedProductSummariesPage() {
 
   const listPanel = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white shadow-md">
-      <div className="sticky top-0 z-20 w-full bg-white p-2">
+      <div className="sticky top-0 z-20 w-full pr-12 bg-white p-2">
+        <div className="absolute right-2 top-2">
+          <ListFilterButton
+            groups={summaryFilters}
+            filters={filters}
+            onApply={setFilters}
+            disabled={false}
+            title="Lọc dữ liệu"
+          />
+        </div>
         <div className="flex items-center justify-between border-b border-gray-200 pb-2">
           <div className="flex min-w-0 items-center gap-2 font-medium text-gray-900">
             <AiOutlineRight className="shrink-0" />

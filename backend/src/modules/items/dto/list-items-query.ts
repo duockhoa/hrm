@@ -22,6 +22,10 @@ type ItemField = (typeof ITEM_SELECT_FIELDS)[number];
 type ItemExpansion = (typeof ITEM_EXPAND_FIELDS)[number];
 
 export type ParsedItemsQuery = {
+  item_code?: string;
+  item_name?: string;
+  dk_code?: string;
+  unit?: string;
   skip?: number;
   top?: number;
   search?: string;
@@ -37,6 +41,10 @@ export type ParsedItemsQuery = {
 
 export function parseItemsQuery(query: ListItemsQuery): ParsedItemsQuery {
   const allowed = new Set([
+    'item_code',
+    'item_name',
+    'dk_code',
+    'unit',
     'skip',
     'top',
     'search',
@@ -101,6 +109,13 @@ export function parseItemsQuery(query: ListItemsQuery): ParsedItemsQuery {
     orderBy: [],
     count: boolean('count') ?? false,
   };
+  for (const field of ['item_code', 'item_name', 'dk_code', 'unit'] as const) {
+    if (text(field)) {
+      if (text(field)!.length > 191)
+        throw new BadRequestException(`${field} is too long`);
+      result[field] = text(field);
+    }
+  }
   if (query.skip !== undefined) result.skip = integer(text('skip')!, 'skip');
   if (query.top !== undefined)
     result.top = integer(text('top')!, 'top', 1, 300);

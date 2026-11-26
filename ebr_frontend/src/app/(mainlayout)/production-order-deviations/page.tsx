@@ -1,4 +1,10 @@
 "use client";
+import {
+  ListFilterButton,
+  type ListFilters,
+} from "@/components/list-filter-button";
+import { deviationFilters } from "@/lib/basic-list-filters";
+import { useState as useFilterState } from "react";
 
 import { useInfiniteRecordList } from "@/hooks/use-infinite-record-list";
 import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
@@ -208,6 +214,7 @@ function EmptyDetailState() {
 }
 
 export default function ProductionOrderDeviationsPage() {
+  const [filters, setFilters] = useFilterState<ListFilters>({});
   const pathname = usePathname();
   const isMobile = useMobile();
   const [selectedDeviationId, setSelectedDeviationId] = useState<
@@ -219,7 +226,8 @@ export default function ProductionOrderDeviationsPage() {
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
   ).trim();
-  const isSearching = searchKeyword.trim().length > 0;
+  const isSearching =
+    searchKeyword.trim().length > 0 || Object.keys(filters).length > 0;
 
   const {
     records: deviations,
@@ -234,7 +242,7 @@ export default function ProductionOrderDeviationsPage() {
     saveScrollPosition,
   } = useInfiniteRecordList<ProductionOrderDeviation>({
     url: API_ROUTES.productionOrderDeviations.base,
-    filters: { search: searchKeyword || undefined },
+    filters: { ...filters, search: searchKeyword || undefined },
     storageKey: "deviationListScroll",
   });
   const filteredDeviations = deviations;
@@ -268,7 +276,16 @@ export default function ProductionOrderDeviationsPage() {
 
   const listPanel = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white shadow-md">
-      <div className="sticky top-0 z-20 w-full bg-white p-2">
+      <div className="sticky top-0 z-20 w-full pr-12 bg-white p-2">
+        <div className="absolute right-2 top-2">
+          <ListFilterButton
+            groups={deviationFilters}
+            filters={filters}
+            onApply={setFilters}
+            disabled={false}
+            title="Lọc dữ liệu"
+          />
+        </div>
         <div className="flex w-full justify-between border-b border-gray-200 pb-2">
           <div className="flex items-center gap-2">
             <AiOutlineRight />

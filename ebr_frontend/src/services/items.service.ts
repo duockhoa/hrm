@@ -42,9 +42,11 @@ const fetchCatalogPage = async (
   url: string,
   search: string,
   skip: number,
+  filters: Record<string, string> = {},
 ): Promise<ItemCatalogPage> => {
   const response = await axiosClient.get<ItemCatalogEntry[]>(url, {
     params: {
+      ...filters,
       search: search.trim() || undefined,
       skip,
       top: ITEM_CATALOG_PAGE_SIZE,

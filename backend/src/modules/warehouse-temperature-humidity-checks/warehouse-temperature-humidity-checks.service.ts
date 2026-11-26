@@ -1,3 +1,4 @@
+import { wmsDateRange } from '../../common/utils/wms-date-range';
 import {
   BadRequestException,
   ConflictException,
@@ -7,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
-import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
+import { WmsListQueryDto } from '../../common/dto/wms-list-query.dto';
 import {
   literalContains,
   recordPagination,
@@ -33,7 +34,7 @@ const allowedFields = new Set([
 export class WarehouseTemperatureHumidityChecksService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(options: RecordListQueryDto = {}) {
+  async findAll(options: WmsListQueryDto = {}) {
     const pagination = recordPagination(options);
     const result = normalizeLotSearch(options.search).trim();
     const resultFilter =
@@ -64,6 +65,36 @@ export class WarehouseTemperatureHumidityChecksService {
               };
             }),
           };
+    const filters: Prisma.WarehouseTemperatureHumidityChecksWhereInput[] = [];
+    for (const field of ['temperature', 'humidity'] as const) {
+      const min = options[`${field}_min`],
+        max = options[`${field}_max`];
+      if (min !== undefined && max !== undefined && Number(min) > Number(max))
+        throw new BadRequestException('Invalid range');
+      if (min !== undefined || max !== undefined)
+        filters.push({
+          [field]: {
+            ...(min !== undefined ? { gte: min } : {}),
+            ...(max !== undefined ? { lte: max } : {}),
+          },
+        });
+    }
+    for (const field of ['location', 'requirement'] as const)
+      if (options[field])
+        filters.push({ [field]: literalContains(options[field]) });
+    if (options.checked_by)
+      filters.push({ checkedBy: { is: searchUserFields(options.checked_by) } });
+    if (options.result)
+      filters.push({
+        is_passed:
+          options.result === 'unrecorded' ? null : options.result === 'pass',
+      });
+    if (options.from_date || options.to_date)
+      filters.push({
+        created_at: wmsDateRange(options.from_date, options.to_date),
+      });
+    if (filters.length)
+      where.AND = [...(Array.isArray(where.AND) ? where.AND : []), ...filters];
     const data = await this.prisma.warehouseTemperatureHumidityChecks.findMany({
       where,
       ...pagination.args,

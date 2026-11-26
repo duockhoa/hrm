@@ -601,6 +601,27 @@ describe('ProductionOrderFinishedProductSummariesService', () => {
     prismaService.productionOrderFinishedProductSummaries.findMany.mockResolvedValue(
       [first, second],
     );
+    expect(
+      (
+        await service.findPage({
+          item_code: 'TP001',
+          sampling_status: 'sent',
+          lot_number: 'LOT-A',
+          page: 1,
+          limit: 1,
+        })
+      ).total,
+    ).toBe(1);
+    expect(
+      (
+        await service.findPage({
+          item_code: 'TP001',
+          sampling_status: 'not_sent',
+          page: 1,
+          limit: 1,
+        })
+      ).total,
+    ).toBe(0);
     for (const search of [
       '  LSX-A  ',
       'LOT-A',

@@ -91,6 +91,28 @@ export default function VersionsPage() {
             </TableHeader>
             <TableBody>
               <TableRow>
+                <TableCell className="font-medium">1.4.0</TableCell>
+                <TableCell>
+                  <time dateTime="2026-11-26">26/11/2026</time>
+                </TableCell>
+                <TableCell className="min-w-72 max-w-xl whitespace-normal">
+                  <ul className="list-disc space-y-1 pl-4">
+                    <li>
+                      Bổ sung bộ lọc dữ liệu tại Lô bán thành phẩm, Lô thành phẩm,
+                      Danh mục thành phẩm, Danh mục bán thành phẩm, Danh mục
+                      nguyên liệu, Danh sách tổng kết thành phẩm, Sai lệch và
+                      Phiếu theo dõi In Date.
+                    </li>
+                    <li>
+                      Cho phép kết hợp các điều kiện lọc cơ bản với tìm kiếm,
+                      áp dụng và xóa bộ lọc; hiển thị số điều kiện đang dùng.
+                      Lọc toàn bộ dữ liệu trước khi phân trang.
+                    </li>
+                  </ul>
+                </TableCell>
+                <VersionResponsibleCells />
+              </TableRow>
+              <TableRow>
                 <TableCell className="font-medium">1.3.21</TableCell>
                 <TableCell>
                   <time dateTime="2026-11-25">25/11/2026</time>

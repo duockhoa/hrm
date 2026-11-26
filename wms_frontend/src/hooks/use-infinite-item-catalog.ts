@@ -25,18 +25,24 @@ const pageHasMore = (page: ItemCatalogPage) =>
   page.items.length === ITEM_CATALOG_PAGE_SIZE &&
   (page.total === null || page.skip + page.items.length < page.total);
 
-export function useInfiniteItemCatalog(url: string, scrollStorageKey: string) {
+export function useInfiniteItemCatalog(
+  url: string,
+  scrollStorageKey: string,
+  filters: Record<string, string> = {},
+) {
   const pathname = usePathname();
   const scope = getSearchScopePath(pathname);
   const keyword = useSearchStore(
     (state) => state.searchByPath[scope] ?? "",
   ).trim();
   const search = useDebouncedValue(keyword);
+  const filterKey = JSON.stringify(filters);
+  const queryKey = JSON.stringify([search, filterKey]);
   const containerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pendingLoads = useRef(new Set<string>());
-  const previousSearch = useRef(search);
-  const storageKey = `${scrollStorageKey}:${encodeURIComponent(search)}`;
+  const previousSearch = useRef(queryKey);
+  const storageKey = `${scrollStorageKey}:${encodeURIComponent(queryKey)}`;
 
   const { data, error, isLoading, isValidating, size, setSize, mutate } =
     useSWRInfinite<ItemCatalogPage>(
@@ -44,13 +50,18 @@ export function useInfiniteItemCatalog(url: string, scrollStorageKey: string) {
         if (previous && !pageHasMore(previous)) return null;
         return [
           url,
-          search,
+          queryKey,
           index * ITEM_CATALOG_PAGE_SIZE,
           "catalog-infinite",
         ];
       },
       ([endpoint, keyword, skip]: CatalogPageKey) =>
-        itemsService.fetchCatalogPage(endpoint, keyword, skip),
+        itemsService.fetchCatalogPage(
+          endpoint,
+          JSON.parse(keyword)[0],
+          skip,
+          JSON.parse(JSON.parse(keyword)[1]),
+        ),
       {
         revalidateFirstPage: false,
         revalidateOnFocus: false,
@@ -60,8 +71,8 @@ export function useInfiniteItemCatalog(url: string, scrollStorageKey: string) {
     );
 
   useLayoutEffect(() => {
-    if (previousSearch.current === search) return;
-    previousSearch.current = search;
+    if (previousSearch.current === queryKey) return;
+    previousSearch.current = queryKey;
     // A new search starts at the top, even when returning to a cached keyword.
     try {
       sessionStorage.removeItem(storageKey);
@@ -74,7 +85,7 @@ export function useInfiniteItemCatalog(url: string, scrollStorageKey: string) {
         /* The error is displayed in the list. */
       });
     }
-  }, [search, setSize, size, storageKey]);
+  }, [queryKey, setSize, size, storageKey]);
 
   useEffect(
     () => registerItemCatalogRefresh(url, () => mutate()),
@@ -100,7 +111,7 @@ export function useInfiniteItemCatalog(url: string, scrollStorageKey: string) {
     (isInitialLoading || (isValidating && size > (data?.length ?? 0)));
 
   const loadMore = useCallback(() => {
-    const requestScope = JSON.stringify([url, search]);
+    const requestScope = JSON.stringify([url, queryKey]);
     if (
       !hasMore ||
       error ||
@@ -116,7 +127,7 @@ export function useInfiniteItemCatalog(url: string, scrollStorageKey: string) {
       .finally(() => {
         pendingLoads.current.delete(requestScope);
       });
-  }, [url, search, hasMore, error, isValidating, setSize]);
+  }, [url, queryKey, hasMore, error, isValidating, setSize]);
 
   const retry = useCallback(() => {
     void mutate().catch(() => {

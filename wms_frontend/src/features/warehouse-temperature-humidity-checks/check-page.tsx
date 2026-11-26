@@ -1,4 +1,9 @@
 "use client";
+import {
+  ReceiptFilterButton,
+  type ReceiptFilters,
+} from "../warehouse-receipt-items/receipt-filters";
+import { checkFilterGroups } from "../warehouse-receipt-items/list-filter-groups";
 
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSkeletonRowCount } from "@/hooks/use-skeleton-row-count";
@@ -93,6 +98,7 @@ export default function CheckPage({
   const [actionsContainer, setActionsContainer] =
     useState<HTMLDivElement | null>(null);
   const [creating, setCreating] = useState(false);
+  const [filters, setFilters] = useState<ReceiptFilters>({});
   const serverSearch = useDebouncedValue(search.trim());
   const {
     records: data,
@@ -107,7 +113,7 @@ export default function CheckPage({
     retry,
   } = useInfiniteRecordList<WarehouseTemperatureHumidityCheck>({
     url: WAREHOUSE_TEMPERATURE_HUMIDITY_CHECKS_URL,
-    filters: { search: serverSearch || undefined },
+    filters: { ...filters, search: serverSearch || undefined },
     observe: !isMobile || selectedId === null,
     storageKey: "warehouseCheckListScroll",
   });
@@ -141,9 +147,21 @@ export default function CheckPage({
               Kiểm tra nhiệt độ, độ ẩm kho
             </Link>
           </div>
-          <Button size="sm" onClick={() => setCreating(true)}>
-            <Plus className="size-4" /> Thêm
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setCreating(true)}>
+              <Plus className="size-4" /> Thêm
+            </Button>
+            <ReceiptFilterButton
+              title="Lọc nhiệt độ, độ ẩm kho"
+              groups={checkFilterGroups}
+              filters={filters}
+              onApply={(next) => {
+                setFilters(next);
+                closeDetail();
+              }}
+              disabled={false}
+            />
+          </div>
         </div>
       </div>
       <div
@@ -256,7 +274,7 @@ export default function CheckPage({
                     colSpan={columns.length}
                     className="h-32 text-center text-sm text-gray-500"
                   >
-                    {search.trim()
+                    {search.trim() || Object.keys(filters).length > 0
                       ? "Không tìm thấy kiểm tra nhiệt độ, độ ẩm kho phù hợp."
                       : "Chưa có kiểm tra nhiệt độ, độ ẩm kho."}
                   </TableCell>

@@ -14,6 +14,33 @@ describe('Items list query composition', () => {
     } as unknown as PrismaService);
   });
 
+  it('filters the entire raw-material catalog before paging', async () => {
+    await service.findRawMaterials({
+      item_code: 'NL_%',
+      unit: 'kg',
+      hasRegistration: 'false',
+      skip: '300',
+      top: '300',
+      count: 'true',
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 300,
+        take: 300,
+        where: {
+          AND: expect.arrayContaining([
+            { item_code: { contains: 'NL\\_\\%' } },
+            { unit: { contains: 'kg' } },
+            { registration_id: null },
+          ]),
+        },
+      }),
+    );
+    expect(count).toHaveBeenCalledWith({
+      where: findMany.mock.calls[0][0].where,
+    });
+  });
+
   it('combines filters with AND and counts before skip/top', async () => {
     const onCount = jest.fn();
     await service.findAll(

@@ -13,7 +13,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
+import { WmsListQueryDto } from '../../common/dto/wms-list-query.dto';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { CreateWarehouseTemperatureHumidityCheckDto } from './dto/create-warehouse-temperature-humidity-check.dto';
 import { UpdateWarehouseTemperatureHumidityCheckDto } from './dto/update-warehouse-temperature-humidity-check.dto';
@@ -30,7 +30,7 @@ export class WarehouseTemperatureHumidityChecksController {
   @Get()
   findAll(
     @Query(new ValidationPipe({ transform: true, whitelist: true }))
-    query: RecordListQueryDto = {},
+    query: WmsListQueryDto = {},
   ) {
     return this.service.findAll(query);
   }

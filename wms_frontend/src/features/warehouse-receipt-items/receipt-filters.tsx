@@ -14,7 +14,10 @@ import {
 import { RECEIPT_COUNTING_METHODS } from "@/services/warehouse-receipt-items.service";
 
 export type ReceiptFilters = Record<string, string>;
-type FilterGroup = {
+export type FilterGroup = {
+  min?: string;
+  max?: string;
+  step?: string;
   label: string;
   keys: string[];
   type: "text" | "date" | "number" | "select";
@@ -127,10 +130,14 @@ const groups: FilterGroup[] = [
 ];
 
 export function ReceiptFilterButton({
+  groups: filterGroups = groups,
+  title = "Lọc kiểm hàng nhập kho",
   filters,
   onApply,
   disabled,
 }: {
+  groups?: FilterGroup[];
+  title?: string;
   filters: ReceiptFilters;
   onApply: (filters: ReceiptFilters) => void;
   disabled: boolean;
@@ -139,13 +146,13 @@ export function ReceiptFilterButton({
   const [draft, setDraft] = useState<ReceiptFilters>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const count = groups.filter((group) =>
+  const count = filterGroups.filter((group) =>
     group.keys.some((key) => filters[key]),
   ).length;
 
   function apply(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    for (const group of groups) {
+    for (const group of filterGroups) {
       if (group.type !== "number" && group.type !== "date") continue;
       const [from, to] = group.keys.map((key) => draft[key] ?? "");
       const invalidInput = group.keys
@@ -158,7 +165,7 @@ export function ReceiptFilterButton({
             !input.checkValidity() ||
             (group.type === "number" &&
               input.value !== "" &&
-              !/^\d{1,9}(?:\.\d{1,3})?$/.test(input.value)),
+              !/^-?\d{1,9}(?:\.\d{1,3})?$/.test(input.value)),
         );
       const reversed =
         from &&
@@ -212,9 +219,7 @@ export function ReceiptFilterButton({
           className="inset-y-0 left-auto right-0 flex h-dvh w-full max-w-[360px] translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-y-0 border-r-0 p-0 sm:max-w-[360px]"
         >
           <div className="flex items-center justify-between border-b px-4 py-4">
-            <DialogTitle className="text-base">
-              Lọc kiểm hàng nhập kho
-            </DialogTitle>
+            <DialogTitle className="text-base">{title}</DialogTitle>
             <Button
               type="button"
               size="icon-sm"
@@ -226,8 +231,8 @@ export function ReceiptFilterButton({
             </Button>
           </div>
           <DialogDescription className="sr-only">
-            Chọn một hoặc nhiều điều kiện rồi nhấn Áp dụng. Ngày nhập tính theo
-            giờ Việt Nam.
+            Chọn một hoặc nhiều điều kiện rồi nhấn Áp dụng. Khoảng ngày tính
+            theo giờ Việt Nam.
           </DialogDescription>
           <form
             onSubmit={apply}
@@ -235,7 +240,7 @@ export function ReceiptFilterButton({
             className="flex min-h-0 flex-1 flex-col"
           >
             <div className="min-h-0 flex-1 overflow-y-auto">
-              {groups.map((group) => {
+              {filterGroups.map((group) => {
                 const values = group.keys.map((key) => draft[key] ?? "");
                 const summary = group.options
                   ? group.options.find(([value]) => value === values[0])?.[1]
@@ -331,9 +336,9 @@ export function ReceiptFilterButton({
                               }
                               {...(group.type === "number"
                                 ? {
-                                    min: "0",
-                                    max: "999999999.999",
-                                    step: "0.001",
+                                    min: group.min ?? "0",
+                                    max: group.max ?? "999999999.999",
+                                    step: group.step ?? "0.001",
                                   }
                                 : group.type === "date"
                                   ? { min: "1000-01-01", max: "9999-12-31" }

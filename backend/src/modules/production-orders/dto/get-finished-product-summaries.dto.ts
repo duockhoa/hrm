@@ -1,7 +1,2 @@
-import { PickType } from '@nestjs/mapped-types';
-import { GetProductionOrderListDto } from './get-production-order-list.dto';
-
-export class GetFinishedProductSummariesDto extends PickType(
-  GetProductionOrderListDto,
-  ['search', 'page', 'limit'] as const,
-) {}
+import { WmsListQueryDto } from '../../../common/dto/wms-list-query.dto';
+export class GetFinishedProductSummariesDto extends WmsListQueryDto {}

@@ -37,6 +37,14 @@ export function productionOrderListWhere(
     item_code: finished ? { startsWith: 'TP' } : { not: { startsWith: 'TP' } },
   };
   const and: Prisma.ProductionOrdersWhereInput[] = [];
+  if (options.lot_number)
+    and.push({ lot_no: { contains: escapeLotSearch(options.lot_number) } });
+  if (options.item_name)
+    and.push({
+      item: {
+        is: { item_name: { contains: escapeLotSearch(options.item_name) } },
+      },
+    });
   if (options.item_code) and.push({ item_code: options.item_code });
   if (options.status) and.push({ status: options.status });
 

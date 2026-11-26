@@ -1,4 +1,10 @@
 "use client";
+import {
+  ListFilterButton,
+  type ListFilters,
+} from "@/components/list-filter-button";
+import { lotFilters } from "@/lib/basic-list-filters";
+import { useState as useFilterState } from "react";
 
 import { HeaderListFinishedProductLot } from "@/features/finished-product-production-orders";
 import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
@@ -78,12 +84,14 @@ const groupLotsByCreationDate = <T extends Record<string, any>>(lots: T[]) => {
 
 export default function FinishedProductProductionOrdersPage() {
   const router = useRouter();
+  const [filters, setFilters] = useFilterState<ListFilters>({});
   const pathname = usePathname();
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
   ).trim();
-  const isSearching = searchKeyword.length > 0;
+  const isSearching =
+    searchKeyword.length > 0 || Object.keys(filters).length > 0;
   const {
     records: productOrders,
     error,
@@ -97,7 +105,7 @@ export default function FinishedProductProductionOrdersPage() {
     saveScrollPosition,
   } = useInfiniteRecordList<ProductionOrderListItem>({
     url: API_ROUTES.productionOrders.finishedProducts,
-    filters: { search: searchKeyword || undefined },
+    filters: { ...filters, search: searchKeyword || undefined },
     storageKey: "finishedProductLotListScroll",
   });
   const activeLotId = pathname.startsWith(
@@ -109,7 +117,8 @@ export default function FinishedProductProductionOrdersPage() {
     : null;
 
   const filteredLots = useMemo(
-    () => productOrders.filter((lot) => !isCancelledProductionOrder(lot.status)),
+    () =>
+      productOrders.filter((lot) => !isCancelledProductionOrder(lot.status)),
     [productOrders],
   );
   const groupedLots = useMemo(
@@ -129,7 +138,16 @@ export default function FinishedProductProductionOrdersPage() {
       ref={containerRef}
       className="flex h-full min-h-0 flex-col overflow-auto rounded-lg bg-white shadow-md"
     >
-      <div className="sticky top-0 z-10 w-full bg-white p-2">
+      <div className="sticky top-0 z-10 w-full pr-12 bg-white p-2">
+        <div className="absolute right-2 top-2">
+          <ListFilterButton
+            groups={lotFilters}
+            filters={filters}
+            onApply={setFilters}
+            disabled={false}
+            title="Lọc dữ liệu"
+          />
+        </div>
         <HeaderListFinishedProductLot />
       </div>
 

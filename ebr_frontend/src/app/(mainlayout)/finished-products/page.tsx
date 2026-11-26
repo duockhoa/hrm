@@ -1,4 +1,10 @@
 "use client";
+import {
+  ListFilterButton,
+  type ListFilters,
+} from "@/components/list-filter-button";
+import { catalogFilters } from "@/lib/basic-list-filters";
+import { useState as useFilterState } from "react";
 
 import { useInfiniteItemCatalog } from "@/hooks/use-infinite-item-catalog";
 import ItemCatalogLoadStatus from "@/components/item-catalog-load-status/item-catalog-load-status";
@@ -12,6 +18,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 export default function FinishedProductsPage() {
   const router = useRouter();
+  const [filters, setFilters] = useFilterState<ListFilters>({});
   const pathname = usePathname();
   const {
     items: filteredProducts,
@@ -28,6 +35,7 @@ export default function FinishedProductsPage() {
   } = useInfiniteItemCatalog(
     API_ROUTES.items.finishedProducts,
     "finishedProductListScroll",
+    filters,
   );
   const activeProductId = pathname.startsWith("/finished-products/")
     ? decodeURIComponent(pathname.replace("/finished-products/", ""))
@@ -42,7 +50,16 @@ export default function FinishedProductsPage() {
       ref={containerRef}
       className="flex h-full min-h-0 flex-col overflow-auto rounded-lg bg-white shadow-md"
     >
-      <div className="sticky top-0 z-10 w-full bg-white p-2">
+      <div className="sticky top-0 z-10 w-full pr-12 bg-white p-2">
+        <div className="absolute right-2 top-2">
+          <ListFilterButton
+            groups={catalogFilters}
+            filters={filters}
+            onApply={setFilters}
+            disabled={false}
+            title="Lọc dữ liệu"
+          />
+        </div>
         <ListFinishProductHeader />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">

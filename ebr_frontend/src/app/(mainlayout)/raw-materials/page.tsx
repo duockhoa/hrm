@@ -1,4 +1,10 @@
 "use client";
+import {
+  ListFilterButton,
+  type ListFilters,
+} from "@/components/list-filter-button";
+import { catalogFilters } from "@/lib/basic-list-filters";
+import { useState as useFilterState } from "react";
 
 import { useInfiniteItemCatalog } from "@/hooks/use-infinite-item-catalog";
 import ItemCatalogLoadStatus from "@/components/item-catalog-load-status/item-catalog-load-status";
@@ -12,6 +18,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 export default function RawMaterialsPage() {
   const router = useRouter();
+  const [filters, setFilters] = useFilterState<ListFilters>({});
   const pathname = usePathname();
   const {
     items: filteredRawMaterials,
@@ -28,6 +35,7 @@ export default function RawMaterialsPage() {
   } = useInfiniteItemCatalog(
     API_ROUTES.items.rawMaterials,
     "rawMaterialListScroll",
+    filters,
   );
   const activeRawMaterialId = pathname.startsWith("/raw-materials/")
     ? decodeURIComponent(pathname.replace("/raw-materials/", ""))
@@ -42,7 +50,16 @@ export default function RawMaterialsPage() {
       ref={containerRef}
       className="flex h-full min-h-0 flex-col overflow-auto rounded-lg bg-white shadow-md"
     >
-      <div className="sticky top-0 z-10 w-full bg-white p-2">
+      <div className="sticky top-0 z-10 w-full pr-12 bg-white p-2">
+        <div className="absolute right-2 top-2">
+          <ListFilterButton
+            groups={catalogFilters}
+            filters={filters}
+            onApply={setFilters}
+            disabled={false}
+            title="Lọc dữ liệu"
+          />
+        </div>
         <ListRawMaterialHeader />
       </div>
 
