@@ -17,7 +17,22 @@ export class ConnectionApplicationParamsDto {
   applicationKey: ConnectionApplicationKey;
 }
 
-export class GetConnectionSessionsDto {
+export class ExportConnectionSessionsDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  keyword?: string;
+
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  connected_from?: string;
+
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  connected_to?: string;
+}
+
+export class GetConnectionSessionsDto extends ExportConnectionSessionsDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -41,21 +56,8 @@ export class GetConnectionSessionsDto {
   cursor?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  keyword?: string;
-
-  @IsOptional()
   @IsIn(['connected', 'reconnecting', 'ended'])
   status?: 'connected' | 'reconnecting' | 'ended';
-
-  @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  connected_from?: string;
-
-  @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  connected_to?: string;
 }
 
 export class EndConnectionSessionDto {

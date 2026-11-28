@@ -2,10 +2,12 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Post,
   Query,
   Req,
+  StreamableFile,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -18,9 +20,11 @@ import { USER_PERMISSIONS } from '../users/users.permissions';
 import {
   ConnectionApplicationParamsDto,
   EndConnectionSessionDto,
+  ExportConnectionSessionsDto,
   GetConnectionSessionsDto,
 } from './dto/connection-sessions.dto';
 import { AppConnectionSessionsService } from './app-connection-sessions.service';
+import { ConnectionHistoryPdfService } from './connection-history-pdf.service';
 
 @Controller('ebr-connection-sessions')
 @ApiTags('EBR connection sessions')
@@ -55,7 +59,10 @@ export class EbrConnectionSessionsController {
 @UseGuards(jwtAuthGuard, PermissionsGuard)
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class AppConnectionSessionsController {
-  constructor(private readonly sessions: AppConnectionSessionsService) {}
+  constructor(
+    private readonly sessions: AppConnectionSessionsService,
+    private readonly historyPdf: ConnectionHistoryPdfService,
+  ) {}
 
   @Get()
   @Permissions(USER_PERMISSIONS.LIST)
@@ -65,6 +72,22 @@ export class AppConnectionSessionsController {
     @Query() query: GetConnectionSessionsDto,
   ) {
     return this.sessions.findAll(params.applicationKey, query);
+  }
+
+  @Get('export-pdf')
+  @Permissions(USER_PERMISSIONS.LIST)
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({ summary: 'Xuất PDF lịch sử kết nối theo ứng dụng' })
+  async exportPdf(
+    @Param() params: ConnectionApplicationParamsDto,
+    @Query() query: ExportConnectionSessionsDto,
+  ) {
+    const buffer = await this.historyPdf.export(params.applicationKey, query);
+    const application = params.applicationKey === 'hsl' ? 'ebr' : 'wms';
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="lich-su-ket-noi-${application}.pdf"`,
+    });
   }
 
   @Post('end')

@@ -26,7 +26,7 @@ import { WarehouseReleaseExportService } from './exports/warehouse-release-expor
 import { ProductionOrderSamplingRequestsService } from './production-order-sampling-requests.service';
 import { ProductionOrderSamplingRecordsService } from './production-order-sampling-records.service';
 import { ProductionOrderDisinfectantPreparationsService } from './production-order-disinfectant-preparations.service';
-import { ProductionOrderPdfRendererService } from './exports/production-order-pdf-renderer.service';
+import { ProductionOrderPdfRendererModule } from './exports/production-order-pdf-renderer.module';
 import { ProductionOrderExportService } from './exports/production-order-export.service';
 import { WeighingTicketExportService } from './exports/weighing-ticket-export.service';
 import { PostWeighingMaterialCheckExportService } from './exports/post-weighing-material-check-export.service';
@@ -79,6 +79,7 @@ import { ProductionOrderHistoryService } from './production-order-history.servic
 
 @Module({
   imports: [
+    ProductionOrderPdfRendererModule,
     AuditLogsModule,
     NetworkPoliciesModule,
     EmailSettingsModule,
@@ -155,7 +156,6 @@ import { ProductionOrderHistoryService } from './production-order-history.servic
     WeighingTicketExportService,
     PostWeighingMaterialCheckExportService,
     ProductionOrderExportService,
-    ProductionOrderPdfRendererService,
     RolesGuard,
     PermissionsGuard,
     PrismaService,

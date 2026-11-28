@@ -3,7 +3,10 @@ import { Interval } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from 'src/prisma.service';
-import { GetConnectionSessionsDto } from './dto/connection-sessions.dto';
+import {
+  ExportConnectionSessionsDto,
+  GetConnectionSessionsDto,
+} from './dto/connection-sessions.dto';
 
 export const RECONNECT_GRACE_MS = 90_000;
 export const STALE_CONNECTION_MS = 120_000;
@@ -16,6 +19,25 @@ type ConnectionMetadata = {
   ipAddress?: string;
   userAgent?: string;
 };
+
+const historyOrder: Prisma.UserAppSessionsOrderByWithRelationInput[] = [
+  { connected_at: 'desc' },
+  { id: 'desc' },
+];
+
+function connectionStatus(
+  session: {
+    ended_at: Date | null;
+    disconnected_at: Date | null;
+    last_seen_at: Date;
+  },
+  cutoff: Date,
+) {
+  if (session.ended_at) return 'ended';
+  return session.disconnected_at || session.last_seen_at <= cutoff
+    ? 'reconnecting'
+    : 'connected';
+}
 
 @Injectable()
 export class AppConnectionSessionsService {
@@ -164,11 +186,10 @@ export class AppConnectionSessionsService {
     }
   }
 
-  async findAll(
+  private historyWhere(
     applicationKey: ConnectionApplicationKey,
-    query: GetConnectionSessionsDto,
+    query: ExportConnectionSessionsDto,
   ) {
-    const { page = 1, limit = 20 } = query;
     const where: Prisma.UserAppSessionsWhereInput = {
       application_key: applicationKey,
     };
@@ -205,6 +226,41 @@ export class AppConnectionSessionsService {
         gte: from,
         lt: to ? new Date(to.getTime() + 86_400_000) : undefined,
       };
+    return where;
+  }
+
+  async findForExport(
+    applicationKey: ConnectionApplicationKey,
+    query: ExportConnectionSessionsDto,
+    exportedAt: Date,
+  ) {
+    const rows = await this.prisma.userAppSessions.findMany({
+      where: this.historyWhere(applicationKey, query),
+      orderBy: historyOrder,
+      select: {
+        id: true,
+        connected_at: true,
+        last_seen_at: true,
+        disconnected_at: true,
+        ended_at: true,
+        connection_count: true,
+        ip_address: true,
+        user: { select: { name: true, username: true } },
+      },
+    });
+    const cutoff = new Date(exportedAt.getTime() - CONNECTED_THRESHOLD_MS);
+    return rows.map((session) => ({
+      ...session,
+      status: connectionStatus(session, cutoff),
+    }));
+  }
+
+  async findAll(
+    applicationKey: ConnectionApplicationKey,
+    query: GetConnectionSessionsDto,
+  ) {
+    const { page = 1, limit = 20 } = query;
+    const where = this.historyWhere(applicationKey, query);
 
     const cutoff = new Date(Date.now() - CONNECTED_THRESHOLD_MS);
     const states: Record<string, Prisma.UserAppSessionsWhereInput> = {
@@ -257,7 +313,7 @@ export class AppConnectionSessionsService {
           where: boundary ? { AND: [filtered, boundary] } : filtered,
           ...(cursorMode ? {} : { skip: (page - 1) * limit }),
           take: cursorMode ? limit + 1 : limit,
-          orderBy: [{ connected_at: 'desc' }, { id: 'desc' }],
+          orderBy: historyOrder,
           select: {
             id: true,
             application_key: true,
@@ -288,11 +344,7 @@ export class AppConnectionSessionsService {
     return {
       data: rows.map((session) => ({
         ...session,
-        status: session.ended_at
-          ? 'ended'
-          : session.disconnected_at || session.last_seen_at <= cutoff
-            ? 'reconnecting'
-            : 'connected',
+        status: connectionStatus(session, cutoff),
       })),
       meta: {
         page,

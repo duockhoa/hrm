@@ -8,6 +8,7 @@ import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/i
 import useSWR from "swr";
 import { isAxiosError } from "axios";
 import { Activity, RefreshCw, Clock3, Unplug } from "lucide-react";
+import ConnectionHistoryExportDialog from "@/features/connection-history/connection-history-export-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -266,6 +267,12 @@ export default function ConnectionHistoryPage() {
           >
             <RefreshCw /> Làm mới
           </Button>
+          <ConnectionHistoryExportDialog
+            connectedFrom={connectedFrom}
+            connectedTo={connectedTo}
+            keyword={keyword}
+            disabled={!canRead}
+          />
         </div>
         <div ref={containerRef} className="min-h-0 flex-1 overflow-auto">
           <table className="w-full min-w-[1000px] table-fixed text-sm [&_th]:whitespace-normal [&_th]:break-words [&_td]:truncate [&_td>div]:truncate [&_[data-slot=skeleton]]:max-w-full">

@@ -12,6 +12,7 @@ import {
   EbrConnectionSessionsController,
 } from './app-connection-sessions.controller';
 import { AppConnectionSessionsService } from './app-connection-sessions.service';
+import { ConnectionHistoryPdfService } from './connection-history-pdf.service';
 
 describe.each([
   ['/ebr-connection-sessions', 'hsl'],
@@ -20,6 +21,7 @@ describe.each([
 ] as const)('%s HTTP authorization', (route, applicationKey) => {
   let app: INestApplication<Server>;
   const sessions = { findAll: jest.fn(), end: jest.fn() };
+  const historyPdf = { export: jest.fn() };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [
@@ -28,6 +30,7 @@ describe.each([
       ],
       providers: [
         { provide: AppConnectionSessionsService, useValue: sessions },
+        { provide: ConnectionHistoryPdfService, useValue: historyPdf },
       ],
     })
       .overrideGuard(jwtAuthGuard)
@@ -74,6 +77,41 @@ describe.each([
       expect.objectContaining({ page: 2, limit: 10 }),
     );
   });
+
+  if (route.startsWith('/app-connection-sessions/')) {
+    it('protects PDF exports and passes the route application and date/user filters', async () => {
+      const exportRoute = `${route}/export-pdf`;
+      await request(app.getHttpServer()).get(exportRoute).expect(401);
+      await request(app.getHttpServer())
+        .get(exportRoute)
+        .set('Authorization', 'Bearer user')
+        .expect(403);
+      await request(app.getHttpServer())
+        .get(`${exportRoute}?connected_to=invalid`)
+        .set('Authorization', 'Bearer admin')
+        .expect(400);
+      expect(historyPdf.export).not.toHaveBeenCalled();
+
+      historyPdf.export.mockResolvedValue(Buffer.from('%PDF-'));
+      await request(app.getHttpServer())
+        .get(
+          `${exportRoute}?connected_from=2026-11-01&connected_to=2026-11-28&keyword=0987&limit=1`,
+        )
+        .set('Authorization', 'Bearer admin')
+        .expect('Content-Type', 'application/pdf')
+        .expect(
+          'Content-Disposition',
+          `attachment; filename="lich-su-ket-noi-${applicationKey === 'hsl' ? 'ebr' : 'wms'}.pdf"`,
+        )
+        .expect('Cache-Control', 'no-store')
+        .expect(200);
+      expect(historyPdf.export).toHaveBeenCalledWith(applicationKey, {
+        connected_from: '2026-11-01',
+        connected_to: '2026-11-28',
+        keyword: '0987',
+      });
+    });
+  }
 
   it('validates pagination, dates and status before querying history', async () => {
     for (const query of [

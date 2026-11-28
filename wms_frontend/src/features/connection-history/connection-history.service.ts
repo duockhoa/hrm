@@ -1,6 +1,7 @@
 import axiosClient from "@/lib/axios-client";
 
 export const CONNECTION_HISTORY_URL = "/app-connection-sessions/wms";
+export const CONNECTION_HISTORY_PDF_FILENAME = "lich-su-ket-noi-wms.pdf";
 export type ConnectionStatus = "connected" | "reconnecting" | "ended";
 export type ConnectionSession = {
   id: number;
@@ -73,6 +74,25 @@ export async function fetchConnectionHistoryCursor(
         keyword: keyword.trim() || undefined,
         connected_from: connectedFrom || undefined,
         connected_to: connectedTo || undefined,
+      },
+    },
+  );
+  return response.data;
+}
+
+export async function fetchConnectionHistoryPdf(
+  connectedFrom: string,
+  connectedTo: string,
+  keyword: string,
+) {
+  const response = await axiosClient.get<Blob>(
+    `${CONNECTION_HISTORY_URL}/export-pdf`,
+    {
+      responseType: "blob",
+      params: {
+        connected_from: connectedFrom || undefined,
+        connected_to: connectedTo || undefined,
+        keyword: keyword.trim() || undefined,
       },
     },
   );
