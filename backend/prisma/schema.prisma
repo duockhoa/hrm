@@ -853,6 +853,13 @@ model WarehouseVerificationRecords {
   @@map("warehouse_verification_records")
 }
 
+model WarehouseVerificationCodeSequence {
+  id          Int    @id
+  last_number BigInt @default(0)
+
+  @@map("warehouse_verification_code_sequence")
+}
+
 model Features {
   id            Int            @id @default(autoincrement())
   key           String         @unique

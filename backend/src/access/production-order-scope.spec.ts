@@ -148,6 +148,25 @@ describe('production order visibility policy', () => {
     expect(productionOrderScopeSql([]).sql).toBe('1=0');
     expect(productionOrderScopeSql(null).sql).toBe('1=1');
   });
+
+  it('keeps receipt verification records visible when order access is limited', () => {
+    const result = scopeProductionOrderQuery(
+      'WarehouseVerificationRecords',
+      {
+        where: { id: 5 },
+        include: { productionOrder: true, warehouseReceiptItem: true },
+      },
+      [],
+    );
+    expect(result.where).toEqual({
+      id: 5,
+      AND: [
+        { OR: [{ production_order_id: null }, { production_order_id: { in: [] } }] },
+      ],
+    });
+    expect(result.include.productionOrder.where.AND).toEqual([{ id: { in: [] } }]);
+    expect(result.include.warehouseReceiptItem).not.toHaveProperty('where');
+  });
 });
 
 describe('Prisma scope extension', () => {

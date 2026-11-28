@@ -10,6 +10,7 @@ const excludedModels = new Set([
   'UserLoginSessions',
   'UserAppSessions',
   'Notifications',
+  'WarehouseVerificationCodeSequence',
 ]);
 const sensitiveField = /password|token|secret|otp|hash|session_key|api_key/i;
 const stringKeyModels = new Set(['Items', 'ProductionSpecifications']);

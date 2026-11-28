@@ -38,6 +38,11 @@ export function productionOrderModelWhere(
   model: string,
   ids: number[],
 ): QueryArgs | null {
+  if (model === 'WarehouseVerificationRecords') {
+    return {
+      OR: [{ production_order_id: null }, { production_order_id: { in: ids } }],
+    };
+  }
   const path = ownership.get(model);
   if (!path) return null;
   if (!path.length) return { id: { in: ids } };

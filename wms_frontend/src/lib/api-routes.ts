@@ -111,6 +111,11 @@ export const API_ROUTES = {
     base: "/warehouse-temperature-humidity-checks",
     detail: (id: number) => `/warehouse-temperature-humidity-checks/${id}`,
   },
+  warehouseVerificationRecords: {
+    base: "/warehouse-verification-records",
+    detail: (id: number) => `/warehouse-verification-records/${id}`,
+    subjects: "/warehouse-verification-records/subjects",
+  },
   auth: AUTH,
   users: USERS,
   internal: INTERNAL,
