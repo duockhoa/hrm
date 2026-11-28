@@ -82,8 +82,14 @@ export default function ConnectionHistoryExportDialog({
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabled}>
-          <Download /> Tải xuống
+        <Button
+          variant="outline"
+          size="icon-sm"
+          disabled={disabled}
+          aria-label="Tải xuống"
+          title="Tải xuống"
+        >
+          <Download aria-hidden="true" />
         </Button>
       </DialogTrigger>
       <DialogContent showCloseButton={!exporting}>

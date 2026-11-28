@@ -1,9 +1,5 @@
 "use client";
-import {
-  ListFilterButton,
-  type ListFilters,
-} from "@/components/list-filter-button";
-import { lotFilters } from "@/lib/basic-list-filters";
+import type { ListFilters } from "@/components/list-filter-button";
 import { useState as useFilterState } from "react";
 
 import InfiniteRecordLoadStatus from "@/components/infinite-record-load-status/infinite-record-load-status";
@@ -129,18 +125,7 @@ export default function HomePage() {
       ref={containerRef}
       className="flex h-full min-h-0 flex-col overflow-auto rounded-lg bg-white shadow-md"
     >
-      <div className="sticky top-0 z-10 w-full pr-12 bg-white p-2">
-        <div className="absolute right-2 top-2">
-          <ListFilterButton
-            groups={lotFilters}
-            filters={filters}
-            onApply={setFilters}
-            disabled={false}
-            title="Lọc dữ liệu"
-          />
-        </div>
-        <HeaderListSemiFinishedLot />
-      </div>
+      <HeaderListSemiFinishedLot filters={filters} onApply={setFilters} />
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 pt-0">
         {isLoading ? (

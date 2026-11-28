@@ -24,15 +24,33 @@ describe.each([
     } as unknown as PrismaService);
 
     await expect(
-      service.findPendingIpc({ page: 2, limit: 25, search: '#42' }),
+      service.findPendingIpc({
+        page: 2,
+        limit: 25,
+        search: '#42',
+        item_code: 'BTP00184',
+        item_name: 'Eugica',
+        lot_number: '0221126',
+        from_date: '2026-11-28',
+        to_date: '2026-11-28',
+      }),
     ).resolves.toEqual({ data: rows, total: 26 });
 
     const query = findMany.mock.calls[0][0];
     expect(query.where).toMatchObject({
       ipc_staff_approved_at: null,
       ipc_staff_approved_by_id: null,
+      created_at: {
+        gte: new Date('2026-11-27T17:00:00.000Z'),
+        lt: new Date('2026-11-28T17:00:00.000Z'),
+      },
       productionOrder: {
-        is: { samplingRequests: { some: { status: 'sent' } } },
+        is: {
+          samplingRequests: { some: { status: 'sent' } },
+          item_code: 'BTP00184',
+          item: { is: { item_name: { contains: 'Eugica' } } },
+          lot_no: { contains: '0221126' },
+        },
       },
     });
     expect(query.where.AND[0].OR).toContainEqual({ id: 42 });

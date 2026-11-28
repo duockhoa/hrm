@@ -91,6 +91,16 @@ export default function VersionsPage() {
             </TableHeader>
             <TableBody>
               <TableRow>
+                <TableCell className="font-medium">1.4.12</TableCell>
+                <TableCell>
+                  <time dateTime="2026-11-28">28/11/2026</time>
+                </TableCell>
+                <TableCell className="min-w-72 max-w-xl whitespace-normal">
+                  Bổ sung danh sách phiếu cân và phiếu pha chế cần duyệt.
+                </TableCell>
+                <VersionResponsibleCells />
+              </TableRow>
+              <TableRow>
                 <TableCell className="font-medium">1.4.0</TableCell>
                 <TableCell>
                   <time dateTime="2026-11-26">26/11/2026</time>

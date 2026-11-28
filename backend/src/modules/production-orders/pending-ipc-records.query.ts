@@ -6,6 +6,7 @@ import {
   searchDocumentId,
   searchLotFields,
 } from 'src/common/utils/record-list-query';
+import { wmsDateRange } from 'src/common/utils/wms-date-range';
 import type { GetPendingIpcRecordsDto } from './dto/get-pending-ipc-records.dto';
 
 const sentSamplingRequest = { status: 'sent' };
@@ -13,6 +14,7 @@ const sentSamplingRequest = { status: 'sent' };
 const pendingIpcRecordSelect = {
   id: true,
   description: true,
+  created_at: true,
   qa_staff_approved_at: true,
   productionOrder: {
     select: {
@@ -38,14 +40,29 @@ export function pendingIpcRecordsQuery({
   page = 1,
   limit = 25,
   search,
+  item_code,
+  item_name,
+  lot_number,
+  from_date,
+  to_date,
 }: GetPendingIpcRecordsDto) {
   const where = {
     ipc_staff_approved_by_id: null,
     ipc_staff_approved_at: null,
     // PYCLM is sent for a production order, shared by its records.
     productionOrder: {
-      is: { samplingRequests: { some: sentSamplingRequest } },
+      is: {
+        samplingRequests: { some: sentSamplingRequest },
+        ...(item_code ? { item_code } : {}),
+        ...(item_name
+          ? { item: { is: { item_name: literalContains(item_name) } } }
+          : {}),
+        ...(lot_number ? { lot_no: literalContains(lot_number) } : {}),
+      },
     },
+    ...(from_date || to_date
+      ? { created_at: wmsDateRange(from_date, to_date) }
+      : {}),
     AND: recordSearchTerms(search).map((term) => {
       const id = searchDocumentId(term.replace(/^#/, ''));
       return {
