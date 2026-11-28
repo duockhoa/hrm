@@ -8,6 +8,7 @@ import { useSidebarStore } from "@/store/sidebar-store";
 import {
   Boxes,
   ClipboardList,
+  FileCheck,
   FilePenLine,
   Info,
   Package,
@@ -68,6 +69,12 @@ const menuItems = [
     name: "Phiếu xuất kho",
     icon: <PackageMinus className="size-5 shrink-0" />,
     url: "/warehouse-dispatches",
+  },
+  {
+    id: "verification-records",
+    name: "Biên bản xác minh",
+    icon: <FileCheck className="size-5 shrink-0" />,
+    url: "/verification-records",
   },
   {
     id: "connection-history",
