@@ -6,9 +6,27 @@ const dateTimeFormatter = new Intl.DateTimeFormat("vi-VN", {
   timeStyle: "short",
   timeZone: "Asia/Ho_Chi_Minh",
 });
+const dayFormatter = new Intl.DateTimeFormat("vi-VN", {
+  day: "numeric",
+  month: "numeric",
+  year: "numeric",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+const timeFormatter = new Intl.DateTimeFormat("vi-VN", {
+  timeStyle: "short",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
 
 export function formatVerificationDate(value: string) {
   return dateTimeFormatter.format(new Date(value));
+}
+
+export function formatVerificationDay(value: string) {
+  return dayFormatter.format(new Date(value));
+}
+
+export function formatVerificationTime(value: string) {
+  return timeFormatter.format(new Date(value));
 }
 
 export function verificationError(error: unknown, fallback: string) {

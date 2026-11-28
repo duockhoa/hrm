@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import VerificationRecordDetail from "@/features/verification-records/verification-record-detail";
+import VerificationRecordSplit from "@/features/verification-records/verification-record-split";
 
 export default async function Page({
   params,
@@ -11,5 +11,5 @@ export default async function Page({
   if (!/^\d+$/.test(id) || recordId < 1 || recordId > 2147483647) {
     notFound();
   }
-  return <VerificationRecordDetail id={recordId} />;
+  return <VerificationRecordSplit id={recordId} />;
 }

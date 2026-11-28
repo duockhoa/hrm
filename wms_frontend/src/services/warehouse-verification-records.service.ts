@@ -50,18 +50,35 @@ type CreateVerificationRecord = {
   participant_user_ids?: number[];
 } & ({ warehouse_receipt_item_id: number } | { production_order_id: number });
 
+export const verificationDefectLabels = {
+  QUALITY: "Sai lỗi chất lượng",
+  QUANTITY: "Sai lỗi số lượng",
+  DOCUMENTATION: "Sai lỗi chứng từ",
+  DELIVERY: "Sai lỗi giao hàng",
+  OTHER: "Khác",
+} as const;
+
+export type VerificationDefectInput = {
+  verified_quantity: string;
+  defect_description: string;
+  defect_quantity: string;
+  defect_type: keyof typeof verificationDefectLabels;
+  proposed_action: string | null;
+  note: string | null;
+};
+
+export type VerificationDefect = VerificationDefectInput & {
+  id: number;
+  created_at: string;
+  createdBy: VerificationParticipant;
+};
+
 type VerificationRecordDetail = VerificationRecord & {
   participants: { user: VerificationParticipant }[];
+  details: VerificationDefect[];
 };
 
 const warehouseVerificationRecordsService = {
-  async list(search: string, page: number) {
-    return (
-      await axiosClient.get<RecordListPage<VerificationRecord>>(routes.base, {
-        params: { search, page },
-      })
-    ).data;
-  },
   async read(id: number) {
     return (await axiosClient.get<VerificationRecordDetail>(routes.detail(id)))
       .data;
@@ -87,6 +104,29 @@ const warehouseVerificationRecordsService = {
   async create(payload: CreateVerificationRecord) {
     return (await axiosClient.post<VerificationRecord>(routes.base, payload))
       .data;
+  },
+  async createDefect(id: number, payload: VerificationDefectInput) {
+    return (
+      await axiosClient.post<VerificationDefect>(
+        routes.defectDetails(id),
+        payload,
+      )
+    ).data;
+  },
+  async updateDefect(
+    id: number,
+    detailId: number,
+    payload: Partial<VerificationDefectInput>,
+  ) {
+    return (
+      await axiosClient.patch<VerificationDefect>(
+        routes.defectDetail(id, detailId),
+        payload,
+      )
+    ).data;
+  },
+  async deleteDefect(id: number, detailId: number) {
+    await axiosClient.delete(routes.defectDetail(id, detailId));
   },
 };
 
