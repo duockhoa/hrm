@@ -2,10 +2,14 @@ import {
   Body,
   CanActivate,
   Controller,
+  Delete,
   ExecutionContext,
   Get,
+  HttpCode,
+  HttpStatus,
   Injectable,
   Param,
+  Patch,
   Post,
   Query,
   Request,
@@ -17,6 +21,11 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { NetworkPolicyGuard } from 'src/guards/network-policy.guard';
 import { PrismaService } from 'src/prisma.service';
+import {
+  CreateVerificationDetailDto,
+  UpdateVerificationDetailDto,
+  VerificationDetailParamsDto,
+} from './warehouse-verification-record-details.dto';
 import {
   CreateVerificationRecordDto,
   VerificationListQueryDto,
@@ -77,6 +86,14 @@ export class WarehouseVerificationRecordsController {
     return this.service.subjects(query, req.user);
   }
 
+  @Get('participant-options')
+  participantOptions(
+    @Query() query: VerificationListQueryDto,
+    @Request() req: { user: VerificationUser },
+  ) {
+    return this.service.participantOptions(query, req.user);
+  }
+
   @Get(':id')
   detail(
     @Param() params: VerificationRecordIdDto,
@@ -91,5 +108,32 @@ export class WarehouseVerificationRecordsController {
     @Request() req: { user: VerificationUser },
   ) {
     return this.service.create(dto, req.user);
+  }
+
+  @Post(':id/details')
+  createDetail(
+    @Param() params: VerificationRecordIdDto,
+    @Body() dto: CreateVerificationDetailDto,
+    @Request() req: { user: VerificationUser },
+  ) {
+    return this.service.createDetail(params.id, dto, req.user);
+  }
+
+  @Patch(':id/details/:detailId')
+  updateDetail(
+    @Param() params: VerificationDetailParamsDto,
+    @Body() dto: UpdateVerificationDetailDto,
+    @Request() req: { user: VerificationUser },
+  ) {
+    return this.service.updateDetail(params.id, params.detailId, dto, req.user);
+  }
+
+  @Delete(':id/details/:detailId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteDetail(
+    @Param() params: VerificationDetailParamsDto,
+    @Request() req: { user: VerificationUser },
+  ) {
+    return this.service.deleteDetail(params.id, params.detailId, req.user);
   }
 }

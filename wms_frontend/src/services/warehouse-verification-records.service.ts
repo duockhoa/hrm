@@ -6,6 +6,12 @@ const routes = API_ROUTES.warehouseVerificationRecords;
 
 export type VerificationSubjectType = "receipt" | "production_order";
 
+export type VerificationParticipant = {
+  id: number;
+  name: string;
+  username: string;
+};
+
 export type VerificationSubject = {
   id: number;
   item_code: string;
@@ -41,7 +47,12 @@ export type VerificationRecord = {
 
 type CreateVerificationRecord = {
   location: string;
+  participant_user_ids?: number[];
 } & ({ warehouse_receipt_item_id: number } | { production_order_id: number });
+
+type VerificationRecordDetail = VerificationRecord & {
+  participants: { user: VerificationParticipant }[];
+};
 
 const warehouseVerificationRecordsService = {
   async list(search: string, page: number) {
@@ -52,7 +63,16 @@ const warehouseVerificationRecordsService = {
     ).data;
   },
   async read(id: number) {
-    return (await axiosClient.get<VerificationRecord>(routes.detail(id))).data;
+    return (await axiosClient.get<VerificationRecordDetail>(routes.detail(id)))
+      .data;
+  },
+  async participantOptions(search: string, page: number) {
+    return (
+      await axiosClient.get<RecordListPage<VerificationParticipant>>(
+        routes.participantOptions,
+        { params: { search, page } },
+      )
+    ).data;
   },
   async subjects(type: VerificationSubjectType, search: string, page: number) {
     return (

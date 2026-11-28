@@ -1,6 +1,8 @@
 import { PickType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  ArrayUnique,
+  IsArray,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -9,6 +11,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import {
   RecordListQueryDto,
@@ -16,6 +19,8 @@ import {
 } from 'src/common/dto/record-list-query.dto';
 
 const MAX_ID = 2147483647;
+export const parseVerificationId = ({ value }: { value: unknown }) =>
+  typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value;
 const subjectTypes = ['receipt', 'production_order'] as const;
 export type VerificationSubjectType = (typeof subjectTypes)[number];
 
@@ -31,9 +36,7 @@ export class VerificationSubjectsQueryDto extends VerificationListQueryDto {
 }
 
 export class VerificationRecordIdDto {
-  @Transform(({ value }) =>
-    typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value,
-  )
+  @Transform(parseVerificationId)
   @IsInt()
   @Min(1)
   @Max(MAX_ID)
@@ -58,4 +61,12 @@ export class CreateVerificationRecordDto {
   @Min(1)
   @Max(MAX_ID)
   production_order_id?: number | null;
+
+  @ValidateIf((_dto, value) => value !== undefined)
+  @IsArray()
+  @ArrayUnique()
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @Max(MAX_ID, { each: true })
+  participant_user_ids?: number[];
 }

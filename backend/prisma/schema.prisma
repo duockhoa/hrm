@@ -31,6 +31,9 @@ model AuditLogs {
 }
 
 model Users {
+  warehouseVerificationParticipations WarehouseVerificationRecordParticipants[]
+  uploadedWarehouseVerificationDetailImages WarehouseVerificationDetailImages[] @relation("WarehouseVerificationDetailImageUploader")
+  createdWarehouseVerificationRecordDetails WarehouseVerificationRecordDetails[] @relation("WarehouseVerificationRecordDetailCreator")
   createdWarehouseVerificationRecords WarehouseVerificationRecords[] @relation("WarehouseVerificationRecordCreator")
   createdWarehouseStocktakes   WarehouseStocktakes[] @relation("WarehouseStocktakeCreator")
   completedWarehouseStocktakes WarehouseStocktakes[] @relation("WarehouseStocktakeCompleter")
@@ -846,6 +849,8 @@ model WarehouseVerificationRecords {
   warehouseReceiptItem      WarehouseReceiptItems? @relation(fields: [warehouse_receipt_item_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
   productionOrder           ProductionOrders?     @relation(fields: [production_order_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
   createdBy                 Users                  @relation("WarehouseVerificationRecordCreator", fields: [created_by_id], references: [id], onDelete: Restrict)
+  details                   WarehouseVerificationRecordDetails[]
+  participants              WarehouseVerificationRecordParticipants[]
 
   @@index([warehouse_receipt_item_id])
   @@index([production_order_id])
@@ -853,11 +858,67 @@ model WarehouseVerificationRecords {
   @@map("warehouse_verification_records")
 }
 
+model WarehouseVerificationRecordParticipants {
+  id                     Int                          @id @default(autoincrement())
+  verification_record_id Int
+  user_id                Int
+  created_at             DateTime                     @default(now()) @db.DateTime(3)
+  verificationRecord     WarehouseVerificationRecords @relation(fields: [verification_record_id], references: [id], onDelete: Cascade, map: "verification_record_participants_record_fkey")
+  user                   Users                        @relation(fields: [user_id], references: [id], onDelete: Restrict, map: "verification_record_participants_user_fkey")
+
+  @@unique([verification_record_id, user_id], map: "verification_record_participants_record_user_key")
+  @@index([user_id], map: "verification_record_participants_user_idx")
+  @@map("warehouse_verification_record_participants")
+}
+
 model WarehouseVerificationCodeSequence {
   id          Int    @id
   last_number BigInt @default(0)
 
   @@map("warehouse_verification_code_sequence")
+}
+
+enum WarehouseVerificationDefectType {
+  QUALITY
+  QUANTITY
+  DOCUMENTATION
+  DELIVERY
+  OTHER
+}
+
+model WarehouseVerificationRecordDetails {
+  id                     Int                             @id @default(autoincrement())
+  verification_record_id Int
+  verified_quantity      Decimal                         @db.Decimal(12, 3)
+  defect_description     String                          @db.Text
+  defect_quantity        Decimal                         @db.Decimal(12, 3)
+  defect_type            WarehouseVerificationDefectType
+  proposed_action        String?                         @db.Text
+  note                   String?                         @db.Text
+  created_by_id          Int
+  created_at             DateTime                        @default(now()) @db.DateTime(3)
+  verificationRecord     WarehouseVerificationRecords    @relation(fields: [verification_record_id], references: [id], onDelete: Restrict, map: "verification_record_details_record_fkey")
+  createdBy              Users                           @relation("WarehouseVerificationRecordDetailCreator", fields: [created_by_id], references: [id], onDelete: Restrict, map: "verification_record_details_creator_fkey")
+  images                 WarehouseVerificationDetailImages[]
+
+  @@index([verification_record_id], map: "verification_record_details_record_idx")
+  @@index([created_by_id], map: "verification_record_details_creator_idx")
+  @@map("warehouse_verification_record_details")
+}
+
+model WarehouseVerificationDetailImages {
+  id                            Int                                @id @default(autoincrement())
+  verification_record_detail_id Int
+  storage_key                   String                             @db.VarChar(512)
+  original_filename             String                             @db.VarChar(255)
+  uploaded_by_id                Int
+  created_at                    DateTime                           @default(now()) @db.DateTime(3)
+  verificationDetail            WarehouseVerificationRecordDetails @relation(fields: [verification_record_detail_id], references: [id], onDelete: Restrict, map: "verification_detail_images_detail_fkey")
+  uploadedBy                    Users                              @relation("WarehouseVerificationDetailImageUploader", fields: [uploaded_by_id], references: [id], onDelete: Restrict, map: "verification_detail_images_uploader_fkey")
+
+  @@index([verification_record_detail_id], map: "verification_detail_images_detail_idx")
+  @@index([uploaded_by_id], map: "verification_detail_images_uploader_idx")
+  @@map("warehouse_verification_detail_images")
 }
 
 model Features {

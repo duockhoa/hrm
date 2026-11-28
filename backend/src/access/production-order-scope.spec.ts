@@ -167,6 +167,23 @@ describe('production order visibility policy', () => {
     expect(result.include.productionOrder.where.AND).toEqual([{ id: { in: [] } }]);
     expect(result.include.warehouseReceiptItem).not.toHaveProperty('where');
   });
+
+  it('limits verification details through the parent production-order scope', () => {
+    const parentScope = {
+      OR: [{ production_order_id: null }, { production_order_id: { in: [9] } }],
+    };
+    expect(
+      productionOrderModelWhere('WarehouseVerificationRecordDetails', [9]),
+    ).toEqual({ verificationRecord: { is: parentScope } });
+    expect(
+      productionOrderModelWhere('WarehouseVerificationRecordParticipants', [9]),
+    ).toEqual({ verificationRecord: { is: parentScope } });
+    expect(
+      productionOrderModelWhere('WarehouseVerificationDetailImages', [9]),
+    ).toEqual({
+      verificationDetail: { is: { verificationRecord: { is: parentScope } } },
+    });
+  });
 });
 
 describe('Prisma scope extension', () => {

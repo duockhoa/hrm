@@ -13,6 +13,10 @@ import {
 import { PrismaService } from 'src/prisma.service';
 import { PRODUCTION_ORDER_PERMISSIONS } from '../production-orders/production-orders.permissions';
 import {
+  CreateVerificationDetailDto,
+  UpdateVerificationDetailDto,
+} from './warehouse-verification-record-details.dto';
+import {
   CreateVerificationRecordDto,
   VerificationListQueryDto,
   VerificationSubjectsQueryDto,
@@ -37,8 +41,15 @@ const orderSelect = {
   item: { select: { item_name: true } },
 } satisfies Prisma.ProductionOrdersSelect;
 
+const creatorSelect = { id: true, name: true, username: true } as const;
+const detailInclude = { createdBy: { select: creatorSelect } } as const;
+const participantsInclude = {
+  orderBy: { id: 'asc' },
+  select: { user: { select: creatorSelect } },
+} satisfies Prisma.WarehouseVerificationRecords$participantsArgs;
+
 const recordInclude = {
-  createdBy: { select: { id: true, name: true, username: true } },
+  createdBy: { select: creatorSelect },
   warehouseReceiptItem: { select: receiptSelect },
   productionOrder: { select: orderSelect },
 } satisfies Prisma.WarehouseVerificationRecordsInclude;
@@ -78,6 +89,39 @@ function recordScope(
     allowed.push({ production_order_id: { not: null } });
   }
   return allowed.length ? { OR: allowed } : { id: { in: [] } };
+}
+
+function verificationDetailWhere(
+  id: number,
+  detailId: number,
+  user: VerificationUser,
+): Prisma.WarehouseVerificationRecordDetailsWhereUniqueInput {
+  return {
+    id: detailId,
+    verification_record_id: id,
+    verificationRecord: { is: recordScope(user) },
+  };
+}
+
+function validateDetailQuantities(
+  verified: string | Prisma.Decimal,
+  defective: string | Prisma.Decimal,
+) {
+  const verifiedQuantity = new Prisma.Decimal(verified);
+  if (verifiedQuantity.lte(0)) {
+    throw new BadRequestException('Số lượng xác minh phải lớn hơn 0.');
+  }
+  if (new Prisma.Decimal(defective).gt(verifiedQuantity)) {
+    throw new BadRequestException(
+      'Số lượng lỗi không được vượt số lượng xác minh.',
+    );
+  }
+}
+
+function isPrismaError(error: unknown, code: string) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
+  );
 }
 
 @Injectable()
@@ -121,11 +165,146 @@ export class WarehouseVerificationRecordsService {
   async detail(id: number, user: VerificationUser) {
     const record = await this.prisma.warehouseVerificationRecords.findFirst({
       where: { AND: [{ id }, recordScope(user)] },
-      include: recordInclude,
+      include: {
+        ...recordInclude,
+        details: { orderBy: { id: 'asc' }, include: detailInclude },
+        participants: participantsInclude,
+      },
     });
     if (!record)
       throw new NotFoundException('Không tìm thấy biên bản xác minh.');
     return record;
+  }
+
+  async participantOptions(
+    { search, page = 1, limit = 10 }: VerificationListQueryDto,
+    user: VerificationUser,
+  ) {
+    if (
+      warehouseReceiptScopeForUser(user).kind === 'none' &&
+      !canReadOrders(user)
+    ) {
+      throw new ForbiddenException('Bạn chưa có quyền lập biên bản xác minh.');
+    }
+    const where: Prisma.UsersWhereInput = {
+      deleted_at: null,
+      ...(search && {
+        OR: [
+          { name: { contains: search } },
+          { username: { contains: search } },
+        ],
+      }),
+    };
+    const [data, total] = await this.prisma.$transaction(
+      [
+        this.prisma.users.findMany({
+          where,
+          select: creatorSelect,
+          orderBy: [{ name: 'asc' }, { id: 'asc' }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        this.prisma.users.count({ where }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { data, total, page, limit };
+  }
+
+  async createDetail(
+    id: number,
+    dto: CreateVerificationDetailDto,
+    user: VerificationUser,
+  ) {
+    validateDetailQuantities(dto.verified_quantity, dto.defect_quantity);
+    const record = await this.prisma.warehouseVerificationRecords.findFirst({
+      where: { AND: [{ id }, recordScope(user)] },
+      select: { id: true },
+    });
+    if (!record)
+      throw new NotFoundException('Không tìm thấy biên bản xác minh.');
+
+    try {
+      return await this.prisma.warehouseVerificationRecordDetails.create({
+        data: {
+          ...dto,
+          verification_record_id: record.id,
+          created_by_id: user.id,
+        },
+        include: detailInclude,
+      });
+    } catch (error) {
+      if (isPrismaError(error, 'P2003')) {
+        throw new NotFoundException('Không tìm thấy biên bản xác minh.');
+      }
+      throw error;
+    }
+  }
+
+  async updateDetail(
+    id: number,
+    detailId: number,
+    dto: UpdateVerificationDetailDto,
+    user: VerificationUser,
+  ) {
+    if (Object.values(dto).every((value) => value === undefined)) {
+      throw new BadRequestException('Nhập ít nhất một trường cần cập nhật.');
+    }
+
+    const where = verificationDetailWhere(id, detailId, user);
+    const changingQuantities =
+      dto.verified_quantity !== undefined || dto.defect_quantity !== undefined;
+    if (changingQuantities) {
+      const current =
+        await this.prisma.warehouseVerificationRecordDetails.findUnique({
+          where,
+          select: { verified_quantity: true, defect_quantity: true },
+        });
+      if (!current)
+        throw new NotFoundException('Không tìm thấy chi tiết biên bản.');
+      validateDetailQuantities(
+        dto.verified_quantity ?? current.verified_quantity,
+        dto.defect_quantity ?? current.defect_quantity,
+      );
+      // Avoid writing a quantity validated against values changed by another request.
+      Object.assign(where, current);
+    }
+
+    try {
+      return await this.prisma.warehouseVerificationRecordDetails.update({
+        where,
+        data: dto,
+        include: detailInclude,
+      });
+    } catch (error) {
+      if (isPrismaError(error, 'P2025')) {
+        if (changingQuantities) {
+          throw new ConflictException(
+            'Chi tiết biên bản đã thay đổi. Vui lòng tải lại.',
+          );
+        }
+        throw new NotFoundException('Không tìm thấy chi tiết biên bản.');
+      }
+      throw error;
+    }
+  }
+
+  async deleteDetail(id: number, detailId: number, user: VerificationUser) {
+    try {
+      await this.prisma.warehouseVerificationRecordDetails.delete({
+        where: verificationDetailWhere(id, detailId, user),
+      });
+    } catch (error) {
+      if (isPrismaError(error, 'P2003')) {
+        throw new ConflictException(
+          'Xóa ảnh minh chứng trước khi xóa chi tiết biên bản.',
+        );
+      }
+      if (isPrismaError(error, 'P2025')) {
+        throw new NotFoundException('Không tìm thấy chi tiết biên bản.');
+      }
+      throw error;
+    }
   }
 
   async subjects(
@@ -234,9 +413,20 @@ export class WarehouseVerificationRecordsService {
     if (!subject)
       throw new NotFoundException('Không tìm thấy đối tượng xác minh.');
 
+    const participantIds = dto.participant_user_ids ?? [];
     for (let attempt = 0; ; attempt++) {
       try {
         return await this.prisma.$transaction(async (tx) => {
+          if (participantIds.length) {
+            const available = await tx.users.count({
+              where: { id: { in: participantIds }, deleted_at: null },
+            });
+            if (available !== participantIds.length) {
+              throw new BadRequestException(
+                'Có người tham gia không còn khả dụng. Vui lòng chọn lại.',
+              );
+            }
+          }
           // Keep the sequence locked until the new record is committed.
           const sequence = await tx.warehouseVerificationCodeSequence.update({
             where: { id: 1 },
@@ -249,8 +439,15 @@ export class WarehouseVerificationRecordsService {
               warehouse_receipt_item_id: receiptId,
               production_order_id: orderId,
               created_by_id: user.id,
+              ...(participantIds.length && {
+                participants: {
+                  createMany: {
+                    data: participantIds.map((user_id) => ({ user_id })),
+                  },
+                },
+              }),
             },
-            include: recordInclude,
+            include: { ...recordInclude, participants: participantsInclude },
           });
         });
       } catch (error) {

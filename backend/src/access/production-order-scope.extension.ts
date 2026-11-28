@@ -38,10 +38,20 @@ export function productionOrderModelWhere(
   model: string,
   ids: number[],
 ): QueryArgs | null {
-  if (model === 'WarehouseVerificationRecords') {
-    return {
+  if (
+    model === 'WarehouseVerificationRecords' ||
+    model === 'WarehouseVerificationRecordParticipants' ||
+    model === 'WarehouseVerificationRecordDetails' ||
+    model === 'WarehouseVerificationDetailImages'
+  ) {
+    const verificationScope = {
       OR: [{ production_order_id: null }, { production_order_id: { in: ids } }],
     };
+    if (model === 'WarehouseVerificationRecords') return verificationScope;
+    const recordRelation = { verificationRecord: { is: verificationScope } };
+    return model === 'WarehouseVerificationDetailImages'
+      ? { verificationDetail: { is: recordRelation } }
+      : recordRelation;
   }
   const path = ownership.get(model);
   if (!path) return null;

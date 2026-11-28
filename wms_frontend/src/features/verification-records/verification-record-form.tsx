@@ -16,11 +16,13 @@ import { Label } from "@/components/ui/label";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { API_ROUTES } from "@/lib/api-routes";
 import service, {
+  type VerificationParticipant,
   type VerificationSubject,
   type VerificationSubjectType,
 } from "@/services/warehouse-verification-records.service";
 import useUserStore from "@/store/user.store";
 import VerificationPagination from "./verification-pagination";
+import VerificationParticipantPicker from "./verification-participant-picker";
 import {
   formatVerificationDate,
   verificationError,
@@ -52,6 +54,9 @@ export default function VerificationRecordForm({
   const [cursor, setCursor] = useState({ query: "", page: 1 });
   const page = cursor.query === query ? cursor.page : 1;
   const [selected, setSelected] = useState<VerificationSubject | null>(null);
+  const [participants, setParticipants] = useState<VerificationParticipant[]>(
+    [],
+  );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const submitting = useRef(false);
@@ -89,6 +94,7 @@ export default function VerificationRecordForm({
     try {
       const record = await service.create({
         location: location.trim(),
+        participant_user_ids: participants.map(({ id }) => id),
         ...(type === "receipt"
           ? { warehouse_receipt_item_id: selected.id }
           : { production_order_id: selected.id }),
@@ -241,6 +247,10 @@ export default function VerificationRecordForm({
               />
             )}
           </div>
+          <VerificationParticipantPicker
+            value={participants}
+            onChange={setParticipants}
+          />
           <div className="space-y-2">
             <Label htmlFor="verification-entered-by">Người nhập</Label>
             <Input id="verification-entered-by" value={enteredBy} readOnly />

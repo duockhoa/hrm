@@ -68,6 +68,14 @@ export default function VerificationRecordDetail({ id }: { id: number }) {
               value={record.createdBy.name || record.createdBy.username}
             />
             <Field
+              label="Người tham gia"
+              value={
+                record.participants
+                  ?.map(({ user }) => user.name || user.username)
+                  .join(", ") || ""
+              }
+            />
+            <Field
               label="Thời điểm tạo"
               value={formatVerificationDate(record.created_at)}
             />

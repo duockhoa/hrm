@@ -9,6 +9,13 @@ import { WarehouseVerificationRecordsModule } from './warehouse-verification-rec
 
 const route = '/warehouse-verification-records';
 const payload = { location: 'Kho A' };
+const detailPayload = {
+  verified_quantity: '12.75',
+  defect_description: 'Seal bị rách',
+  defect_quantity: '2.5',
+  defect_type: 'QUALITY',
+  proposed_action: 'Cách ly',
+};
 const receipt = {
   id: 8,
   item_code: 'NL-01',
@@ -20,6 +27,7 @@ const receipt = {
 describe('Warehouse verification records HTTP API', () => {
   let app: INestApplication;
   const prisma = {
+    users: { findMany: jest.fn(), count: jest.fn() },
     userApplications: { findFirst: jest.fn() },
     warehouseReceiptItems: {
       findMany: jest.fn(),
@@ -37,6 +45,12 @@ describe('Warehouse verification records HTTP API', () => {
       findMany: jest.fn(),
       count: jest.fn(),
       findFirst: jest.fn(),
+    },
+    warehouseVerificationRecordDetails: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     },
     $transaction: (
       queries: Promise<unknown>[] | ((tx: unknown) => Promise<unknown>),
@@ -211,6 +225,75 @@ describe('Warehouse verification records HTTP API', () => {
     expect(prisma.warehouseVerificationRecords.findMany).not.toHaveBeenCalled();
   });
 
+  it('searches participant options by name or username using a limited projection', async () => {
+    const user = { id: 7, name: 'Nguyễn Văn A', username: 'van-a' };
+    prisma.users.findMany.mockResolvedValue([user]);
+    prisma.users.count.mockResolvedValue(1);
+    await request(app.getHttpServer())
+      .get(`${route}/participant-options`)
+      .query({ search: '  Văn  ', page: 1, limit: 3 })
+      .expect(200, { data: [user], total: 1, page: 1, limit: 3 });
+    expect(prisma.users.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          deleted_at: null,
+          OR: [
+            { name: { contains: 'Văn' } },
+            { username: { contains: 'Văn' } },
+          ],
+        },
+        select: { id: true, name: true, username: true },
+        take: 3,
+      }),
+    );
+  });
+
+  it('creates the record and participant links in the same write', async () => {
+    prisma.users.count.mockResolvedValue(2);
+    prisma.warehouseVerificationRecords.create.mockResolvedValue({ id: 1 });
+    await request(app.getHttpServer())
+      .post(route)
+      .send({
+        ...payload,
+        warehouse_receipt_item_id: receipt.id,
+        participant_user_ids: [7, 10],
+      })
+      .expect(201);
+    expect(prisma.users.count).toHaveBeenCalledWith({
+      where: { id: { in: [7, 10] }, deleted_at: null },
+    });
+    expect(prisma.warehouseVerificationRecords.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          participants: {
+            createMany: { data: [{ user_id: 7 }, { user_id: 10 }] },
+          },
+        }),
+      }),
+    );
+  });
+
+  it('rejects duplicate or unavailable participants without consuming a record code', async () => {
+    prisma.users.count.mockResolvedValue(1);
+    for (const participant_user_ids of [
+      [7, 7],
+      [7, 10],
+    ]) {
+      await request(app.getHttpServer())
+        .post(route)
+        .send({
+          ...payload,
+          warehouse_receipt_item_id: receipt.id,
+          participant_user_ids,
+        })
+        .expect(400);
+    }
+    expect(prisma.users.count).toHaveBeenCalledTimes(1);
+    expect(
+      prisma.warehouseVerificationCodeSequence.update,
+    ).not.toHaveBeenCalled();
+  });
+
   it('searches production codes and creates an order-linked record', async () => {
     const order = {
       id: 17,
@@ -262,5 +345,160 @@ describe('Warehouse verification records HTTP API', () => {
       .get(`${route}/3`)
       .set('x-test-orders', 'true')
       .expect(200, record);
+  });
+
+  it('adds details using the parent and signed-in user and includes details in the parent response', async () => {
+    const detail = {
+      ...detailPayload,
+      id: 2,
+      verification_record_id: 9,
+      created_by_id: 5,
+    };
+    prisma.warehouseVerificationRecords.findFirst.mockResolvedValue({ id: 9 });
+    prisma.warehouseVerificationRecordDetails.create.mockResolvedValue(detail);
+
+    await request(app.getHttpServer())
+      .post(`${route}/9/details`)
+      .send({ ...detailPayload, verified_quantity: 12.75 })
+      .expect(201, detail);
+    expect(
+      prisma.warehouseVerificationRecordDetails.create,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          ...detailPayload,
+          verification_record_id: 9,
+          created_by_id: 5,
+        }),
+      }),
+    );
+    const record = { id: 9, record_code: 'BMXM00009', details: [detail] };
+    prisma.warehouseVerificationRecords.findFirst.mockResolvedValue(record);
+    await request(app.getHttpServer()).get(`${route}/9`).expect(200, record);
+    expect(
+      prisma.warehouseVerificationRecords.findFirst,
+    ).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          details: expect.objectContaining({ orderBy: { id: 'asc' } }),
+        }),
+      }),
+    );
+  });
+
+  it.each([
+    { verified_quantity: '0' },
+    { defect_quantity: '-1' },
+    { defect_quantity: '20' },
+    { defect_quantity: '1.0001' },
+    { defect_type: 'UNKNOWN' },
+    { created_by_id: 99 },
+  ])('rejects invalid detail inputs %j', async (invalidFields) => {
+    await request(app.getHttpServer())
+      .post(`${route}/9/details`)
+      .send({ ...detailPayload, ...invalidFields })
+      .expect(400);
+    expect(
+      prisma.warehouseVerificationRecordDetails.create,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('does not create a detail for an inaccessible parent', async () => {
+    prisma.warehouseVerificationRecords.findFirst.mockResolvedValue(null);
+    await request(app.getHttpServer())
+      .post(`${route}/9/details`)
+      .send(detailPayload)
+      .expect(404);
+    expect(
+      prisma.warehouseVerificationRecordDetails.create,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('uses saved quantities when validating a partial change and allows clearing a note', async () => {
+    const detailsRoute = `${route}/9/details/2`;
+    const quantities = {
+      verified_quantity: new Prisma.Decimal(12.75),
+      defect_quantity: new Prisma.Decimal(2.5),
+    };
+    prisma.warehouseVerificationRecordDetails.findUnique.mockResolvedValue(
+      quantities,
+    );
+    await request(app.getHttpServer())
+      .patch(detailsRoute)
+      .send({ verified_quantity: 2 })
+      .expect(400);
+    await request(app.getHttpServer())
+      .patch(detailsRoute)
+      .send({ defect_quantity: null })
+      .expect(400);
+    expect(
+      prisma.warehouseVerificationRecordDetails.update,
+    ).not.toHaveBeenCalled();
+
+    const patch = { verified_quantity: '3', note: null };
+    prisma.warehouseVerificationRecordDetails.update.mockResolvedValue({
+      id: 2,
+      ...patch,
+    });
+    await request(app.getHttpServer())
+      .patch(detailsRoute)
+      .send(patch)
+      .expect(200);
+    expect(
+      prisma.warehouseVerificationRecordDetails.update,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 2,
+          verification_record_id: 9,
+          ...quantities,
+          verificationRecord: {
+            is: {
+              OR: [{ warehouseReceiptItem: { is: { entered_by_id: 5 } } }],
+            },
+          },
+        }),
+        data: expect.objectContaining(patch),
+      }),
+    );
+  });
+
+  it('deletes only through the specified accessible parent', async () => {
+    prisma.warehouseVerificationRecordDetails.delete.mockResolvedValue({
+      id: 2,
+    });
+    await request(app.getHttpServer())
+      .delete(`${route}/9/details/2`)
+      .expect(204);
+    expect(
+      prisma.warehouseVerificationRecordDetails.delete,
+    ).toHaveBeenCalledWith({
+      where: {
+        id: 2,
+        verification_record_id: 9,
+        verificationRecord: {
+          is: { OR: [{ warehouseReceiptItem: { is: { entered_by_id: 5 } } }] },
+        },
+      },
+    });
+    prisma.warehouseVerificationRecordDetails.delete.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Not found', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
+    await request(app.getHttpServer())
+      .delete(`${route}/10/details/2`)
+      .expect(404);
+
+    prisma.warehouseVerificationRecordDetails.delete.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Foreign key constraint', {
+        code: 'P2003',
+        clientVersion: 'test',
+      }),
+    );
+    await request(app.getHttpServer())
+      .delete(`${route}/9/details/2`)
+      .expect(409);
   });
 });

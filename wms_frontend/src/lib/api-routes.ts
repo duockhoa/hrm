@@ -115,6 +115,7 @@ export const API_ROUTES = {
     base: "/warehouse-verification-records",
     detail: (id: number) => `/warehouse-verification-records/${id}`,
     subjects: "/warehouse-verification-records/subjects",
+    participantOptions: "/warehouse-verification-records/participant-options",
   },
   auth: AUTH,
   users: USERS,
