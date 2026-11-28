@@ -2,6 +2,15 @@ import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { RecordListQueryDto } from '../dto/record-list-query.dto';
 
+export const normalizeRecordSearch = (
+  value: string | number | null | undefined,
+) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase();
+
 export function recordSearchTerms(search?: string) {
   const terms = [
     ...new Set(

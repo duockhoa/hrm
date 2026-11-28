@@ -369,11 +369,13 @@ const PRODUCT_LINES = {
 
 const FILTER_CATALOGS = {
   base: "/filter-catalogs",
+  includingInactive: "/filter-catalogs?include_inactive=true",
   detail: (id: string | number) => `/filter-catalogs/${id}`,
 };
 
 const PRODUCTION_WORKSHOPS = {
   base: "/production-workshops",
+  includingInactive: "/production-workshops?include_inactive=true",
   pressureDifferentials: (id: string | number) =>
     `/production-workshops/${id}/pressure-differentials`,
   pressureDifferentialDetail: (pressureDifferentialId: string | number) =>

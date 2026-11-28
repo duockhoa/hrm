@@ -12,6 +12,9 @@ import { refreshItemCatalog } from "@/lib/item-catalog-refresh";
 
 const API_SEARCH_URLS: Record<string, string[]> = {
   "/connection-history": [CONNECTION_HISTORY_URL],
+  "/pressure-differentials": [API_ROUTES.productionWorkshops.includingInactive],
+  "/cleaning-checklists": [API_ROUTES.productionWorkshops.includingInactive],
+  "/filter-usage-records": [API_ROUTES.filterCatalogs.includingInactive],
   "/pending-mixing-records": [API_ROUTES.productionOrders.pendingMixingRecords],
   "/pending-weighing-records": [API_ROUTES.productionOrders.pendingWeighingRecords],
   "/finished-products": [API_ROUTES.items.finishedProducts],

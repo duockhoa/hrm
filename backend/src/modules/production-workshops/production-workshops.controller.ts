@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { RecordListQueryDto } from '../../common/dto/record-list-query.dto';
+import { RecordSearchQueryDto } from 'src/common/dto/record-search-query.dto';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateProductionWorkshopPressureDifferentialDto } from './dto/create-production-workshop-pressure-differential.dto';
@@ -39,8 +40,15 @@ export class ProductionWorkshopsController {
 
   @Get()
   @Permissions(PRODUCTION_WORKSHOP_PERMISSIONS.LIST)
-  async findAll(@Query('include_inactive') includeInactive?: string) {
-    return this.productionWorkshopsService.findAll(includeInactive === 'true');
+  async findAll(
+    @Query('include_inactive') includeInactive?: string,
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query?: RecordSearchQueryDto,
+  ) {
+    return this.productionWorkshopsService.findAll(
+      includeInactive === 'true',
+      query?.search,
+    );
   }
 
   @Get('pressure-differentials/:pressureDifferentialId')

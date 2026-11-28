@@ -1,17 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { normalizeRecordSearch as normalizeLotSearch } from 'src/common/utils/record-list-query';
 import { GetProductionOrderListDto } from './dto/get-production-order-list.dto';
 
 // Prisma contains uses SQL LIKE. Escape LIKE metacharacters so user input is literal.
 export const escapeLotSearch = (value: string) =>
   value.replace(/[\\%_]/g, '\\$&');
 
-export const normalizeLotSearch = (value: string | number | null | undefined) =>
-  String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[đĐ]/g, 'd')
-    .toLowerCase();
+export { normalizeLotSearch };
 
 const statusSearchLabels = [
   {

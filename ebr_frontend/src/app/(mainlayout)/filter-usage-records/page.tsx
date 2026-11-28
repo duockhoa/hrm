@@ -23,7 +23,7 @@ import {
 } from "@/features/filter-catalogs/utils";
 import useMobile from "@/hooks/use-mobile";
 import { API_ROUTES } from "@/lib/api-routes";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { getSearchScopePath } from "@/lib/search-utils";
 import filterCatalogsService from "@/services/filter-catalogs.service";
 import useSearchStore from "@/store/search.store";
 import { X } from "lucide-react";
@@ -89,51 +89,26 @@ export default function FilterUsageRecordsPage() {
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
-  );
-  const isSearching = searchKeyword.trim().length > 0;
+  ).trim();
+  const isSearching = searchKeyword.length > 0;
+  const listKey = API_ROUTES.filterCatalogs.includingInactive;
   const { data, error, isLoading } = useSWR<FilterCatalog[]>(
-    `${API_ROUTES.filterCatalogs.base}?include_inactive=true`,
-    filterCatalogsService.fetchIncludingInactive,
-  );
-
-  const filterCatalogs = useMemo(() => data ?? [], [data]);
-  const filteredFilterCatalogs = useMemo(() => {
-    if (!searchKeyword) {
-      return filterCatalogs;
-    }
-
-    return filterCatalogs.filter((filterCatalog) =>
-      matchesSearchKeyword(
-        [
-          filterCatalog.id,
-          filterCatalog.filter_code,
-          filterCatalog.filter_type,
-          filterCatalog.usable_steam_cycles,
-          filterCatalog.production_order_filtration_checks_count,
-          filterCatalog.pre_filter_sensory_requirement,
-          filterCatalog.post_filter_sensory_requirement,
-          filterCatalog.integrity_requirement,
-          filterCatalog.description,
-        ],
-        searchKeyword,
-      ),
-    );
-  }, [filterCatalogs, searchKeyword]);
-  const groupedFilterCatalogs = useMemo(
-    () => groupFilterCatalogsByUsageStatus(filteredFilterCatalogs),
-    [filteredFilterCatalogs],
-  );
-
-  const selectedFilterCatalog = useMemo(
+    isSearching ? ([listKey, searchKeyword] as const) : listKey,
     () =>
-      filterCatalogs.find(
-        (filterCatalog) => filterCatalog.id === selectedFilterCatalogId,
-      ),
-    [filterCatalogs, selectedFilterCatalogId],
+      isSearching
+        ? filterCatalogsService.searchIncludingInactive(searchKeyword)
+        : filterCatalogsService.fetchIncludingInactive(),
   );
-  const selectedFilterCatalogExists = filteredFilterCatalogs.some(
+
+  const groupedFilterCatalogs = useMemo(
+    () => groupFilterCatalogsByUsageStatus(data ?? []),
+    [data],
+  );
+
+  const selectedFilterCatalog = data?.find(
     (filterCatalog) => filterCatalog.id === selectedFilterCatalogId,
   );
+  const selectedFilterCatalogExists = Boolean(selectedFilterCatalog);
   const shouldShowMobileDetail =
     isMobile && selectedFilterCatalogId !== null && selectedFilterCatalogExists;
   const selectedFilterCatalogTitle = selectedFilterCatalog

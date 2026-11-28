@@ -10,7 +10,9 @@ import {
   Post,
   Request,
   UseGuards,
+  ValidationPipe,
 } from '@nestjs/common';
+import { RecordSearchQueryDto } from 'src/common/dto/record-search-query.dto';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
@@ -26,8 +28,15 @@ export class FilterCatalogsController {
 
   @Get()
   @Permissions(FILTER_CATALOG_PERMISSIONS.LIST)
-  async findAll(@Query('include_inactive') includeInactive?: string) {
-    return this.filterCatalogsService.findAll(includeInactive === 'true');
+  async findAll(
+    @Query('include_inactive') includeInactive?: string,
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query?: RecordSearchQueryDto,
+  ) {
+    return this.filterCatalogsService.findAll(
+      includeInactive === 'true',
+      query?.search,
+    );
   }
 
   @Get(':id')

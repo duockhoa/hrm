@@ -6,9 +6,12 @@ import type {
 import axiosClient from "@/lib/axios-client";
 import { API_ROUTES } from "@/lib/api-routes";
 
-const fetchFilterCatalogs = async (includeInactive = false): Promise<FilterCatalog[]> => {
+const fetchFilterCatalogs = async (
+  includeInactive = false,
+  search?: string,
+): Promise<FilterCatalog[]> => {
   const response = await axiosClient.get(API_ROUTES.filterCatalogs.base, {
-    params: includeInactive ? { include_inactive: true } : undefined,
+    params: { include_inactive: includeInactive || undefined, search },
   });
   return [...response.data].sort((a, b) => b.id - a.id);
 };
@@ -49,6 +52,7 @@ const deleteFilterCatalog = async (id: string | number): Promise<FilterCatalog> 
 const filterCatalogsService = {
   fetchFilterCatalogs: () => fetchFilterCatalogs(),
   fetchIncludingInactive: () => fetchFilterCatalogs(true),
+  searchIncludingInactive: (search: string) => fetchFilterCatalogs(true, search),
   fetchFilterCatalogById,
   createFilterCatalog,
   updateFilterCatalog,

@@ -39,6 +39,22 @@ describe('ProductionWorkshopsService', () => {
     prismaService = module.get(PrismaService);
   });
 
+  it('finds workshops on the server by accent-insensitive text and partial ID', async () => {
+    const workshop = { id: 17, code: 'ĐĐ', name: 'Xưởng Đông Dược' };
+    const stopped = { id: 8, code: 'HT', name: 'Xưởng hoàn thiện' };
+    const findMany = prismaService.productionWorkshops.findMany;
+    findMany.mockResolvedValue([workshop, stopped]);
+
+    await expect(service.findAll(true, ' DONG DUOC ')).resolves.toEqual([
+      workshop,
+    ]);
+    await expect(service.findAll(true, '7')).resolves.toEqual([workshop]);
+    await expect(service.findAll(true, 'khác')).resolves.toEqual([]);
+    expect(findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ withDeleted: true }),
+    );
+  });
+
   it('creates a production workshop with normalized data', async () => {
     const productionWorkshop = {
       id: 1,

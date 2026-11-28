@@ -2,7 +2,7 @@
 
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { API_ROUTES } from "@/lib/api-routes";
-import { getSearchScopePath, matchesSearchKeyword } from "@/lib/search-utils";
+import { getSearchScopePath } from "@/lib/search-utils";
 import { productionWorkshopsService } from "@/services/index.service";
 import useSearchStore from "@/store/search.store";
 import { usePathname, useRouter } from "next/navigation";
@@ -26,40 +26,34 @@ export default function ProductionWorkshopsListPage({
   const searchScopePath = getSearchScopePath(pathname);
   const searchKeyword = useSearchStore(
     (state) => state.searchByPath[searchScopePath] ?? "",
-  );
-  const isSearching = searchKeyword.trim().length > 0;
+  ).trim();
+  const isSearching = searchKeyword.length > 0;
   const activeWorkshopId = pathname.startsWith(`${baseRoute}/`)
     ? decodeURIComponent(
         pathname.replace(`${baseRoute}/`, ""),
       )
     : null;
 
+  const listKey = API_ROUTES.productionWorkshops.includingInactive;
   const { data, error, isLoading } = useSWR(
-    `${API_ROUTES.productionWorkshops.base}?include_inactive=true`,
-    productionWorkshopsService.fetchIncludingInactive,
+    isSearching ? ([listKey, searchKeyword] as const) : listKey,
+    () =>
+      isSearching
+        ? productionWorkshopsService.searchIncludingInactive(searchKeyword)
+        : productionWorkshopsService.fetchIncludingInactive(),
   );
-
-  const filteredWorkshops = useMemo(() => {
-    return (data ?? [])
-      .filter((workshop) =>
-        matchesSearchKeyword(
-          [
-            workshop.id,
-            workshop.code,
-            workshop.name,
-            workshop.description,
-            workshop.address,
-          ],
-          searchKeyword,
-        ),
-      )
-      .sort((first, second) => first.code.localeCompare(second.code));
-  }, [data, searchKeyword]);
+  const workshops = useMemo(
+    () =>
+      [...(data ?? [])].sort((first, second) =>
+        first.code.localeCompare(second.code),
+      ),
+    [data],
+  );
 
   const { saveScrollPosition } = useScrollRestoration({
     ref: containerRef,
     storageKey: `productionWorkshopListScroll:${baseRoute}`,
-    restoreSignal: `${filteredWorkshops.length}:${pathname}`,
+    restoreSignal: `${workshops.length}:${pathname}`,
   });
 
   const handleClick = (workshopId: string | number) => {
@@ -91,8 +85,8 @@ export default function ProductionWorkshopsListPage({
               onClick={() => {}}
             />
           ))
-        ) : filteredWorkshops.length > 0 ? (
-          filteredWorkshops.map((workshop) => (
+        ) : workshops.length > 0 ? (
+          workshops.map((workshop) => (
             <ItemProductionWorkshop
               key={workshop.id}
               workshop={workshop}

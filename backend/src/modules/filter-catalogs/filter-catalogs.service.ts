@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { normalizeRecordSearch } from 'src/common/utils/record-list-query';
 import { PrismaService } from 'src/prisma.service';
 import { CreateFilterCatalogDto } from './dto/create-filter-catalog.dto';
 import { UpdateFilterCatalogDto } from './dto/update-filter-catalog.dto';
@@ -72,18 +73,34 @@ const filterCatalogDetailInclude = {
 export class FilterCatalogsService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll(includeInactive = false) {
+  async findAll(includeInactive = false, search?: string) {
     const filterCatalogs = await this.prismaService.filterCatalogs.findMany({
       where: includeInactive ? undefined : { deleted_at: null },
       include: filterCatalogListInclude,
       orderBy: [{ filter_code: 'asc' }, { id: 'asc' }],
     });
 
-    return filterCatalogs.map(({ _count, ...filterCatalog }) => ({
+    const records = filterCatalogs.map(({ _count, ...filterCatalog }) => ({
       ...filterCatalog,
       production_order_filtration_checks_count:
         _count.productionOrderFiltrationChecks,
     }));
+    const keyword = normalizeRecordSearch(search).trim();
+    if (!keyword) return records;
+    // Use the same permission-scoped usage count returned in the response.
+    return records.filter((record) =>
+      [
+        record.id,
+        record.filter_code,
+        record.filter_type,
+        record.usable_steam_cycles,
+        record.production_order_filtration_checks_count,
+        record.pre_filter_sensory_requirement,
+        record.post_filter_sensory_requirement,
+        record.integrity_requirement,
+        record.description,
+      ].some((value) => normalizeRecordSearch(value).includes(keyword)),
+    );
   }
 
   async findById(id: number) {

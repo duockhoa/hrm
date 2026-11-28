@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { normalizeRecordSearch } from 'src/common/utils/record-list-query';
 import { PrismaService, withSoftDeleted } from 'src/prisma.service';
 import { CreateProductionWorkshopDto } from './dto/create-production-workshop.dto';
 import { UpdateProductionWorkshopDto } from './dto/update-production-workshop.dto';
@@ -13,11 +14,18 @@ import { UpdateProductionWorkshopDto } from './dto/update-production-workshop.dt
 export class ProductionWorkshopsService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll(includeInactive = false) {
-    return this.prismaService.productionWorkshops.findMany(
+  async findAll(includeInactive = false, search?: string) {
+    const workshops = await this.prismaService.productionWorkshops.findMany(
       withSoftDeleted<Prisma.ProductionWorkshopsFindManyArgs>(
         { orderBy: [{ name: 'asc' }, { code: 'asc' }] },
         includeInactive,
+      ),
+    );
+    const keyword = normalizeRecordSearch(search).trim();
+    if (!keyword) return workshops;
+    return workshops.filter(({ id, code, name, description, address }) =>
+      [id, code, name, description, address].some((value) =>
+        normalizeRecordSearch(value).includes(keyword),
       ),
     );
   }

@@ -178,4 +178,34 @@ describe('FilterCatalogsService', () => {
       }),
     );
   });
+
+  it('searches catalog text, allowed cycles and scoped usage counts on the server', async () => {
+    const filterCatalog = {
+      id: 1,
+      filter_code: 'LOC-A',
+      usable_steam_cycles: 62,
+      post_filter_sensory_requirement: 'Độ trong',
+      _count: { productionOrderFiltrationChecks: 18 },
+    };
+    prismaService.filterCatalogs.findMany.mockResolvedValue([
+      filterCatalog,
+      {
+        id: 2,
+        filter_code: 'LOC-B',
+        _count: { productionOrderFiltrationChecks: 0 },
+      },
+    ]);
+
+    for (const search of [' do trong ', '6', '8']) {
+      await expect(service.findAll(true, search)).resolves.toEqual([
+        expect.objectContaining({
+          id: filterCatalog.id,
+          production_order_filtration_checks_count: 18,
+        }),
+      ]);
+    }
+    expect(prismaService.filterCatalogs.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: undefined }),
+    );
+  });
 });
