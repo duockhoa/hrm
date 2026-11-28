@@ -82,10 +82,12 @@ const PRODUCTION_ORDERS = {
     `/production-orders/${id}/completeness`,
   weighingRecords: (id: string | number) =>
     `/production-orders/${id}/weighing-records`,
+  pendingWeighingRecords: "/production-orders/weighing-records/pending-ipc",
   weighingRecordDetail: (recordId: string | number) =>
     `/production-orders/weighing-records/${recordId}`,
   mixingRecords: (id: string | number) =>
     `/production-orders/${id}/mixing-records`,
+  pendingMixingRecords: "/production-orders/mixing-records/pending-ipc",
   mixingRecordDetail: (recordId: string | number) =>
     `/production-orders/mixing-records/${recordId}`,
   mixingRecordQaStaffApproval: (recordId: string | number) =>

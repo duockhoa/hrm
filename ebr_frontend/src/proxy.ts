@@ -13,6 +13,8 @@ const protectedPaths = [
   "/finished-products",
   "/pressure-differentials",
   "/product-orders",
+  "/pending-mixing-records",
+  "/pending-weighing-records",
   "/production-order-deviations",
   "/production-order-date-checks",
   "/semi-finished-products",

@@ -12,11 +12,13 @@ import { CreateProductionOrderMixingRecordDto } from './dto/create-production-or
 import { CreateProductionOrderMixingRecordParameterDto } from './dto/create-production-order-mixing-record-parameter.dto';
 import { CreateProductionOrderMixingRecordStageDto } from './dto/create-production-order-mixing-record-stage.dto';
 import { CreateProductionOrderMixingRecordStepDto } from './dto/create-production-order-mixing-record-step.dto';
+import type { GetPendingIpcRecordsDto } from './dto/get-pending-ipc-records.dto';
 import { UpdateProductionOrderMixingRecordParameterDto } from './dto/update-production-order-mixing-record-parameter.dto';
 import { UpdateProductionOrderMixingRecordParameterResultDto } from './dto/update-production-order-mixing-record-parameter-result.dto';
 import { UpdateProductionOrderMixingRecordDto } from './dto/update-production-order-mixing-record.dto';
 import { UpdateProductionOrderMixingRecordStageDto } from './dto/update-production-order-mixing-record-stage.dto';
 import { UpdateProductionOrderMixingRecordStepDto } from './dto/update-production-order-mixing-record-step.dto';
+import { pendingIpcRecordsQuery } from './pending-ipc-records.query';
 import {
   getProductionOrderMixingRecordParameterImagePath,
   removeProductionOrderMixingRecordParameterImageByPath,
@@ -93,6 +95,22 @@ const mixingTemplateInclude = {
 @Injectable()
 export class ProductionOrderMixingRecordsService {
   constructor(private readonly prismaService: PrismaService) {}
+
+  async findPendingIpc(options: GetPendingIpcRecordsDto) {
+    const query = pendingIpcRecordsQuery(options);
+    const where = { ...query.where, record_type: 'mixing' };
+    const [data, total] = await this.prismaService.$transaction(
+      [
+        this.prismaService.productionOrderMixingRecords.findMany({
+          ...query,
+          where,
+        }),
+        this.prismaService.productionOrderMixingRecords.count({ where }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { data, total };
+  }
 
   async findAllByProductionOrder(productionOrderId: number) {
     await this.findProductionOrderOrThrow(productionOrderId);

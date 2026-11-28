@@ -9,14 +9,17 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
 import { Permissions } from 'src/decorators/permissions.decorator';
 import { jwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateProductionOrderWeighingRecordDto } from './dto/create-production-order-weighing-record.dto';
+import { GetPendingIpcRecordsDto } from './dto/get-pending-ipc-records.dto';
 import { UpdateProductionOrderWeighingRecordDto } from './dto/update-production-order-weighing-record.dto';
 import { PRODUCTION_ORDER_PERMISSIONS } from './production-orders.permissions';
 import { ProductionOrderWeighingRecordsService } from './production-order-weighing-records.service';
@@ -28,6 +31,15 @@ export class ProductionOrderWeighingRecordsController {
   constructor(
     private readonly service: ProductionOrderWeighingRecordsService,
   ) {}
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Get('weighing-records/pending-ipc')
+  findPendingIpc(
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query: GetPendingIpcRecordsDto,
+  ) {
+    return this.service.findPendingIpc(query);
+  }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('weighing-records/:recordId')

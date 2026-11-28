@@ -21,6 +21,7 @@ import {
   ListTree,
   PackageCheck,
   PackageSearch,
+  Scale,
   TriangleAlert,
   Wrench,
   Unplug,
@@ -85,6 +86,20 @@ const data = [
     url: "/product-orders",
   },
   {
+    id: "pending-mixing-records",
+    name: "Phiếu pha chế cần duyệt",
+    icon: <FlaskConical className="size-5 shrink-0" />,
+    url: "/pending-mixing-records",
+    permission: "production-orders.read",
+  },
+  {
+    id: "pending-weighing-records",
+    name: "Phiếu cân cần duyệt",
+    icon: <Scale className="size-5 shrink-0" />,
+    url: "/pending-weighing-records",
+    permission: "production-orders.read",
+  },
+  {
     id: "finished-product-summaries",
     name: "Danh sách tổng kết thành phẩm",
     icon: <PackageSearch className="size-5 shrink-0" />,
@@ -119,6 +134,7 @@ const data = [
     name: "Lịch sử kết nối",
     icon: <Unplug className="size-5 shrink-0" />,
     url: "/connection-history",
+    permission: "users.list",
   },
   {
     id: "11",
@@ -150,9 +166,8 @@ export default function MainLayout({
     userService.fetchMyPermissions,
   );
   const menuData = data.filter(
-    (item) =>
-      item.id !== "connection-history" ||
-      myPermissions?.permissionKeys.includes("users.list"),
+    ({ permission }) =>
+      !permission || myPermissions?.permissionKeys.includes(permission),
   );
 
   return (

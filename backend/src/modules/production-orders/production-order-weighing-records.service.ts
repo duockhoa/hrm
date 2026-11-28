@@ -8,7 +8,9 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductionOrderWeighingRecordDto } from './dto/create-production-order-weighing-record.dto';
+import type { GetPendingIpcRecordsDto } from './dto/get-pending-ipc-records.dto';
 import { UpdateProductionOrderWeighingRecordDto } from './dto/update-production-order-weighing-record.dto';
+import { pendingIpcRecordsQuery } from './pending-ipc-records.query';
 import { removeProductionOrderWeighingRecordLotCheckImageByPath } from './production-order-weighing-record-lot-check-upload.config';
 
 type AuthenticatedUser = { id?: number | string | null };
@@ -23,6 +25,18 @@ const editableStatuses = ['draft', 'in_progress', 'completed', 'cancelled'];
 @Injectable()
 export class ProductionOrderWeighingRecordsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async findPendingIpc(options: GetPendingIpcRecordsDto) {
+    const query = pendingIpcRecordsQuery(options);
+    const [data, total] = await this.prisma.$transaction(
+      [
+        this.prisma.productionOrderWeighingRecords.findMany(query),
+        this.prisma.productionOrderWeighingRecords.count({ where: query.where }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { data, total };
+  }
 
   async findAllByProductionOrder(productionOrderId: number) {
     await this.ensureProductionOrder(productionOrderId);

@@ -17,6 +17,7 @@ describe('Weighing record HTTP routes', () => {
   const service = Object.fromEntries(
     [
       'findAllByProductionOrder',
+      'findPendingIpc',
       'findById',
       'create',
       'update',
@@ -110,6 +111,34 @@ describe('Weighing record HTTP routes', () => {
       .set('Authorization', 'test')
       .set('x-test-permission', 'production-orders.read')
       .expect(400);
+    expect(service.findById).not.toHaveBeenCalled();
+  });
+
+  it('validates the pending IPC list and protects it with read permission', async () => {
+    const path = '/production-orders/weighing-records/pending-ipc';
+    await request(app.getHttpServer()).get(path).expect(401);
+    await request(app.getHttpServer())
+      .get(path)
+      .set('Authorization', 'test')
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(path)
+      .query({ limit: 301 })
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.read')
+      .expect(400);
+    expect(service.findPendingIpc).not.toHaveBeenCalled();
+    await request(app.getHttpServer())
+      .get(path)
+      .query({ page: 2, limit: 25, search: ' LO-1 ' })
+      .set('Authorization', 'test')
+      .set('x-test-permission', 'production-orders.read')
+      .expect(200);
+    expect(service.findPendingIpc).toHaveBeenCalledWith({
+      page: 2,
+      limit: 25,
+      search: 'LO-1',
+    });
     expect(service.findById).not.toHaveBeenCalled();
   });
 });

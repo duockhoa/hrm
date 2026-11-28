@@ -18,6 +18,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createReadStream } from 'fs';
@@ -29,6 +30,7 @@ import { CreateProductionOrderMixingRecordDto } from './dto/create-production-or
 import { CreateProductionOrderMixingRecordParameterDto } from './dto/create-production-order-mixing-record-parameter.dto';
 import { CreateProductionOrderMixingRecordStageDto } from './dto/create-production-order-mixing-record-stage.dto';
 import { CreateProductionOrderMixingRecordStepDto } from './dto/create-production-order-mixing-record-step.dto';
+import { GetPendingIpcRecordsDto } from './dto/get-pending-ipc-records.dto';
 import { UpdateProductionOrderMixingRecordParameterDto } from './dto/update-production-order-mixing-record-parameter.dto';
 import { UpdateProductionOrderMixingRecordParameterResultDto } from './dto/update-production-order-mixing-record-parameter-result.dto';
 import { UpdateProductionOrderMixingRecordDto } from './dto/update-production-order-mixing-record.dto';
@@ -49,6 +51,15 @@ export class ProductionOrderMixingRecordsController {
   constructor(
     private readonly productionOrderMixingRecordsService: ProductionOrderMixingRecordsService,
   ) {}
+
+  @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
+  @Get('mixing-records/pending-ipc')
+  findPendingIpc(
+    @Query(new ValidationPipe({ transform: true, whitelist: true }))
+    query: GetPendingIpcRecordsDto,
+  ) {
+    return this.productionOrderMixingRecordsService.findPendingIpc(query);
+  }
 
   @Permissions(PRODUCTION_ORDER_PERMISSIONS.READ)
   @Get('mixing-records/:recordId')
